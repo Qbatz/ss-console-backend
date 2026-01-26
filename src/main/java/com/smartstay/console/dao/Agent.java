@@ -14,12 +14,20 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Agents {
+public class Agent {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String agentId;
-    private String agentName;
-    private boolean isActive;
+    private String firstName;
+    private String lastName;
+    private String mobile;
+    private String agentEmailId;
+    private Long roleId;
+    private String agentZohoUserId;
+    private Boolean isActive;
+    private Boolean isProfileCompleted;
     private Date createdAt;
     private String createdBy;
+    private Date updatedAt;
+    private String updatedBy;
 }

@@ -1,4 +1,4 @@
-package com.smartstay.console.dto;
+package com.smartstay.console.dto.zoho;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
