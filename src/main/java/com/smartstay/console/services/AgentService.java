@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class AgentService {
 
@@ -55,5 +57,13 @@ public class AgentService {
 
         return new ResponseEntity<>(HttpStatus.CREATED);
 
+    }
+
+    public Agent findUserByUserId(String userId) {
+        return agentRepository.findByAgentIdAndIsActiveTrue(userId);
+    }
+
+    public List<Agent> findActiveUsersByRoleId(long roleId) {
+        return agentRepository.findByRoleIdAndIsActiveTrue(roleId);
     }
 }
