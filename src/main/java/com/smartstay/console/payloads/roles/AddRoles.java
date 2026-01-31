@@ -11,7 +11,7 @@ public record AddRoles(
         @NotEmpty(message = "Role name is required")
         String roleName,
         @NotNull(message = "Permission list cannot be null")
-        @Size(min = 1, max = 25, message = "Permission list must contain between 1 and 25 items")
+        @Size(min = 1, max =14, message = "Permission list must contain between 1 and 25 items")
         List<Permission> permissionList
 ) {
 }

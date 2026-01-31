@@ -7,5 +7,7 @@ import jakarta.validation.constraints.NotNull;
 public record AddAdmin(
         @NotNull(message = "Email Id cannot be empty")
         @NotEmpty(message = "Email Id cannot be empty")
-        String emailId) {
+        String emailId,
+        @NotNull(message = "Role Id cannot be empty")
+        Long roleId){
 }

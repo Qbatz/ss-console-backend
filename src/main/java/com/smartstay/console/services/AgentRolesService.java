@@ -71,6 +71,10 @@ public class AgentRolesService {
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
+    public AgentRoles findById(Long roleId) {
+        return agentRolesRepository.findByRoleId(roleId);
+    }
+
     public ResponseEntity<?> updateRoleById(long roleId, UpdateRoles updatedRole) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
@@ -217,7 +221,7 @@ public class AgentRolesService {
         return false;
     }
 
-    private List<RolesPermission> permissionInsertion(List<Permission> inputPermissions) {
+    public List<RolesPermission> permissionInsertion(List<Permission> inputPermissions) {
         Map<Integer, Permission> permissionMap = inputPermissions.stream().collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
 
         List<RolesPermission> result = new ArrayList<>();
@@ -251,4 +255,9 @@ public class AgentRolesService {
 
         return merged;
     }
+
+    public AgentRoles saveRole(AgentRoles role) {
+        return agentRolesRepository.save(role);
+    }
+
 }
