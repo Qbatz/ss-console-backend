@@ -6,13 +6,21 @@ plugins {
 }
 
 group = 'com.smartstay.console'
-version = '0.0.1-SNAPSHOT'
-description = 'Demo project for Spring Boot'
+version = ''
+description = 'SS console App'
 
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)
 	}
+}
+
+bootWar {
+	archiveBaseName = 'ROOT'
+}
+
+bootJar {
+	archiveBaseName = 'console-dev'
 }
 
 configurations {

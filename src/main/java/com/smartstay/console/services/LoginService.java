@@ -54,30 +54,36 @@ public class LoginService {
                 ZohoLoginResponse.class
         );
 
-        if (response.getStatusCode() == HttpStatus.OK) {
-            Date expireAt = JwtUtil.getExpireAt(response.getBody().getId_token());
-            ZohoUserDetails userDetails = JwtUtil.getUserDetails(response.getBody().getId_token());
-            Agent agents = agentService.findAgentByEmail(userDetails.emailId());
-            if (agents != null) {
-                if (agents.getIsProfileCompleted() != null && agents.getIsProfileCompleted()) {
-                    HashMap<String, Object> claims = new HashMap<>();
-                    claims.put("role", agents.getRoleId());
-                    claims.put("zoho-user-id", agents.getAgentZohoUserId());
-                    claims.put("agent-email", agents.getAgentEmailId());
-                    String token = jwtService.generateToken(agents.getAgentId(), claims, expireAt);
-                    return new ResponseEntity<>(token, HttpStatus.OK);
-                }
-                else {
-                    Agent agents1 = agentService.updateProfileFromLogin(agents, userDetails);
-                    HashMap<String, Object> claims = new HashMap<>();
-                    claims.put("role", agents1.getRoleId());
-                    claims.put("zoho-user-id", agents1.getAgentZohoUserId());
-                    claims.put("agent-email", agents1.getAgentEmailId());
-                    String token = jwtService.generateToken(agents1.getAgentId(), claims, expireAt);
-                    return new ResponseEntity<>(token, HttpStatus.OK);
-                }
 
+        if (response.getStatusCode() == HttpStatus.OK) {
+            if (response.getBody().getId_token() != null) {
+                Date expireAt = JwtUtil.getExpireAt(response.getBody().getId_token());
+                ZohoUserDetails userDetails = JwtUtil.getUserDetails(response.getBody().getId_token());
+                Agent agents = agentService.findAgentByEmail(userDetails.emailId());
+                if (agents != null) {
+                    if (agents.getIsProfileCompleted() != null && agents.getIsProfileCompleted()) {
+                        HashMap<String, Object> claims = new HashMap<>();
+                        claims.put("role", agents.getRoleId());
+                        claims.put("zoho-user-id", agents.getAgentZohoUserId());
+                        claims.put("agent-email", agents.getAgentEmailId());
+                        String token = jwtService.generateToken(agents.getAgentId(), claims, expireAt);
+                        return new ResponseEntity<>(token, HttpStatus.OK);
+                    }
+                    else {
+                        Agent agents1 = agentService.updateProfileFromLogin(agents, userDetails);
+                        HashMap<String, Object> claims = new HashMap<>();
+                        claims.put("role", agents1.getRoleId());
+                        claims.put("zoho-user-id", agents1.getAgentZohoUserId());
+                        claims.put("agent-email", agents1.getAgentEmailId());
+                        String token = jwtService.generateToken(agents1.getAgentId(), claims, expireAt);
+                        return new ResponseEntity<>(token, HttpStatus.OK);
+                    }
+
+                } else {
+                    return new ResponseEntity<>("Not having access to portal", HttpStatus.FORBIDDEN);
+                }
             }
+
             else {
                 return new ResponseEntity<>("Not having access to portal", HttpStatus.FORBIDDEN);
             }

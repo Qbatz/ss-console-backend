@@ -18,6 +18,7 @@ public class LoginController {
     @GetMapping("/authorize")
     public void authorize(HttpServletResponse response) throws IOException {
 
+
         String authUrl =
                 "https://accounts.zoho.com/oauth/v2/auth" +
                         "?prompt=consent" +
@@ -32,7 +33,6 @@ public class LoginController {
 
     @GetMapping("/verify")
     public ResponseEntity<?> verify(@RequestParam("code") String code, @RequestParam("location") String location, @RequestParam("accountsServer") String authorizeUrl)  {
-//
         return loginService.verifyAuthToken(code, location, authorizeUrl);
     }
 
