@@ -1,6 +1,5 @@
 package com.smartstay.console.services;
 
-
 import com.smartstay.console.Mapper.role.RolesMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
@@ -14,6 +13,7 @@ import com.smartstay.console.repositories.AgentRolesRepository;
 import com.smartstay.console.responses.roles.Roles;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -32,9 +32,8 @@ public class AgentRolesService {
     private Authentication authentication;
 
     @Autowired
+    @Lazy
     private AgentService agentService;
-
-
 
     public ResponseEntity<?> addRole(AddRoles roleData) {
         if (!authentication.isAuthenticated()) {
@@ -94,9 +93,8 @@ public class AgentRolesService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-
         if (updatedRole.roleName() != null && !updatedRole.roleName().isEmpty()) {
-            if (agentRolesRepository.existsByRoleNameNotRoleId(updatedRole.roleName(),roleId) > 0) {
+            if (agentRolesRepository.existsByRoleNameNotRoleId(updatedRole.roleName(), roleId) > 0) {
                 return new ResponseEntity<>(Utils.ROLE_NAME_EXISTS, HttpStatus.BAD_REQUEST);
             }
             existingRole.setRoleName(updatedRole.roleName());
@@ -105,9 +103,12 @@ public class AgentRolesService {
             existingRole.setIsActive(updatedRole.isActive());
         }
         if (updatedRole.permissionList() != null && !updatedRole.permissionList().isEmpty()) {
-            Map<Integer, Permission> incomingPermissions = updatedRole.permissionList().stream().collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
+            Map<Integer, Permission> incomingPermissions = updatedRole.permissionList().stream()
+                    .collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
 
-            List<RolesPermission> finalPermissions = Arrays.stream(ModuleId.values()).map(module -> updatePermission(module.getId(), incomingPermissions, existingRole.getPermissions())).collect(Collectors.toList());
+            List<RolesPermission> finalPermissions = Arrays.stream(ModuleId.values())
+                    .map(module -> updatePermission(module.getId(), incomingPermissions, existingRole.getPermissions()))
+                    .collect(Collectors.toList());
 
             existingRole.setPermissions(finalPermissions);
         }
@@ -129,7 +130,8 @@ public class AgentRolesService {
         if (!checkPermission(users.getRoleId(), ModuleId.Agents.getId(), Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (agentService.findActiveUsersByRoleId(roleId) != null && !agentService.findActiveUsersByRoleId(roleId).isEmpty()) {
+        if (agentService.findActiveUsersByRoleId(roleId) != null
+                && !agentService.findActiveUsersByRoleId(roleId).isEmpty()) {
             return new ResponseEntity<>(Utils.ACTIVE_USERS_FOUND, HttpStatus.BAD_REQUEST);
         }
         AgentRoles existingRole = agentRolesRepository.findByRoleId(roleId);
@@ -193,14 +195,14 @@ public class AgentRolesService {
 
     }
 
-
     public boolean checkPermission(long roleId, int moduleId, String type) {
         AgentRoles roles = agentRolesRepository.findByRoleId(roleId);
 
         if (roles != null) {
             List<RolesPermission> rolesPermission = roles.getPermissions();
             if (!rolesPermission.isEmpty()) {
-                List<RolesPermission> filteredPermission = rolesPermission.stream().filter(item -> item.getModuleId() == moduleId).toList();
+                List<RolesPermission> filteredPermission = rolesPermission.stream()
+                        .filter(item -> item.getModuleId() == moduleId).toList();
                 if (!filteredPermission.isEmpty()) {
                     if (type.equalsIgnoreCase(Utils.PERMISSION_READ)) {
                         return filteredPermission.get(0).isCanRead();
@@ -222,7 +224,8 @@ public class AgentRolesService {
     }
 
     public List<RolesPermission> permissionInsertion(List<Permission> inputPermissions) {
-        Map<Integer, Permission> permissionMap = inputPermissions.stream().collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
+        Map<Integer, Permission> permissionMap = inputPermissions.stream()
+                .collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
 
         List<RolesPermission> result = new ArrayList<>();
 
@@ -240,18 +243,22 @@ public class AgentRolesService {
         return result;
     }
 
-
-    private RolesPermission updatePermission(int moduleId, Map<Integer, Permission> incomingPermissions, List<RolesPermission> existingPermissions) {
+    private RolesPermission updatePermission(int moduleId, Map<Integer, Permission> incomingPermissions,
+            List<RolesPermission> existingPermissions) {
         Permission incoming = incomingPermissions.get(moduleId);
 
-        RolesPermission existingDB = existingPermissions.stream().filter(p -> p.getModuleId() == moduleId).findFirst().orElse(new RolesPermission());
+        RolesPermission existingDB = existingPermissions.stream().filter(p -> p.getModuleId() == moduleId).findFirst()
+                .orElse(new RolesPermission());
 
         RolesPermission merged = new RolesPermission();
         merged.setModuleId(moduleId);
         merged.setCanRead(incoming != null && incoming.canRead() != null ? incoming.canRead() : existingDB.isCanRead());
-        merged.setCanWrite(incoming != null && incoming.canWrite() != null ? incoming.canWrite() : existingDB.isCanWrite());
-        merged.setCanUpdate(incoming != null && incoming.canUpdate() != null ? incoming.canUpdate() : existingDB.isCanUpdate());
-        merged.setCanDelete(incoming != null && incoming.canDelete() != null ? incoming.canDelete() : existingDB.isCanDelete());
+        merged.setCanWrite(
+                incoming != null && incoming.canWrite() != null ? incoming.canWrite() : existingDB.isCanWrite());
+        merged.setCanUpdate(
+                incoming != null && incoming.canUpdate() != null ? incoming.canUpdate() : existingDB.isCanUpdate());
+        merged.setCanDelete(
+                incoming != null && incoming.canDelete() != null ? incoming.canDelete() : existingDB.isCanDelete());
 
         return merged;
     }

@@ -22,30 +22,30 @@ public class RolesController {
     @Autowired
     private AgentRolesService agentRolesService;
 
-    @PostMapping("")
-    public ResponseEntity<?> addRole(@Valid @RequestBody AddRoles roleDto) {
-        return agentRolesService.addRole(roleDto);
-    }
-
-    @PutMapping("/{roleId}")
-    public ResponseEntity<?> updateRole(@PathVariable("roleId") Long roleId, @RequestBody UpdateRoles updateRoles) {
-        return agentRolesService.updateRoleById(roleId, updateRoles);
-    }
-
-    @DeleteMapping("/{roleId}")
-    public ResponseEntity<?> deleteRoleById(@PathVariable("roleId") Long roleId) {
-        return agentRolesService.deleteRoleById(roleId);
-    }
-
-    @GetMapping("")
-    public ResponseEntity<?> getAllRoles() {
-        return agentRolesService.getAllRoles();
-    }
-
-    @GetMapping("/{roleId}")
-    public ResponseEntity<?> getRoleById(@PathVariable("roleId") Long roleId) {
-        return agentRolesService.getRoleById(roleId);
-    }
+//    @PostMapping("")
+//    public ResponseEntity<?> addRole(@Valid @RequestBody AddRoles roleDto) {
+//        return agentRolesService.addRole(roleDto);
+//    }
+//
+//    @PutMapping("/{roleId}")
+//    public ResponseEntity<?> updateRole(@PathVariable("roleId") Long roleId, @RequestBody UpdateRoles updateRoles) {
+//        return agentRolesService.updateRoleById(roleId, updateRoles);
+//    }
+//
+//    @DeleteMapping("/{roleId}")
+//    public ResponseEntity<?> deleteRoleById(@PathVariable("roleId") Long roleId) {
+//        return agentRolesService.deleteRoleById(roleId);
+//    }
+//
+//    @GetMapping("")
+//    public ResponseEntity<?> getAllRoles() {
+//        return agentRolesService.getAllRoles();
+//    }
+//
+//    @GetMapping("/{roleId}")
+//    public ResponseEntity<?> getRoleById(@PathVariable("roleId") Long roleId) {
+//        return agentRolesService.getRoleById(roleId);
+//    }
 
 
 }

@@ -9,6 +9,7 @@ import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class AgentService {
     private AgentRepository agentRepository;
 
     @Autowired
+    @Lazy
     private AgentRolesService agentRolesService;
     @Autowired
     private Authentication authentication;
@@ -78,5 +80,9 @@ public class AgentService {
 
     public List<Agent> findActiveUsersByRoleId(long roleId) {
         return agentRepository.findByRoleIdAndIsActiveTrue(roleId);
+    }
+
+    public Agent findById(String agentId) {
+        return agentRepository.findByAgentId(agentId);
     }
 }
