@@ -1,5 +1,9 @@
 package com.smartstay.console.utils;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
+
 public class Utils {
 
     public static final String CREATED = "Created Successfully";
@@ -25,6 +29,30 @@ public class Utils {
     public static final String NO_ROLES_FOUND = "No roles found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
+    public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
+    public static final String INVALID_SUBSCRIPTION = "Invalid subscription";
+    public static final String PLAN_CODE_REQUIRED = "Plan code required";
+    public static final String INVALID_PLAN_CODE = "Invalid plan code";
+
+
+    public static int compareWithTwoDates(Date date1, Date date2) {
+        LocalDate localDate1 = date1.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        LocalDate localDate2 = date2.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return localDate1.compareTo(localDate2);
+    }
+
+    public static Date addDaysToDate(Date date, int noOfDays) {
+        return Date.from(date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .plusDays(noOfDays)
+                .atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
 
 
 }

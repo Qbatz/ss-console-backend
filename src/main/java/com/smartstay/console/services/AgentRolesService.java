@@ -14,6 +14,7 @@ import com.smartstay.console.repositories.AgentRolesRepository;
 import com.smartstay.console.responses.roles.Roles;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -31,8 +32,12 @@ public class AgentRolesService {
     @Autowired
     private Authentication authentication;
 
-    @Autowired
     private AgentService agentService;
+
+    @Autowired
+    public void setAgentService(@Lazy AgentService agentService) {
+        this.agentService = agentService;
+    }
 
 
 
