@@ -17,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class SubscriptionService {
@@ -41,9 +42,9 @@ public class SubscriptionService {
         if (agent == null) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-//        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_WRITE)) {
-//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-//        }
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
 
         HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
         if (hostelV1 == null) {
@@ -141,5 +142,9 @@ public class SubscriptionService {
 
         return new ResponseEntity<>(HttpStatus.OK);
 
+    }
+
+    public List<com.smartstay.console.dao.Subscription> getAllSubscriptions(List<String> hostelIds) {
+        return null;
     }
 }

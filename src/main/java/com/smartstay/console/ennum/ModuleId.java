@@ -6,16 +6,14 @@ public enum ModuleId {
     Subscriptions(3),
     Plans(4),
     Invoices(5),
-    Hostel_Bank_Transactions(6),
+    Agents(6),
     Assets(7),
-    Amenities(8),
-    Cities(9),
-    States(10),
-    Agents(11),
-    Updates(12),
-    Agreements(13);
-
-
+    Updates(8),
+    Agreements(9),
+    Amenities(10),
+    Hostel_Bank_Transactions(11),
+    Cities(12),
+    States(13);
 
 
     private final int id;

@@ -27,6 +27,7 @@ public interface AgentRolesRepository extends JpaRepository<AgentRoles, Long> {
     int existsByRoleNameNotRoleId(@Param("roleName") String roleName,@Param("roleId") long roleId);
 
     List<AgentRoles> findAllByIsActiveTrueAndIsDeletedFalse();
+    AgentRoles findByRoleName(String roleName);
 
 
 }

@@ -2,6 +2,7 @@ package com.smartstay.console.utils;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
 public class Utils {
@@ -25,7 +26,7 @@ public class Utils {
     public static final String ACTIVE_USERS_FOUND = "Active users found with this role, cannot delete";
 
     public static final String ROLE_NAME_EXISTS = "Role name already exists";
-
+    public static final String ROLE_NAME_CANNOT_EDIT = "This role cannot be edited";
     public static final String NO_ROLES_FOUND = "No roles found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
@@ -52,6 +53,13 @@ public class Utils {
                 .toLocalDate()
                 .plusDays(noOfDays)
                 .atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    public static long findNumberOfDays(Date date1, Date date2) {
+        LocalDate start = date1.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate end   = date2.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+
+        return ChronoUnit.DAYS.between(start, end) + 1;
     }
 
 

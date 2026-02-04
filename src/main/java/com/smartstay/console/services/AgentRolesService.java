@@ -98,6 +98,9 @@ public class AgentRolesService {
         if (existingRole == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+        if (!existingRole.getIsEditable()) {
+            return new ResponseEntity<>(Utils.ROLE_NAME_CANNOT_EDIT, HttpStatus.BAD_REQUEST);
+        }
 
 
         if (updatedRole.roleName() != null && !updatedRole.roleName().isEmpty()) {
