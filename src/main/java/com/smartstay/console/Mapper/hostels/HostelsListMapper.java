@@ -2,6 +2,7 @@ package com.smartstay.console.Mapper.hostels;
 
 import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dao.HostelV1;
+import com.smartstay.console.dao.UserActivities;
 import com.smartstay.console.dao.Users;
 import com.smartstay.console.responses.hostels.HostelList;
 import com.smartstay.console.responses.hostels.OwnerInfo;
@@ -14,14 +15,19 @@ import java.util.function.Function;
 public class HostelsListMapper implements Function<HostelV1, HostelList> {
 
     List<OwnerInfo> owners = null;
+    List<UserActivities> userActivities = null;
 
-    public HostelsListMapper(List<OwnerInfo> owners) {
+    public HostelsListMapper(List<OwnerInfo> owners, List<UserActivities> userActivities) {
         this.owners = owners;
+        this.userActivities = userActivities;
     }
 
     @Override
     public HostelList apply(HostelV1 hostelV1) {
         OwnerInfo ownerInfo = null;
+        String lastUpdateAt = null;
+        String lastUpdateTime = null;
+        String expiredOn = null;
         com.smartstay.console.responses.hostels.HostelPlan hp = null;
         boolean isSubscriptionActive = true;
         long noOfDaysSubscriptionActive = 0;
@@ -48,6 +54,21 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                     .orElse(null);
         }
 
+        if (userActivities != null) {
+            UserActivities ua = userActivities
+                    .stream()
+                    .filter(i -> i.getHostelId().equalsIgnoreCase(hostelV1.getHostelId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (ua != null) {
+                lastUpdateAt = Utils.dateToString(ua.getCreatedAt());
+                lastUpdateTime = Utils.dateToTime(ua.getCreatedAt());
+            }
+        }
+
+
+
         HostelPlan plan = hostelV1.getHostelPlan();
         if (plan != null) {
             hp = new com.smartstay.console.responses.hostels.HostelPlan(plan.getCurrentPlanCode(),
@@ -55,23 +76,25 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                     plan.getCurrentPlanName());
             if (Utils.compareWithTwoDates(plan.getCurrentPlanEndsAt(), new Date()) < 0) {
                 isSubscriptionActive = false;
+                expiredOn = Utils.dateToString(plan.getCurrentPlanEndsAt());
+                noOfDaysSubscriptionActive = 0;
             }
             else {
                 isSubscriptionActive = true;
+                noOfDaysSubscriptionActive = Utils.findNumberOfDays(new Date(), plan.getCurrentPlanEndsAt());
             }
-
-            noOfDaysSubscriptionActive = Utils.findNumberOfDays(new Date(), plan.getCurrentPlanEndsAt());
-
 
         }
         return new HostelList(hostelV1.getHostelName(),
                 hostelV1.getHostelId(),
                 hostelV1.getMainImage(),
                 initials.toString(),
+                Utils.dateToString(hostelV1.getCreatedAt()),
+                expiredOn,
                 isSubscriptionActive,
                 noOfDaysSubscriptionActive,
-                null,
-                null,
+                lastUpdateAt,
+                lastUpdateTime,
                 ownerInfo,
                 hp);
     }

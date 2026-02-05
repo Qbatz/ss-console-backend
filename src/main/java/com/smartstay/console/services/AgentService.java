@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -48,7 +49,7 @@ public class AgentService {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         if (addAdmin == null) {
-            return new ResponseEntity<>(Constants.PAYLOAD_REQUIRED, HttpStatus.BAD_GATEWAY);
+            return new ResponseEntity<>(Constants.PAYLOAD_REQUIRED, HttpStatus.BAD_REQUEST);
         }
         if (addAdmin.emailId() == null || addAdmin.emailId().trim().equalsIgnoreCase("")) {
             return new ResponseEntity<>(Constants.EMAIL_ID_REQUIRED, HttpStatus.BAD_REQUEST);
@@ -57,6 +58,10 @@ public class AgentService {
         Agent newAgent = new Agent();
         newAgent.setAgentEmailId(addAdmin.emailId());
         newAgent.setIsProfileCompleted(false);
+        newAgent.setIsActive(true);
+        newAgent.setCreatedAt(new Date());
+        newAgent.setCreatedBy(authentication.getName());
+        newAgent.setTicketLink(addAdmin.ticketLink());
 
         if (addAdmin.roleId() != null) {
             AgentRoles role = agentRolesService.findById(addAdmin.roleId());

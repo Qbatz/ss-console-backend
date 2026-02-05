@@ -1,6 +1,7 @@
 package com.smartstay.console;
 
 import com.fasterxml.jackson.databind.Module;
+import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.AgentModules;
 import com.smartstay.console.dao.AgentRoles;
 import com.smartstay.console.dao.RolesPermission;

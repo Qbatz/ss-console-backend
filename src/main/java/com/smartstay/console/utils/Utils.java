@@ -1,5 +1,6 @@
 package com.smartstay.console.utils;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -7,6 +8,8 @@ import java.util.Date;
 
 public class Utils {
 
+    public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
+    public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";
     public static final String CREATED = "Created Successfully";
 
     public static final String UPDATED = "Updated Successfully";
@@ -60,6 +63,20 @@ public class Utils {
         LocalDate end   = date2.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
 
         return ChronoUnit.DAYS.between(start, end) + 1;
+    }
+
+    public static String dateToString(Date date) {
+        if (date == null) {
+            return "";
+        }
+        return new SimpleDateFormat(OUTPUT_DATE_FORMAT).format(date);
+    }
+
+    public static String dateToTime(Date date) {
+        if (date == null) {
+            return "";
+        }
+        return new SimpleDateFormat(OUTPUT_TIME_FORMAT).format(date);
     }
 
 

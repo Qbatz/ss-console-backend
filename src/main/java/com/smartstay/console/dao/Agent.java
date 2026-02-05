@@ -24,6 +24,7 @@ public class Agent {
     private String agentEmailId;
     private Long roleId;
     private String agentZohoUserId;
+    private String ticketLink;
     private Boolean isActive;
     private Boolean isProfileCompleted;
     private Date createdAt;
