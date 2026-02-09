@@ -16,12 +16,17 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "*")
 @SecurityScheme(name = "Authorization", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
 @SecurityRequirement(name = "Authorization")
-public class AgentController {
+public class  AgentController {
     @Autowired
     private AgentService agentService;
 
     @PostMapping("")
     public ResponseEntity<?> addAdmin(@Valid @RequestBody AddAdmin addAdmin) {
         return agentService.addAdmin(addAdmin);
+    }
+
+    @GetMapping("/")
+    public ResponseEntity<?> getAdminDetails() {
+        return agentService.getAgentDetails();
     }
 }

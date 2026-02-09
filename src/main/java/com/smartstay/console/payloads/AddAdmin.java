@@ -9,5 +9,8 @@ public record AddAdmin(
         @NotEmpty(message = "Email Id cannot be empty")
         String emailId,
         @NotNull(message = "Role Id cannot be empty")
-        Long roleId){
+        Long roleId,
+        @NotNull(message = "Ticket is required to add admin")
+                @NotEmpty(message = "Ticket is required to add admin")
+        String ticketLink){
 }

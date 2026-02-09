@@ -6,6 +6,7 @@ import com.smartstay.console.dto.zoho.ZohoLoginResponse;
 import com.smartstay.console.dto.zoho.ZohoUserDetails;
 import com.smartstay.console.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -19,7 +20,8 @@ import java.util.HashMap;
 public class LoginService {
 
     private final RestTemplate restTemplate;
-
+    @Value("${REDIRECT-DOMAIN}")
+    private String domain;
     @Autowired
     private AgentService agentService;
     @Autowired
@@ -40,7 +42,7 @@ public class LoginService {
                         .queryParam("client_id", "1000.YLXF17CNZ2C016LL4WVTAQ8FRC6VWB")
                         .queryParam("client_secret", "d2415f2ec8b384d703b8eca441c0f92737d67627d8")
                         .queryParam("grant_type", "authorization_code")
-                        .queryParam("redirect_uri", "http://localhost:5173/verify")
+                        .queryParam("redirect_uri", domain + "/verify")
                         .queryParam("code", code);
 
 

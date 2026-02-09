@@ -16,5 +16,14 @@ public interface HostelPlanRepository extends JpaRepository<HostelPlan, Long> {
             """)
     List<HostelPlan> findNotActiveHostels(@Param("todaysDate") Date todaysDate);
 
+    @Query(value = """
+            SELECT * FROM hostel_plan ORDER BY current_plan_ends_at LIMIT :offset, :limit
+            """, nativeQuery = true)
+    List<HostelPlan> findAllHostelPlans(@Param("limit") int size, @Param("offset") int offset);
+
+    @Query("""
+            SELECT hp FROM HostelPlan hp WHERE DATE(hp.currentPlanEndsAt) >= DATE(:todaysDate)
+            """)
+    List<HostelPlan> findActiveHostels(@Param("todaysDate") Date todaysDate);
 
 }
