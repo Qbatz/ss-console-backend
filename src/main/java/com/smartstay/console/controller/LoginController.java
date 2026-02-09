@@ -3,6 +3,7 @@ package com.smartstay.console.controller;
 import com.smartstay.console.services.LoginService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,6 +13,8 @@ import java.io.IOException;
 @RequestMapping("/v2/agents")
 @CrossOrigin("*")
 public class LoginController {
+    @Value("${REDIRECT-DOMAIN}")
+    private String domain;
     @Autowired
     private LoginService loginService;
 
@@ -25,7 +28,7 @@ public class LoginController {
                         "&response_type=code" +
                         "&client_id=1000.YLXF17CNZ2C016LL4WVTAQ8FRC6VWB" +
                         "&scope=email profile" +
-                        "&redirect_uri=http://localhost:5173/verify" +
+                        "&redirect_uri=" + domain + "/verify" +
                         "&access_type=offline";
 
         response.sendRedirect(authUrl);

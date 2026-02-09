@@ -6,6 +6,7 @@ import com.smartstay.console.dao.AgentRoles;
 import com.smartstay.console.dto.zoho.ZohoUserDetails;
 import com.smartstay.console.payloads.AddAdmin;
 import com.smartstay.console.repositories.AgentRepository;
+import com.smartstay.console.responses.agents.AgentDetails;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,5 +84,52 @@ public class AgentService {
 
     public List<Agent> findActiveUsersByRoleId(long roleId) {
         return agentRepository.findByRoleIdAndIsActiveTrue(roleId);
+    }
+
+    public ResponseEntity<?> getAgentDetails() {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Agent agent = agentRepository.findByAgentId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        StringBuilder fullName = new StringBuilder();
+        StringBuilder initials = new StringBuilder();
+        if (agent.getFirstName() != null) {
+            fullName.append(agent.getFirstName());
+            initials.append(agent.getFirstName().trim().toUpperCase().charAt(0));
+        }
+        if (agent.getLastName() != null && !agent.getLastName().trim().equalsIgnoreCase("")) {
+            fullName.append(" ");
+            fullName.append(agent.getLastName());
+            initials.append(agent.getLastName().trim().toUpperCase().charAt(0));
+        }
+        else {
+            if (agent.getFirstName() != null) {
+                String[] nameArr = agent.getFirstName().split(" ");
+                if (nameArr.length > 1) {
+                    initials.append(nameArr[nameArr.length - 1].trim().toUpperCase().charAt(0));
+                }
+                else {
+                    if (!nameArr[0].isEmpty()) {
+                        initials.append(nameArr[0].toUpperCase().charAt(1));
+                    }
+                }
+            }
+
+
+        }
+
+        AgentDetails agentDetails = new AgentDetails(fullName.toString(),
+                initials.toString(),
+                agent.getAgentEmailId(),
+                agent.getFirstName(),
+                agent.getLastName(),
+                agent.getMobile());
+
+        return new ResponseEntity<>(agentDetails, HttpStatus.OK);
+
     }
 }

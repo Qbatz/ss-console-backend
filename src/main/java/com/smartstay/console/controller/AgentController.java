@@ -24,4 +24,9 @@ public class  AgentController {
     public ResponseEntity<?> addAdmin(@Valid @RequestBody AddAdmin addAdmin) {
         return agentService.addAdmin(addAdmin);
     }
+
+    @GetMapping("/")
+    public ResponseEntity<?> getAdminDetails() {
+        return agentService.getAgentDetails();
+    }
 }
