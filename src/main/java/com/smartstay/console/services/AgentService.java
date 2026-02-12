@@ -10,7 +10,6 @@ import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.responses.agents.AgentDetails;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.Utils;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
