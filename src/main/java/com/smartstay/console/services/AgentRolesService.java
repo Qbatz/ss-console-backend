@@ -1,6 +1,7 @@
 package com.smartstay.console.services;
 
 
+import com.smartstay.console.Mapper.role.AllRolesMapper;
 import com.smartstay.console.Mapper.role.RolesMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
@@ -11,6 +12,7 @@ import com.smartstay.console.payloads.roles.AddRoles;
 import com.smartstay.console.payloads.roles.Permission;
 import com.smartstay.console.payloads.roles.UpdateRoles;
 import com.smartstay.console.repositories.AgentRolesRepository;
+import com.smartstay.console.responses.roles.AllRoles;
 import com.smartstay.console.responses.roles.Roles;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -167,7 +169,8 @@ public class AgentRolesService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         List<AgentRoles> listRoles = agentRolesRepository.findAllByIsActiveTrueAndIsDeletedFalse();
-        List<Roles> rolesList = listRoles.stream().map(item -> new RolesMapper().apply(item)).toList();
+        List<AllRoles> rolesList = listRoles.stream()
+                .map(item -> new AllRolesMapper(agentService).apply(item)).toList();
         return new ResponseEntity<>(rolesList, HttpStatus.OK);
     }
 

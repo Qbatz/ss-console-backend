@@ -132,4 +132,8 @@ public class AgentService {
         return new ResponseEntity<>(agentDetails, HttpStatus.OK);
 
     }
+
+    public long findCountOfAgentByRoleId(long roleId){
+        return agentRepository.countByRoleIdAndIsActiveTrue(roleId);
+    }
 }

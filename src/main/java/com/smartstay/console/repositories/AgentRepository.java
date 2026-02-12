@@ -16,4 +16,5 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
     Agent findByAgentId(String userId);
     Agent findByAgentIdAndIsActiveTrue(String userId);
     List<Agent> findByRoleIdAndIsActiveTrue(long roleId);
+    long countByRoleIdAndIsActiveTrue(long roleId);
 }
