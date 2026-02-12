@@ -169,8 +169,18 @@ public class AgentRolesService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
         List<AgentRoles> listRoles = agentRolesRepository.findAllByIsActiveTrueAndIsDeletedFalse();
+
+        List<Long> roleIds = listRoles.stream()
+                .map(AgentRoles::getRoleId)
+                .toList();
+
+        Map<Long, Long> roleIdToCountMap = agentService.findCountOfAgentByRoleIds(roleIds);
+
         List<AllRoles> rolesList = listRoles.stream()
-                .map(item -> new AllRolesMapper(agentService).apply(item)).toList();
+                .map(item -> {
+                    long userCount = roleIdToCountMap.getOrDefault(item.getRoleId(), 0L);
+                    return new AllRolesMapper(userCount).apply(item);
+                }).toList();
         return new ResponseEntity<>(rolesList, HttpStatus.OK);
     }
 
