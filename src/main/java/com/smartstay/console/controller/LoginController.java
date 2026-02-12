@@ -2,6 +2,7 @@ package com.smartstay.console.controller;
 
 import com.smartstay.console.services.LoginService;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +38,11 @@ public class LoginController {
     @GetMapping("/verify")
     public ResponseEntity<?> verify(@RequestParam("code") String code, @RequestParam("location") String location, @RequestParam("accountsServer") String authorizeUrl)  {
         return loginService.verifyAuthToken(code, location, authorizeUrl);
+    }
+
+    @GetMapping("/mock-agent-login")
+    public ResponseEntity<?> mockAgentLogin(@RequestParam("email") String email){
+        return loginService.verifyMockAuthToken(email);
     }
 
 }
