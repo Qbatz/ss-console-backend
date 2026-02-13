@@ -6,5 +6,7 @@ public record OwnerInfo(String firstName,
                         String initials,
                         String profilePic,
                         String ownerId,
-                        String parentId) {
+                        String parentId,
+                        String countryCode,
+                        String mobile) {
 }

@@ -2,6 +2,7 @@ package com.smartstay.console.Mapper.users;
 
 import com.smartstay.console.dao.Users;
 import com.smartstay.console.responses.hostels.OwnerInfo;
+import com.smartstay.console.utils.CountryUtils;
 import org.springframework.security.core.parameters.P;
 
 import java.util.function.Function;
@@ -40,6 +41,8 @@ public class UserOnerInfoMapper implements Function<Users, OwnerInfo> {
                 initials.toString(),
                 users.getProfileUrl(),
                 users.getUserId(),
-                users.getParentId());
+                users.getParentId(),
+                CountryUtils.COUNTRY_CODE_IN,
+                users.getMobileNo());
     }
 }
