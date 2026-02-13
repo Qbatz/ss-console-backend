@@ -3,8 +3,10 @@ package com.smartstay.console.services;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.AgentRoles;
+import com.smartstay.console.dto.agent.RoleCountProjection;
 import com.smartstay.console.dto.zoho.ZohoUserDetails;
 import com.smartstay.console.payloads.AddAdmin;
+import com.smartstay.console.payloads.agent.AddMockAgent;
 import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.responses.agents.AgentDetails;
 import com.smartstay.console.utils.Constants;
@@ -16,6 +18,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class AgentService {
@@ -131,5 +135,48 @@ public class AgentService {
 
         return new ResponseEntity<>(agentDetails, HttpStatus.OK);
 
+    }
+
+    public Map<Long,Long> findCountOfAgentByRoleIds(List<Long> roleIds){
+        return agentRepository.countActiveAgentsByRoleIds(roleIds)
+                .stream().collect(Collectors.toMap(
+                        RoleCountProjection::getRoleId,
+                        RoleCountProjection::getCount
+                ));
+    }
+
+    public ResponseEntity<?> addMockAgent(AddMockAgent addMockAgent) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent newAgent = new Agent();
+
+        String email = addMockAgent.email().trim();
+        Long roleId = addMockAgent.roleId();
+
+        int atIndex = email.indexOf("@");
+        String firstName = atIndex > 0 ? email.substring(0, atIndex) : email;
+
+        newAgent.setFirstName(firstName);
+        newAgent.setAgentEmailId(email);
+
+        AgentRoles role = agentRolesService.findById(roleId);
+        if (role == null) {
+            return new ResponseEntity<>(Utils.NO_ROLES_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        newAgent.setRoleId(roleId);
+
+        newAgent.setMockAgent(true);
+
+        newAgent.setIsActive(true);
+        newAgent.setIsProfileCompleted(false);
+        newAgent.setCreatedAt(new Date());
+        newAgent.setCreatedBy(authentication.getName());
+
+        agentRepository.save(newAgent);
+
+        return new ResponseEntity<>(HttpStatus.CREATED);
     }
 }

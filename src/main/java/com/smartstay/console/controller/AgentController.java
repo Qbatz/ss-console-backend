@@ -1,7 +1,7 @@
 package com.smartstay.console.controller;
 
-import com.smartstay.console.config.Authentication;
 import com.smartstay.console.payloads.AddAdmin;
+import com.smartstay.console.payloads.agent.AddMockAgent;
 import com.smartstay.console.services.AgentService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -29,4 +29,10 @@ public class  AgentController {
     public ResponseEntity<?> getAdminDetails() {
         return agentService.getAgentDetails();
     }
+
+    //Api to create mock agents for testing
+//    @PostMapping("/add-mock-agent")
+//    public ResponseEntity<?> addMockAgent(@Valid @RequestBody AddMockAgent addMockAgent) {
+//        return agentService.addMockAgent(addMockAgent);
+//    }
 }
