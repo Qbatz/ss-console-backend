@@ -99,13 +99,17 @@ public class LoginService {
     public ResponseEntity<?> verifyMockAuthToken(String email) {
         Agent agent = agentService.findAgentByEmail(email);
         if (agent != null) {
-            Date expireAt = Date.from(Instant.now().plusSeconds(86400));
-            HashMap<String, Object> claims = new HashMap<>();
-            claims.put("role", agent.getRoleId());
-            claims.put("zoho-user-id", agent.getAgentZohoUserId());
-            claims.put("agent-email", agent.getAgentEmailId());
-            String token = jwtService.generateToken(agent.getAgentId(), claims, expireAt);
-            return new ResponseEntity<>(token, HttpStatus.OK);
+            if (agent.isMockAgent()){
+                Date expireAt = Date.from(Instant.now().plusSeconds(86400));
+                HashMap<String, Object> claims = new HashMap<>();
+                claims.put("role", agent.getRoleId());
+                claims.put("zoho-user-id", agent.getAgentZohoUserId());
+                claims.put("agent-email", agent.getAgentEmailId());
+                String token = jwtService.generateToken(agent.getAgentId(), claims, expireAt);
+                return new ResponseEntity<>(token, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>("This Agent is not a Mock Agent", HttpStatus.BAD_REQUEST);
+            }
         } else {
             return new ResponseEntity<>("No agent found for this email", HttpStatus.NOT_FOUND);
         }
