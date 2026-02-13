@@ -27,6 +27,7 @@ public class Agent {
     private String ticketLink;
     private Boolean isActive;
     private Boolean isProfileCompleted;
+    private boolean isMockAgent = false;
     private Date createdAt;
     private String createdBy;
     private Date updatedAt;
