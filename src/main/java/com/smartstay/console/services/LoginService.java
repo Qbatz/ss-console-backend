@@ -4,6 +4,8 @@ import com.smartstay.console.config.RestTemplateLoggingInterceptor;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dto.zoho.ZohoLoginResponse;
 import com.smartstay.console.dto.zoho.ZohoUserDetails;
+import com.smartstay.console.ennum.ActivityType;
+import com.smartstay.console.ennum.Source;
 import com.smartstay.console.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +29,8 @@ public class LoginService {
     private AgentService agentService;
     @Autowired
     private JWTService jwtService;
+    @Autowired
+    private AgentActivitiesService agentActivitiesService;
 
     public LoginService(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
@@ -70,6 +74,10 @@ public class LoginService {
                         claims.put("zoho-user-id", agents.getAgentZohoUserId());
                         claims.put("agent-email", agents.getAgentEmailId());
                         String token = jwtService.generateToken(agents.getAgentId(), claims, expireAt);
+
+                        agentActivitiesService.createAgentActivity(agents, ActivityType.LOGIN, Source.AGENT_LOGIN,
+                                agents.getAgentId(), null, null);
+
                         return new ResponseEntity<>(token, HttpStatus.OK);
                     }
                     else {
@@ -79,6 +87,10 @@ public class LoginService {
                         claims.put("zoho-user-id", agents1.getAgentZohoUserId());
                         claims.put("agent-email", agents1.getAgentEmailId());
                         String token = jwtService.generateToken(agents1.getAgentId(), claims, expireAt);
+
+                        agentActivitiesService.createAgentActivity(agents, ActivityType.LOGIN, Source.AGENT_LOGIN,
+                                agents.getAgentId(), null, null);
+
                         return new ResponseEntity<>(token, HttpStatus.OK);
                     }
 
@@ -106,6 +118,10 @@ public class LoginService {
                 claims.put("zoho-user-id", agent.getAgentZohoUserId());
                 claims.put("agent-email", agent.getAgentEmailId());
                 String token = jwtService.generateToken(agent.getAgentId(), claims, expireAt);
+
+                agentActivitiesService.createAgentActivity(agent, ActivityType.LOGIN, Source.MOCK_AGENT_LOGIN,
+                        agent.getAgentId(), null, null);
+
                 return new ResponseEntity<>(token, HttpStatus.OK);
             } else {
                 return new ResponseEntity<>("This Agent is not a Mock Agent", HttpStatus.BAD_REQUEST);

@@ -1,13 +1,16 @@
 package com.smartstay.console.services;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.role.AllRolesMapper;
 import com.smartstay.console.Mapper.role.RolesMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.AgentRoles;
 import com.smartstay.console.dao.RolesPermission;
+import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
+import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.roles.AddRoles;
 import com.smartstay.console.payloads.roles.Permission;
 import com.smartstay.console.payloads.roles.UpdateRoles;
@@ -35,6 +38,9 @@ public class AgentRolesService {
     private Authentication authentication;
 
     private AgentService agentService;
+
+    @Autowired
+    private AgentActivitiesService agentActivitiesService;
 
     @Autowired
     public void setAgentService(@Lazy AgentService agentService) {
@@ -74,7 +80,11 @@ public class AgentRolesService {
         role.setIsDeleted(false);
         role.setRoleName(roleData.roleName());
         role.setPermissions(rolesPermissions);
-        agentRolesRepository.save(role);
+        role = agentRolesRepository.save(role);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.AGENT_ROLE,
+                String.valueOf(role.getRoleId()), null, role);
+
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.CREATED);
     }
 
@@ -84,7 +94,7 @@ public class AgentRolesService {
 
     public ResponseEntity<?> updateRoleById(long roleId, UpdateRoles updatedRole) {
         if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>("Invalid user.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
         String userId = authentication.getName();
         Agent user = agentService.findUserByUserId(userId);
@@ -103,7 +113,7 @@ public class AgentRolesService {
         if (!existingRole.getIsEditable()) {
             return new ResponseEntity<>(Utils.ROLE_NAME_CANNOT_EDIT, HttpStatus.BAD_REQUEST);
         }
-
+        AgentRoles oldRole = new ObjectMapper().convertValue(existingRole, AgentRoles.class);
 
         if (updatedRole.roleName() != null && !updatedRole.roleName().isEmpty()) {
             if (agentRolesRepository.existsByRoleNameNotRoleId(updatedRole.roleName(),roleId) > 0) {
@@ -115,14 +125,22 @@ public class AgentRolesService {
             existingRole.setIsActive(updatedRole.isActive());
         }
         if (updatedRole.permissionList() != null && !updatedRole.permissionList().isEmpty()) {
-            Map<Integer, Permission> incomingPermissions = updatedRole.permissionList().stream().collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
+            Map<Integer, Permission> incomingPermissions = updatedRole.permissionList().stream()
+                    .collect(Collectors.toMap(Permission::moduleId, Function.identity(), (a, b) -> b));
 
-            List<RolesPermission> finalPermissions = Arrays.stream(ModuleId.values()).map(module -> updatePermission(module.getId(), incomingPermissions, existingRole.getPermissions())).collect(Collectors.toList());
+            AgentRoles finalExistingRole = existingRole;
+            List<RolesPermission> finalPermissions = Arrays.stream(ModuleId.values())
+                    .map(module -> updatePermission(module.getId(), incomingPermissions, finalExistingRole.getPermissions()))
+                    .collect(Collectors.toList());
 
             existingRole.setPermissions(finalPermissions);
         }
         existingRole.setUpdatedAt(new Date());
-        agentRolesRepository.save(existingRole);
+        existingRole = agentRolesRepository.save(existingRole);
+
+        agentActivitiesService.createAgentActivity(user, ActivityType.UPDATE, Source.AGENT_ROLE,
+                String.valueOf(existingRole.getRoleId()), oldRole, existingRole);
+
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
 
     }
@@ -145,7 +163,11 @@ public class AgentRolesService {
         AgentRoles existingRole = agentRolesRepository.findByRoleId(roleId);
         if (existingRole != null) {
             existingRole.setIsDeleted(true);
-            agentRolesRepository.save(existingRole);
+            existingRole = agentRolesRepository.save(existingRole);
+
+            agentActivitiesService.createAgentActivity(users, ActivityType.DELETE, Source.AGENT_ROLE,
+                    String.valueOf(existingRole.getRoleId()), existingRole, null);
+
             return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
         }
         return new ResponseEntity<>(Utils.NO_ROLES_FOUND, HttpStatus.BAD_REQUEST);
