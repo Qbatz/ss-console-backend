@@ -3,6 +3,7 @@ package com.smartstay.console.services;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.AgentRoles;
+import com.smartstay.console.dto.agent.RoleCountProjection;
 import com.smartstay.console.dto.zoho.ZohoUserDetails;
 import com.smartstay.console.payloads.AddAdmin;
 import com.smartstay.console.payloads.agent.AddMockAgent;
@@ -17,6 +18,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class AgentService {
@@ -132,6 +135,14 @@ public class AgentService {
 
         return new ResponseEntity<>(agentDetails, HttpStatus.OK);
 
+    }
+
+    public Map<Long,Long> findCountOfAgentByRoleIds(List<Long> roleIds){
+        return agentRepository.countActiveAgentsByRoleIds(roleIds)
+                .stream().collect(Collectors.toMap(
+                        RoleCountProjection::getRoleId,
+                        RoleCountProjection::getCount
+                ));
     }
 
     public ResponseEntity<?> addMockAgent(AddMockAgent addMockAgent) {
