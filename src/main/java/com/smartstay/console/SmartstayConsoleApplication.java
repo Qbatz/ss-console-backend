@@ -14,31 +14,19 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @SpringBootApplication
+@EnableScheduling
 @OpenAPIDefinition(servers = {@Server(url = "/", description = "Default")})
 public class SmartstayConsoleApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(SmartstayConsoleApplication.class, args);
-    }
-
-    @Bean
-    CommandLineRunner addUserToPortal(AgentRepository agentRepository) {
-        return args -> {
-//			Agent agents = new Agent();
-//			agents.setIsActive(true);
-//			agents.setAgentEmailId("robin.isac@s3remotica.com");
-//			agents.setRoleId(1l);
-//			agents.setCreatedAt(new Date());
-//			agents.setIsProfileCompleted(false);
-//
-//			agentRepository.save(agents);
-
-        };
     }
 
     @Bean

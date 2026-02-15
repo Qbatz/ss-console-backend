@@ -31,6 +31,7 @@ public class Subscription {
     private Double discountAmount;
     private Date nextBillingAt;
     private Date createdAt;
+    private Boolean isActive;
 
 
 }
