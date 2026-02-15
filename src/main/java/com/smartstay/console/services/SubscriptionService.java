@@ -5,8 +5,10 @@ import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dao.Plans;
+import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.PlanType;
+import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.subscription.Subscription;
 import com.smartstay.console.repositories.SubscriptionRepository;
 import com.smartstay.console.utils.Constants;
@@ -33,6 +35,8 @@ public class SubscriptionService {
     private PlansService plansService;
     @Autowired
     private SubscriptionRepository subscriptionRepository;
+    @Autowired
+    private AgentActivitiesService agentActivitiesService;
 
     public ResponseEntity<?> subscribeHostel(String hostelId, Subscription subscription) {
         if (!authentication.isAuthenticated()) {
@@ -138,7 +142,10 @@ public class SubscriptionService {
         }
 
 
-        subscriptionRepository.save(newSubscription);
+        newSubscription = subscriptionRepository.save(newSubscription);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.SUBSCRIPTION,
+                String.valueOf(newSubscription.getSubscriptionId()), null, newSubscription);
 
         return new ResponseEntity<>(HttpStatus.OK);
 

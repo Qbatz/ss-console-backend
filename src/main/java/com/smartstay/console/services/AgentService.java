@@ -5,6 +5,8 @@ import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.AgentRoles;
 import com.smartstay.console.dto.agent.RoleCountProjection;
 import com.smartstay.console.dto.zoho.ZohoUserDetails;
+import com.smartstay.console.ennum.ActivityType;
+import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.AddAdmin;
 import com.smartstay.console.payloads.agent.AddMockAgent;
 import com.smartstay.console.repositories.AgentRepository;
@@ -31,6 +33,9 @@ public class AgentService {
     private AgentRolesService agentRolesService;
     @Autowired
     private Authentication authentication;
+
+    @Autowired
+    private AgentActivitiesService agentActivitiesService;
 
     public Agent findAgentByEmail(String agentEmail) {
         return agentRepository.findByAgentEmailId(agentEmail);
@@ -76,7 +81,10 @@ public class AgentService {
             newAgent.setRoleId(agents.getRoleId());
 
         }
-        agentRepository.save(newAgent);
+        newAgent = agentRepository.save(newAgent);
+
+        agentActivitiesService.createAgentActivity(agents, ActivityType.CREATE, Source.AGENT,
+                newAgent.getAgentId(), null, newAgent);
 
         return new ResponseEntity<>(HttpStatus.CREATED);
 
@@ -151,6 +159,8 @@ public class AgentService {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
+        Agent agent = agentRepository.findByAgentId(authentication.getName());
+
         Agent newAgent = new Agent();
 
         String email = addMockAgent.email().trim();
@@ -175,7 +185,10 @@ public class AgentService {
         newAgent.setCreatedAt(new Date());
         newAgent.setCreatedBy(authentication.getName());
 
-        agentRepository.save(newAgent);
+        newAgent = agentRepository.save(newAgent);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.MOCK_AGENT,
+                newAgent.getAgentId(), null, newAgent);
 
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
