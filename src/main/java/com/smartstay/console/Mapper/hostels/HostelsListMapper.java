@@ -6,6 +6,7 @@ import com.smartstay.console.dao.UserActivities;
 import com.smartstay.console.dao.Users;
 import com.smartstay.console.responses.hostels.HostelList;
 import com.smartstay.console.responses.hostels.OwnerInfo;
+import com.smartstay.console.utils.CountryUtils;
 import com.smartstay.console.utils.Utils;
 
 import java.util.Date;
@@ -28,10 +29,40 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         String lastUpdateAt = null;
         String lastUpdateTime = null;
         String expiredOn = null;
+        StringBuilder fullAddress = new StringBuilder();
         com.smartstay.console.responses.hostels.HostelPlan hp = null;
         boolean isSubscriptionActive = true;
         long noOfDaysSubscriptionActive = 0;
         StringBuilder initials = new StringBuilder();
+
+        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")) {
+            fullAddress.append(hostelV1.getHouseNo());
+        }
+        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("") && hostelV1.getStreet() != null) {
+            fullAddress.append(", ");
+            fullAddress.append(hostelV1.getStreet());
+        }
+        else {
+            fullAddress.append(hostelV1.getStreet());
+        }
+        if (hostelV1.getCity() != null) {
+            if (fullAddress.isEmpty()) {
+                fullAddress.append(hostelV1.getCity());
+            }
+            else {
+                fullAddress.append(", ");
+                fullAddress.append(hostelV1.getCity());
+            }
+        }
+        if (hostelV1.getState() != null) {
+            if (fullAddress.isEmpty()) {
+                fullAddress.append(hostelV1.getState());
+            }
+            else {
+                fullAddress.append(", ");
+                fullAddress.append(hostelV1.getState());
+            }
+        }
 
         if (hostelV1.getHostelName() != null) {
             String[] arrName = hostelV1.getHostelName().split(" ");
@@ -89,6 +120,11 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                 hostelV1.getHostelId(),
                 hostelV1.getMainImage(),
                 initials.toString(),
+                CountryUtils.COUNTRY_CODE_IN,
+                hostelV1.getMobile(),
+                fullAddress.toString(),
+                hostelV1.getCity(),
+                hostelV1.getState(),
                 Utils.dateToString(hostelV1.getCreatedAt()),
                 expiredOn,
                 isSubscriptionActive,

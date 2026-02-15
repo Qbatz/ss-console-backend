@@ -32,10 +32,6 @@ public class JwtUtil {
         String fullName = jwt.getClaim("name").asString();
         String zohoUserId = jwt.getSubject();
 
-        System.out.println(email);
-        System.out.println(fullName);
-        System.out.println(zohoUserId);
-
         return email;
     }
 
@@ -46,11 +42,6 @@ public class JwtUtil {
         String firstName = jwt.getClaim("first_name").asString();
         String lastName = jwt.getClaim("last_name").asString();
         String fullName = jwt.getClaim("name").asString();
-        String zohoUserId = jwt.getSubject();
-
-        System.out.println(email);
-        System.out.println(fullName);
-        System.out.println(zohoUserId);
 
         return new ZohoUserDetails(email, sub, firstName, lastName, fullName);
     }

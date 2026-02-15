@@ -64,7 +64,6 @@ public class JWTService {
 
     public boolean validateToken(String token, UserDetails userDetails) {
         final String userName = extractUserName(token);
-        System.out.println("Validating token for user: " + userName);
         if (userDetails == null) {
             return false;
         }
