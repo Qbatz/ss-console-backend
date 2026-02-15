@@ -1,8 +1,13 @@
 package com.smartstay.console.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.config.Authentication;
+import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.Users;
+import com.smartstay.console.ennum.ActivityType;
+import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.owners.ResetPassword;
+import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.repositories.UsersRepository;
 import com.smartstay.console.utils.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +23,10 @@ public class OwnersService {
     UsersRepository usersRepository;
     @Autowired
     private Authentication authentication;
+    @Autowired
+    private AgentRepository agentRepository;
+    @Autowired
+    private AgentActivitiesService agentActivitiesService;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
@@ -25,6 +34,7 @@ public class OwnersService {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+        Agent agent = agentRepository.findByAgentId(authentication.getName());
         if (resetPassword == null) {
             return new ResponseEntity<>(Constants.PAYLOAD_REQUIRED, HttpStatus.BAD_REQUEST);
         }
@@ -39,10 +49,14 @@ public class OwnersService {
         if (users == null) {
             return new ResponseEntity<>(Constants.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
+        Users oldUser = new ObjectMapper().convertValue(users, Users.class);
 
         String encodedPassword = encoder.encode(resetPassword.password());
         users.setPassword(encodedPassword);
-        usersRepository.save(users);
+        users = usersRepository.save(users);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.RESET_PASSWORD,
+                users.getUserId(), oldUser, users);
 
         return new ResponseEntity<>(Constants.UPDATED_SUCCESSFULLY, HttpStatus.OK);
 
