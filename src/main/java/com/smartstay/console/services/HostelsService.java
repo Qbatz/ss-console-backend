@@ -97,4 +97,8 @@ public class HostelsService {
         return new ResponseEntity<>(hostels, HttpStatus.OK);
 
     }
+
+    public List<HostelV1> getHostelsByParentIds(List<String> parentIds) {
+        return hostelRepository.findAllByParentIdIn(parentIds);
+    }
 }

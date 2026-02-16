@@ -23,4 +23,21 @@ public class OwnersController {
     public ResponseEntity<?> changeAccountPassword(@Valid @RequestBody ResetPassword resetPassword) {
         return ownersService.resetPassword(resetPassword);
     }
+
+    @GetMapping("/")
+    public ResponseEntity<?> getAllOwnersList(@RequestParam(required = false) String name,
+                                              @RequestParam(required = false) Boolean isPropertiesExpired,
+                                              @RequestParam(required = false) Boolean isAboutToExpire,
+                                              @RequestParam(defaultValue = "0") int page,
+                                              @RequestParam(defaultValue = "10") int size,
+                                              @RequestParam(defaultValue = "createdAt") String sortBy,
+                                              @RequestParam(defaultValue = "desc") String direction) {
+        return ownersService.getAllOwnersList(name,
+                                              isPropertiesExpired,
+                                              isAboutToExpire,
+                                              page,
+                                              size,
+                                              sortBy,
+                                              direction);
+    }
 }

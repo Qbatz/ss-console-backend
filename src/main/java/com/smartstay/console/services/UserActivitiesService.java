@@ -18,4 +18,8 @@ public class UserActivitiesService {
     public List<UserActivities> findLatestActivities(List<String> hostelIds) {
         return userActivitiesRepository.findLatestActivity(hostelIds);
     }
+
+    public List<UserActivities> findLatestActivitiesByParentIds(List<String> parentIds){
+        return userActivitiesRepository.findLatestActivityPerParent(parentIds);
+    }
 }
