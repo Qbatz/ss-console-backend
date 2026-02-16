@@ -4,6 +4,7 @@ import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dao.UserActivities;
 import com.smartstay.console.dao.Users;
+import com.smartstay.console.ennum.PlanType;
 import com.smartstay.console.responses.hostels.HostelList;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.utils.CountryUtils;
@@ -34,6 +35,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         boolean isSubscriptionActive = true;
         long noOfDaysSubscriptionActive = 0;
         StringBuilder initials = new StringBuilder();
+        boolean isTrial = false;
 
         if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")) {
             fullAddress.append(hostelV1.getHouseNo());
@@ -105,6 +107,9 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
             hp = new com.smartstay.console.responses.hostels.HostelPlan(plan.getCurrentPlanCode(),
                     plan.getPaidAmount(),
                     plan.getCurrentPlanName());
+            if (plan.getCurrentPlanName().equalsIgnoreCase(PlanType.TRIAL.name())) {
+                isTrial = true;
+            }
             if (Utils.compareWithTwoDates(plan.getCurrentPlanEndsAt(), new Date()) < 0) {
                 isSubscriptionActive = false;
                 expiredOn = Utils.dateToString(plan.getCurrentPlanEndsAt());
@@ -127,6 +132,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                 hostelV1.getState(),
                 Utils.dateToString(hostelV1.getCreatedAt()),
                 expiredOn,
+                isTrial,
                 isSubscriptionActive,
                 noOfDaysSubscriptionActive,
                 lastUpdateAt,
