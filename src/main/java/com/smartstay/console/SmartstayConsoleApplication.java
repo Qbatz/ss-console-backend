@@ -1,6 +1,5 @@
 package com.smartstay.console;
 
-import com.fasterxml.jackson.databind.Module;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.AgentModules;
 import com.smartstay.console.dao.AgentRoles;
@@ -205,7 +204,12 @@ public class SmartstayConsoleApplication {
                 module13.setModuleName("States");
                 repository.save(module13);
             }
-
+            AgentModules module14 = repository.findByModuleName("Owners");
+            if (module14 == null) {
+                module14 = new AgentModules();
+                module14.setModuleName("Owners");
+                repository.save(module14);
+            }
         };
     }
 
