@@ -13,6 +13,7 @@ public class HostelService {
     private Authentication authentication;
     @Autowired
     private HostelV1Repositories hostelRepository;
+
     public HostelV1 getHostelInfo(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return null;
