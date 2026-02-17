@@ -1,30 +1,25 @@
 package com.smartstay.console.Mapper.users;
 
 import com.smartstay.console.dao.Address;
-import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dao.UserActivities;
 import com.smartstay.console.dao.Users;
-import com.smartstay.console.responses.hostels.HostelResponse;
 import com.smartstay.console.responses.users.AddressResponse;
 import com.smartstay.console.responses.users.OwnerResponse;
 import com.smartstay.console.utils.Utils;
 
 import java.util.Date;
-import java.util.List;
 import java.util.function.Function;
 
 public class OwnerListMapper implements Function<Users, OwnerResponse> {
 
     int noOfProperties;
     Address address;
-    List<HostelV1> hostels;
     UserActivities userActivities;
 
     public OwnerListMapper(int noOfProperties, Address address,
-                           List<HostelV1> hostels, UserActivities userActivities) {
+                           UserActivities userActivities) {
         this.noOfProperties = noOfProperties;
         this.address = address;
-        this.hostels = hostels;
         this.userActivities = userActivities;
     }
 
@@ -71,12 +66,6 @@ public class OwnerListMapper implements Function<Users, OwnerResponse> {
                     address.getLandMark(), address.getCity(), address.getState(), address.getPincode());
         }
 
-        List<HostelResponse> hostelList = hostels.stream()
-                .map(hostel -> new HostelResponse(
-                        hostel.getHostelId(),
-                        hostel.getHostelName()
-                )).toList();
-
         Date latestActivityDate = null;
         if (userActivities != null){
             latestActivityDate = userActivities.getCreatedAt();
@@ -86,7 +75,7 @@ public class OwnerListMapper implements Function<Users, OwnerResponse> {
                 lastName, fullName.toString(), initials.toString(), users.getMobileNo(),
                 noOfProperties, addressRes, Utils.dateToString(users.getCreatedAt()),
                 latestActivityDate != null ? Utils.dateToString(latestActivityDate) : null,
-                latestActivityDate != null ? Utils.dateToTime(latestActivityDate) : null,
-                hostelList);
+                latestActivityDate != null ? Utils.dateToTime(latestActivityDate) : null
+        );
     }
 }

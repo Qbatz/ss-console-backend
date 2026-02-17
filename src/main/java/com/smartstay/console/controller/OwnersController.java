@@ -30,7 +30,7 @@ public class OwnersController {
                                               @RequestParam(required = false) Boolean isAboutToExpire,
                                               @RequestParam(defaultValue = "0") int page,
                                               @RequestParam(defaultValue = "10") int size,
-                                              @RequestParam(defaultValue = "createdAt") String sortBy,
+                                              @RequestParam(defaultValue = "JOINING_DATE") String sortBy,
                                               @RequestParam(defaultValue = "desc") String direction) {
         return ownersService.getAllOwnersList(name,
                                               isPropertiesExpired,

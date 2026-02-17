@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -48,7 +49,6 @@ public interface UsersRepository extends JpaRepository<Users, String> {
             SELECT DISTINCT usr
             FROM Users usr
             LEFT JOIN hostelv1 h ON h.parentId = usr.parentId
-            LEFT JOIN UserActivities ua ON ua.parentId = usr.parentId
             WHERE usr.roleId = 1
               AND (
                     :name IS NULL OR :name = '' OR
@@ -57,9 +57,9 @@ public interface UsersRepository extends JpaRepository<Users, String> {
                     OR LOWER(h.hostelName) LIKE LOWER(CONCAT('%', :name, '%'))
                   )
             ORDER BY (
-               SELECT MAX(ua2.createdAt)
-               FROM UserActivities ua2
-               WHERE ua2.parentId = usr.parentId
+                SELECT MAX(ua.createdAt)
+                FROM UserActivities ua
+                WHERE ua.parentId = usr.parentId
             ) DESC
             """,
             countQuery = """
@@ -80,7 +80,6 @@ public interface UsersRepository extends JpaRepository<Users, String> {
             SELECT DISTINCT usr
             FROM Users usr
             LEFT JOIN hostelv1 h ON h.parentId = usr.parentId
-            LEFT JOIN UserActivities ua ON ua.parentId = usr.parentId
             WHERE usr.roleId = 1
               AND (
                     :name IS NULL OR :name = '' OR
@@ -89,9 +88,9 @@ public interface UsersRepository extends JpaRepository<Users, String> {
                     OR LOWER(h.hostelName) LIKE LOWER(CONCAT('%', :name, '%'))
                   )
             ORDER BY (
-               SELECT MAX(ua2.createdAt)
-               FROM UserActivities ua2
-               WHERE ua2.parentId = usr.parentId
+                SELECT MAX(ua.createdAt)
+                FROM UserActivities ua
+                WHERE ua.parentId = usr.parentId
             ) ASC
             """,
             countQuery = """
@@ -108,4 +107,172 @@ public interface UsersRepository extends JpaRepository<Users, String> {
             """)
     Page<Users> findAllOwnersOrderByLatestActivityAsc(@Param("name") String name, Pageable pageable);
 
+    @Query(value = """
+            SELECT DISTINCT usr
+            FROM Users usr
+            LEFT JOIN hostelv1 h ON h.parentId = usr.parentId
+            LEFT JOIN HostelPlan hp ON hp.hostel = h
+            WHERE usr.roleId = 1
+              AND (
+                    :name IS NULL OR :name = '' OR
+                    LOWER(usr.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
+                    OR LOWER(usr.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
+                    OR LOWER(h.hostelName) LIKE LOWER(CONCAT('%', :name, '%'))
+                  )
+              AND (
+                    (:expired = TRUE AND (
+                        hp.currentPlanEndsAt IS NULL
+                        OR hp.currentPlanEndsAt < :today
+                    ))
+                    OR
+                    (:aboutToExpire = TRUE AND
+                        hp.currentPlanEndsAt BETWEEN :today AND :plus10
+                    )
+                  )
+            """,
+            countQuery = """
+            SELECT COUNT(DISTINCT usr)
+            FROM Users usr
+            LEFT JOIN hostelv1 h ON h.parentId = usr.parentId
+            LEFT JOIN HostelPlan hp ON hp.hostel = h
+            WHERE usr.roleId = 1
+              AND (
+                    :name IS NULL OR :name = '' OR
+                    LOWER(usr.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
+                    OR LOWER(usr.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
+                    OR LOWER(h.hostelName) LIKE LOWER(CONCAT('%', :name, '%'))
+                  )
+              AND (
+                    (:expired = TRUE AND (
+                        hp.currentPlanEndsAt IS NULL
+                        OR hp.currentPlanEndsAt < :today
+                    ))
+                    OR
+                    (:aboutToExpire = TRUE AND
+                        hp.currentPlanEndsAt BETWEEN :today AND :plus10
+                    )
+                  )
+            """)
+    Page<Users> findAllOwnersWithExpiry(@Param("name") String name,
+                                        @Param("expired") boolean expired,
+                                        @Param("aboutToExpire") boolean aboutToExpire,
+                                        @Param("today") LocalDateTime today,
+                                        @Param("plus10") LocalDateTime plus10,
+                                        Pageable pageable);
+
+    @Query(value = """
+            SELECT DISTINCT usr
+            FROM Users usr
+            LEFT JOIN hostelv1 h ON h.parentId = usr.parentId
+            LEFT JOIN HostelPlan hp ON hp.hostel = h
+            WHERE usr.roleId = 1
+              AND (
+                    :name IS NULL OR :name = '' OR
+                    LOWER(usr.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
+                    OR LOWER(usr.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
+                    OR LOWER(h.hostelName) LIKE LOWER(CONCAT('%', :name, '%'))
+                  )
+              AND (
+                    (:expired = TRUE AND (
+                        hp.currentPlanEndsAt IS NULL
+                        OR hp.currentPlanEndsAt < :today
+                    ))
+                    OR
+                    (:aboutToExpire = TRUE AND
+                        hp.currentPlanEndsAt BETWEEN :today AND :plus10
+                    )
+                  )
+            ORDER BY (
+                SELECT MAX(ua.createdAt)
+                FROM UserActivities ua
+                WHERE ua.parentId = usr.parentId
+            ) DESC
+            """,
+            countQuery = """
+            SELECT COUNT(DISTINCT usr)
+            FROM Users usr
+            LEFT JOIN hostelv1 h ON h.parentId = usr.parentId
+            LEFT JOIN HostelPlan hp ON hp.hostel = h
+            WHERE usr.roleId = 1
+              AND (
+                    :name IS NULL OR :name = '' OR
+                    LOWER(usr.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
+                    OR LOWER(usr.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
+                    OR LOWER(h.hostelName) LIKE LOWER(CONCAT('%', :name, '%'))
+                  )
+              AND (
+                    (:expired = TRUE AND (
+                        hp.currentPlanEndsAt IS NULL
+                        OR hp.currentPlanEndsAt < :today
+                    ))
+                    OR
+                    (:aboutToExpire = TRUE AND
+                        hp.currentPlanEndsAt BETWEEN :today AND :plus10
+                    )
+                  )
+            """)
+    Page<Users> findAllOwnersWithExpiryOrderByLatestActivityDesc(@Param("name") String name,
+                                                                 @Param("expired") boolean expired,
+                                                                 @Param("aboutToExpire") boolean aboutToExpire,
+                                                                 @Param("today") LocalDateTime today,
+                                                                 @Param("plus10") LocalDateTime plus10,
+                                                                 Pageable pageable);
+
+    @Query(value = """
+            SELECT DISTINCT usr
+            FROM Users usr
+            LEFT JOIN hostelv1 h ON h.parentId = usr.parentId
+            LEFT JOIN HostelPlan hp ON hp.hostel = h
+            WHERE usr.roleId = 1
+              AND (
+                    :name IS NULL OR :name = '' OR
+                    LOWER(usr.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
+                    OR LOWER(usr.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
+                    OR LOWER(h.hostelName) LIKE LOWER(CONCAT('%', :name, '%'))
+                  )
+              AND (
+                    (:expired = TRUE AND (
+                        hp.currentPlanEndsAt IS NULL
+                        OR hp.currentPlanEndsAt < :today
+                    ))
+                    OR
+                    (:aboutToExpire = TRUE AND
+                        hp.currentPlanEndsAt BETWEEN :today AND :plus10
+                    )
+                  )
+            ORDER BY (
+                SELECT MAX(ua.createdAt)
+                FROM UserActivities ua
+                WHERE ua.parentId = usr.parentId
+            ) ASC
+            """,
+            countQuery = """
+            SELECT COUNT(DISTINCT usr)
+            FROM Users usr
+            LEFT JOIN hostelv1 h ON h.parentId = usr.parentId
+            LEFT JOIN HostelPlan hp ON hp.hostel = h
+            WHERE usr.roleId = 1
+              AND (
+                    :name IS NULL OR :name = '' OR
+                    LOWER(usr.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
+                    OR LOWER(usr.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
+                    OR LOWER(h.hostelName) LIKE LOWER(CONCAT('%', :name, '%'))
+                  )
+              AND (
+                    (:expired = TRUE AND (
+                        hp.currentPlanEndsAt IS NULL
+                        OR hp.currentPlanEndsAt < :today
+                    ))
+                    OR
+                    (:aboutToExpire = TRUE AND
+                        hp.currentPlanEndsAt BETWEEN :today AND :plus10
+                    )
+                  )
+            """)
+    Page<Users> findAllOwnersWithExpiryOrderByLatestActivityAsc(@Param("name") String name,
+                                                                @Param("expired") boolean expired,
+                                                                @Param("aboutToExpire") boolean aboutToExpire,
+                                                                @Param("today") LocalDateTime today,
+                                                                @Param("plus10") LocalDateTime plus10,
+                                                                Pageable pageable);
 }

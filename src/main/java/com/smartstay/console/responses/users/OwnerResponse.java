@@ -1,9 +1,5 @@
 package com.smartstay.console.responses.users;
 
-import com.smartstay.console.responses.hostels.HostelResponse;
-
-import java.util.List;
-
 public record OwnerResponse(String ownerId,
                             String parentId,
                             String firstName,
@@ -15,6 +11,6 @@ public record OwnerResponse(String ownerId,
                             AddressResponse address,
                             String joinedDate,
                             String lastActivityDate,
-                            String lastActivityTime,
-                            List<HostelResponse> properties) {
+                            String lastActivityTime
+                            ) {
 }

@@ -22,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -98,49 +99,38 @@ public class OwnersService {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-//        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_READ)) {
-//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-//        }
-
-        Pageable pageable;
+//    if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_READ)) {
+//        return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+//    }
 
         OwnerSortField sortField = OwnerSortField.from(sortBy);
-
         String resolvedSortBy = sortField.getDbField();
-
         String finalDirection = "desc".equalsIgnoreCase(direction) ? "desc" : "asc";
 
-        if (sortField == OwnerSortField.LATEST_ACTIVITY) {
-            pageable = PageRequest.of(page, size);
-        } else {
-            Sort sort = finalDirection.equalsIgnoreCase("desc")
-                    ? Sort.by(resolvedSortBy).descending()
-                    : Sort.by(resolvedSortBy).ascending();
+        boolean isLatestActivitySort = sortField == OwnerSortField.LATEST_ACTIVITY;
+        boolean isDesc = "desc".equalsIgnoreCase(finalDirection);
 
-            pageable = PageRequest.of(page, size, sort);
-        }
+        Pageable pageable = isLatestActivitySort
+                ? PageRequest.of(page, size)
+                : PageRequest.of(page, size,
+                isDesc
+                        ? Sort.by(resolvedSortBy).descending()
+                        : Sort.by(resolvedSortBy).ascending()
+        );
 
-        Page<Users> pagedOwners;
+        boolean expired = Boolean.TRUE.equals(isPropertiesExpired);
+        boolean aboutToExpire = Boolean.TRUE.equals(isAboutToExpire);
 
-        if (sortField == OwnerSortField.LATEST_ACTIVITY) {
-
-            if ("desc".equalsIgnoreCase(finalDirection)) {
-                pagedOwners = usersRepository.findAllOwnersOrderByLatestActivityDesc(name, pageable);
-            } else {
-                pagedOwners = usersRepository.findAllOwnersOrderByLatestActivityAsc(name, pageable);
-            }
-
-        } else {
-            pagedOwners = usersRepository.findAllOwners(name, pageable);
-        }
+        Page<Users> pagedOwners = fetchOwners(name, expired,
+                aboutToExpire, isLatestActivitySort, isDesc, pageable);
 
         List<Users> owners = pagedOwners.getContent();
 
         List<String> parentIds = owners.stream()
-                .map(Users::getParentId).toList();
+                .map(Users::getParentId)
+                .toList();
 
-        List<HostelV1> hostels = hostelsService
-                .getHostelsByParentIds(parentIds);
+        List<HostelV1> hostels = hostelsService.getHostelsByParentIds(parentIds);
 
         Map<String, List<HostelV1>> hostelMap = hostels.stream()
                 .collect(Collectors.groupingBy(HostelV1::getParentId));
@@ -148,23 +138,18 @@ public class OwnersService {
         List<Address> addressList = addressService.getAddressByUsers(owners);
 
         Map<Users, Address> addressMap = addressList.stream()
-                .collect(Collectors.toMap(
-                        Address::getUser,
-                        address -> address
-                ));
+                .collect(Collectors.toMap(Address::getUser, address -> address));
 
-        List<UserActivities> userActivitiesList = userActivitiesService
-                .findLatestActivitiesByParentIds(parentIds);
+        List<UserActivities> userActivitiesList =
+                userActivitiesService.findLatestActivitiesByParentIds(parentIds);
 
         Map<String, UserActivities> userActivitiesMap = userActivitiesList.stream()
-                .collect(Collectors.toMap(UserActivities::getParentId,
-                        userActivities -> userActivities));
+                .collect(Collectors.toMap(UserActivities::getParentId, ua -> ua));
 
         List<OwnerResponse> ownersList = owners.stream()
                 .map(owner -> new OwnerListMapper(
                         hostelMap.getOrDefault(owner.getParentId(), Collections.emptyList()).size(),
                         addressMap.get(owner),
-                        hostelMap.getOrDefault(owner.getParentId(), Collections.emptyList()),
                         userActivitiesMap.get(owner.getParentId())
                 ).apply(owner))
                 .toList();
@@ -178,15 +163,48 @@ public class OwnersService {
         response.put("sortBy", sortField.name());
         response.put("direction", finalDirection);
 
-        List<Map<String, String>> sortOptions = List.of(
-                Map.of("key", OwnerSortField.JOINING_DATE.name(), "label", "Joining Date"),
-                Map.of("key", OwnerSortField.LATEST_ACTIVITY.name(), "label", "Latest Activity")
-        );
-        List<String> directionOptions = List.of("asc", "desc");
+        List<Map<String, String>> sortOptions = Arrays.stream(OwnerSortField.values())
+                .map(field -> Map.of(
+                        "key", field.name(),
+                        "label", field.getLabel()
+                ))
+                .toList();
 
         response.put("availableSortBy", sortOptions);
-        response.put("availableDirection", directionOptions);
+        response.put("availableDirection", List.of("asc", "desc"));
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    private Page<Users> fetchOwners(String name,
+                                    boolean expired,
+                                    boolean aboutToExpire,
+                                    boolean isLatestActivitySort,
+                                    boolean isDesc,
+                                    Pageable pageable) {
+        boolean hasExpiryFilter = expired || aboutToExpire;
+
+        LocalDateTime today = LocalDateTime.now();
+        LocalDateTime plus10 = today.plusDays(10);
+
+        if (isLatestActivitySort) {
+            if (hasExpiryFilter) {
+                return isDesc
+                        ? usersRepository.findAllOwnersWithExpiryOrderByLatestActivityDesc(name,
+                        expired, aboutToExpire, today, plus10, pageable)
+                        : usersRepository.findAllOwnersWithExpiryOrderByLatestActivityAsc(name,
+                        expired, aboutToExpire, today, plus10, pageable);
+            } else {
+                return isDesc
+                        ? usersRepository.findAllOwnersOrderByLatestActivityDesc(name, pageable)
+                        : usersRepository.findAllOwnersOrderByLatestActivityAsc(name, pageable);
+            }
+        }
+
+        return hasExpiryFilter
+                ? usersRepository.findAllOwnersWithExpiry(name, expired,
+                aboutToExpire, today, plus10, pageable)
+                : usersRepository.findAllOwners(name, pageable);
+    }
+
 }
