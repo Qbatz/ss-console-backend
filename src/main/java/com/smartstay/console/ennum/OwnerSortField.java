@@ -5,14 +5,14 @@ import lombok.Getter;
 @Getter
 public enum OwnerSortField {
 
-    JOINING_DATE("createdAt", "Joining Date"),
-    LATEST_ACTIVITY("latestActivity", "Latest Activity");
+    OWNER_NAME("Owner Name"),
+    HOSTEL_COUNT("No of Properties"),
+    JOINING_DATE("Joining Date"),
+    LATEST_ACTIVITY("Latest Activity");
 
-    private final String dbField;
     private final String label;
 
-    OwnerSortField(String dbField, String label) {
-        this.dbField = dbField;
+    OwnerSortField(String label) {
         this.label = label;
     }
 

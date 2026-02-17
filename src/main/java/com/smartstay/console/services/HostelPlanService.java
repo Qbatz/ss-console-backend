@@ -2,6 +2,7 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.HostelPlan;
+import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.repositories.HostelPlanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,5 +24,9 @@ public class HostelPlanService {
 
     public List<HostelPlan> findActiveHostels() {
         return hostelPlanRepository.findActiveHostels(new Date());
+    }
+
+    public List<HostelPlan> getHostelPlansByHostels(List<HostelV1> hostels) {
+        return hostelPlanRepository.findAllByHostelIn(hostels);
     }
 }
