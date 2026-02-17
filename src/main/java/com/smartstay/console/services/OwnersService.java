@@ -5,6 +5,7 @@ import com.smartstay.console.Mapper.users.OwnerListMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.ennum.ActivityType;
+import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.OwnerSortField;
 import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.owners.ResetPassword;
@@ -12,6 +13,7 @@ import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.repositories.UsersRepository;
 import com.smartstay.console.responses.users.OwnerResponse;
 import com.smartstay.console.utils.Constants;
+import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -99,9 +101,9 @@ public class OwnersService {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-//    if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_READ)) {
-//        return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-//    }
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
 
         OwnerSortField sortField = OwnerSortField.from(sortBy);
         String resolvedSortBy = sortField.getDbField();

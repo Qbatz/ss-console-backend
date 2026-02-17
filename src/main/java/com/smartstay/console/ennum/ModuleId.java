@@ -13,7 +13,8 @@ public enum ModuleId {
     Amenities(10),
     Hostel_Bank_Transactions(11),
     Cities(12),
-    States(13);
+    States(13),
+    Owners(14);
 
 
     private final int id;
