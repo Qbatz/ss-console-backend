@@ -8,6 +8,7 @@ import com.smartstay.console.dao.RolesPermission;
 import com.smartstay.console.repositories.AgentModulesRepository;
 import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.repositories.AgentRolesRepository;
+import com.smartstay.console.responses.roles.Roles;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.boot.CommandLineRunner;
@@ -42,7 +43,7 @@ public class SmartstayConsoleApplication {
                 agentRoles.setIsDeleted(false);
 
                 List<RolesPermission> rolesPermissions = new ArrayList<>();
-                for (int i = 1; i <= 13; i++) {
+                for (int i = 1; i <= 14; i++) {
                     RolesPermission perm = new RolesPermission();
                     perm.setModuleId(i);
                     perm.setCanRead(true);
@@ -65,7 +66,7 @@ public class SmartstayConsoleApplication {
                 agentRoles2.setIsDeleted(false);
 
                 List<RolesPermission> rolesPermissions = new ArrayList<>();
-                for (int i = 1; i <= 13; i++) {
+                for (int i = 1; i <= 14; i++) {
                     RolesPermission perm = new RolesPermission();
                     perm.setModuleId(i);
                     perm.setCanRead(true);
@@ -88,7 +89,7 @@ public class SmartstayConsoleApplication {
                 agentRoles3.setIsDeleted(false);
 
                 List<RolesPermission> rolesPermissions = new ArrayList<>();
-                for (int i = 1; i <= 13; i++) {
+                for (int i = 1; i <= 14; i++) {
                     RolesPermission perm = new RolesPermission();
                     perm.setModuleId(i);
                     perm.setCanRead(true);
@@ -193,7 +194,31 @@ public class SmartstayConsoleApplication {
                 module13.setModuleName("States");
                 repository.save(module13);
             }
+            AgentModules module14 = repository.findByModuleName("Owners");
+            if (module14 == null) {
+                module14 = new AgentModules();
+                module14.setModuleName("Owners");
+                repository.save(module14);
+            }
 
+        };
+    }
+
+    @Bean
+    CommandLineRunner addNewModuleToExistingRoles(AgentRolesRepository rolesRepository) {
+        return args -> {
+            List<AgentRoles> agentRoles = rolesRepository.findAll()
+                    .stream()
+                    .map(i -> {
+                        List<RolesPermission> agentRolesPermission = new ArrayList<>(i.getPermissions());
+                        agentRolesPermission.add(new RolesPermission(14, false, false, false, false));
+
+                        i.setPermissions(agentRolesPermission);
+                        return i;
+                    })
+                    .toList();
+
+            rolesRepository.saveAll(agentRoles);
         };
     }
 

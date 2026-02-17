@@ -1,12 +1,10 @@
 package com.smartstay.console.dao;
 
-import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Data
-@Setter
-@Getter
+@AllArgsConstructor
+@NoArgsConstructor
 public class RolesPermission {
     private int moduleId;
     private boolean canRead;
