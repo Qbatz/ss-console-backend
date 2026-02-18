@@ -28,44 +28,52 @@ public class JWTFilter extends OncePerRequestFilter {
         String token = null;
         String userName = null;
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7);
-            userName = jwtService.extractUserName(token);
-        }
+        try {
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                token = authHeader.substring(7);
+                userName = jwtService.extractUserName(token);
+            }
 
-        if (userName != null &&
-                SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (userName != null &&
+                    SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            UserDetails userDetails =
-                    userDetailService.loadUserByUsername(userName);
+                UserDetails userDetails =
+                        userDetailService.loadUserByUsername(userName);
 
-            if (jwtService.validateToken(token, userDetails)) {
+                if (jwtService.validateToken(token, userDetails)) {
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
 
-                authentication.setDetails(
-                        new WebAuthenticationDetailsSource()
-                                .buildDetails(request)
-                );
+                    authentication.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
 
-                SecurityContextHolder.getContext()
-                        .setAuthentication(authentication);
+                    SecurityContextHolder.getContext()
+                            .setAuthentication(authentication);
 
-                filterChain.doFilter(request, response);
+                    filterChain.doFilter(request, response);
+                }
+                else {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\": \"Please login again\"}");
+                }
             }
             else {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.setContentType("application/json");
-                response.getWriter().write("{\"error\": \"Please login again\"}");
+                filterChain.doFilter(request, response);
             }
         }
-        else {
-            filterChain.doFilter(request, response);
+        catch (Exception e) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\": \"Please login again\"}");
         }
+
     }
 }

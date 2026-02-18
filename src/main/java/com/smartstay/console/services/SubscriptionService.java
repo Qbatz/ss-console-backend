@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -103,6 +104,7 @@ public class SubscriptionService {
         newSubscription.setDiscount(0.0);
         newSubscription.setDiscountAmount(0.0);
         newSubscription.setCreatedAt(new Date());
+        newSubscription.setIsActive(true);
 
         if (latestSubscription.getPlanEndsAt() != null) {
             if (Utils.compareWithTwoDates(latestSubscription.getPlanEndsAt(), new Date()) < 0) {
@@ -154,4 +156,19 @@ public class SubscriptionService {
     public List<com.smartstay.console.dao.Subscription> getAllSubscriptions(List<String> hostelIds) {
         return null;
     }
+
+    public List<com.smartstay.console.dto.hostelPlans.HostelPlan> getHostelsActivatingToday() {
+        List<com.smartstay.console.dto.hostelPlans.HostelPlan> listHostelPlans = new ArrayList<>();
+        List<com.smartstay.console.dao.Subscription> listSubscriptions = subscriptionRepository.findSubscriptionStartingToday(new Date());
+        if (listSubscriptions != null && !listSubscriptions.isEmpty()) {
+            listHostelPlans = new ArrayList<>(listSubscriptions
+                    .stream()
+                    .map(i -> new com.smartstay.console.dto.hostelPlans.HostelPlan(i.getHostelId(),  i.getPlanStartsAt(),
+                            i.getPlanEndsAt(),
+                            i.getPlanCode(),
+                            i.getPlanCode())).toList());
+        }
+        return listHostelPlans;
+    }
+
 }

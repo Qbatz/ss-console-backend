@@ -27,5 +27,7 @@ public interface HostelPlanRepository extends JpaRepository<HostelPlan, Long> {
             """)
     List<HostelPlan> findActiveHostels(@Param("todaysDate") Date todaysDate);
 
+    List<HostelPlan> findByHostel_HostelIdIn(List<String> hostelIds);
+
     List<HostelPlan> findAllByHostelIn(List<HostelV1> hostels);
 }

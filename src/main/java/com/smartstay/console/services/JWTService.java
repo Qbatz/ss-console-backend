@@ -1,5 +1,6 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.exceptions.SmartStayException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -51,13 +52,13 @@ public class JWTService {
                     .build().parseClaimsJws(token).getBody();
         }
         catch (ExpiredJwtException e) {
-            throw new SignatureException("Token expired. Please login again.");
+            throw new SmartStayException("Token expired. Please login again.");
         } catch (MalformedJwtException e) {
-            throw new SignatureException("Invalid token format. Please login again.");
+            throw new SmartStayException("Invalid token format. Please login again.");
         } catch (io.jsonwebtoken.security.SignatureException e) {
-            throw new SignatureException("Signature mismatch. Please login again.");
+            throw new SmartStayException("Signature mismatch. Please login again.");
         } catch (Exception e) {
-            throw new SignatureException("Invalid token. Please login again.");
+            throw new SmartStayException("Invalid token. Please login again.");
         }
 
     }

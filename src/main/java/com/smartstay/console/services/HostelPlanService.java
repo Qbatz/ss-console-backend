@@ -17,6 +17,8 @@ public class HostelPlanService {
 
     @Autowired
     private HostelPlanRepository hostelPlanRepository;
+    @Autowired
+    private SubscriptionService subscriptionService;
 
     public List<HostelPlan> findAllHostelPlans(int size, int offset) {
         return hostelPlanRepository.findAllHostelPlans(size, offset);
@@ -24,6 +26,14 @@ public class HostelPlanService {
 
     public List<HostelPlan> findActiveHostels() {
         return hostelPlanRepository.findActiveHostels(new Date());
+    }
+
+    public List<HostelPlan> findByHostelIds(List<String> hostelIds) {
+        return hostelPlanRepository.findByHostel_HostelIdIn(hostelIds);
+    }
+
+    public void saveAll(List<HostelPlan> listNewPlans) {
+        hostelPlanRepository.saveAll(listNewPlans);
     }
 
     public List<HostelPlan> getHostelPlansByHostels(List<HostelV1> hostels) {
