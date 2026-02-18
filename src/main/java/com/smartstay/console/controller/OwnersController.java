@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/v2/master")
+@RequestMapping("/v2/owners")
 @CrossOrigin(origins = "*")
 @SecurityScheme(name = "Authorization", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
 @SecurityRequirement(name = "Authorization")
@@ -24,7 +24,7 @@ public class OwnersController {
         return ownersService.resetPassword(resetPassword);
     }
 
-    @GetMapping("/")
+    @GetMapping("")
     public ResponseEntity<?> getAllOwnersList(@RequestParam(required = false) String name,
                                               @RequestParam(required = false) Boolean isPropertiesExpired,
                                               @RequestParam(required = false) Boolean isAboutToExpire,
