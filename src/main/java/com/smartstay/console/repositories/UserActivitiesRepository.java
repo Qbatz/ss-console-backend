@@ -17,4 +17,16 @@ public interface UserActivitiesRepository extends JpaRepository<UserActivities, 
             AND ua.hostel_id in (:hostelIds)
             """, nativeQuery = true)
     List<UserActivities> findLatestActivity(@Param("hostelIds") List<String> hostelIds);
+
+    @Query("""
+            SELECT ua FROM UserActivities ua
+            WHERE ua.createdAt = (
+                SELECT MAX(u2.createdAt)
+                FROM UserActivities u2
+                WHERE u2.parentId = ua.parentId
+            )
+            AND ua.parentId IN :parentIds
+            """)
+    List<UserActivities> findLatestActivityPerParent(@Param("parentIds") List<String> parentIds);
+
 }

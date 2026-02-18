@@ -1,14 +1,10 @@
 package com.smartstay.console;
 
-import com.fasterxml.jackson.databind.Module;
-import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.AgentModules;
 import com.smartstay.console.dao.AgentRoles;
 import com.smartstay.console.dao.RolesPermission;
 import com.smartstay.console.repositories.AgentModulesRepository;
-import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.repositories.AgentRolesRepository;
-import com.smartstay.console.responses.roles.Roles;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.boot.CommandLineRunner;
@@ -16,7 +12,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.annotation.Scheduled;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -204,22 +199,22 @@ public class SmartstayConsoleApplication {
         };
     }
 
-    @Bean
-    CommandLineRunner addNewModuleToExistingRoles(AgentRolesRepository rolesRepository) {
-        return args -> {
-            List<AgentRoles> agentRoles = rolesRepository.findAll()
-                    .stream()
-                    .map(i -> {
-                        List<RolesPermission> agentRolesPermission = new ArrayList<>(i.getPermissions());
-                        agentRolesPermission.add(new RolesPermission(14, false, false, false, false));
-
-                        i.setPermissions(agentRolesPermission);
-                        return i;
-                    })
-                    .toList();
-
-            rolesRepository.saveAll(agentRoles);
-        };
-    }
+//    @Bean
+//    CommandLineRunner addNewModuleToExistingRoles(AgentRolesRepository rolesRepository) {
+//        return args -> {
+//            List<AgentRoles> agentRoles = rolesRepository.findAll()
+//                    .stream()
+//                    .map(i -> {
+//                        List<RolesPermission> agentRolesPermission = new ArrayList<>(i.getPermissions());
+//                        agentRolesPermission.add(new RolesPermission(14, false, false, false, false));
+//
+//                        i.setPermissions(agentRolesPermission);
+//                        return i;
+//                    })
+//                    .toList();
+//
+//            rolesRepository.saveAll(agentRoles);
+//        };
+//    }
 
 }
