@@ -70,6 +70,7 @@ public class OwnersService {
         if (users == null) {
             return new ResponseEntity<>(Constants.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
+
         Users oldUser = new ObjectMapper().convertValue(users, Users.class);
 
         String encodedPassword = encoder.encode(resetPassword.password());

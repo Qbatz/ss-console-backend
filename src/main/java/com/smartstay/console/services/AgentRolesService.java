@@ -1,6 +1,5 @@
 package com.smartstay.console.services;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.role.AllRolesMapper;
 import com.smartstay.console.Mapper.role.RolesMapper;
@@ -113,6 +112,7 @@ public class AgentRolesService {
         if (!existingRole.getIsEditable()) {
             return new ResponseEntity<>(Utils.ROLE_NAME_CANNOT_EDIT, HttpStatus.BAD_REQUEST);
         }
+
         AgentRoles oldRole = new ObjectMapper().convertValue(existingRole, AgentRoles.class);
 
         if (updatedRole.roleName() != null && !updatedRole.roleName().isEmpty()) {
