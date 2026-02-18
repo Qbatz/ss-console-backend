@@ -101,7 +101,6 @@ public class AgentActivityUtil {
             case UPDATE -> getUpdateDescription(source);
             case DELETE -> getDeleteDescription(source);
             case LOGIN -> getLoginDescription(source);
-            default -> type.name() + " action performed for " + source.name();
         };
     }
 

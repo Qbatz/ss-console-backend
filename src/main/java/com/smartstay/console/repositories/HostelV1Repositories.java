@@ -26,4 +26,5 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
 
     List<HostelV1> findAllByParentIdIn(List<String> parentIds);
 
+    HostelV1 findByHostelId(String hostelId);
 }

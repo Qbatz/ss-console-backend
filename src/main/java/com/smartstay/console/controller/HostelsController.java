@@ -22,4 +22,9 @@ public class HostelsController {
                                             @RequestParam(value = "hostelName", required = false) String hostelName) {
         return hostelsService.getAllHostels(page, size, hostelName);
     }
+
+    @GetMapping("/{hostelId}")
+    public ResponseEntity<?> getHostelByHostelId(@RequestParam("hostelId") String hostelId){
+        return hostelsService.getHostelByHostelId(hostelId);
+    }
 }

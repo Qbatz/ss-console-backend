@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface UsersRepository extends JpaRepository<Users, String> {
@@ -28,4 +29,12 @@ public interface UsersRepository extends JpaRepository<Users, String> {
             """)
     List<Users> findAllOwners(@Param("name") String name);
 
+    @Query("""
+            SELECT usr FROM Users usr WHERE usr.parentId = :parentId AND usr.roleId = 1
+            """)
+    Users findOwner(String parentId);
+
+    List<Users> findAllByParentIdAndRoleId(String parentId, int roleId);
+
+    List<Users> findAllByParentIdAndRoleIdNotInAndUserIdIn(String parentId, Set<Integer> roleIds, List<String> userIds);
 }

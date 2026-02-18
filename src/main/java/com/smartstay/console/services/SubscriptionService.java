@@ -171,4 +171,8 @@ public class SubscriptionService {
         return listHostelPlans;
     }
 
+    public List<com.smartstay.console.dao.Subscription> getSubscriptionsByHostelId(String hostelId){
+        return subscriptionRepository.findByHostelId(hostelId);
+    }
+
 }

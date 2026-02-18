@@ -31,6 +31,7 @@ public class Utils {
     public static final String ROLE_NAME_EXISTS = "Role name already exists";
     public static final String ROLE_NAME_CANNOT_EDIT = "This role cannot be edited";
     public static final String NO_ROLES_FOUND = "No roles found";
+    public static final String NO_HOSTEL_FOUND = "No hostel found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
