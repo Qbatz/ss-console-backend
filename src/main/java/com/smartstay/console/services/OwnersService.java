@@ -55,23 +55,32 @@ public class OwnersService {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         Agent agent = agentRepository.findByAgentId(authentication.getName());
+
         if (resetPassword == null) {
             return new ResponseEntity<>(Constants.PAYLOAD_REQUIRED, HttpStatus.BAD_REQUEST);
         }
         if (resetPassword.password() == null) {
             return new ResponseEntity<>(Constants.PASSWORD_REQUIRED, HttpStatus.BAD_REQUEST);
         }
-        if (resetPassword.emailId() == null) {
-            return new ResponseEntity<>(Constants.EMAIL_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+        if (resetPassword.confirmPassword() == null) {
+            return new ResponseEntity<>(Constants.CONFIRM_PASSWORD_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+        if (resetPassword.userId() == null) {
+            return new ResponseEntity<>(Constants.USER_ID_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
-        Users users = usersRepository.findByEmailId(resetPassword.emailId());
+        Users users = usersRepository.findByUserId(resetPassword.userId());
         if (users == null) {
             return new ResponseEntity<>(Constants.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
         Users oldUser = new ObjectMapper().convertValue(users, Users.class);
+
+        if (!resetPassword.password().equals(resetPassword.confirmPassword())){
+            return new ResponseEntity<>(Constants.PASSWORD_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
 
         String encodedPassword = encoder.encode(resetPassword.password());
         users.setPassword(encodedPassword);
@@ -81,7 +90,6 @@ public class OwnersService {
                 users.getUserId(), oldUser, users);
 
         return new ResponseEntity<>(Constants.UPDATED_SUCCESSFULLY, HttpStatus.OK);
-
     }
 
     public ResponseEntity<?> getAllOwnersList(String name,
