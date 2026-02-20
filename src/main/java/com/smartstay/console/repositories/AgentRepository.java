@@ -27,4 +27,5 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
        """)
     List<RoleCountProjection> countActiveAgentsByRoleIds(@Param("roleIds") List<Long> roleIds);
 
+    List<Agent> findAllByIsMockAgentFalseAndAgentIdNotOrderByCreatedAtDesc(String agentId);
 }

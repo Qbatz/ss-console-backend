@@ -1,16 +1,20 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.Mapper.agent.AgentResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
+import com.smartstay.console.dao.AgentActivities;
 import com.smartstay.console.dao.AgentRoles;
 import com.smartstay.console.dto.agent.RoleCountProjection;
 import com.smartstay.console.dto.zoho.ZohoUserDetails;
 import com.smartstay.console.ennum.ActivityType;
+import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.AddAdmin;
 import com.smartstay.console.payloads.agent.AddMockAgent;
 import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.responses.agents.AgentDetails;
+import com.smartstay.console.responses.agents.AgentResponse;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -191,5 +196,49 @@ public class AgentService {
                 newAgent.getAgentId(), null, newAgent);
 
         return new ResponseEntity<>(HttpStatus.CREATED);
+    }
+
+    public ResponseEntity<?> getAllAgents() {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentRepository.findByAgentId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Agents.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<Agent> agents = agentRepository
+                .findAllByIsMockAgentFalseAndAgentIdNotOrderByCreatedAtDesc(agent.getAgentId());
+
+        Set<Long> roleIds = agents.stream()
+                .map(Agent::getRoleId)
+                .collect(Collectors.toSet());
+        List<AgentRoles> roles = agentRolesService.getAgentRolesByRoleIds(roleIds);
+        Map<Long, AgentRoles> rolesMap = roles.stream()
+                .collect(Collectors.toMap(AgentRoles::getRoleId, role -> role));
+
+        Set<String> agentIds = agents.stream()
+                .map(Agent::getAgentId)
+                .collect(Collectors.toSet());
+        List<AgentActivities> agentActivities = agentActivitiesService
+                .getLatestActivityByAgentIds(agentIds);
+        Map<String, AgentActivities> agentActivitiesMap = agentActivities.stream()
+                .collect(Collectors.toMap(AgentActivities::getAgentId,
+                        agentAct -> agentAct));
+
+        List<AgentResponse> agentsRes = agents.stream()
+                .map(a -> new AgentResMapper(
+                        rolesMap.get(a.getRoleId()),
+                        agentActivitiesMap.get(a.getAgentId())
+                ).apply(a))
+                .toList();
+
+        return new ResponseEntity<>(agentsRes, HttpStatus.OK);
     }
 }
