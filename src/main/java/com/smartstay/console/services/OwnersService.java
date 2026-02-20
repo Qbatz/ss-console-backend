@@ -20,8 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -43,11 +41,7 @@ public class OwnersService {
     @Autowired
     private HostelsService hostelsService;
     @Autowired
-    private AddressService addressService;
-    @Autowired
     private UserActivitiesService userActivitiesService;
-    @Autowired
-    private HostelPlanService hostelPlanService;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
@@ -147,16 +141,12 @@ public class OwnersService {
         Map<String, List<HostelV1>> hostelMap = hostels.stream()
                 .collect(Collectors.groupingBy(HostelV1::getParentId));
 
-        List<HostelPlan> hostelPlans = hostelPlanService.getHostelPlansByHostels(hostels);
+        Map<HostelV1, HostelPlan> hostelPlanMap = hostels.stream()
+                .collect(Collectors.toMap(hostelV1 -> hostelV1,
+                        HostelV1::getHostelPlan));
 
-        Map<HostelV1, HostelPlan> hostelPlanMap = hostelPlans.stream()
-                .collect(Collectors.toMap(HostelPlan::getHostel,
-                        hostelPlan -> hostelPlan));
-
-        List<Address> addressList = addressService.getAddressByUsers(owners);
-
-        Map<Users, Address> addressMap = addressList.stream()
-                .collect(Collectors.toMap(Address::getUser, address -> address));
+        Map<Users, Address> addressMap = owners.stream()
+                .collect(Collectors.toMap(owner -> owner, Users::getAddress));
 
         List<UserActivities> userActivitiesList =
                 userActivitiesService.findLatestActivitiesByParentIds(parentIds);
@@ -164,8 +154,8 @@ public class OwnersService {
         Map<String, UserActivities> userActivitiesMap = userActivitiesList.stream()
                 .collect(Collectors.toMap(UserActivities::getParentId, ua -> ua));
 
-        LocalDateTime today = LocalDateTime.now();
-        LocalDateTime plus10 = today.plusDays(10);
+        Date today = new Date();
+        Date plus10 = Utils.addDaysToDate(today, 10);
 
         List<Users> filteredOwners = owners.stream()
                 .filter(owner -> {
@@ -181,13 +171,16 @@ public class OwnersService {
                                 return expired;
                             }
 
-                            LocalDateTime end = hp.getCurrentPlanEndsAt().toInstant()
-                                    .atZone(ZoneId.systemDefault())
-                                    .toLocalDateTime();
+                            Date end = hp.getCurrentPlanEndsAt();
 
-                            if (expired && end.isBefore(today)) return true;
+                            int cmpToday = Utils.compareWithTwoDates(end, today);
+                            int cmpPlus10 = Utils.compareWithTwoDates(end, plus10);
 
-                            return aboutToExpire && (end.isAfter(today) && end.isBefore(plus10));
+                            if (expired && cmpToday < 0) {
+                                return true;
+                            }
+
+                            return aboutToExpire && (cmpToday >= 0 && cmpPlus10 < 0);
                         });
                     }
 
