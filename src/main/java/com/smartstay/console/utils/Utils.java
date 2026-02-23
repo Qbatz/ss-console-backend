@@ -39,6 +39,9 @@ public class Utils {
     public static final String PLAN_CODE_REQUIRED = "Plan code required";
     public static final String INVALID_PLAN_CODE = "Invalid plan code";
 
+    public static final String SUBSCRIPTION_INACTIVE = "Inactive";
+    public static final String SUBSCRIPTION_ACTIVE = "Active";
+
 
     public static int compareWithTwoDates(Date date1, Date date2) {
         LocalDate localDate1 = date1.toInstant()

@@ -29,4 +29,6 @@ public interface UserActivitiesRepository extends JpaRepository<UserActivities, 
             """)
     List<UserActivities> findLatestActivityPerParent(@Param("parentIds") List<String> parentIds);
 
+    List<UserActivities> findAllByHostelIdOrderByCreatedAtDesc(String hostelId);
+
 }
