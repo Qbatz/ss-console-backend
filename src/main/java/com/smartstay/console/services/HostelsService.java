@@ -49,8 +49,6 @@ public class HostelsService {
     private BedsService bedsService;
     @Autowired
     private CustomersService customersService;
-    @Autowired
-    private AddressService addressService;
 
     public ResponseEntity<?> getAllHostels(int page, int size, String hostelName) {
         if (!authentication.isAuthenticated()) {
@@ -142,18 +140,16 @@ public class HostelsService {
         OwnerInfo ownerInfo = new UserOnerInfoMapper().apply(owner);
 
         List<Users> masters = usersService.getMasters(hostel);
-        List<Address> mastersAddressList = addressService.getAddressByUsers(masters);
-        Map<Users, Address> mastersAddressMap = mastersAddressList.stream()
-                .collect(Collectors.toMap(Address::getUser, address -> address));
+        Map<Users, Address> mastersAddressMap = masters.stream()
+                .collect(Collectors.toMap(master -> master, Users::getAddress));
         List<UsersResponse> mastersRes = masters.stream()
                 .map(users -> new UsersResponseMapper(
                         mastersAddressMap.get(users)
                 ).apply(users)).toList();
 
         List<Users> staffs = usersService.getStaffs(hostel);
-        List<Address> staffsAddressList = addressService.getAddressByUsers(staffs);
-        Map<Users, Address> staffsAddressMap = staffsAddressList.stream()
-                .collect(Collectors.toMap(Address::getUser, address -> address));
+        Map<Users, Address> staffsAddressMap = staffs.stream()
+                .collect(Collectors.toMap(staff -> staff, Users::getAddress));
         List<UsersResponse> staffsRes = staffs.stream()
                 .map(users -> new UsersResponseMapper(
                         staffsAddressMap.get(users)

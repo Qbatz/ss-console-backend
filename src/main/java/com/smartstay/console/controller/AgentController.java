@@ -35,4 +35,9 @@ public class  AgentController {
 //    public ResponseEntity<?> addMockAgent(@Valid @RequestBody AddMockAgent addMockAgent) {
 //        return agentService.addMockAgent(addMockAgent);
 //    }
+
+    @GetMapping("/get-all-agents")
+    public ResponseEntity<?> getAllAgents(){
+        return agentService.getAllAgents();
+    }
 }

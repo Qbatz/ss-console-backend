@@ -303,4 +303,8 @@ public class AgentRolesService {
         return agentRolesRepository.save(role);
     }
 
+    public List<AgentRoles> getAgentRolesByRoleIds(Set<Long> roleIds){
+        return agentRolesRepository.findAllByRoleIdIn(roleIds);
+    }
+
 }
