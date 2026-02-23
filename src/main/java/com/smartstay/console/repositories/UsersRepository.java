@@ -37,4 +37,6 @@ public interface UsersRepository extends JpaRepository<Users, String> {
     List<Users> findAllByParentIdAndRoleId(String parentId, int roleId);
 
     List<Users> findAllByParentIdAndRoleIdNotInAndUserIdIn(String parentId, Set<Integer> roleIds, List<String> userIds);
+
+    Users findByUserId( String userId);
 }
