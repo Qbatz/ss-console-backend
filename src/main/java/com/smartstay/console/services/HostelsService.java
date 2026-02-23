@@ -1,13 +1,16 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.Mapper.customers.CustomerResMapper;
 import com.smartstay.console.Mapper.hostels.HostelDetailsMapper;
 import com.smartstay.console.Mapper.hostels.HostelsListMapper;
 import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.Mapper.users.UsersResponseMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.ennum.BookingsStatus;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.repositories.HostelV1Repositories;
+import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.HostelList;
 import com.smartstay.console.responses.hostels.HostelResponse;
 import com.smartstay.console.responses.hostels.Hostels;
@@ -19,8 +22,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,6 +52,8 @@ public class HostelsService {
     private RoomsService roomsService;
     @Autowired
     private BedsService bedsService;
+    @Autowired
+    private BookingsService bookingsService;
     @Autowired
     private CustomersService customersService;
 
@@ -158,13 +165,55 @@ public class HostelsService {
         int noOfFloors = floorsService.getCountByHostelId(hostelId);
         int noOfRooms = roomsService.getCountByHostelId(hostelId);
         int noOfBeds = bedsService.getCountByHostelId(hostelId);
-        int noOfTenants = customersService.getCountByHostelId(hostelId);
+        int noOfBookedTenants = 0;
+        int noOfCheckedInTenants = 0;
+        int noOfNoticeTenants = 0;
+        int noOfVacatedTenants = 0;
+        int noOfTerminatedTenants = 0;
 
-        List<Subscription> subscriptions = subscriptionService.getSubscriptionsByHostelId(hostelId);
+        List<BookingsV1> bookings = bookingsService.getBookingsByHostelId(hostelId);
+
+        for (BookingsV1 booking : bookings){
+            if (booking.getCurrentStatus().equalsIgnoreCase(BookingsStatus.BOOKED.name())){
+                noOfBookedTenants++;
+            } else if (booking.getCurrentStatus().equalsIgnoreCase(BookingsStatus.CHECKIN.name())) {
+                noOfCheckedInTenants++;
+            } else if (booking.getCurrentStatus().equalsIgnoreCase(BookingsStatus.NOTICE.name())) {
+                noOfNoticeTenants++;
+            } else if (booking.getCurrentStatus().equalsIgnoreCase(BookingsStatus.VACATED.name())) {
+                noOfVacatedTenants++;
+            } else if (booking.getCurrentStatus().equalsIgnoreCase(BookingsStatus.TERMINATED.name())) {
+                noOfTerminatedTenants++;
+            }
+        }
+
+        List<CustomerResponse> customerResponses = new ArrayList<>();
+
+        if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_READ)) {
+
+            Set<String> customerIds = bookings.stream()
+                    .map(BookingsV1::getCustomerId)
+                    .collect(Collectors.toSet());
+
+            List<Customers> customers = customersService.getCustomersByIds(customerIds);
+
+            customerResponses = customers.stream()
+                    .map(customer -> new CustomerResMapper().apply(customer))
+                    .toList();
+        }
+
+        int noOfActiveTenants = noOfBookedTenants + noOfCheckedInTenants;
+
+        List<Subscription> subscriptions = new ArrayList<>();
+
+        if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_READ)) {
+            subscriptions = subscriptionService.getSubscriptionsByHostelId(hostelId);
+        }
 
         HostelResponse hostelDetails = new HostelDetailsMapper(
-                ownerInfo, noOfFloors, noOfRooms, noOfBeds, noOfTenants,
-                subscriptions, mastersRes, staffsRes
+                ownerInfo, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
+                noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
+                customerResponses, subscriptions, mastersRes, staffsRes
         ).apply(hostel);
 
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);

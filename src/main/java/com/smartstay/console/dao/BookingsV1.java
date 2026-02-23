@@ -1,0 +1,43 @@
+package com.smartstay.console.dao;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.util.Date;
+import java.util.List;
+
+@Entity(name="bookingsv1")
+@Data
+public class BookingsV1 {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String bookingId;
+    private Date joiningDate;
+    //this is requested leaving date
+    private Date leavingDate;
+    //actual checkout date
+    private Date checkoutDate;
+    private Date cancelDate;
+    private Date expectedJoiningDate;
+    private Date noticeDate;
+    private Date bookingDate;
+    private Boolean isBooked;
+    private Double rentAmount;
+    private Double advanceAmount;
+    private Double bookingAmount;
+    private Date createdAt;
+    private Date updatedAt;
+    private String createdBy;
+    private String customerId;
+    private String hostelId;
+    private String currentStatus;
+    private String updatedBy;
+    private String reasonForLeaving;
+    private String reasonForCancellation;
+    private int floorId;
+    private int roomId;
+    private int bedId;
+
+    @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private List<RentHistory> rentHistory;
+}

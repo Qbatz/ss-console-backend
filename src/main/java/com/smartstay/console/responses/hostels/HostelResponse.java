@@ -1,6 +1,7 @@
 package com.smartstay.console.responses.hostels;
 
 import com.smartstay.console.responses.bills.BillingRulesResponse;
+import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.users.UsersResponse;
 
 import java.util.List;
@@ -22,7 +23,13 @@ public record HostelResponse(String hostelId,
                              int noOfFloors,
                              int noOfRooms,
                              int noOfBeds,
-                             int noOfTenants,
+                             int noOfActiveTenants,
+                             int noOfBookedTenants,
+                             int noOfCheckedInTenants,
+                             int noOfNoticeTenants,
+                             int noOfVacatedTenants,
+                             int noOfTerminatedTenants,
+                             List<CustomerResponse> tenantList,
                              String createdAtDate,
                              String createdAtTime,
                              OwnerInfo ownerInfo,
