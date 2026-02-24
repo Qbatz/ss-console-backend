@@ -16,7 +16,7 @@ public class MyUserDetailService implements UserDetailsService {
     AgentRepository agentRepository;
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Agent agents = agentRepository.findByAgentId(username);
+        Agent agents = agentRepository.findByAgentIdAndIsActiveTrue(username);
 
         if (agents == null) {
             return null;

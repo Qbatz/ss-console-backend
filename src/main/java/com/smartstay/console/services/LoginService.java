@@ -7,6 +7,7 @@ import com.smartstay.console.dto.zoho.ZohoUserDetails;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.Source;
 import com.smartstay.console.utils.JwtUtil;
+import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -127,7 +128,7 @@ public class LoginService {
                 return new ResponseEntity<>("This Agent is not a Mock Agent", HttpStatus.BAD_REQUEST);
             }
         } else {
-            return new ResponseEntity<>("No agent found for this email", HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.NOT_FOUND);
         }
     }
 }
