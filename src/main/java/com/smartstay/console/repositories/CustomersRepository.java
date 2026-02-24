@@ -4,7 +4,10 @@ import com.smartstay.console.dao.Customers;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Set;
+
 @Repository
 public interface CustomersRepository extends JpaRepository<Customers, String> {
-    int countByHostelId(String hostelId);
+    List<Customers> findAllByCustomerIdIn(Set<String> customerIds);
 }

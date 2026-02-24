@@ -80,5 +80,74 @@ public class Utils {
         return new SimpleDateFormat(OUTPUT_TIME_FORMAT).format(date);
     }
 
+    public static String getFullName(String firstName, String lastName){
+        StringBuilder fullName = new StringBuilder();
 
+        if (firstName != null) {
+            firstName = firstName.trim();
+            fullName.append(firstName);
+        }
+
+        if (lastName != null && !lastName.isBlank()) {
+            lastName = lastName.trim();
+            fullName.append(" ");
+            fullName.append(lastName);
+        }
+
+        return fullName.toString();
+    }
+
+    public static String getInitials(String firstName, String lastName){
+        StringBuilder initials = new StringBuilder();
+
+        if (firstName != null) {
+            firstName = firstName.trim();
+            initials.append(firstName.toUpperCase().charAt(0));
+        }
+
+        if (lastName != null && !lastName.isBlank()) {
+            lastName = lastName.trim();
+            initials.append(lastName.toUpperCase().charAt(0));
+        }
+        else {
+            if (firstName != null) {
+                String[] nameArr = firstName.split(" ");
+                if (nameArr.length > 1) {
+                    initials.append(nameArr[nameArr.length - 1].toUpperCase().charAt(0));
+                }
+                else {
+                    String lastPart = nameArr[nameArr.length - 1].toUpperCase();
+
+                    if (lastPart.length() > 1) {
+                        initials.append(lastPart.charAt(1));
+                    }
+                }
+            }
+        }
+
+        return initials.toString();
+    }
+
+    public static String getInitials(String name){
+        StringBuilder initials = new StringBuilder();
+
+        if (name != null) {
+            String[] arrName = name.split(" ");
+            if (arrName.length > 0) {
+                initials.append(arrName[0].toUpperCase().charAt(0));
+            }
+            if (arrName.length > 1) {
+                initials.append(arrName[arrName.length - 1].toUpperCase().charAt(0));
+            }
+            else {
+                String lastPart = arrName[arrName.length - 1].toUpperCase();
+
+                if (lastPart.length() > 1) {
+                    initials.append(lastPart.charAt(1));
+                }
+            }
+        }
+
+        return initials.toString();
+    }
 }
