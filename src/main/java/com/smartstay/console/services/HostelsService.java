@@ -152,11 +152,12 @@ public class HostelsService {
                 ).apply(users)).toList();
 
         List<Users> staffs = usersService.getStaffs(hostel);
-        Map<Users, Address> staffsAddressMap = staffs.stream()
-                .collect(Collectors.toMap(staff -> staff, Users::getAddress));
+//        Map<Users, Address> staffsAddressMap = staffs.stream()
+//                .collect(Collectors.toMap(staff -> staff, Users::getAddress));
         List<UsersResponse> staffsRes = staffs.stream()
                 .map(users -> new UsersResponseMapper(
-                        staffsAddressMap.get(users)
+//                        staffsAddressMap.get(users)
+                        null
                 ).apply(users)).toList();
 
         int noOfFloors = floorsService.getCountByHostelId(hostelId);
