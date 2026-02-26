@@ -30,6 +30,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         String lastUpdateAt = null;
         String lastUpdateTime = null;
         String expiredOn = null;
+        String expiringAt = null;
         StringBuilder fullAddress = new StringBuilder();
         com.smartstay.console.responses.hostels.HostelPlan hp = null;
         boolean isSubscriptionActive = true;
@@ -117,6 +118,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
             }
             else {
                 isSubscriptionActive = true;
+                expiringAt = Utils.dateToString(plan.getCurrentPlanEndsAt());
                 noOfDaysSubscriptionActive = Utils.findNumberOfDays(new Date(), plan.getCurrentPlanEndsAt());
             }
 
@@ -132,6 +134,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                 hostelV1.getState(),
                 Utils.dateToString(hostelV1.getCreatedAt()),
                 expiredOn,
+                expiringAt,
                 isTrial,
                 isSubscriptionActive,
                 noOfDaysSubscriptionActive,
