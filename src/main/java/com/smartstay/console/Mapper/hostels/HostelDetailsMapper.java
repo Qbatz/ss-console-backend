@@ -5,10 +5,11 @@ import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.responses.bills.BillingRulesResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
+import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
 import com.smartstay.console.utils.Utils;
 
-import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 
 public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
@@ -27,6 +28,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
     List<Subscription> subscriptions;
     List<UsersResponse> masters;
     List<UsersResponse> staffs;
+    List<UserActivities> activities;
+    Map<String, Users> userLookup;
 
     public HostelDetailsMapper(OwnerInfo ownerInfo,
                                int noOfFloors,
@@ -41,7 +44,9 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                                List<CustomerResponse> tenantList,
                                List<Subscription> subscriptions,
                                List<UsersResponse> masters,
-                               List<UsersResponse> staffs) {
+                               List<UsersResponse> staffs,
+                               List<UserActivities> activities,
+                               Map<String, Users> userLookup) {
         this.ownerInfo = ownerInfo;
         this.noOfFloors = noOfFloors;
         this.noOfRooms = noOfRooms;
@@ -56,6 +61,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
         this.subscriptions = subscriptions;
         this.masters = masters;
         this.staffs = staffs;
+        this.activities = activities;
+        this.userLookup = userLookup;
     }
 
     @Override
@@ -96,12 +103,93 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                 electricityConfig.isShouldIncludeInRent(), electricityConfig.getTypeOfReading(),
                 electricityConfig.isProRate(), electricityConfig.getCharge(), electricityConfig.getBillDate());
 
-        List<SubscriptionResponse> subscriptionRes = subscriptions.stream()
-                .map(subscription -> new SubscriptionResponse(subscription.getSubscriptionId(),
-                        subscription.getSubscriptionNumber(), subscription.getPlanCode(), subscription.getPlanName(),
-                        Utils.dateToString(subscription.getPlanStartsAt()), Utils.dateToString(subscription.getPlanEndsAt()),
-                        subscription.getPlanAmount(), subscription.getPaidAmount()
+        String subscriptionStatus;
+        int subscriptionRenewalTimeLeftDays = 0;
+
+        Date today = new Date();
+
+        List<Subscription> sortedSubs = subscriptions.stream()
+                .sorted(Comparator.comparing(Subscription::getPlanStartsAt))
+                .toList();
+
+        boolean hasActive = false;
+
+        Subscription currentSubscription = null;
+        List<Subscription> otherSubscriptions = new ArrayList<>();
+
+        for (Subscription sub : sortedSubs) {
+
+            Date start = sub.getPlanStartsAt();
+            Date end = sub.getPlanEndsAt();
+
+            // CASE 1: already expired -> ignore
+            if (end.compareTo(today) < 0) {
+                otherSubscriptions.add(sub);
+                continue;
+            }
+
+            // CASE 2: currently active
+            if (start.compareTo(today) <= 0 && end.compareTo(today) > 0) {
+                hasActive = true;
+                subscriptionRenewalTimeLeftDays += (int) Utils.findNumberOfDays(today, end);
+                currentSubscription = sub;
+                continue;
+            }
+
+            // CASE 3: future subscription
+            if (start.compareTo(today) > 0) {
+                subscriptionRenewalTimeLeftDays += (int) Utils.findNumberOfDays(start, end);
+                otherSubscriptions.add(sub);
+            }
+        }
+
+        if (hasActive) {
+            subscriptionStatus = Utils.SUBSCRIPTION_ACTIVE;
+        } else {
+            subscriptionStatus = Utils.SUBSCRIPTION_INACTIVE;
+        }
+
+        SubscriptionResponse currentSubRes = null;
+
+        if (currentSubscription != null) {
+            currentSubRes = new SubscriptionResponse(
+                    currentSubscription.getSubscriptionId(),
+                    currentSubscription.getSubscriptionNumber(),
+                    currentSubscription.getPlanCode(),
+                    currentSubscription.getPlanName(),
+                    Utils.dateToString(currentSubscription.getPlanStartsAt()),
+                    Utils.dateToString(currentSubscription.getPlanEndsAt()),
+                    currentSubscription.getPlanAmount(),
+                    currentSubscription.getPaidAmount()
+            );
+        }
+
+        List<SubscriptionResponse> otherSubsRes = otherSubscriptions.stream()
+                .sorted(Comparator.comparing(Subscription::getPlanStartsAt).reversed())
+                .map(subscription -> new SubscriptionResponse(
+                        subscription.getSubscriptionId(),
+                        subscription.getSubscriptionNumber(),
+                        subscription.getPlanCode(),
+                        subscription.getPlanName(),
+                        Utils.dateToString(subscription.getPlanStartsAt()),
+                        Utils.dateToString(subscription.getPlanEndsAt()),
+                        subscription.getPlanAmount(),
+                        subscription.getPaidAmount()
                 )).toList();
+
+        List<UserActivitiesResponse> activitiesRes = activities.stream()
+                .map(activity -> {
+                    Users user = userLookup.get(activity.getUserId());
+                    String userName = null;
+                    if (user != null){
+                        userName = Utils.getFullName(user.getFirstName(), user.getLastName());
+                    }
+                    return new UserActivitiesResponse(
+                            activity.getActivityId(), activity.getDescription(), activity.getUserId(), userName,
+                            Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
+                            activity.getSource(), activity.getActivityType()
+                    );
+                }).toList();
 
         return new HostelResponse(hostelV1.getHostelId(), hostelV1.getHostelName(), Utils.getInitials(hostelV1.getHostelName()),
                 hostelV1.getMobile(), hostelV1.getHouseNo(), hostelV1.getStreet(), hostelV1.getLandmark(), hostelV1.getCity(),
@@ -109,7 +197,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                 addImages, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants, noOfCheckedInTenants,
                 noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants, tenantList, Utils.dateToString(hostelV1.getCreatedAt()),
                 Utils.dateToTime(hostelV1.getCreatedAt()), ownerInfo, masters, staffs, hostelPlanResponse, billingRules, ebConfig,
-                subscriptionRes);
+                currentSubRes, otherSubsRes, subscriptionStatus, subscriptionRenewalTimeLeftDays, activitiesRes);
     }
 
     private static String buildFullAddress(HostelV1 hostelV1) {

@@ -2,6 +2,7 @@ package com.smartstay.console.responses.hostels;
 
 import com.smartstay.console.responses.bills.BillingRulesResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
+import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
 
 import java.util.List;
@@ -38,6 +39,10 @@ public record HostelResponse(String hostelId,
                              HostelPlan hostelPlan,
                              List<BillingRulesResponse> billingRules,
                              EbConfig ebConfig,
-                             List<SubscriptionResponse> subscriptions
+                             SubscriptionResponse currentSubscription,
+                             List<SubscriptionResponse> subscriptions,
+                             String subscriptionStatus,
+                             int renewalTimeLeftDays,
+                             List<UserActivitiesResponse> activities
 ) {
 }

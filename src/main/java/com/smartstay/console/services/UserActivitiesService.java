@@ -22,4 +22,8 @@ public class UserActivitiesService {
     public List<UserActivities> findLatestActivitiesByParentIds(List<String> parentIds){
         return userActivitiesRepository.findLatestActivityPerParent(parentIds);
     }
+
+    public List<UserActivities> getActivitiesByHostelId(String hostelId){
+        return userActivitiesRepository.findAllByHostelIdOrderByCreatedAtDesc(hostelId);
+    }
 }

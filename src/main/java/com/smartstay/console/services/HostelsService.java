@@ -22,10 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -155,11 +152,12 @@ public class HostelsService {
                 ).apply(users)).toList();
 
         List<Users> staffs = usersService.getStaffs(hostel);
-        Map<Users, Address> staffsAddressMap = staffs.stream()
-                .collect(Collectors.toMap(staff -> staff, Users::getAddress));
+//        Map<Users, Address> staffsAddressMap = staffs.stream()
+//                .collect(Collectors.toMap(staff -> staff, Users::getAddress));
         List<UsersResponse> staffsRes = staffs.stream()
                 .map(users -> new UsersResponseMapper(
-                        staffsAddressMap.get(users)
+//                        staffsAddressMap.get(users)
+                        null
                 ).apply(users)).toList();
 
         int noOfFloors = floorsService.getCountByHostelId(hostelId);
@@ -210,10 +208,17 @@ public class HostelsService {
             subscriptions = subscriptionService.getSubscriptionsByHostelId(hostelId);
         }
 
+        List<UserActivities> activities = userActivitiesService.getActivitiesByHostelId(hostelId);
+
+        Map<String, Users> userLookup = new HashMap<>();
+        userLookup.put(owner.getUserId(), owner);
+        masters.forEach(master -> userLookup.put(master.getUserId(), master));
+        staffs.forEach(staff -> userLookup.put(staff.getUserId(), staff));
+
         HostelResponse hostelDetails = new HostelDetailsMapper(
                 ownerInfo, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
                 noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
-                customerResponses, subscriptions, mastersRes, staffsRes
+                customerResponses, subscriptions, mastersRes, staffsRes, activities, userLookup
         ).apply(hostel);
 
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);
