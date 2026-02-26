@@ -23,8 +23,8 @@ public class HostelsController {
         return hostelsService.getAllHostels(page, size, hostelName);
     }
 
-    @GetMapping("/")
-    public ResponseEntity<?> getHostelByHostelId(@RequestParam("hostelId") String hostelId){
+    @GetMapping("/{hostelId}")
+    public ResponseEntity<?> getHostelByHostelId(@PathVariable String hostelId){
         return hostelsService.getHostelByHostelId(hostelId);
     }
 }
