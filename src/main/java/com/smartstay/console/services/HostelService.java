@@ -7,6 +7,9 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Set;
+
 @Service
 public class HostelService {
     @Autowired
@@ -30,5 +33,13 @@ public class HostelService {
 
     public void updateHostel(HostelV1 hostelV1) {
         hostelRepository.save(hostelV1);
+    }
+
+    public List<HostelV1> getHostelsByHostelIds(Set<String> hostelIds) {
+        return hostelRepository.findAllByHostelIdIn(hostelIds);
+    }
+
+    public List<HostelV1> getHostelsByHostelName(String hostelName) {
+        return hostelRepository.findByHostelNameContainingIgnoreCase(hostelName);
     }
 }

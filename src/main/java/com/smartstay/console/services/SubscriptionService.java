@@ -1,5 +1,6 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.Mapper.subscription.SubscriptionsResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.HostelPlan;
@@ -7,20 +8,22 @@ import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dao.Plans;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
-import com.smartstay.console.ennum.PlanType;
 import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.subscription.Subscription;
 import com.smartstay.console.repositories.SubscriptionRepository;
+import com.smartstay.console.responses.subscriptions.SubscriptionsResponse;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class SubscriptionService {
@@ -175,4 +178,88 @@ public class SubscriptionService {
         return subscriptionRepository.findByHostelId(hostelId);
     }
 
+    public ResponseEntity<?> getSubscriptions(int page, int size, String hostelName) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<com.smartstay.console.dao.Subscription> pagedSubscriptions;
+        Map<String, HostelV1> hostelMap;
+        List<com.smartstay.console.dao.Subscription> subscriptions;
+
+        if (hostelName != null && !hostelName.isBlank()) {
+
+            List<HostelV1> filteredHostels =
+                    hostelService.getHostelsByHostelName(hostelName);
+
+            Set<String> filteredHostelIds = filteredHostels.stream()
+                    .map(HostelV1::getHostelId)
+                    .collect(Collectors.toSet());
+
+            if (filteredHostelIds.isEmpty()) {
+                Map<String, Object> emptyResponse = new HashMap<>();
+                emptyResponse.put("content", List.of());
+                emptyResponse.put("currentPage", page + 1);
+                emptyResponse.put("pageSize", size);
+                emptyResponse.put("totalItems", 0);
+                emptyResponse.put("totalPages", 0);
+
+                return new ResponseEntity<>(emptyResponse, HttpStatus.OK);
+            } else {
+                pagedSubscriptions = subscriptionRepository
+                        .findByHostelIdInOrderByCreatedAtDesc(filteredHostelIds, pageable);
+            }
+
+            subscriptions = pagedSubscriptions.getContent();
+
+            hostelMap = filteredHostels.stream()
+                    .collect(Collectors.toMap(HostelV1::getHostelId,
+                            hostel -> hostel));
+
+        } else {
+            pagedSubscriptions = subscriptionRepository
+                    .findAllByOrderByCreatedAtDesc(pageable);
+
+            subscriptions = pagedSubscriptions.getContent();
+
+            Set<String> hostelIds = subscriptions.stream()
+                    .map(com.smartstay.console.dao.Subscription::getHostelId)
+                    .collect(Collectors.toSet());
+
+            List<HostelV1> hostels = hostelService.getHostelsByHostelIds(hostelIds);
+
+            hostelMap = hostels.stream()
+                    .collect(Collectors.toMap(HostelV1::getHostelId,
+                            hostel -> hostel));
+        }
+
+        List<SubscriptionsResponse> responseList = subscriptions.stream()
+                .map(subscription -> new SubscriptionsResMapper(
+                        hostelMap.getOrDefault(subscription.getHostelId(), null)
+                ).apply(subscription)).toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", responseList);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedSubscriptions.getTotalElements());
+        response.put("totalPages", pagedSubscriptions.getTotalPages());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }

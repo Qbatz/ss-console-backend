@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
@@ -27,4 +28,8 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
     List<HostelV1> findAllByParentIdIn(List<String> parentIds);
 
     HostelV1 findByHostelId(String hostelId);
+
+    List<HostelV1> findAllByHostelIdIn(Set<String> hostelIds);
+
+    List<HostelV1> findByHostelNameContainingIgnoreCase(String hostelName);
 }
