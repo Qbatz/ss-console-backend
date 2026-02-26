@@ -13,9 +13,9 @@ import java.util.List;
 public interface AgentRepository extends JpaRepository<Agent, String> {
     @Query("""
             SELECT ag FROM Agent ag WHERE ag.agentEmailId=:agentEmailId
+            AND ag.isActive = true
             """)
     Agent findByAgentEmailId(String agentEmailId);
-    Agent findByAgentId(String userId);
     Agent findByAgentIdAndIsActiveTrue(String userId);
     List<Agent> findByRoleIdAndIsActiveTrue(long roleId);
     @Query("""
@@ -27,5 +27,5 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
        """)
     List<RoleCountProjection> countActiveAgentsByRoleIds(@Param("roleIds") List<Long> roleIds);
 
-    List<Agent> findAllByIsMockAgentFalseAndAgentIdNotOrderByCreatedAtDesc(String agentId);
+    List<Agent> findAllByIsMockAgentFalseAndIsActiveTrueAndAgentIdNotOrderByCreatedAtDesc(String agentId);
 }

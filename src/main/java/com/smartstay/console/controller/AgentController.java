@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.repository.query.Param;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,5 +40,10 @@ public class  AgentController {
     @GetMapping("/get-all-agents")
     public ResponseEntity<?> getAllAgents(){
         return agentService.getAllAgents();
+    }
+
+    @PutMapping("/deactivate-agent")
+    public ResponseEntity<?> deactivateAgent(@Param("agentId") String agentId){
+        return agentService.deactivateAgent(agentId);
     }
 }

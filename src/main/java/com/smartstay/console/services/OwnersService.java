@@ -50,7 +50,10 @@ public class OwnersService {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        Agent agent = agentRepository.findByAgentId(authentication.getName());
+        Agent agent = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
 
         if (resetPassword == null) {
             return new ResponseEntity<>(Constants.PAYLOAD_REQUIRED, HttpStatus.BAD_REQUEST);

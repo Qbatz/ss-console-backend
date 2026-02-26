@@ -1,5 +1,6 @@
 package com.smartstay.console.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.agent.AgentResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
@@ -59,7 +60,7 @@ public class AgentService {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-        Agent agents = agentRepository.findByAgentId(authentication.getName());
+        Agent agents = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
         if (agents == null) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -107,7 +108,7 @@ public class AgentService {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-        Agent agent = agentRepository.findByAgentId(authentication.getName());
+        Agent agent = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -164,7 +165,10 @@ public class AgentService {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        Agent agent = agentRepository.findByAgentId(authentication.getName());
+        Agent agent = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
 
         Agent newAgent = new Agent();
 
@@ -204,7 +208,7 @@ public class AgentService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        Agent agent = agentRepository.findByAgentId(authentication.getName());
+        Agent agent = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -214,7 +218,7 @@ public class AgentService {
         }
 
         List<Agent> agents = agentRepository
-                .findAllByIsMockAgentFalseAndAgentIdNotOrderByCreatedAtDesc(agent.getAgentId());
+                .findAllByIsMockAgentFalseAndIsActiveTrueAndAgentIdNotOrderByCreatedAtDesc(agent.getAgentId());
 
         Set<Long> roleIds = agents.stream()
                 .map(Agent::getRoleId)
@@ -240,5 +244,35 @@ public class AgentService {
                 .toList();
 
         return new ResponseEntity<>(agentsRes, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> deactivateAgent(String agentId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Agents.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Agent deactivatingAgent = agentRepository.findByAgentIdAndIsActiveTrue(agentId);
+        Agent oldAgent = new ObjectMapper().convertValue(deactivatingAgent, Agent.class);
+        if (deactivatingAgent == null){
+            return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        deactivatingAgent.setIsActive(false);
+        deactivatingAgent = agentRepository.save(deactivatingAgent);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.AGENT,
+                agentId, oldAgent, deactivatingAgent);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 }
