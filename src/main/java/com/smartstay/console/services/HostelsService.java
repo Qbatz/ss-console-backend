@@ -53,6 +53,18 @@ public class HostelsService {
     private BookingsService bookingsService;
     @Autowired
     private CustomersService customersService;
+    @Autowired
+    private InvoiceV1Service invoiceV1Service;
+    @Autowired
+    private CustomerConfigService customersConfigService;
+    @Autowired
+    private CustomerDocumentService customerDocumentService;
+    @Autowired
+    private CustomersCredentialService customersCredentialService;
+    @Autowired
+    private AmenityRequestService amenityRequestService;
+    @Autowired
+    private ComplaintService complaintService;
 
     public ResponseEntity<?> getAllHostels(int page, int size, String hostelName) {
         if (!authentication.isAuthenticated()) {
@@ -222,5 +234,37 @@ public class HostelsService {
         ).apply(hostel);
 
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> resetHostelTenats(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostel_Reset.getId(), Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        HostelV1 hostelV1 = hostelRepository.findByHostelId(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        List<Customers> customersList = customersService.findCustomersByHostelId(hostelId);
+        List<String> customerIds = customersList
+                .stream()
+                .map(Customers::getCustomerId)
+                .toList();
+
+        List<InvoicesV1> invoicesList = invoiceV1Service.findByListOfCustomers(hostelId, customerIds);
+        List<BookingsV1> listBookings = bookingsService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<CustomersConfig> listConfigs = customersConfigService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<CustomerDocuments> listCustomerDocuments = customerDocumentService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<CustomerCredentials> listCustomerCredentials = customersCredentialService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<ComplaintsV1> complaints = complaintService.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
+        return null;
     }
 }

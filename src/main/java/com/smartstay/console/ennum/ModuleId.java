@@ -15,7 +15,8 @@ public enum ModuleId {
     Cities(12),
     States(13),
     Owners(14),
-    Tenant_Summary(15);
+    Tenant_Summary(15),
+    Hostel_Reset(16);
 
 
     private final int id;

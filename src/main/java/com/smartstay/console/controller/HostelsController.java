@@ -27,4 +27,9 @@ public class HostelsController {
     public ResponseEntity<?> getHostelByHostelId(@PathVariable String hostelId){
         return hostelsService.getHostelByHostelId(hostelId);
     }
+
+    @PostMapping("/hard-reset/{hostelId}")
+    public ResponseEntity<?> hardReserHostelTenants(@PathVariable("hostelId") String hostelId) {
+        return hostelsService.resetHostelTenats(hostelId);
+    }
 }

@@ -16,4 +16,8 @@ public class BookingsService {
     public List<BookingsV1> getBookingsByHostelId(String hostelId) {
         return bookingsRepository.findAllByHostelId(hostelId);
     }
+
+    public List<BookingsV1> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
+        return bookingsRepository.findByHostelIdAndCustomerId(hostelId, customerIds);
+    }
 }

@@ -18,10 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -123,5 +120,14 @@ public class CustomersService {
         response.put("totalPages", pagedTenants.getTotalPages());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public List<Customers> findCustomersByHostelId(String hostelId) {
+        List<Customers> listCustomers = customersRepository.findByHostelId(hostelId);
+        if (listCustomers == null) {
+            listCustomers = new ArrayList<>();
+        }
+
+        return listCustomers;
     }
 }

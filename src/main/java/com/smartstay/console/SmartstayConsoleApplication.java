@@ -201,26 +201,42 @@ public class SmartstayConsoleApplication {
                 module15.setModuleName("Tenant Summary");
                 repository.save(module15);
             }
+
+            AgentModules module16 = repository.findByModuleName("Reset hostel");
+            if (module16 == null) {
+                module16 = new AgentModules();
+                module16.setModuleName("Reset hostel");
+                repository.save(module16);
+            }
         };
     }
 
-//    @Bean
-//    CommandLineRunner addNewModuleToExistingRoles(AgentRolesRepository rolesRepository) {
-//        return args -> {
-//            List<AgentRoles> agentRoles = rolesRepository.findAll()
-//                    .stream()
-//                    .map(i -> {
-//                        List<RolesPermission> agentRolesPermission = new ArrayList<>(i.getPermissions());
-//                        agentRolesPermission.add(new RolesPermission(15, false, false, false, false));
-//
-//                        i.setPermissions(agentRolesPermission);
-//                        return i;
-//                    })
-//                    .toList();
-//
-//            rolesRepository.saveAll(agentRoles);
-//        };
-//    }
+    @Bean
+    CommandLineRunner addNewModuleToExistingRoles(AgentRolesRepository rolesRepository) {
+        return args -> {
+            List<AgentRoles> agentRoles = rolesRepository.findAll()
+                    .stream()
+                    .map(i -> {
+                        if (i.getRoleId() == 1) {
+                            List<RolesPermission> agentRolesPermission = new ArrayList<>(i.getPermissions());
+                            agentRolesPermission.add(new RolesPermission(16, true, true, true, true));
+
+                            i.setPermissions(agentRolesPermission);
+                        }
+                        else {
+                            List<RolesPermission> agentRolesPermission = new ArrayList<>(i.getPermissions());
+                            agentRolesPermission.add(new RolesPermission(16, false, false, false, false));
+
+                            i.setPermissions(agentRolesPermission);
+                        }
+
+                        return i;
+                    })
+                    .toList();
+
+            rolesRepository.saveAll(agentRoles);
+        };
+    }
 
 //    @Bean
 //    CommandLineRunner addNewModuleToExistingRoles(AgentRolesRepository rolesRepository) {
