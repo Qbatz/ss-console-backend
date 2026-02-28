@@ -4,7 +4,9 @@ import com.smartstay.console.dao.Rooms;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface RoomsRepository extends JpaRepository<Rooms, Integer> {
-    int countByHostelId(String hostelId);
+    List<Rooms> findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
 }
