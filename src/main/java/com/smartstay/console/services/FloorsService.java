@@ -11,6 +11,6 @@ public class FloorsService {
     FloorsRepository floorsRepository;
 
     public int getCountByHostelId(String hostelId){
-        return floorsRepository.countByHostelId(hostelId);
+        return floorsRepository.countByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
     }
 }

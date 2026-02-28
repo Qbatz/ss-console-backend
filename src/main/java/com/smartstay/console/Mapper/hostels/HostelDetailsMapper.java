@@ -24,6 +24,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
     int noOfNoticeTenants;
     int noOfVacatedTenants;
     int noOfTerminatedTenants;
+    List<SharingTypeResponse> sharingTypeList;
+    List<AmenitiesV1> amenities;
     List<CustomerResponse> tenantList;
     List<Subscription> subscriptions;
     List<UsersResponse> masters;
@@ -41,6 +43,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                                int noOfNoticeTenants,
                                int noOfVacatedTenants,
                                int noOfTerminatedTenants,
+                               List<SharingTypeResponse> sharingTypeList,
+                               List<AmenitiesV1> amenities,
                                List<CustomerResponse> tenantList,
                                List<Subscription> subscriptions,
                                List<UsersResponse> masters,
@@ -57,6 +61,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
         this.noOfNoticeTenants = noOfNoticeTenants;
         this.noOfVacatedTenants = noOfVacatedTenants;
         this.noOfTerminatedTenants = noOfTerminatedTenants;
+        this.sharingTypeList = sharingTypeList;
+        this.amenities = amenities;
         this.tenantList = tenantList;
         this.subscriptions = subscriptions;
         this.masters = masters;
@@ -191,13 +197,20 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                     );
                 }).toList();
 
+        List<AmenitiesResponse> amenitiesRes = amenities.stream()
+                .map(amenity -> new AmenitiesResponse(amenity.getAmenityId(), amenity.getAmenityName(),
+                        amenity.getAmenityAmount(), amenity.getDescription(), amenity.getTermsAndCondition(),
+                        amenity.getIsProRate()))
+                .toList();
+
         return new HostelResponse(hostelV1.getHostelId(), hostelV1.getHostelName(), Utils.getInitials(hostelV1.getHostelName()),
                 hostelV1.getMobile(), hostelV1.getHouseNo(), hostelV1.getStreet(), hostelV1.getLandmark(), hostelV1.getCity(),
                 hostelV1.getState(), hostelV1.getCountry(), hostelV1.getPincode(), fullAddress, hostelV1.getMainImage(),
-                addImages, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants, noOfCheckedInTenants,
-                noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants, tenantList, Utils.dateToString(hostelV1.getCreatedAt()),
-                Utils.dateToTime(hostelV1.getCreatedAt()), ownerInfo, masters, staffs, hostelPlanResponse, billingRules, ebConfig,
-                currentSubRes, otherSubsRes, subscriptionStatus, subscriptionRenewalTimeLeftDays, activitiesRes);
+                addImages, amenitiesRes, sharingTypeList, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
+                noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants, tenantList,
+                Utils.dateToString(hostelV1.getCreatedAt()), Utils.dateToTime(hostelV1.getCreatedAt()), ownerInfo, masters, staffs,
+                hostelPlanResponse, billingRules, ebConfig, currentSubRes, otherSubsRes, subscriptionStatus, subscriptionRenewalTimeLeftDays,
+                activitiesRes);
     }
 
     private static String buildFullAddress(HostelV1 hostelV1) {
