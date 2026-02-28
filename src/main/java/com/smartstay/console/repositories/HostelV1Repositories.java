@@ -30,4 +30,6 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
     HostelV1 findByHostelId(String hostelId);
 
     List<HostelV1> findAllByHostelIdIn(Set<String> hostelIds);
+
+    List<HostelV1> findByHostelNameContainingIgnoreCase(String hostelName);
 }

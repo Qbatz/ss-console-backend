@@ -21,4 +21,11 @@ public class SubscriptionController {
     public ResponseEntity<?> subscribeHostel(@PathVariable("hostelId") String hostelId, @RequestBody Subscription subscription) {
         return subscriptionService.subscribeHostel(hostelId, subscription);
     }
+
+    @GetMapping("")
+    public ResponseEntity<?> getSubscriptions(@RequestParam(value = "page", defaultValue = "0") int page,
+                                              @RequestParam(value = "size", defaultValue = "10") int size,
+                                              @RequestParam(value = "hostelName", required = false) String hostelName){
+        return subscriptionService.getSubscriptions(page, size, hostelName);
+    }
 }

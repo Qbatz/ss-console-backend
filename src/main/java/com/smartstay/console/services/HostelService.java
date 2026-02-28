@@ -38,4 +38,8 @@ public class HostelService {
     public List<HostelV1> getHostelsByHostelIds(Set<String> hostelIds) {
         return hostelRepository.findAllByHostelIdIn(hostelIds);
     }
+
+    public List<HostelV1> getHostelsByHostelName(String hostelName) {
+        return hostelRepository.findByHostelNameContainingIgnoreCase(hostelName);
+    }
 }

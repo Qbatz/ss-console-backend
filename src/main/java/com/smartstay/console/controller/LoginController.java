@@ -39,8 +39,8 @@ public class LoginController {
         return loginService.verifyAuthToken(code, location, authorizeUrl);
     }
 
-    @GetMapping("/mock-agent-login")
-    public ResponseEntity<?> mockAgentLogin(@RequestParam("email") String email){
+    @GetMapping("/mock-agent-login/{email}")
+    public ResponseEntity<?> mockAgentLogin(@PathVariable String email){
         return loginService.verifyMockAuthToken(email);
     }
 
