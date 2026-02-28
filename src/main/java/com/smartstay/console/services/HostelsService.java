@@ -7,14 +7,12 @@ import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.Mapper.users.UsersResponseMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.ennum.BookingsStatus;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.responses.customers.CustomerResponse;
-import com.smartstay.console.responses.hostels.HostelList;
-import com.smartstay.console.responses.hostels.HostelResponse;
-import com.smartstay.console.responses.hostels.Hostels;
-import com.smartstay.console.responses.hostels.OwnerInfo;
+import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.users.UsersResponse;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +51,8 @@ public class HostelsService {
     private BookingsService bookingsService;
     @Autowired
     private CustomersService customersService;
+    @Autowired
+    private AmenitiesService amenitiesService;
 
     public ResponseEntity<?> getAllHostels(int page, int size, String hostelName) {
         if (!authentication.isAuthenticated()) {
@@ -160,16 +160,80 @@ public class HostelsService {
                         null
                 ).apply(users)).toList();
 
+        List<Rooms> rooms = roomsService.getRoomsByHostelId(hostelId);
+        List<Beds> beds = bedsService.getBedsByHostelId(hostelId);
+        List<BookingsV1> bookings = bookingsService.getBookingsByHostelId(hostelId);
+
+        Map<Integer, List<Rooms>> roomsBySharing = rooms.stream()
+                .collect(Collectors.groupingBy(Rooms::getSharingType));
+
+        Map<Integer, List<Beds>> bedsByRoom = beds.stream()
+                .collect(Collectors.groupingBy(Beds::getRoomId));
+
+        Set<String> activeStatuses = Set.of(
+                BookingsStatus.CHECKIN.name(),
+                BookingsStatus.BOOKED.name(),
+                BookingsStatus.NOTICE.name()
+        );
+
+        Set<Integer> occupiedBedIds = bookings.stream()
+                .filter(b -> activeStatuses.contains(b.getCurrentStatus()))
+                .map(BookingsV1::getBedId)
+                .collect(Collectors.toSet());
+
+        List<SharingTypeResponse> sharingTypeList = new ArrayList<>();
+
+        for (Map.Entry<Integer, List<Rooms>> entry : roomsBySharing.entrySet()) {
+
+            Integer sharingType = entry.getKey();
+            List<Rooms> sharingRooms = entry.getValue();
+
+            int noOfRooms = sharingRooms.size();
+
+            int noOfBeds = 0;
+            int noOfOccupiedBeds = 0;
+            int noOfAvailableRooms = 0;
+
+            for (Rooms room : sharingRooms) {
+
+                List<Beds> roomBeds = bedsByRoom.getOrDefault(room.getRoomId(), Collections.emptyList());
+
+                int totalBedsInRoom = roomBeds.size();
+
+                long occupiedBedsInRoom = roomBeds.stream()
+                        .filter(b -> occupiedBedIds.contains(b.getBedId()))
+                        .count();
+
+                noOfBeds += totalBedsInRoom;
+                noOfOccupiedBeds += (int) occupiedBedsInRoom;
+
+                if (occupiedBedsInRoom < totalBedsInRoom) {
+                    noOfAvailableRooms++;
+                }
+            }
+
+            SharingTypeResponse sharingTypeResponse = new SharingTypeResponse(
+                    sharingType,
+                    sharingType + "-Sharing",
+                    noOfRooms,
+                    noOfBeds,
+                    noOfOccupiedBeds,
+                    noOfAvailableRooms
+            );
+
+            sharingTypeList.add(sharingTypeResponse);
+        }
+
+        sharingTypeList.sort(Comparator.comparing(SharingTypeResponse::sharingType));
+
         int noOfFloors = floorsService.getCountByHostelId(hostelId);
-        int noOfRooms = roomsService.getCountByHostelId(hostelId);
-        int noOfBeds = bedsService.getCountByHostelId(hostelId);
+        int noOfRooms = rooms.size();
+        int noOfBeds = beds.size();
         int noOfBookedTenants = 0;
         int noOfCheckedInTenants = 0;
         int noOfNoticeTenants = 0;
         int noOfVacatedTenants = 0;
         int noOfTerminatedTenants = 0;
-
-        List<BookingsV1> bookings = bookingsService.getBookingsByHostelId(hostelId);
 
         for (BookingsV1 booking : bookings){
             if (booking.getCurrentStatus().equalsIgnoreCase(BookingsStatus.BOOKED.name())){
@@ -215,10 +279,13 @@ public class HostelsService {
         masters.forEach(master -> userLookup.put(master.getUserId(), master));
         staffs.forEach(staff -> userLookup.put(staff.getUserId(), staff));
 
+        List<AmenitiesV1> amenities = amenitiesService.getAmenitiesByHostelId(hostelId);
+
         HostelResponse hostelDetails = new HostelDetailsMapper(
                 ownerInfo, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
                 noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
-                customerResponses, subscriptions, mastersRes, staffsRes, activities, userLookup
+                sharingTypeList, amenities, customerResponses, subscriptions, mastersRes, staffsRes,
+                activities, userLookup
         ).apply(hostel);
 
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);
