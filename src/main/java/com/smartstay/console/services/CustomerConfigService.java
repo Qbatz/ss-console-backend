@@ -14,4 +14,8 @@ public class CustomerConfigService {
     public List<CustomersConfig> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
         return customersConfigReposotory.findByHostelIdAndCustomerIds(hostelId, customerIds);
     }
+
+    public void deleteAll(List<CustomersConfig> listConfigs) {
+        customersConfigReposotory.deleteAll(listConfigs);
+    }
 }

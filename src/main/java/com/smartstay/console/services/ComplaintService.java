@@ -16,4 +16,8 @@ public class ComplaintService {
     public List<ComplaintsV1> findByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds) {
         return complaintsRepository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
     }
+
+    public void deleteAll(List<ComplaintsV1> complaints) {
+        complaintsRepository.deleteAll(complaints);
+    }
 }

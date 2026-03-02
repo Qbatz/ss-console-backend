@@ -15,4 +15,8 @@ public class InvoiceV1Service {
     public List<InvoicesV1> findByListOfCustomers(String hostelId, List<String> customerIds) {
         return invoiceV1Repository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
     }
+
+    public void deleteAllInvoices(List<InvoicesV1> invoicesList) {
+        invoiceV1Repository.deleteAll(invoicesList);
+    }
 }

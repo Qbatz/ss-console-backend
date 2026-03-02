@@ -20,4 +20,8 @@ public class BookingsService {
     public List<BookingsV1> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
         return bookingsRepository.findByHostelIdAndCustomerId(hostelId, customerIds);
     }
+
+    public void deleteBookings(List<BookingsV1> listBookings) {
+        bookingsRepository.deleteAll(listBookings);
+    }
 }

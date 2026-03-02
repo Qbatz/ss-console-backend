@@ -130,4 +130,8 @@ public class CustomersService {
 
         return listCustomers;
     }
+
+    public void deleteAll(List<Customers> customersList) {
+        customersRepository.deleteAll(customersList);
+    }
 }

@@ -1,5 +1,6 @@
 package com.smartstay.console.config;
 
+import com.smartstay.console.exceptions.SmartStayException;
 import com.smartstay.console.services.JWTService;
 import com.smartstay.console.services.MyUserDetailService;
 import jakarta.servlet.FilterChain;
@@ -69,7 +70,7 @@ public class JWTFilter extends OncePerRequestFilter {
                 filterChain.doFilter(request, response);
             }
         }
-        catch (Exception e) {
+        catch (SmartStayException e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.getWriter().write("{\"error\": \"Please login again\"}");

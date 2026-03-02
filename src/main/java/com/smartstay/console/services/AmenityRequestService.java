@@ -15,4 +15,8 @@ public class AmenityRequestService {
     public List<AmenityRequest> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
         return amenityRequestRepository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
     }
+
+    public void deleteAmenities(List<AmenityRequest> listAmenityRequests) {
+        amenityRequestRepository.deleteAll(listAmenityRequests);
+    }
 }

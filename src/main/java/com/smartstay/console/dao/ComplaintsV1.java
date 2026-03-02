@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.util.Date;
 import java.util.List;
 
-@Entity
+@Entity(name = "complaintsv1")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

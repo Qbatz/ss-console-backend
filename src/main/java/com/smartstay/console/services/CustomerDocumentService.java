@@ -15,4 +15,8 @@ public class CustomerDocumentService {
     public List<CustomerDocuments> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
         return customerDocumentRepository.findByHostelIdAndCustomerIds(hostelId, customerIds);
     }
+
+    public void deleteDocuments(List<CustomerDocuments> listCustomerDocuments) {
+        customerDocumentRepository.deleteAll(listCustomerDocuments);
+    }
 }

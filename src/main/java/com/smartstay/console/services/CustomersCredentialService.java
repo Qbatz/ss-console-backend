@@ -15,4 +15,7 @@ public class CustomersCredentialService {
     public List<CustomerCredentials> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
         return null;
     }
+
+    public void deleteCredentials(List<CustomerCredentials> listCustomerCredentials) {
+    }
 }
