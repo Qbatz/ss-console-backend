@@ -18,6 +18,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
                                                                                                              Pageable pageable);
 
     Page<Customers> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    List<Customers> findByHostelId(String hostelId);
 
 
 }

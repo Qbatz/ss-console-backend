@@ -37,10 +37,10 @@ public class GlobalExceptionHandler {
 //        return new ResponseEntity<>("Something went wrong", HttpStatus.BAD_REQUEST);
 //    }
 
-    @ExceptionHandler(SignatureException.class)
-    public ResponseEntity<?> handleSignatureMismatchException(SignatureException se) {
-        return new ResponseEntity<>("Something went wrong. Please login again", HttpStatus.UNAUTHORIZED);
-    }
+//    @ExceptionHandler(SignatureException.class)
+//    public ResponseEntity<?> handleSignatureMismatchException(SignatureException se) {
+//        return new ResponseEntity<>("Something went wrong. Please login again", HttpStatus.UNAUTHORIZED);
+//    }
 
     @ExceptionHandler(SmartStayException.class)
     public ResponseEntity<?> handleLogoutException(SmartStayException sse) {

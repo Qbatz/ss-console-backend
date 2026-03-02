@@ -8,13 +8,16 @@ import com.smartstay.console.Mapper.users.UsersResponseMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
+import com.smartstay.console.ennum.BankSource;
 import com.smartstay.console.ennum.BookingsStatus;
 import com.smartstay.console.ennum.ModuleId;
+import com.smartstay.console.repositories.BankingRepository;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.users.UsersResponse;
 import com.smartstay.console.utils.Utils;
+import jdk.jfr.Unsigned;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -53,6 +56,38 @@ public class HostelsService {
     private CustomersService customersService;
     @Autowired
     private AmenitiesService amenitiesService;
+    @Autowired
+    private InvoiceV1Service invoiceV1Service;
+    @Autowired
+    private CustomerConfigService customersConfigService;
+    @Autowired
+    private CustomerDocumentService customerDocumentService;
+    @Autowired
+    private CustomersCredentialService customersCredentialService;
+    @Autowired
+    private AmenityRequestService amenityRequestService;
+    @Autowired
+    private ComplaintService complaintService;
+    @Autowired
+    private CreditDebitNotesService creditDebitNotesService;
+    @Autowired
+    private CustomersAmenityService customersAmenityService;
+    @Autowired
+    private CustomerBedHistoryService customerBedHistoryService;
+    @Autowired
+    private CustomerEbHistoryService customerEbHistoryService;
+    @Autowired
+    private CustomerWalletService customerWalletService;
+    @Autowired
+    private ElectricityReadingsService electricityReadingsService;
+    @Autowired
+    private HostelReadingService hostelReadingService;
+    @Autowired
+    private TransactionV1Service transactionV1Service;
+    @Autowired
+    private BankTransactionService bankTransactionService;
+    @Autowired
+    private BankingService bankingService;
 
     public ResponseEntity<?> getAllHostels(int page, int size, String hostelName) {
         if (!authentication.isAuthenticated()) {
@@ -289,5 +324,160 @@ public class HostelsService {
         ).apply(hostel);
 
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> resetHostelTenats(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostel_Reset.getId(), Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+        HostelV1 hostelV1 = hostelRepository.findByHostelId(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        List<Customers> customersList = customersService.findCustomersByHostelId(hostelId);
+        List<String> customerIds = customersList
+                .stream()
+                .map(Customers::getCustomerId)
+                .toList();
+
+        List<InvoicesV1> invoicesList = invoiceV1Service.findByListOfCustomers(hostelId, customerIds);
+        List<BookingsV1> listBookings = bookingsService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<CustomersConfig> listConfigs = customersConfigService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<CustomerDocuments> listCustomerDocuments = customerDocumentService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<CustomerCredentials> listCustomerCredentials = customersCredentialService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<ComplaintsV1> complaints = complaintService.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
+        List<CreditDebitNotes> listCreditDebits = creditDebitNotesService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<CustomersAmenity> listCustomersAmenity = customersAmenityService.findByHostelIdAndCustomerIdIs(customerIds);
+        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistoryService.findByCustomerIds(hostelId, customerIds);
+        List<CustomersEbHistory> listCustomerEbHistory = customerEbHistoryService.findByCustomerIdAndHostelId(hostelId, customerIds);
+        List<CustomerWalletHistory> listCustomersWallet = customerWalletService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<ElectricityReadings> listElectricityReadings = electricityReadingsService.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
+        List<HostelReadings> listHostelReadings = hostelReadingService.findByHostelId(hostelId);
+        List<TransactionV1> listTransactions = transactionV1Service.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<Beds> listBeds = bedsService.findOccupiedBeds(hostelId);
+        List<BankTransactionsV1> listBankTransactions = bankTransactionService.getAllTransactions(hostelId);
+        List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
+
+        List<BankTransactionsV1> listItemsExpense = listBankTransactions
+                .stream()
+                .filter(i -> i.getSource().equalsIgnoreCase(BankSource.EXPENSE.name()))
+                .toList();
+
+        List<BankTransactionsV1> listItemsOtherThanExpense = listBankTransactions
+                .stream()
+                .filter(i -> !i.getSource().equalsIgnoreCase(BankSource.EXPENSE.name()))
+                .toList();
+
+        double expenseAmount = listItemsExpense
+                .stream()
+                .mapToDouble(BankTransactionsV1::getAmount)
+                .sum();
+
+        HashMap<String, Double> bankBalances = new HashMap<>();
+
+        if (invoicesList != null && !invoicesList.isEmpty()) {
+            invoiceV1Service.deleteAllInvoices(invoicesList);
+        }
+        if (listBookings != null && !listBookings.isEmpty()) {
+            bookingsService.deleteBookings(listBookings);
+        }
+        if (listConfigs != null && !listConfigs.isEmpty()) {
+            customersConfigService.deleteAll(listConfigs);
+        }
+        if (listCustomerDocuments != null && !listCustomerDocuments.isEmpty()) {
+            customerDocumentService.deleteDocuments(listCustomerDocuments);
+        }
+        if (listCustomerCredentials != null && !listCustomerCredentials.isEmpty()) {
+            customersCredentialService.deleteCredentials(listCustomerCredentials);
+        }
+        if (listAmenityRequests != null && !listAmenityRequests.isEmpty()) {
+            amenityRequestService.deleteAmenities(listAmenityRequests);
+        }
+        if (complaints != null && !complaints.isEmpty()) {
+            complaintService.deleteAll(complaints);
+        }
+        if (listCreditDebits != null && !listCreditDebits.isEmpty()) {
+            creditDebitNotesService.deleteAll(listCreditDebits);
+        }
+        if (listCustomersAmenity != null && !listCustomersAmenity.isEmpty()) {
+            customersAmenityService.deleteAll(listCustomersAmenity);
+        }
+        if (listCustomerBedHistory != null && !listCustomerBedHistory.isEmpty()) {
+            customerBedHistoryService.deleteAll(listCustomerBedHistory);
+        }
+        if (listCustomerEbHistory != null && !listCustomerEbHistory.isEmpty()) {
+            customerEbHistoryService.deleteAll(listCustomerEbHistory);
+        }
+        if (listCustomersWallet != null && !listCustomersWallet.isEmpty()) {
+            customerWalletService.deleteAll(listCustomersWallet);
+        }
+        if (listElectricityReadings != null && !listElectricityReadings.isEmpty()) {
+            electricityReadingsService.deleteAll(listElectricityReadings);
+        }
+        if (listHostelReadings != null && !listHostelReadings.isEmpty()) {
+            hostelReadingService.deleteAll(listHostelReadings);
+        }
+        if (listTransactions != null && !listTransactions.isEmpty()) {
+            double transactionAmount = 0.0;
+            listTransactions.forEach(item -> {
+                if (bankBalances.containsKey(item.getBankId())) {
+                    if (item.getType() == null) {
+                        double amount = bankBalances.get(item.getBankId());
+                        amount = amount + item.getPaidAmount();
+                        bankBalances.put(item.getBankId(), amount);
+                    }
+                    else {
+                        double amount = bankBalances.get(item.getBankId());
+                        amount = amount  + (-1 * item.getPaidAmount());
+                        bankBalances.put(item.getBankId(), amount);
+                    }
+
+
+                }
+                else {
+                    if (item.getType() == null) {
+                        bankBalances.put(item.getBankId(), item.getPaidAmount());
+                    }
+                    else {
+                        bankBalances.put(item.getBankId(), item.getPaidAmount() * -1);
+                    }
+                }
+
+            });
+            transactionV1Service.deleteALl(listTransactions);
+        }
+        if (listBeds != null && !listBeds.isEmpty()) {
+            bedsService.makeAllBedAvailabe(listBeds);
+        }
+        if (customersList != null && !listBeds.isEmpty()) {
+            customersService.deleteAll(customersList);
+        }
+        if (listItemsOtherThanExpense != null && !listItemsOtherThanExpense.isEmpty()) {
+            bankTransactionService.deleteItemsOtherThanExpense(listItemsOtherThanExpense);
+        }
+        if (bankingList != null && !bankingList.isEmpty()) {
+            List<BankingV1> newBalanceAmounts = bankingList
+                    .stream()
+                    .map(i -> {
+                        if (bankBalances != null && bankBalances.get(i.getBankId()) != null) {
+                            double amount = bankBalances.get(i.getBankId());
+                            i.setBalance(i.getBalance() - amount);
+                        }
+
+                        return i;
+                    })
+                    .toList();
+            bankingService.updateBankAccount(newBalanceAmounts);
+        }
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }
