@@ -11,13 +11,12 @@ import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.ennum.BankSource;
 import com.smartstay.console.ennum.BookingsStatus;
 import com.smartstay.console.ennum.ModuleId;
-import com.smartstay.console.repositories.BankingRepository;
+import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.users.UsersResponse;
 import com.smartstay.console.utils.Utils;
-import jdk.jfr.Unsigned;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -326,7 +325,7 @@ public class HostelsService {
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> resetHostelTenats(String hostelId) {
+    public ResponseEntity<?> resetHostelTenant(String hostelId, HostelIdPayload hostelIdPayload) {
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -340,6 +339,10 @@ public class HostelsService {
         HostelV1 hostelV1 = hostelRepository.findByHostelId(hostelId);
         if (hostelV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!hostelV1.getHostelId().equals(hostelIdPayload.hostelId())){
+            return new ResponseEntity<>(Utils.HOSTEL_ID_MISMATCH, HttpStatus.BAD_REQUEST);
         }
 
         List<Customers> customersList = customersService.findCustomersByHostelId(hostelId);
