@@ -9,6 +9,7 @@ import java.util.List;
 
 @Service
 public class ComplaintService {
+
     @Autowired
     private ComplaintsRepository complaintsRepository;
 
@@ -19,5 +20,9 @@ public class ComplaintService {
 
     public void deleteAll(List<ComplaintsV1> complaints) {
         complaintsRepository.deleteAll(complaints);
+    }
+
+    public List<ComplaintsV1> findByHostelIdAndCustomerId(String hostelId, String customerId) {
+        return complaintsRepository.findByHostelIdAndCustomerId(hostelId, customerId);
     }
 }

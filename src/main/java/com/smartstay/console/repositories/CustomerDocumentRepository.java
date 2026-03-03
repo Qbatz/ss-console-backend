@@ -13,4 +13,6 @@ public interface CustomerDocumentRepository extends JpaRepository<CustomerDocume
             SELECT cd FROM CustomerDocuments cd WHERE cd.hostelId=:hostelId AND cd.customerId IN (:customerIds)
             """)
     List<CustomerDocuments> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds);
+
+    List<CustomerDocuments> findByHostelIdAndCustomerId(String hostelId, String customerId);
 }

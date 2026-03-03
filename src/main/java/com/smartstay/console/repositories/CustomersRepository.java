@@ -20,5 +20,5 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     Page<Customers> findAllByOrderByCreatedAtDesc(Pageable pageable);
     List<Customers> findByHostelId(String hostelId);
 
-
+    Customers findByCustomerIdAndHostelId(String customerId, String hostelId);
 }

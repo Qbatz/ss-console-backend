@@ -2,11 +2,10 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.customers.CustomerSumMapper;
 import com.smartstay.console.config.Authentication;
-import com.smartstay.console.dao.Agent;
-import com.smartstay.console.dao.Customers;
-import com.smartstay.console.dao.HostelV1;
-import com.smartstay.console.dao.PaymentSummary;
+import com.smartstay.console.dao.*;
+import com.smartstay.console.ennum.BookingsStatus;
 import com.smartstay.console.ennum.ModuleId;
+import com.smartstay.console.payloads.customers.CustomerResetPayload;
 import com.smartstay.console.repositories.CustomersRepository;
 import com.smartstay.console.responses.customers.CustomerSummaryResponse;
 import com.smartstay.console.utils.Utils;
@@ -36,6 +35,32 @@ public class CustomersService {
     private PaymentSummaryService paymentSummaryService;
     @Autowired
     private HostelService hostelService;
+    @Autowired
+    private InvoiceV1Service invoiceV1Service;
+    @Autowired
+    private CustomerConfigService customersConfigService;
+    @Autowired
+    private CustomerDocumentService customerDocumentService;
+    @Autowired
+    private AmenityRequestService amenityRequestService;
+    @Autowired
+    private ComplaintService complaintService;
+    @Autowired
+    private CreditDebitNotesService creditDebitNotesService;
+    @Autowired
+    private CustomersAmenityService customersAmenityService;
+    @Autowired
+    private CustomerBedHistoryService customerBedHistoryService;
+    @Autowired
+    private CustomerEbHistoryService customerEbHistoryService;
+    @Autowired
+    private CustomerWalletService customerWalletService;
+    @Autowired
+    private TransactionV1Service transactionV1Service;
+    @Autowired
+    private BedsService bedsService;
+    @Autowired
+    private BookingsService bookingsService;
 
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
@@ -133,5 +158,130 @@ public class CustomersService {
 
     public void deleteAll(List<Customers> customersList) {
         customersRepository.deleteAll(customersList);
+    }
+
+    public ResponseEntity<?> resetTenant(String hostelId, String customerId,
+                                         CustomerResetPayload customerResetPayload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Customers customer = customersRepository.findByCustomerIdAndHostelId(customerId, hostelId);
+
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_TENANT_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!customer.getMobile().equals(customerResetPayload.tenantMobile())){
+            return new ResponseEntity<>(Utils.TENANT_MOBILE_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
+
+        List<InvoicesV1> invoicesList = invoiceV1Service.findAllByHostelIdAndCustomerId(hostelId, customerId);
+        List<BookingsV1> listBookings = bookingsService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<CustomersConfig> listConfigs = customersConfigService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<CustomerDocuments> listCustomerDocuments = customerDocumentService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<ComplaintsV1> complaints = complaintService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<CreditDebitNotes> listCreditDebits = creditDebitNotesService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<CustomersAmenity> listCustomersAmenity = customersAmenityService.findByCustomerId(customerId);
+        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistoryService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<CustomersEbHistory> listCustomerEbHistory = customerEbHistoryService.findByCustomerId(customerId);
+        List<CustomerWalletHistory> listCustomersWallet = customerWalletService.findByCustomerId(customerId);
+        List<TransactionV1> listTransactions = transactionV1Service.findByHostelIdAndCustomerId(hostelId, customerId);
+
+        Set<Integer> occupiedBedIds = new HashSet<>();
+        HashMap<String, Double> bankBalances = new HashMap<>();
+
+        if (invoicesList != null && !invoicesList.isEmpty()) {
+            invoiceV1Service.deleteAllInvoices(invoicesList);
+        }
+        if (listBookings != null && !listBookings.isEmpty()) {
+            Set<String> activeStatuses = Set.of(
+                    BookingsStatus.CHECKIN.name(),
+                    BookingsStatus.BOOKED.name(),
+                    BookingsStatus.NOTICE.name()
+            );
+
+            occupiedBedIds = listBookings.stream()
+                    .filter(b -> activeStatuses.contains(b.getCurrentStatus()))
+                    .map(BookingsV1::getBedId)
+                    .collect(Collectors.toSet());
+            bookingsService.deleteBookings(listBookings);
+        }
+        if (listConfigs != null && !listConfigs.isEmpty()) {
+            customersConfigService.deleteAll(listConfigs);
+        }
+        if (listCustomerDocuments != null && !listCustomerDocuments.isEmpty()) {
+            customerDocumentService.deleteDocuments(listCustomerDocuments);
+        }
+        if (listAmenityRequests != null && !listAmenityRequests.isEmpty()) {
+            amenityRequestService.deleteAmenities(listAmenityRequests);
+        }
+        if (complaints != null && !complaints.isEmpty()) {
+            complaintService.deleteAll(complaints);
+        }
+        if (listCreditDebits != null && !listCreditDebits.isEmpty()) {
+            creditDebitNotesService.deleteAll(listCreditDebits);
+        }
+        if (listCustomersAmenity != null && !listCustomersAmenity.isEmpty()) {
+            customersAmenityService.deleteAll(listCustomersAmenity);
+        }
+        if (listCustomerBedHistory != null && !listCustomerBedHistory.isEmpty()) {
+            customerBedHistoryService.deleteAll(listCustomerBedHistory);
+        }
+        if (listCustomerEbHistory != null && !listCustomerEbHistory.isEmpty()) {
+            customerEbHistoryService.deleteAll(listCustomerEbHistory);
+        }
+        if (listCustomersWallet != null && !listCustomersWallet.isEmpty()) {
+            customerWalletService.deleteAll(listCustomersWallet);
+        }
+        if (listTransactions != null && !listTransactions.isEmpty()) {
+            double transactionAmount = 0.0;
+            listTransactions.forEach(item -> {
+                if (bankBalances.containsKey(item.getBankId())) {
+                    if (item.getType() == null) {
+                        double amount = bankBalances.get(item.getBankId());
+                        amount = amount + item.getPaidAmount();
+                        bankBalances.put(item.getBankId(), amount);
+                    }
+                    else {
+                        double amount = bankBalances.get(item.getBankId());
+                        amount = amount  + (-1 * item.getPaidAmount());
+                        bankBalances.put(item.getBankId(), amount);
+                    }
+
+
+                }
+                else {
+                    if (item.getType() == null) {
+                        bankBalances.put(item.getBankId(), item.getPaidAmount());
+                    }
+                    else {
+                        bankBalances.put(item.getBankId(), item.getPaidAmount() * -1);
+                    }
+                }
+
+            });
+            transactionV1Service.deleteALl(listTransactions);
+        }
+
+        List<Beds> listBeds = bedsService.getBedsByBedIds(occupiedBedIds);
+        if (listBeds != null && !listBeds.isEmpty()) {
+            bedsService.makeAllBedAvailabe(listBeds);
+        }
+
+        customersRepository.delete(customer);
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

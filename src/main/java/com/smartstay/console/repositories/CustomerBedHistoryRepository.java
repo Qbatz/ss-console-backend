@@ -13,4 +13,6 @@ public interface CustomerBedHistoryRepository extends JpaRepository<CustomersBed
             SELECT cbh FROM CustomersBedHistory cbh WHERE cbh.hostelId=:hostelId and cbh.customerId IN (:customerId)
             """)
     List<CustomersBedHistory> findByHostelIdAndCustomerIds(String hostelId, List<String> customerId);
+
+    List<CustomersBedHistory> findByHostelIdAndCustomerId(String hostelId, String customerId);
 }

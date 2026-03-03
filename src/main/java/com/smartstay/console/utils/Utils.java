@@ -32,6 +32,7 @@ public class Utils {
     public static final String ROLE_NAME_CANNOT_EDIT = "This role cannot be edited";
     public static final String NO_ROLES_FOUND = "No roles found";
     public static final String NO_HOSTEL_FOUND = "No hostel found";
+    public static final String NO_TENANT_HOSTEL_FOUND = "No tenant with hostel found";
     public static final String NO_AGENT_FOUND = "No agent found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
@@ -39,6 +40,7 @@ public class Utils {
     public static final String INVALID_SUBSCRIPTION = "Invalid subscription";
     public static final String PLAN_CODE_REQUIRED = "Plan code required";
     public static final String INVALID_PLAN_CODE = "Invalid plan code";
+    public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";

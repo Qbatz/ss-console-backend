@@ -9,6 +9,7 @@ import java.util.List;
 
 @Service
 public class CreditDebitNotesService {
+
     @Autowired
     private CreditDebitNoteRepository creditDebitNotesRepository;
 
@@ -18,5 +19,9 @@ public class CreditDebitNotesService {
 
     public void deleteAll(List<CreditDebitNotes> listCreditDebits) {
         creditDebitNotesRepository.deleteAll(listCreditDebits);
+    }
+
+    public List<CreditDebitNotes> findByHostelIdAndCustomerId(String hostelId, String customerId) {
+        return creditDebitNotesRepository.findByHostelIdAndCustomerId(hostelId, customerId);
     }
 }

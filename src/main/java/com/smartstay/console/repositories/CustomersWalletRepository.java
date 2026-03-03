@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface CustomersWalletRepository extends JpaRepository<CustomerWalletHistory, Long> {
     List<CustomerWalletHistory> findByCustomerIdIn(List<String> customerIds);
+
+    List<CustomerWalletHistory> findByCustomerId(String customerId);
 }

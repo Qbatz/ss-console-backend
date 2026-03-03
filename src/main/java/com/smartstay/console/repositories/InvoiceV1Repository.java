@@ -13,4 +13,6 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
             SELECT i FROM invoicesv1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds)
             """)
     List<InvoicesV1> findByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds);
+
+    List<InvoicesV1> findAllByHostelIdAndCustomerId(String hostelId, String customerId);
 }

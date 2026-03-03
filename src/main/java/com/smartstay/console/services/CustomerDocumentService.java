@@ -9,6 +9,7 @@ import java.util.List;
 
 @Service
 public class CustomerDocumentService {
+
     @Autowired
     private CustomerDocumentRepository customerDocumentRepository;
 
@@ -18,5 +19,9 @@ public class CustomerDocumentService {
 
     public void deleteDocuments(List<CustomerDocuments> listCustomerDocuments) {
         customerDocumentRepository.deleteAll(listCustomerDocuments);
+    }
+
+    public List<CustomerDocuments> findByHostelIdAndCustomerId(String hostelId, String customerId) {
+        return customerDocumentRepository.findByHostelIdAndCustomerId(hostelId, customerId);
     }
 }
