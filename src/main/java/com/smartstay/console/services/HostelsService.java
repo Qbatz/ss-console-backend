@@ -199,7 +199,9 @@ public class HostelsService {
         List<BookingsV1> bookings = bookingsService.getBookingsByHostelId(hostelId);
 
         Map<Integer, List<Rooms>> roomsBySharing = rooms.stream()
-                .collect(Collectors.groupingBy(Rooms::getSharingType));
+                .collect(Collectors.groupingBy(room ->
+                        Optional.ofNullable(room.getSharingType()).orElse(0)
+                ));
 
         Map<Integer, List<Beds>> bedsByRoom = beds.stream()
                 .collect(Collectors.groupingBy(Beds::getRoomId));
