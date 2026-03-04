@@ -161,12 +161,13 @@ public class AgentRolesService {
             return new ResponseEntity<>(Utils.ACTIVE_USERS_FOUND, HttpStatus.BAD_REQUEST);
         }
         AgentRoles existingRole = agentRolesRepository.findByRoleId(roleId);
+        AgentRoles oldRole = new ObjectMapper().convertValue(existingRole, AgentRoles.class);
         if (existingRole != null) {
             existingRole.setIsDeleted(true);
             existingRole = agentRolesRepository.save(existingRole);
 
             agentActivitiesService.createAgentActivity(users, ActivityType.DELETE, Source.AGENT_ROLE,
-                    String.valueOf(existingRole.getRoleId()), existingRole, null);
+                    String.valueOf(existingRole.getRoleId()), oldRole, null);
 
             return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
         }

@@ -1,5 +1,6 @@
 package com.smartstay.console.dao;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -20,5 +21,6 @@ public class CustomerWallet {
 
     @OneToOne
     @JoinColumn(name = "customer_id")
+    @JsonIgnore
     private Customers customers;
 }

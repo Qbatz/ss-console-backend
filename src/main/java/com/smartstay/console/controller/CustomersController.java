@@ -27,10 +27,10 @@ public class CustomersController {
         return customersService.getTenantsWithPaymentSummary(page, size, tenantName);
     }
 
-    @PostMapping("/hard-reset/{hostelId}/{customerId}")
-    public ResponseEntity<?> hardResetTenant(@PathVariable String hostelId,
-                                             @PathVariable String customerId,
-                                             @Valid @RequestBody CustomerResetPayload customerResetPayload) {
-        return customersService.resetTenant(hostelId, customerId, customerResetPayload);
+    @DeleteMapping("/{hostelId}/{customerId}")
+    public ResponseEntity<?> deleteTenant(@PathVariable String hostelId,
+                                          @PathVariable String customerId,
+                                          @Valid @RequestBody CustomerResetPayload customerResetPayload) {
+        return customersService.deleteTenant(hostelId, customerId, customerResetPayload);
     }
 }

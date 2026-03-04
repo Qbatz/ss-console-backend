@@ -1,10 +1,14 @@
 package com.smartstay.console.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.customers.CustomerSumMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.customers.CustomerResetSnapshot;
+import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.BookingsStatus;
 import com.smartstay.console.ennum.ModuleId;
+import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.customers.CustomerResetPayload;
 import com.smartstay.console.repositories.CustomersRepository;
 import com.smartstay.console.responses.customers.CustomerSummaryResponse;
@@ -19,6 +23,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.smartstay.console.utils.AgentActivityUtil.cloneList;
 
 @Service
 public class CustomersService {
@@ -61,6 +67,8 @@ public class CustomersService {
     private BedsService bedsService;
     @Autowired
     private BookingsService bookingsService;
+    @Autowired
+    private AgentActivitiesService agentActivitiesService;
 
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
@@ -160,8 +168,8 @@ public class CustomersService {
         customersRepository.deleteAll(customersList);
     }
 
-    public ResponseEntity<?> resetTenant(String hostelId, String customerId,
-                                         CustomerResetPayload customerResetPayload) {
+    public ResponseEntity<?> deleteTenant(String hostelId, String customerId,
+                                          CustomerResetPayload customerResetPayload) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -199,8 +207,25 @@ public class CustomersService {
         List<CustomerWalletHistory> listCustomersWallet = customerWalletService.findByCustomerId(customerId);
         List<TransactionV1> listTransactions = transactionV1Service.findByHostelIdAndCustomerId(hostelId, customerId);
 
+        Customers oldCustomer = new ObjectMapper().convertValue(customer, Customers.class);
+
+        CustomerResetSnapshot snapshot = new CustomerResetSnapshot(
+                oldCustomer,
+                cloneList(invoicesList, InvoicesV1.class),
+                cloneList(listBookings, BookingsV1.class),
+                cloneList(listTransactions, TransactionV1.class),
+                cloneList(listCustomersWallet, CustomerWalletHistory.class),
+                cloneList(listCreditDebits, CreditDebitNotes.class),
+                cloneList(complaints, ComplaintsV1.class),
+                cloneList(listCustomerDocuments, CustomerDocuments.class),
+                cloneList(listCustomerBedHistory, CustomersBedHistory.class),
+                cloneList(listCustomerEbHistory, CustomersEbHistory.class),
+                cloneList(listCustomersAmenity, CustomersAmenity.class),
+                cloneList(listAmenityRequests, AmenityRequest.class),
+                cloneList(listConfigs, CustomersConfig.class)
+        );
+
         Set<Integer> occupiedBedIds = new HashSet<>();
-        HashMap<String, Double> bankBalances = new HashMap<>();
 
         if (invoicesList != null && !invoicesList.isEmpty()) {
             invoiceV1Service.deleteAllInvoices(invoicesList);
@@ -246,32 +271,6 @@ public class CustomersService {
             customerWalletService.deleteAll(listCustomersWallet);
         }
         if (listTransactions != null && !listTransactions.isEmpty()) {
-            double transactionAmount = 0.0;
-            listTransactions.forEach(item -> {
-                if (bankBalances.containsKey(item.getBankId())) {
-                    if (item.getType() == null) {
-                        double amount = bankBalances.get(item.getBankId());
-                        amount = amount + item.getPaidAmount();
-                        bankBalances.put(item.getBankId(), amount);
-                    }
-                    else {
-                        double amount = bankBalances.get(item.getBankId());
-                        amount = amount  + (-1 * item.getPaidAmount());
-                        bankBalances.put(item.getBankId(), amount);
-                    }
-
-
-                }
-                else {
-                    if (item.getType() == null) {
-                        bankBalances.put(item.getBankId(), item.getPaidAmount());
-                    }
-                    else {
-                        bankBalances.put(item.getBankId(), item.getPaidAmount() * -1);
-                    }
-                }
-
-            });
             transactionV1Service.deleteALl(listTransactions);
         }
 
@@ -281,6 +280,9 @@ public class CustomersService {
         }
 
         customersRepository.delete(customer);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.TENANT,
+                customerId, snapshot, null);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

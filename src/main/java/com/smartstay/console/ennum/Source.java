@@ -7,5 +7,7 @@ public enum Source {
     MOCK_AGENT_LOGIN,
     AGENT_ROLE,
     SUBSCRIPTION,
-    RESET_PASSWORD
+    RESET_PASSWORD,
+    TENANT,
+    HOSTEL
 }

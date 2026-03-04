@@ -1,5 +1,6 @@
 package com.smartstay.console.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
 import com.smartstay.console.Mapper.hostels.HostelDetailsMapper;
 import com.smartstay.console.Mapper.hostels.HostelsListMapper;
@@ -8,9 +9,8 @@ import com.smartstay.console.Mapper.users.UsersResponseMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
-import com.smartstay.console.ennum.BankSource;
-import com.smartstay.console.ennum.BookingsStatus;
-import com.smartstay.console.ennum.ModuleId;
+import com.smartstay.console.dto.hostel.HostelResetSnapshot;
+import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.responses.customers.CustomerResponse;
@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.smartstay.console.utils.AgentActivityUtil.cloneList;
 
 @Service
 public class HostelsService {
@@ -87,6 +89,8 @@ public class HostelsService {
     private BankTransactionService bankTransactionService;
     @Autowired
     private BankingService bankingService;
+    @Autowired
+    private AgentActivitiesService agentActivitiesService;
 
     public ResponseEntity<?> getAllHostels(int page, int size, String hostelName) {
         if (!authentication.isAuthenticated()) {
@@ -391,6 +395,31 @@ public class HostelsService {
 
         HashMap<String, Double> bankBalances = new HashMap<>();
 
+        HostelV1 oldHostel = new ObjectMapper().convertValue(hostelV1, HostelV1.class);
+
+        HostelResetSnapshot snapshot = new HostelResetSnapshot(
+                oldHostel,
+                cloneList(customersList, Customers.class),
+                cloneList(invoicesList, InvoicesV1.class),
+                cloneList(listBookings, BookingsV1.class),
+                cloneList(listTransactions, TransactionV1.class),
+                cloneList(listCustomersWallet, CustomerWalletHistory.class),
+                cloneList(listCreditDebits, CreditDebitNotes.class),
+                cloneList(complaints, ComplaintsV1.class),
+                cloneList(listCustomerDocuments, CustomerDocuments.class),
+                cloneList(listCustomerBedHistory, CustomersBedHistory.class),
+                cloneList(listCustomerEbHistory, CustomersEbHistory.class),
+                cloneList(listCustomersAmenity, CustomersAmenity.class),
+                cloneList(listAmenityRequests, AmenityRequest.class),
+                cloneList(listConfigs, CustomersConfig.class),
+                cloneList(listCustomerCredentials, CustomerCredentials.class),
+                cloneList(listElectricityReadings, ElectricityReadings.class),
+                cloneList(listHostelReadings, HostelReadings.class),
+                cloneList(listBeds, Beds.class),
+                cloneList(listBankTransactions, BankTransactionsV1.class),
+                cloneList(bankingList, BankingV1.class)
+        );
+
         if (invoicesList != null && !invoicesList.isEmpty()) {
             invoiceV1Service.deleteAllInvoices(invoicesList);
         }
@@ -485,6 +514,10 @@ public class HostelsService {
                     .toList();
             bankingService.updateBankAccount(newBalanceAmounts);
         }
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
+                hostelId, snapshot, null);
+
         return new ResponseEntity<>(HttpStatus.OK);
     }
 }

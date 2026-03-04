@@ -1,5 +1,6 @@
 package com.smartstay.console.dao;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -19,5 +20,6 @@ public class KycDetails {
 
     @OneToOne()
     @JoinColumn(name = "customer_id", referencedColumnName = "customerId")
+    @JsonIgnore
     private Customers customers;
 }
