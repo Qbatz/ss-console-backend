@@ -157,4 +157,26 @@ public class Utils {
 
         return initials.toString();
     }
+
+    public static String formatDateDisplay(Date date) {
+        if (date == null) return "";
+
+        long now = System.currentTimeMillis();
+        long diffMillis = now - date.getTime();
+
+        long minutes = diffMillis / (60 * 1000);
+        long hours = diffMillis / (60 * 60 * 1000);
+
+        if (hours < 24) {
+            if (hours >= 1) {
+                return hours + " hrs ago";
+            }
+            if (minutes >= 1) {
+                return minutes + " mins ago";
+            }
+            return "Just now";
+        }
+
+        return new SimpleDateFormat("dd/MM/yyyy").format(date);
+    }
 }

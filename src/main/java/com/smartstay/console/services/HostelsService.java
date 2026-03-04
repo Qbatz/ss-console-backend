@@ -139,15 +139,17 @@ public class HostelsService {
 
         long inactiveHostels = totalHostels - actHostels.size();
 
+        int totalPages = (int) Math.ceil((double) totalHostels / size);
+
         Hostels hostels = new Hostels(totalHostels,
                 actHostels.size(),
                 inactiveHostels,
                 currentPage,
                 size,
+                totalPages,
                 hostelsList);
 
         return new ResponseEntity<>(hostels, HttpStatus.OK);
-
     }
 
     public List<HostelV1> getHostelsByParentIds(List<String> parentIds) {
