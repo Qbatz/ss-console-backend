@@ -40,6 +40,7 @@ public class Utils {
     public static final String INVALID_SUBSCRIPTION = "Invalid subscription";
     public static final String PLAN_CODE_REQUIRED = "Plan code required";
     public static final String INVALID_PLAN_CODE = "Invalid plan code";
+    public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";

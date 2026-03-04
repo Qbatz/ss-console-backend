@@ -1,9 +1,11 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.services.HostelsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +31,8 @@ public class HostelsController {
     }
 
     @PostMapping("/hard-reset/{hostelId}")
-    public ResponseEntity<?> hardReserHostelTenants(@PathVariable("hostelId") String hostelId) {
-        return hostelsService.resetHostelTenats(hostelId);
+    public ResponseEntity<?> hardResetHostelTenants(@PathVariable String hostelId,
+                                                    @Valid @RequestBody HostelIdPayload hostelIdPayload) {
+        return hostelsService.resetHostelTenant(hostelId, hostelIdPayload);
     }
 }
