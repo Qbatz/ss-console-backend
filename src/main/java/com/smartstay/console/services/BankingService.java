@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class BankingService {
@@ -19,5 +20,9 @@ public class BankingService {
 
     public void updateBankAccount(List<BankingV1> newBalanceAmounts) {
         bankingRepository.saveAll(newBalanceAmounts);
+    }
+
+    public List<BankingV1> findByBankIds(Set<String> bankIds) {
+        return bankingRepository.findByBankIdIn(bankIds);
     }
 }

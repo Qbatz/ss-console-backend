@@ -5,10 +5,7 @@ import com.smartstay.console.Mapper.customers.CustomerSumMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.customers.CustomerResetSnapshot;
-import com.smartstay.console.ennum.ActivityType;
-import com.smartstay.console.ennum.BookingsStatus;
-import com.smartstay.console.ennum.ModuleId;
-import com.smartstay.console.ennum.Source;
+import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.customers.CustomerResetPayload;
 import com.smartstay.console.repositories.CustomersRepository;
 import com.smartstay.console.responses.customers.CustomerSummaryResponse;
@@ -69,6 +66,10 @@ public class CustomersService {
     private BookingsService bookingsService;
     @Autowired
     private AgentActivitiesService agentActivitiesService;
+    @Autowired
+    private BankTransactionService bankTransactionService;
+    @Autowired
+    private BankingService bankingService;
 
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
@@ -206,6 +207,34 @@ public class CustomersService {
         List<CustomersEbHistory> listCustomerEbHistory = customerEbHistoryService.findByCustomerId(customerId);
         List<CustomerWalletHistory> listCustomersWallet = customerWalletService.findByCustomerId(customerId);
         List<TransactionV1> listTransactions = transactionV1Service.findByHostelIdAndCustomerId(hostelId, customerId);
+        Set<String> transactionIds = listTransactions.stream()
+                .map(TransactionV1::getTransactionId)
+                .collect(Collectors.toSet());
+        Set<String> bankIds = listTransactions.stream()
+                .map(TransactionV1::getBankId)
+                .collect(Collectors.toSet());
+        List<BankTransactionsV1> listBankTransactions = bankTransactionService.getTransactionsByTransactionIds(transactionIds);
+        List<BankingV1> bankingList = bankingService.findByBankIds(bankIds);
+
+        Set<String> activeStatuses = Set.of(
+                BookingsStatus.CHECKIN.name(),
+                BookingsStatus.BOOKED.name(),
+                BookingsStatus.NOTICE.name()
+        );
+
+        Set<Integer> occupiedBedIds = listBookings.stream()
+                .filter(b -> activeStatuses.contains(b.getCurrentStatus()))
+                .map(BookingsV1::getBedId)
+                .collect(Collectors.toSet());
+
+        List<Beds> listBeds = bedsService.getBedsByBedIds(occupiedBedIds);
+
+        List<BankTransactionsV1> listItemsOtherThanExpense = listBankTransactions
+                .stream()
+                .filter(i -> !i.getSource().equalsIgnoreCase(BankSource.EXPENSE.name()))
+                .toList();
+
+        HashMap<String, Double> bankBalances = new HashMap<>();
 
         Customers oldCustomer = new ObjectMapper().convertValue(customer, Customers.class);
 
@@ -222,25 +251,16 @@ public class CustomersService {
                 cloneList(listCustomerEbHistory, CustomersEbHistory.class),
                 cloneList(listCustomersAmenity, CustomersAmenity.class),
                 cloneList(listAmenityRequests, AmenityRequest.class),
-                cloneList(listConfigs, CustomersConfig.class)
+                cloneList(listConfigs, CustomersConfig.class),
+                cloneList(listBankTransactions, BankTransactionsV1.class),
+                cloneList(bankingList, BankingV1.class),
+                cloneList(listBeds, Beds.class)
         );
-
-        Set<Integer> occupiedBedIds = new HashSet<>();
 
         if (invoicesList != null && !invoicesList.isEmpty()) {
             invoiceV1Service.deleteAllInvoices(invoicesList);
         }
-        if (listBookings != null && !listBookings.isEmpty()) {
-            Set<String> activeStatuses = Set.of(
-                    BookingsStatus.CHECKIN.name(),
-                    BookingsStatus.BOOKED.name(),
-                    BookingsStatus.NOTICE.name()
-            );
-
-            occupiedBedIds = listBookings.stream()
-                    .filter(b -> activeStatuses.contains(b.getCurrentStatus()))
-                    .map(BookingsV1::getBedId)
-                    .collect(Collectors.toSet());
+        if (!listBookings.isEmpty()) {
             bookingsService.deleteBookings(listBookings);
         }
         if (listConfigs != null && !listConfigs.isEmpty()) {
@@ -270,11 +290,47 @@ public class CustomersService {
         if (listCustomersWallet != null && !listCustomersWallet.isEmpty()) {
             customerWalletService.deleteAll(listCustomersWallet);
         }
-        if (listTransactions != null && !listTransactions.isEmpty()) {
+        if (!listTransactions.isEmpty()) {
+            listTransactions.forEach(item -> {
+                if (bankBalances.containsKey(item.getBankId())) {
+                    if (item.getType() == null) {
+                        double amount = bankBalances.get(item.getBankId());
+                        amount = amount + item.getPaidAmount();
+                        bankBalances.put(item.getBankId(), amount);
+                    }
+                    else {
+                        double amount = bankBalances.get(item.getBankId());
+                        amount = amount  + (-1 * item.getPaidAmount());
+                        bankBalances.put(item.getBankId(), amount);
+                    }
+                }
+                else {
+                    if (item.getType() == null) {
+                        bankBalances.put(item.getBankId(), item.getPaidAmount());
+                    }
+                    else {
+                        bankBalances.put(item.getBankId(), item.getPaidAmount() * -1);
+                    }
+                }
+            });
             transactionV1Service.deleteALl(listTransactions);
         }
+        if (!listItemsOtherThanExpense.isEmpty()) {
+            bankTransactionService.deleteItemsOtherThanExpense(listItemsOtherThanExpense);
+        }
+        if (bankingList != null && !bankingList.isEmpty()) {
+            List<BankingV1> newBalanceAmounts = bankingList
+                    .stream()
+                    .map(i -> {
+                        if (bankBalances.get(i.getBankId()) != null) {
+                            double amount = bankBalances.get(i.getBankId());
+                            i.setBalance(i.getBalance() - amount);
+                        }
 
-        List<Beds> listBeds = bedsService.getBedsByBedIds(occupiedBedIds);
+                        return i;
+                    }).toList();
+            bankingService.updateBankAccount(newBalanceAmounts);
+        }
         if (listBeds != null && !listBeds.isEmpty()) {
             bedsService.makeAllBedAvailabe(listBeds);
         }
