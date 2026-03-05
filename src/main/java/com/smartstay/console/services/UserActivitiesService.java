@@ -26,4 +26,8 @@ public class UserActivitiesService {
     public List<UserActivities> getActivitiesByHostelId(String hostelId){
         return userActivitiesRepository.findAllByHostelIdOrderByCreatedAtDesc(hostelId);
     }
+
+    public List<UserActivities> getActivitiesByUserId(String userId){
+        return userActivitiesRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+    }
 }

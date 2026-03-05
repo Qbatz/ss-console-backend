@@ -520,4 +520,8 @@ public class HostelsService {
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
+    public List<HostelV1> getHostelsByParentId(String parentId) {
+        return hostelRepository.findAllByParentId(parentId);
+    }
 }
