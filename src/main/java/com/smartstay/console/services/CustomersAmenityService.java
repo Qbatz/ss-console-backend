@@ -9,13 +9,19 @@ import java.util.List;
 
 @Service
 public class CustomersAmenityService {
+
     @Autowired
     private CustomersAmenityRepository customersAmenityRepository;
-    public List<CustomersAmenity> findByHostelIdAndCustomerIdIs(List<String> customerIds) {
+
+    public List<CustomersAmenity> findByHostelIdAndCustomerIdIn(List<String> customerIds) {
         return customersAmenityRepository.findByCustomerIdIn(customerIds);
     }
 
     public void deleteAll(List<CustomersAmenity> listCustomersAmenity) {
         customersAmenityRepository.deleteAll(listCustomersAmenity);
+    }
+
+    public List<CustomersAmenity> findByCustomerId(String customerId) {
+        return customersAmenityRepository.findByCustomerId(customerId);
     }
 }

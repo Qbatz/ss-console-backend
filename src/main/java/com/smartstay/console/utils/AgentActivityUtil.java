@@ -6,6 +6,7 @@ import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.Source;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -131,6 +132,8 @@ public class AgentActivityUtil {
             case MOCK_AGENT -> "Deleted a mock agent";
             case AGENT_ROLE -> "Deleted an agent role";
             case SUBSCRIPTION -> "Deleted subscription";
+            case TENANT -> "Deleted tenant";
+            case HOSTEL -> "Deleted hostel";
             default -> "Deleted successfully";
         };
     }
@@ -141,5 +144,15 @@ public class AgentActivityUtil {
             case MOCK_AGENT_LOGIN -> "Mock agent logged in";
             default -> "Login successful";
         };
+    }
+
+    public static <T> List<T> cloneList(List<T> source, Class<T> clazz) {
+        if (source == null || source.isEmpty()) {
+            return List.of();
+        }
+
+        return source.stream()
+                .map(item -> mapper.convertValue(item, clazz))
+                .toList();
     }
 }

@@ -13,4 +13,6 @@ public interface AmenityRequestRepository extends JpaRepository<AmenityRequest, 
             SELECT ar FROM AmenityRequest ar WHERE ar.hostelId=:hostelId AND ar.customerId IN (:customerId)
             """)
     public List<AmenityRequest> findByHostelIdAndCustomerIdIn(String hostelId, List<String> customerId);
+
+    List<AmenityRequest> findByHostelIdAndCustomerId(String hostelId, String customerId);
 }

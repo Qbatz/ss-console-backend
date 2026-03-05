@@ -14,4 +14,6 @@ public interface ComplaintsRepository extends JpaRepository<ComplaintsV1, Intege
             SELECT c FROM complaintsv1 c WHERE c.hostelId=:hostelId AND c.customerId IN (:customerIds)
             """)
     List<ComplaintsV1> findByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds);
+
+    List<ComplaintsV1> findByHostelIdAndCustomerId(String hostelId, String customerId);
 }

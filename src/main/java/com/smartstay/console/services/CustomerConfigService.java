@@ -1,7 +1,7 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.dao.CustomersConfig;
-import com.smartstay.console.repositories.CustomersConfigReposotory;
+import com.smartstay.console.repositories.CustomersConfigRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -9,13 +9,19 @@ import java.util.List;
 
 @Service
 public class CustomerConfigService {
+
     @Autowired
-    private CustomersConfigReposotory customersConfigReposotory;
+    private CustomersConfigRepository customersConfigRepository;
+
     public List<CustomersConfig> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
-        return customersConfigReposotory.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        return customersConfigRepository.findByHostelIdAndCustomerIds(hostelId, customerIds);
     }
 
     public void deleteAll(List<CustomersConfig> listConfigs) {
-        customersConfigReposotory.deleteAll(listConfigs);
+        customersConfigRepository.deleteAll(listConfigs);
+    }
+
+    public List<CustomersConfig> findByHostelIdAndCustomerId(String hostelId, String customerId) {
+        return customersConfigRepository.findByHostelIdAndCustomerId(hostelId, customerId);
     }
 }

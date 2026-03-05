@@ -9,9 +9,9 @@ import java.util.List;
 
 @Service
 public class BankingService {
+
     @Autowired
     private BankingRepository bankingRepository;
-
 
     public List<BankingV1> findByHostelId(String hostelId) {
         return bankingRepository.findByHostelId(hostelId);

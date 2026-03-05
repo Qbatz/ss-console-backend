@@ -1,5 +1,6 @@
 package com.smartstay.console.dao;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -26,6 +27,7 @@ public class BillingRules {
 
     @ManyToOne
     @JoinColumn(name = "hostel_id")
+    @JsonIgnore
     private HostelV1 hostel;
 
 }

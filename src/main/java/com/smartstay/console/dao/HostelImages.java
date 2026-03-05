@@ -1,5 +1,6 @@
 package com.smartstay.console.dao;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,5 +19,6 @@ public class HostelImages {
 
     @ManyToOne
     @JoinColumn(name = "hostel_id")
+    @JsonIgnore
     private HostelV1 hostel;
 }

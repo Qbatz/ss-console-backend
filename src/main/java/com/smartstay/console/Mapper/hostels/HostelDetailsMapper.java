@@ -1,7 +1,6 @@
 package com.smartstay.console.Mapper.hostels;
 
 import com.smartstay.console.dao.*;
-import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.responses.bills.BillingRulesResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
@@ -76,18 +75,6 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
 
         String fullAddress = buildFullAddress(hostelV1);
 
-        HostelPlan hostelPlan = hostelV1.getHostelPlan();
-
-        com.smartstay.console.responses.hostels.HostelPlan hostelPlanResponse = null;
-
-        if (hostelPlan != null){
-            hostelPlanResponse = new com.smartstay.console.responses.hostels.HostelPlan(
-                    hostelPlan.getCurrentPlanCode(),
-                    hostelPlan.getPaidAmount(),
-                    hostelPlan.getCurrentPlanName()
-            );
-        }
-
         List<HostelImages> additionalImages = hostelV1.getAdditionalImages();
 
         List<HostelImagesResponse> addImages = additionalImages.stream()
@@ -129,22 +116,30 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
             Date end = sub.getPlanEndsAt();
 
             // CASE 1: already expired -> ignore
-            if (end.compareTo(today) < 0) {
+            if (Utils.compareWithTwoDates(end, today) < 0) {
                 otherSubscriptions.add(sub);
                 continue;
             }
 
-            // CASE 2: currently active
-            if (start.compareTo(today) <= 0 && end.compareTo(today) > 0) {
+            // CASE 2: currently active (start <= today AND end >= today)
+            if (Utils.compareWithTwoDates(start, today) <= 0 &&
+                    Utils.compareWithTwoDates(end, today) >= 0) {
+
                 hasActive = true;
-                subscriptionRenewalTimeLeftDays += (int) Utils.findNumberOfDays(today, end);
+                subscriptionRenewalTimeLeftDays +=
+                        (int) Utils.findNumberOfDays(today, end);
+
                 currentSubscription = sub;
+                otherSubscriptions.add(sub);
                 continue;
             }
 
             // CASE 3: future subscription
-            if (start.compareTo(today) > 0) {
-                subscriptionRenewalTimeLeftDays += (int) Utils.findNumberOfDays(start, end);
+            if (Utils.compareWithTwoDates(start, today) > 0) {
+
+                subscriptionRenewalTimeLeftDays +=
+                        (int) Utils.findNumberOfDays(start, end);
+
                 otherSubscriptions.add(sub);
             }
         }
@@ -209,7 +204,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                 addImages, amenitiesRes, sharingTypeList, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
                 noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants, tenantList,
                 Utils.dateToString(hostelV1.getCreatedAt()), Utils.dateToTime(hostelV1.getCreatedAt()), ownerInfo, masters, staffs,
-                hostelPlanResponse, billingRules, ebConfig, currentSubRes, otherSubsRes, subscriptionStatus, subscriptionRenewalTimeLeftDays,
+                billingRules, ebConfig, currentSubRes, otherSubsRes, subscriptionStatus, subscriptionRenewalTimeLeftDays,
                 activitiesRes);
     }
 

@@ -32,6 +32,7 @@ public class Utils {
     public static final String ROLE_NAME_CANNOT_EDIT = "This role cannot be edited";
     public static final String NO_ROLES_FOUND = "No roles found";
     public static final String NO_HOSTEL_FOUND = "No hostel found";
+    public static final String NO_TENANT_HOSTEL_FOUND = "No tenant with hostel found";
     public static final String NO_AGENT_FOUND = "No agent found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
@@ -40,6 +41,7 @@ public class Utils {
     public static final String PLAN_CODE_REQUIRED = "Plan code required";
     public static final String INVALID_PLAN_CODE = "Invalid plan code";
     public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
+    public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";
@@ -154,5 +156,27 @@ public class Utils {
         }
 
         return initials.toString();
+    }
+
+    public static String formatDateDisplay(Date date) {
+        if (date == null) return "";
+
+        long now = System.currentTimeMillis();
+        long diffMillis = now - date.getTime();
+
+        long minutes = diffMillis / (60 * 1000);
+        long hours = diffMillis / (60 * 60 * 1000);
+
+        if (hours < 24) {
+            if (hours >= 1) {
+                return hours + " hrs ago";
+            }
+            if (minutes >= 1) {
+                return minutes + " mins ago";
+            }
+            return "Just now";
+        }
+
+        return new SimpleDateFormat("dd/MM/yyyy").format(date);
     }
 }

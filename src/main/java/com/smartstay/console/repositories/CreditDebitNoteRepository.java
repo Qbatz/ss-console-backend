@@ -13,4 +13,6 @@ public interface CreditDebitNoteRepository extends JpaRepository<CreditDebitNote
             SELECT cdn FROM CreditDebitNotes cdn WHERE cdn.hostelId=:hostelId AND cdn.customerId IN (:customerIds)
             """)
     List<CreditDebitNotes> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds);
+
+    List<CreditDebitNotes> findByHostelIdAndCustomerId(String hostelId, String customerId);
 }

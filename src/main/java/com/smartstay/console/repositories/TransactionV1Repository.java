@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface TransactionV1Repository extends JpaRepository<TransactionV1, String> {
     List<TransactionV1> findByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds);
+
+    List<TransactionV1> findByHostelIdAndCustomerId(String hostelId, String customerId);
 }

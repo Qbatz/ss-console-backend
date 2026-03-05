@@ -8,9 +8,11 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface CustomersConfigReposotory extends JpaRepository<CustomersConfig, Long> {
+public interface CustomersConfigRepository extends JpaRepository<CustomersConfig, Long> {
     @Query("""
-            SELECT cc FROM CustomersConfig cc WHERE cc.hostelId=:hostelId AND cc.customerId IN (:customerIds) 
+            SELECT cc FROM CustomersConfig cc WHERE cc.hostelId=:hostelId AND cc.customerId IN (:customerIds)
             """)
     List<CustomersConfig> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds);
+
+    List<CustomersConfig> findByHostelIdAndCustomerId(String hostelId, String customerId);
 }

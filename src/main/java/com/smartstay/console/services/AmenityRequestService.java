@@ -9,6 +9,7 @@ import java.util.List;
 
 @Service
 public class AmenityRequestService {
+
     @Autowired
     private AmenityRequestRepository amenityRequestRepository;
 
@@ -18,5 +19,9 @@ public class AmenityRequestService {
 
     public void deleteAmenities(List<AmenityRequest> listAmenityRequests) {
         amenityRequestRepository.deleteAll(listAmenityRequests);
+    }
+
+    public List<AmenityRequest> findByHostelIdAndCustomerId(String hostelId, String customerId) {
+        return amenityRequestRepository.findByHostelIdAndCustomerId(hostelId, customerId);
     }
 }

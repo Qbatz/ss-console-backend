@@ -29,6 +29,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         OwnerInfo ownerInfo = null;
         String lastUpdateAt = null;
         String lastUpdateTime = null;
+        String lastUpdateDateDisplay = null;
         String expiredOn = null;
         String expiringAt = null;
         StringBuilder fullAddress = new StringBuilder();
@@ -98,6 +99,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
             if (ua != null) {
                 lastUpdateAt = Utils.dateToString(ua.getCreatedAt());
                 lastUpdateTime = Utils.dateToTime(ua.getCreatedAt());
+                lastUpdateDateDisplay = Utils.formatDateDisplay(ua.getCreatedAt());
             }
         }
 
@@ -140,6 +142,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                 noOfDaysSubscriptionActive,
                 lastUpdateAt,
                 lastUpdateTime,
+                lastUpdateDateDisplay,
                 ownerInfo,
                 hp);
     }

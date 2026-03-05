@@ -1,5 +1,6 @@
 package com.smartstay.console.dao;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.smartstay.console.converters.DeductionsConverter;
 import jakarta.persistence.*;
 import lombok.*;
@@ -32,5 +33,6 @@ public class Advance {
 
     @OneToOne()
     @JoinColumn(name = "customer_id", referencedColumnName = "customerId")
+    @JsonIgnore
     private Customers customers;
 }
