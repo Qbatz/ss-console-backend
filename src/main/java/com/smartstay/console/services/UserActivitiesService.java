@@ -4,6 +4,8 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.UserActivities;
 import com.smartstay.console.repositories.UserActivitiesRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,8 +25,11 @@ public class UserActivitiesService {
         return userActivitiesRepository.findLatestActivityPerParent(parentIds);
     }
 
-    public List<UserActivities> getActivitiesByHostelId(String hostelId){
-        return userActivitiesRepository.findAllByHostelIdOrderByCreatedAtDesc(hostelId);
+    public List<UserActivities> getLimitedActivitiesByHostelId(String hostelId, int size){
+        Pageable pageable = PageRequest.of(0, size);
+        return userActivitiesRepository
+                .findByHostelIdOrderByCreatedAtDesc(hostelId, pageable)
+                .getContent();
     }
 
     public List<UserActivities> getActivitiesByUserId(String userId){

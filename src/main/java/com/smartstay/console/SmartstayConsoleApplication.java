@@ -38,7 +38,7 @@ public class SmartstayConsoleApplication {
                 agentRoles.setIsDeleted(false);
 
                 List<RolesPermission> rolesPermissions = new ArrayList<>();
-                for (int i = 1; i <= 16; i++) {
+                for (int i = 1; i <= 17; i++) {
                     RolesPermission perm = new RolesPermission();
                     perm.setModuleId(i);
                     perm.setCanRead(true);
@@ -61,7 +61,7 @@ public class SmartstayConsoleApplication {
                 agentRoles2.setIsDeleted(false);
 
                 List<RolesPermission> rolesPermissions = new ArrayList<>();
-                for (int i = 1; i <= 16; i++) {
+                for (int i = 1; i <= 17; i++) {
                     RolesPermission perm = new RolesPermission();
                     perm.setModuleId(i);
                     perm.setCanRead(true);
@@ -84,7 +84,7 @@ public class SmartstayConsoleApplication {
                 agentRoles3.setIsDeleted(false);
 
                 List<RolesPermission> rolesPermissions = new ArrayList<>();
-                for (int i = 1; i <= 16; i++) {
+                for (int i = 1; i <= 17; i++) {
                     RolesPermission perm = new RolesPermission();
                     perm.setModuleId(i);
                     perm.setCanRead(true);
@@ -207,6 +207,13 @@ public class SmartstayConsoleApplication {
                 module16 = new AgentModules();
                 module16.setModuleName("Reset hostel");
                 repository.save(module16);
+            }
+
+            AgentModules module17 = repository.findByModuleName("Hostel Activities");
+            if (module17 == null) {
+                module17 = new AgentModules();
+                module17.setModuleName("Hostel Activities");
+                repository.save(module17);
             }
         };
     }
