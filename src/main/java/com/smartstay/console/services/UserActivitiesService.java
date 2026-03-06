@@ -4,12 +4,16 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.UserActivities;
 import com.smartstay.console.repositories.UserActivitiesRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class UserActivitiesService {
+
     @Autowired
     private Authentication authentication;
     @Autowired
@@ -29,5 +33,16 @@ public class UserActivitiesService {
 
     public List<UserActivities> getActivitiesByUserId(String userId){
         return userActivitiesRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    public Page<UserActivities> getPaginatedActivitiesByHostelId(String hostelId, Pageable pageable){
+        return userActivitiesRepository.findByHostelIdOrderByCreatedAtDesc(hostelId, pageable);
+    }
+
+    public Page<UserActivities> getFilteredPaginatedActivitiesByHostelId(String hostelId,
+                                                                         Set<String> userIds,
+                                                                         Pageable pageable) {
+        return userActivitiesRepository
+                .findByHostelIdAndUserIdInOrderByCreatedAtDesc(hostelId, userIds, pageable);
     }
 }

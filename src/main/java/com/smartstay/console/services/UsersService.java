@@ -14,6 +14,7 @@ import java.util.Set;
 
 @Service
 public class UsersService {
+
     @Autowired
     private Authentication authentication;
     @Autowired
@@ -54,5 +55,14 @@ public class UsersService {
 
         return usersRepository
                 .findAllByParentIdAndRoleIdNotInAndUserIdIn(hostel.getParentId(), roleIds, userIds);
+    }
+
+    public List<Users> getUsersByIds(Set<String> userIds){
+        return usersRepository.findAllByUserIdIn(userIds);
+    }
+
+    public List<Users> getUsersByName(String name){
+        return usersRepository
+                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(name, name);
     }
 }
