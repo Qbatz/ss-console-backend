@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class BankTransactionService {
@@ -19,5 +20,9 @@ public class BankTransactionService {
 
     public void deleteItemsOtherThanExpense(List<BankTransactionsV1> listItemsOtherThanExpense) {
         bankTransactionRepositories.deleteAll(listItemsOtherThanExpense);
+    }
+
+    public List<BankTransactionsV1> getTransactionsByTransactionIds(Set<String> transactionIds) {
+        return bankTransactionRepositories.findByTransactionNumberIn(transactionIds);
     }
 }

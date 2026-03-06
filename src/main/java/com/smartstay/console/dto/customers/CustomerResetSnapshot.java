@@ -16,5 +16,8 @@ public record CustomerResetSnapshot(Customers customer,
                                     List<CustomersEbHistory> ebHistory,
                                     List<CustomersAmenity> amenities,
                                     List<AmenityRequest> amenityRequests,
-                                    List<CustomersConfig> configs) {
+                                    List<CustomersConfig> configs,
+                                    List<BankTransactionsV1> bankTransactions,
+                                    List<BankingV1> banking,
+                                    List<Beds> beds) {
 }
