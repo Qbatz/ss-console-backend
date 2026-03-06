@@ -19,6 +19,7 @@ public class OwnersController {
 
     @Autowired
     OwnersService ownersService;
+
     @PostMapping("/change-password")
     public ResponseEntity<?> changeAccountPassword(@Valid @RequestBody ResetPassword resetPassword) {
         return ownersService.resetPassword(resetPassword);
@@ -39,5 +40,10 @@ public class OwnersController {
                                               size,
                                               sortBy,
                                               direction);
+    }
+
+    @GetMapping("/{ownerId}")
+    public ResponseEntity<?> getOwnerById(@PathVariable String ownerId){
+        return ownersService.getOwnerById(ownerId);
     }
 }

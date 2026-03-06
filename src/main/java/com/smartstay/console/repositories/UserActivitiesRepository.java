@@ -31,4 +31,5 @@ public interface UserActivitiesRepository extends JpaRepository<UserActivities, 
 
     List<UserActivities> findAllByHostelIdOrderByCreatedAtDesc(String hostelId);
 
+    List<UserActivities> findAllByUserIdOrderByCreatedAtDesc(String userId);
 }

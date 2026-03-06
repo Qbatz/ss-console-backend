@@ -1,6 +1,7 @@
 package com.smartstay.console.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.smartstay.console.Mapper.users.OwnerDetailsMapper;
 import com.smartstay.console.Mapper.users.OwnerListMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
@@ -11,6 +12,7 @@ import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.owners.ResetPassword;
 import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.repositories.UsersRepository;
+import com.smartstay.console.responses.users.OwnerDetailsResponse;
 import com.smartstay.console.responses.users.OwnerResponse;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.Utils;
@@ -258,4 +260,33 @@ public class OwnersService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    public ResponseEntity<?> getOwnerById(String ownerId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Users owner = usersRepository.findByUserId(ownerId);
+        if (owner == null){
+            return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<HostelV1> hostels = hostelsService.getHostelsByParentId(owner.getParentId());
+
+        List<UserActivities> userActivities = userActivitiesService.getActivitiesByUserId(ownerId);
+
+        OwnerDetailsResponse response = new OwnerDetailsMapper(hostels, userActivities)
+                .apply(owner);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }
