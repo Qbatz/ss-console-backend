@@ -16,8 +16,10 @@ import org.springframework.web.bind.annotation.*;
 @SecurityRequirement(name = "Authorization")
 @CrossOrigin("*")
 public class HostelsController {
+
     @Autowired
     private HostelsService hostelsService;
+
     @GetMapping("")
     public ResponseEntity<?> getAllHostels( @RequestParam(value = "page", defaultValue = "0") int page,
                                             @RequestParam(value = "size", defaultValue = "10") int size,
@@ -34,5 +36,13 @@ public class HostelsController {
     public ResponseEntity<?> hardResetHostelTenants(@PathVariable String hostelId,
                                                     @Valid @RequestBody HostelIdPayload hostelIdPayload) {
         return hostelsService.resetHostelTenant(hostelId, hostelIdPayload);
+    }
+
+    @GetMapping("/activities/{hostelId}")
+    public ResponseEntity<?> getHostelActivities(@PathVariable String hostelId,
+                                                 @RequestParam(value = "page", defaultValue = "0") int page,
+                                                 @RequestParam(value = "size", defaultValue = "10") int size,
+                                                 @RequestParam(value = "name", required = false) String name) {
+        return hostelsService.getHostelActivities(hostelId, page, size, name);
     }
 }
