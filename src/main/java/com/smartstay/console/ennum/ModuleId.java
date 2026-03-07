@@ -11,12 +11,14 @@ public enum ModuleId {
     Updates(8),
     Agreements(9),
     Amenities(10),
-    Hostel_Bank_Transactions(11),
+    Hostel_Transactions(11),
     Cities(12),
     States(13),
     Owners(14),
     Tenant_Summary(15),
-    Hostel_Reset(16);
+    Hostel_Reset(16),
+    Hostel_Activities(17),
+    EXPENSES(18);
 
 
     private final int id;

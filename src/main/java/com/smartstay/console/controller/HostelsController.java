@@ -26,13 +26,18 @@ public class HostelsController {
     }
 
     @GetMapping("/{hostelId}")
-    public ResponseEntity<?> getHostelByHostelId(@PathVariable String hostelId){
+    public ResponseEntity<?> getHostelByHostelId(@PathVariable("hostelId") String hostelId){
         return hostelsService.getHostelByHostelId(hostelId);
     }
 
     @PostMapping("/hard-reset/{hostelId}")
-    public ResponseEntity<?> hardResetHostelTenants(@PathVariable String hostelId,
+    public ResponseEntity<?> hardResetHostelTenants(@PathVariable("hostelId") String hostelId,
                                                     @Valid @RequestBody HostelIdPayload hostelIdPayload) {
         return hostelsService.resetHostelTenant(hostelId, hostelIdPayload);
+    }
+
+    @DeleteMapping("/expense/{hostelId}")
+    public ResponseEntity<?> removeExpenses(@PathVariable("hostelId") String hostelId) {
+        return hostelsService.removeExpenses(hostelId);
     }
 }
