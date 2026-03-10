@@ -95,6 +95,8 @@ public class HostelsService {
     private BankingService bankingService;
     @Autowired
     private AgentActivitiesService agentActivitiesService;
+    @Autowired
+    private ExpenseService expenseService;
 
     public ResponseEntity<?> getAllHostels(int page, int size, String hostelName) {
         if (!authentication.isAuthenticated()) {
@@ -296,7 +298,9 @@ public class HostelsService {
         }
 
         List<CustomerResponse> customerResponses = new ArrayList<>();
+
         if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_READ)) {
+
             Set<String> customerIds = bookings.stream()
                     .map(BookingsV1::getCustomerId)
                     .collect(Collectors.toSet());
@@ -311,6 +315,7 @@ public class HostelsService {
         int noOfActiveTenants = noOfBookedTenants + noOfCheckedInTenants;
 
         List<Subscription> subscriptions = new ArrayList<>();
+
         if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_READ)) {
             subscriptions = subscriptionService.getSubscriptionsByHostelId(hostelId);
         }
@@ -618,5 +623,20 @@ public class HostelsService {
         response.put("totalPages", pagedActivities.getTotalPages());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> removeExpenses(String hostelId) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.EXPENSES.getId(), Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        return expenseService.deleteExpenses(hostelId);
     }
 }
