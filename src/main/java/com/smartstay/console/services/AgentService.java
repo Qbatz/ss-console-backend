@@ -136,19 +136,21 @@ public class AgentService {
                     }
                 }
             }
-
-
         }
+
+        AgentRoles agentRoles = agentRolesService.getAgentRoleById(agent.getRoleId());
 
         AgentDetails agentDetails = new AgentDetails(fullName.toString(),
                 initials.toString(),
                 agent.getAgentEmailId(),
                 agent.getFirstName(),
                 agent.getLastName(),
-                agent.getMobile());
+                agent.getMobile(),
+                agent.getRoleId(),
+                agentRoles.getRoleName(),
+                agentRoles.getPermissions());
 
         return new ResponseEntity<>(agentDetails, HttpStatus.OK);
-
     }
 
     public Map<Long,Long> findCountOfAgentByRoleIds(List<Long> roleIds){

@@ -1,9 +1,6 @@
 package com.smartstay.console.Mapper.users;
 
-import com.smartstay.console.dao.Address;
-import com.smartstay.console.dao.HostelV1;
-import com.smartstay.console.dao.UserActivities;
-import com.smartstay.console.dao.Users;
+import com.smartstay.console.dao.*;
 import com.smartstay.console.responses.hostels.OwnerHostelResponse;
 import com.smartstay.console.responses.users.AddressResponse;
 import com.smartstay.console.responses.users.OwnerDetailsResponse;
@@ -12,17 +9,21 @@ import com.smartstay.console.utils.Utils;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 public class OwnerDetailsMapper implements Function<Users, OwnerDetailsResponse> {
 
     List<HostelV1> hostels;
     List<UserActivities> userActivities;
+    Map<Integer, HotelType> hotelTypeMap;
 
     public OwnerDetailsMapper(List<HostelV1> hostels,
-                              List<UserActivities> userActivities) {
+                              List<UserActivities> userActivities,
+                              Map<Integer, HotelType> hotelTypeMap) {
         this.hostels = hostels;
         this.userActivities = userActivities;
+        this.hotelTypeMap = hotelTypeMap;
     }
 
     @Override
@@ -41,7 +42,8 @@ public class OwnerDetailsMapper implements Function<Users, OwnerDetailsResponse>
         }
 
         List<OwnerHostelResponse> propertiesRes = hostels.stream()
-                .map(hostel -> new OwnerHostelResMapper()
+                .map(hostel -> new OwnerHostelResMapper(hotelTypeMap != null ?
+                        hotelTypeMap.get(hostel.getHostelType()) : null)
                         .apply(hostel))
                 .toList();
 

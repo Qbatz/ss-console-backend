@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface UserActivitiesRepository extends JpaRepository<UserActivities, Long> {
@@ -34,4 +35,6 @@ public interface UserActivitiesRepository extends JpaRepository<UserActivities, 
     Page<UserActivities> findByHostelIdOrderByCreatedAtDesc(String hostelId, Pageable pageable);
 
     List<UserActivities> findAllByUserIdOrderByCreatedAtDesc(String userId);
+
+    Page<UserActivities> findByHostelIdAndUserIdInOrderByCreatedAtDesc(String hostelId, Set<String> userIds, Pageable pageable);
 }
