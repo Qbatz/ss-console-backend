@@ -7,6 +7,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface ExpenseRespository extends JpaRepository<ExpensesV1, String> {
+public interface ExpenseRepository extends JpaRepository<ExpensesV1, String> {
     List<ExpensesV1> findByHostelId(String hostelId);
 }

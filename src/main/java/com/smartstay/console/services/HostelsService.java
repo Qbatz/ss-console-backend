@@ -637,6 +637,6 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        return expenseService.deleteExpenses(hostelId);
+        return expenseService.deleteExpenses(hostelId, agent);
     }
 }
