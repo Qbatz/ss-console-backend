@@ -29,6 +29,8 @@ public class SmartstayConsoleApplication {
     CommandLineRunner updateModules(AgentRolesRepository rolesRepository) {
         return args -> {
 
+            final int NEW_MODULE_ID = 19;
+
             AgentRoles agentRoles = rolesRepository.findByRoleName("CONSOLE-ADMIN-LEVEL-1");
             if (agentRoles == null) {
                 agentRoles = new AgentRoles();
@@ -38,7 +40,7 @@ public class SmartstayConsoleApplication {
                 agentRoles.setIsDeleted(false);
 
                 List<RolesPermission> rolesPermissions = new ArrayList<>();
-                for (int i = 1; i <= 16; i++) {
+                for (int i = 1; i <= NEW_MODULE_ID; i++) {
                     RolesPermission perm = new RolesPermission();
                     perm.setModuleId(i);
                     perm.setCanRead(true);
@@ -61,7 +63,7 @@ public class SmartstayConsoleApplication {
                 agentRoles2.setIsDeleted(false);
 
                 List<RolesPermission> rolesPermissions = new ArrayList<>();
-                for (int i = 1; i <= 16; i++) {
+                for (int i = 1; i <= NEW_MODULE_ID; i++) {
                     RolesPermission perm = new RolesPermission();
                     perm.setModuleId(i);
                     perm.setCanRead(true);
@@ -84,7 +86,7 @@ public class SmartstayConsoleApplication {
                 agentRoles3.setIsDeleted(false);
 
                 List<RolesPermission> rolesPermissions = new ArrayList<>();
-                for (int i = 1; i <= 16; i++) {
+                for (int i = 1; i <= NEW_MODULE_ID; i++) {
                     RolesPermission perm = new RolesPermission();
                     perm.setModuleId(i);
                     perm.setCanRead(true);
@@ -97,8 +99,6 @@ public class SmartstayConsoleApplication {
 
                 rolesRepository.save(agentRoles3);
             }
-
-
         };
     }
 
@@ -208,6 +208,94 @@ public class SmartstayConsoleApplication {
                 module16.setModuleName("Reset hostel");
                 repository.save(module16);
             }
+
+            AgentModules module17 = repository.findByModuleName("Hostel Activities");
+            if (module17 == null) {
+                module17 = new AgentModules();
+                module17.setModuleName("Hostel Activities");
+                repository.save(module17);
+            }
+
+            AgentModules module18 = repository.findByModuleName("Expenses");
+            if (module18 == null) {
+                module18 = new AgentModules();
+                module18.setModuleName("Expenses");
+                repository.save(module18);
+            }
+
+            AgentModules module19 = repository.findByModuleName("Recurring");
+            if (module19 == null) {
+                module19 = new AgentModules();
+                module19.setModuleName("Recurring");
+                repository.save(module19);
+            }
         };
     }
+
+    /**
+     * IMPORTANT: PRODUCTION ONE-TIME EXECUTION
+     */
+//    @Bean
+//    CommandLineRunner addNewModuleToExistingRoles(AgentRolesRepository rolesRepository) {
+//        return args -> {
+//
+//            final int NEW_MODULE_ID = 19;
+//
+//            List<AgentRoles> updatedRoles = rolesRepository.findAll()
+//                    .stream()
+//                    .map(role -> {
+//
+//                        // check if permission for module already exists
+//                        boolean alreadyExists = role.getPermissions()
+//                                .stream()
+//                                .anyMatch(p -> p.getModuleId() == NEW_MODULE_ID);
+//
+//                        if (alreadyExists) {
+//                            return role; // skip if already present
+//                        }
+//
+//                        RolesPermission newPermission = new RolesPermission();
+//                        newPermission.setModuleId(NEW_MODULE_ID);
+//
+//                        String roleName = role.getRoleName();
+//
+//                        switch (roleName) {
+//                            case "CONSOLE-ADMIN-LEVEL-1" -> {
+//                                newPermission.setCanRead(true);
+//                                newPermission.setCanWrite(true);
+//                                newPermission.setCanUpdate(true);
+//                                newPermission.setCanDelete(true);
+//                            }
+//                            case "CONSOLE-ADMIN-READ-ONLY" -> {
+//                                newPermission.setCanRead(true);
+//                                newPermission.setCanWrite(false);
+//                                newPermission.setCanUpdate(false);
+//                                newPermission.setCanDelete(false);
+//                            }
+//                            case "CONSOLE-ADMIN-READ-WRITE-ONLY" -> {
+//                                newPermission.setCanRead(true);
+//                                newPermission.setCanWrite(true);
+//                                newPermission.setCanUpdate(false);
+//                                newPermission.setCanDelete(false);
+//                            }
+//                            case null, default -> {
+//                                // default for all other roles
+//                                newPermission.setCanRead(false);
+//                                newPermission.setCanWrite(false);
+//                                newPermission.setCanUpdate(false);
+//                                newPermission.setCanDelete(false);
+//                            }
+//                        }
+//
+//                        List<RolesPermission> permissions = new ArrayList<>(role.getPermissions());
+//                        permissions.add(newPermission);
+//                        role.setPermissions(permissions);
+//
+//                        return role;
+//                    })
+//                    .toList();
+//
+//            rolesRepository.saveAll(updatedRoles);
+//        };
+//    }
 }
