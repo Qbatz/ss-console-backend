@@ -39,4 +39,8 @@ public interface UsersRepository extends JpaRepository<Users, String> {
     List<Users> findAllByParentIdAndRoleIdNotInAndUserIdIn(String parentId, Set<Integer> roleIds, List<String> userIds);
 
     Users findByUserId( String userId);
+
+    List<Users> findAllByUserIdIn(Set<String> userIds);
+
+    List<Users> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(String firstName, String lastName);
 }

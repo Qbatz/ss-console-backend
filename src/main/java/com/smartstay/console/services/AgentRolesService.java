@@ -308,4 +308,7 @@ public class AgentRolesService {
         return agentRolesRepository.findAllByRoleIdIn(roleIds);
     }
 
+    public AgentRoles getAgentRoleById(Long roleId){
+        return agentRolesRepository.findByRoleIdAndIsActiveTrueAndIsDeletedFalse(roleId);
+    }
 }

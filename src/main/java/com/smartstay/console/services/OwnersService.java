@@ -44,6 +44,8 @@ public class OwnersService {
     private HostelsService hostelsService;
     @Autowired
     private UserActivitiesService userActivitiesService;
+    @Autowired
+    private HotelTypeService hotelTypeService;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
@@ -282,9 +284,13 @@ public class OwnersService {
 
         List<HostelV1> hostels = hostelsService.getHostelsByParentId(owner.getParentId());
 
+        List<HotelType> hotelTypes = hotelTypeService.getAllHotelTypes();
+        Map<Integer, HotelType> hotelTypeMap = hotelTypes.stream()
+                .collect(Collectors.toMap(HotelType::getId, hotelType -> hotelType));
+
         List<UserActivities> userActivities = userActivitiesService.getActivitiesByUserId(ownerId);
 
-        OwnerDetailsResponse response = new OwnerDetailsMapper(hostels, userActivities)
+        OwnerDetailsResponse response = new OwnerDetailsMapper(hostels, userActivities, hotelTypeMap)
                 .apply(owner);
 
         return new ResponseEntity<>(response, HttpStatus.OK);

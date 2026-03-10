@@ -1,6 +1,7 @@
 package com.smartstay.console.responses.hostels;
 
 public record OwnerHostelResponse(String hostelId,
+                                  String hostelType,
                                   String hostelName,
                                   String initials,
                                   String mobile,

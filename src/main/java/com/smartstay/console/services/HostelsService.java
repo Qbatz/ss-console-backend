@@ -15,9 +15,13 @@ import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
+import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -316,7 +320,10 @@ public class HostelsService {
             subscriptions = subscriptionService.getSubscriptionsByHostelId(hostelId);
         }
 
-        List<UserActivities> activities = userActivitiesService.getActivitiesByHostelId(hostelId);
+        List<UserActivities> activities = new ArrayList<>();
+        if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostel_Activities.getId(), Utils.PERMISSION_READ)) {
+            activities = userActivitiesService.getLimitedActivitiesByHostelId(hostelId, 50);
+        }
 
         Map<String, Users> userLookup = new HashMap<>();
         userLookup.put(owner.getUserId(), owner);
@@ -525,6 +532,97 @@ public class HostelsService {
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentId(parentId);
+    }
+
+    public ResponseEntity<?> getHostelActivities(String hostelId, int page, int size, String name) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostel_Activities.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelRepository.findByHostelId(hostelId);
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<UserActivities> pagedActivities;
+        List<UserActivities> userActivities;
+        List<Users> users;
+        Map<String, Users> usersMap;
+
+        if (name != null && !name.isBlank()){
+            users = usersService.getUsersByName(name);
+
+            Set<String> userIds = users.stream()
+                    .map(Users::getUserId)
+                    .collect(Collectors.toSet());
+
+            if (userIds.isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("content", List.of());
+                response.put("currentPage", page + 1);
+                response.put("pageSize", size);
+                response.put("totalItems", 0);
+                response.put("totalPages", 0);
+
+                return new ResponseEntity<>(response, HttpStatus.OK);
+            }
+
+            pagedActivities = userActivitiesService
+                    .getFilteredPaginatedActivitiesByHostelId(hostelId, userIds, pageable);
+
+            userActivities = pagedActivities.getContent();
+        } else {
+            pagedActivities = userActivitiesService
+                    .getPaginatedActivitiesByHostelId(hostelId, pageable);
+
+            userActivities = pagedActivities.getContent();
+
+            Set<String> userIds = userActivities.stream()
+                    .map(UserActivities::getUserId)
+                    .collect(Collectors.toSet());
+
+            users = usersService.getUsersByIds(userIds);
+        }
+
+        usersMap = users.stream()
+                .collect(Collectors.toMap(Users::getUserId, user -> user));
+
+        List<UserActivitiesResponse> responseList = userActivities.stream()
+                .map(activity -> {
+                    Users user = usersMap.get(activity.getUserId());
+                    String userName = null;
+                    if (user != null){
+                        userName = Utils.getFullName(user.getFirstName(), user.getLastName());
+                    }
+                    return new UserActivitiesResponse(
+                            activity.getActivityId(), activity.getDescription(), activity.getUserId(), userName,
+                            Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
+                            activity.getSource(), activity.getActivityType());
+                }).toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", responseList);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedActivities.getTotalElements());
+        response.put("totalPages", pagedActivities.getTotalPages());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public ResponseEntity<?> removeExpenses(String hostelId) {

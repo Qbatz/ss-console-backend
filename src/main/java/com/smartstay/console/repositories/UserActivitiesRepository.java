@@ -1,12 +1,15 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.UserActivities;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface UserActivitiesRepository extends JpaRepository<UserActivities, Long> {
@@ -29,7 +32,9 @@ public interface UserActivitiesRepository extends JpaRepository<UserActivities, 
             """)
     List<UserActivities> findLatestActivityPerParent(@Param("parentIds") List<String> parentIds);
 
-    List<UserActivities> findAllByHostelIdOrderByCreatedAtDesc(String hostelId);
+    Page<UserActivities> findByHostelIdOrderByCreatedAtDesc(String hostelId, Pageable pageable);
 
     List<UserActivities> findAllByUserIdOrderByCreatedAtDesc(String userId);
+
+    Page<UserActivities> findByHostelIdAndUserIdInOrderByCreatedAtDesc(String hostelId, Set<String> userIds, Pageable pageable);
 }

@@ -40,4 +40,12 @@ public class HostelsController {
     public ResponseEntity<?> removeExpenses(@PathVariable("hostelId") String hostelId) {
         return hostelsService.removeExpenses(hostelId);
     }
+
+    @GetMapping("/activities/{hostelId}")
+    public ResponseEntity<?> getHostelActivities(@PathVariable String hostelId,
+                                                 @RequestParam(value = "page", defaultValue = "0") int page,
+                                                 @RequestParam(value = "size", defaultValue = "10") int size,
+                                                 @RequestParam(value = "name", required = false) String name) {
+        return hostelsService.getHostelActivities(hostelId, page, size, name);
+    }
 }
