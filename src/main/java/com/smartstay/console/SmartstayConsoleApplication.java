@@ -38,7 +38,7 @@ public class SmartstayConsoleApplication {
                 agentRoles.setIsDeleted(false);
 
                 List<RolesPermission> rolesPermissions = new ArrayList<>();
-                for (int i = 1; i <= 17; i++) {
+                for (int i = 1; i <= 18; i++) {
                     RolesPermission perm = new RolesPermission();
                     perm.setModuleId(i);
                     perm.setCanRead(true);
@@ -61,7 +61,7 @@ public class SmartstayConsoleApplication {
                 agentRoles2.setIsDeleted(false);
 
                 List<RolesPermission> rolesPermissions = new ArrayList<>();
-                for (int i = 1; i <= 17; i++) {
+                for (int i = 1; i <= 18; i++) {
                     RolesPermission perm = new RolesPermission();
                     perm.setModuleId(i);
                     perm.setCanRead(true);
@@ -84,7 +84,7 @@ public class SmartstayConsoleApplication {
                 agentRoles3.setIsDeleted(false);
 
                 List<RolesPermission> rolesPermissions = new ArrayList<>();
-                for (int i = 1; i <= 17; i++) {
+                for (int i = 1; i <= 18; i++) {
                     RolesPermission perm = new RolesPermission();
                     perm.setModuleId(i);
                     perm.setCanRead(true);
@@ -208,58 +208,64 @@ public class SmartstayConsoleApplication {
                 module16.setModuleName("Reset hostel");
                 repository.save(module16);
             }
-            AgentModules module17 = repository.findByModuleName("Expenses");
+            AgentModules module17 = repository.findByModuleName("Hostel Activities");
             if (module17 == null) {
                 module17 = new AgentModules();
-                module17.setModuleName("Expenses");
+                module17.setModuleName("Hostel Activities");
                 repository.save(module17);
+            }
+            AgentModules module18 = repository.findByModuleName("Expenses");
+            if (module18 == null) {
+                module18 = new AgentModules();
+                module18.setModuleName("Expenses");
+                repository.save(module18);
             }
         };
     }
-//    @Bean
-//    CommandLineRunner mapExpensesToExistingRole(AgentRolesRepository agentRolesRepository) {
-//        return args -> {
-//            List<AgentRoles> agentRoles = agentRolesRepository
-//                    .findAll()
-//                    .stream()
-//                    .map(i -> {
-//                       List<RolesPermission> agentRolesPermission = i.getPermissions();
-//                       RolesPermission permission = new RolesPermission();
-//                       permission.setModuleId(17);
-//                       if (i.getRoleId() == 1) {
-//                           permission.setCanRead(true);
-//                           permission.setCanWrite(true);
-//                           permission.setCanUpdate(true);
-//                           permission.setCanDelete(true);
-//                       }
-//                       else if (i.getRoleId() == 2) {
-//                           permission.setCanRead(true);
-//                           permission.setCanWrite(false);
-//                           permission.setCanUpdate(false);
-//                           permission.setCanDelete(false);
-//                       }
-//                       else if (i.getRoleId() == 3) {
-//                           permission.setCanRead(true);
-//                           permission.setCanWrite(true);
-//                           permission.setCanUpdate(false);
-//                           permission.setCanDelete(false);
-//                       }
-//                       else {
-//                           permission.setCanRead(false);
-//                           permission.setCanWrite(false);
-//                           permission.setCanUpdate(false);
-//                           permission.setCanDelete(false);
-//                       }
-//
-//                       agentRolesPermission.add(permission);
-//                       i.setPermissions(agentRolesPermission);
-//
-//                       return i;
-//                    })
-//                    .toList();
-//
-//            agentRolesRepository.saveAll(agentRoles);
-//        };
-//    }
+    @Bean
+    CommandLineRunner mapExpensesToExistingRole(AgentRolesRepository agentRolesRepository) {
+        return args -> {
+            List<AgentRoles> agentRoles = agentRolesRepository
+                    .findAll()
+                    .stream()
+                    .map(i -> {
+                       List<RolesPermission> agentRolesPermission = i.getPermissions();
+                       RolesPermission permission = new RolesPermission();
+                       permission.setModuleId(18);
+                       if (i.getRoleId() == 1) {
+                           permission.setCanRead(true);
+                           permission.setCanWrite(true);
+                           permission.setCanUpdate(true);
+                           permission.setCanDelete(true);
+                       }
+                       else if (i.getRoleId() == 2) {
+                           permission.setCanRead(true);
+                           permission.setCanWrite(false);
+                           permission.setCanUpdate(false);
+                           permission.setCanDelete(false);
+                       }
+                       else if (i.getRoleId() == 3) {
+                           permission.setCanRead(true);
+                           permission.setCanWrite(true);
+                           permission.setCanUpdate(false);
+                           permission.setCanDelete(false);
+                       }
+                       else {
+                           permission.setCanRead(false);
+                           permission.setCanWrite(false);
+                           permission.setCanUpdate(false);
+                           permission.setCanDelete(false);
+                       }
+
+                       agentRolesPermission.add(permission);
+                       i.setPermissions(agentRolesPermission);
+
+                       return i;
+                    })
+                    .toList();
+
+            agentRolesRepository.saveAll(agentRoles);
+        };
+    }
 
 }

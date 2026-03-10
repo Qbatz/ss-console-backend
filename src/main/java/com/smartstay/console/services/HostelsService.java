@@ -91,6 +91,8 @@ public class HostelsService {
     private BankingService bankingService;
     @Autowired
     private AgentActivitiesService agentActivitiesService;
+    @Autowired
+    private ExpenseService expenseService;
 
     public ResponseEntity<?> getAllHostels(int page, int size, String hostelName) {
         if (!authentication.isAuthenticated()) {
@@ -537,6 +539,6 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        return null;
+        return expenseService.deleteExpenses(hostelId);
     }
 }

@@ -25,4 +25,9 @@ public class BankTransactionService {
     public List<BankTransactionsV1> getTransactionsByTransactionIds(Set<String> transactionIds) {
         return bankTransactionRepositories.findByTransactionNumberIn(transactionIds);
     }
+
+    public void updateBankTransactions(List<String> expensesId) {
+        List<BankTransactionsV1> listBankTransactions = bankTransactionRepositories.findBySourceIdIn(expensesId);
+        bankTransactionRepositories.deleteAll(listBankTransactions);
+    }
 }
