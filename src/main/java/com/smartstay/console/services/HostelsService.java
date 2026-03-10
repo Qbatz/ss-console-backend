@@ -296,9 +296,7 @@ public class HostelsService {
         }
 
         List<CustomerResponse> customerResponses = new ArrayList<>();
-
         if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_READ)) {
-
             Set<String> customerIds = bookings.stream()
                     .map(BookingsV1::getCustomerId)
                     .collect(Collectors.toSet());
@@ -313,12 +311,14 @@ public class HostelsService {
         int noOfActiveTenants = noOfBookedTenants + noOfCheckedInTenants;
 
         List<Subscription> subscriptions = new ArrayList<>();
-
         if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_READ)) {
             subscriptions = subscriptionService.getSubscriptionsByHostelId(hostelId);
         }
 
-        List<UserActivities> activities = userActivitiesService.getActivitiesByHostelId(hostelId);
+        List<UserActivities> activities = new ArrayList<>();
+        if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostel_Activities.getId(), Utils.PERMISSION_READ)) {
+            activities = userActivitiesService.getLimitedActivitiesByHostelId(hostelId, 50);
+        }
 
         Map<String, Users> userLookup = new HashMap<>();
         userLookup.put(owner.getUserId(), owner);

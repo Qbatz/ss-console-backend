@@ -32,7 +32,7 @@ public interface UserActivitiesRepository extends JpaRepository<UserActivities, 
             """)
     List<UserActivities> findLatestActivityPerParent(@Param("parentIds") List<String> parentIds);
 
-    List<UserActivities> findAllByHostelIdOrderByCreatedAtDesc(String hostelId);
+    Page<UserActivities> findByHostelIdOrderByCreatedAtDesc(String hostelId, Pageable pageable);
 
     Page<UserActivities> findByHostelIdOrderByCreatedAtDesc(String hostelId, Pageable pageable);
 
