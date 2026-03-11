@@ -639,4 +639,64 @@ public class HostelsService {
 
         return expenseService.deleteExpenses(hostelId);
     }
+
+    public ResponseEntity<?> getAllHostelsNew(int page, int size, String hostelName) {
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        long totalHostels = hostelRepository.findHostelCount();
+
+        List<HostelPlan> actHostels = hostelPlansService.findActiveHostels();
+
+        long inactiveHostels = totalHostels - actHostels.size();
+
+
+        Pageable pagebleRequest = PageRequest.of(page-1, size);
+        Page<HostelV1> pageableHostelV1 = hostelRepository.findAllHostelsNew(hostelName, pagebleRequest);
+        pageableHostelV1.getTotalElements();
+
+        List<HostelV1> listHostels = pageableHostelV1.stream().toList();
+
+        List<String> parentId = listHostels
+                .stream()
+                .map(HostelV1::getParentId)
+                .toList();
+        List<String> hostelIds = listHostels
+                .stream()
+                .map(HostelV1::getHostelId)
+                .toList();
+
+        List<Users> createdUsers = usersService.getOwners(parentId);
+        List<OwnerInfo> ownerInfos = createdUsers
+                .stream()
+                .map(i -> new UserOnerInfoMapper().apply(i))
+                .toList();
+        List<UserActivities> listActivities = userActivitiesService.findLatestActivities(hostelIds);
+
+
+        List<HostelList> hostelsList = listHostels
+                .stream()
+                .map(i -> new HostelsListMapper(ownerInfos, listActivities).apply(i))
+                .toList();
+
+
+        Hostels hostels = new Hostels(totalHostels,
+                actHostels.size(),
+                inactiveHostels,
+                pageableHostelV1.getPageable().getPageNumber()+1,
+                size,
+                pageableHostelV1.getTotalPages(),
+                hostelsList);
+
+
+        return new ResponseEntity<>(hostels, HttpStatus.OK);
+    }
 }

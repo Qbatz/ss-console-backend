@@ -1,6 +1,8 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.HostelV1;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,6 +26,22 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                 ORDER BY hp.current_plan_ends_at LIMIT :offset, :limit
             """, nativeQuery = true)
     List<HostelV1> findAllHostels(@Param("limit") int size, @Param("offset") int offset, @Param("name") String name);
+
+    @Query(value = """
+        SELECT h.*
+        FROM hostelv1 h
+        LEFT JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+        WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+        ORDER BY hp.current_plan_ends_at
+        """,
+            countQuery = """
+        SELECT COUNT(*)
+        FROM hostelv1 h
+        LEFT JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+        WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+        """,
+            nativeQuery = true)
+    Page<HostelV1> findAllHostelsNew(String name, Pageable pageable);
 
     List<HostelV1> findAllByParentIdIn(List<String> parentIds);
 
