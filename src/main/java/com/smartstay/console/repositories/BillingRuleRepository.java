@@ -1,6 +1,8 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.BillingRules;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -8,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface BillingRuleRepository extends JpaRepository<BillingRules, Integer> {
 
@@ -56,4 +59,34 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
             """, nativeQuery = true)
     List<BillingRules> findAllHostelsHavingTodaysRecurring(@Param("day") Integer day);
 
+    @Query(
+            value = """
+            SELECT b.*
+            FROM billing_rules b
+            JOIN hostelv1 h ON h.hostel_id = b.hostel_id
+            WHERE b.billing_start_date IN :days
+              AND (:hostelName IS NULL OR LOWER(h.hostel_name) LIKE LOWER(CONCAT('%', :hostelName, '%')))
+              AND b.created_at = (
+                    SELECT MAX(b2.created_at)
+                    FROM billing_rules b2
+                    WHERE b2.hostel_id = b.hostel_id
+              )
+            """,
+            countQuery = """
+            SELECT COUNT(*)
+            FROM billing_rules b
+            JOIN hostelv1 h ON h.hostel_id = b.hostel_id
+            WHERE b.billing_start_date IN :days
+              AND (:hostelName IS NULL OR LOWER(h.hostel_name) LIKE LOWER(CONCAT('%', :hostelName, '%')))
+              AND b.created_at = (
+                    SELECT MAX(b2.created_at)
+                    FROM billing_rules b2
+                    WHERE b2.hostel_id = b.hostel_id
+              )
+            """,
+            nativeQuery = true
+    )
+    Page<BillingRules> findAllHostelsHavingRecurringByDays(@Param("days") Set<Integer> days,
+                                                           @Param("hostelName") String hostelName,
+                                                           Pageable pageable);
 }

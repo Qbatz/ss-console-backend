@@ -23,7 +23,7 @@ public class OwnerHostelResMapper implements Function<HostelV1, OwnerHostelRespo
 
         String hostelName = hostel.getHostelName() != null ? hostel.getHostelName().trim() : null;
 
-        String fullAddress = buildFullAddress(hostel);
+        String fullAddress = Utils.buildFullAddress(hostel);
 
         HostelPlan hostelPlan = hostel.getHostelPlan();
         boolean isSubscriptionActive;
@@ -48,40 +48,5 @@ public class OwnerHostelResMapper implements Function<HostelV1, OwnerHostelRespo
                 hostel.getMobile(), hostel.getHouseNo(), hostel.getStreet(), hostel.getLandmark(), hostel.getCity(),
                 hostel.getState(), hostel.getCountry(), hostel.getPincode(), fullAddress, hostel.getMainImage(),
                 Utils.dateToString(hostel.getCreatedAt()), hostelPlanRes);
-    }
-
-    private static String buildFullAddress(HostelV1 hostelV1) {
-        StringBuilder fullAddress = new StringBuilder();
-
-        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")) {
-            fullAddress.append(hostelV1.getHouseNo());
-        }
-        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")
-                && hostelV1.getStreet() != null) {
-            fullAddress.append(", ");
-            fullAddress.append(hostelV1.getStreet());
-        }
-        else {
-            fullAddress.append(hostelV1.getStreet());
-        }
-        if (hostelV1.getCity() != null) {
-            if (fullAddress.isEmpty()) {
-                fullAddress.append(hostelV1.getCity());
-            }
-            else {
-                fullAddress.append(", ");
-                fullAddress.append(hostelV1.getCity());
-            }
-        }
-        if (hostelV1.getState() != null) {
-            if (fullAddress.isEmpty()) {
-                fullAddress.append(hostelV1.getState());
-            }
-            else {
-                fullAddress.append(", ");
-                fullAddress.append(hostelV1.getState());
-            }
-        }
-        return fullAddress.toString();
     }
 }

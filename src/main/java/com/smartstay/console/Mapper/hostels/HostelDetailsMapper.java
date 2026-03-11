@@ -73,7 +73,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
     @Override
     public HostelResponse apply(HostelV1 hostelV1) {
 
-        String fullAddress = buildFullAddress(hostelV1);
+        String fullAddress = Utils.buildFullAddress(hostelV1);
 
         List<HostelImages> additionalImages = hostelV1.getAdditionalImages();
 
@@ -206,40 +206,5 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                 Utils.dateToString(hostelV1.getCreatedAt()), Utils.dateToTime(hostelV1.getCreatedAt()), ownerInfo, masters, staffs,
                 billingRules, ebConfig, currentSubRes, otherSubsRes, subscriptionStatus, subscriptionRenewalTimeLeftDays,
                 activitiesRes);
-    }
-
-    private static String buildFullAddress(HostelV1 hostelV1) {
-        StringBuilder fullAddress = new StringBuilder();
-
-        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")) {
-            fullAddress.append(hostelV1.getHouseNo());
-        }
-        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")
-                && hostelV1.getStreet() != null) {
-            fullAddress.append(", ");
-            fullAddress.append(hostelV1.getStreet());
-        }
-        else {
-            fullAddress.append(hostelV1.getStreet());
-        }
-        if (hostelV1.getCity() != null) {
-            if (fullAddress.isEmpty()) {
-                fullAddress.append(hostelV1.getCity());
-            }
-            else {
-                fullAddress.append(", ");
-                fullAddress.append(hostelV1.getCity());
-            }
-        }
-        if (hostelV1.getState() != null) {
-            if (fullAddress.isEmpty()) {
-                fullAddress.append(hostelV1.getState());
-            }
-            else {
-                fullAddress.append(", ");
-                fullAddress.append(hostelV1.getState());
-            }
-        }
-        return fullAddress.toString();
     }
 }
