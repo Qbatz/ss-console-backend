@@ -10,6 +10,7 @@ import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.OwnerSortField;
 import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.owners.ResetPassword;
+import com.smartstay.console.payloads.owners.UserEmailPayload;
 import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.repositories.UsersRepository;
 import com.smartstay.console.responses.users.OwnerDetailsResponse;
@@ -294,5 +295,41 @@ public class OwnersService {
                 .apply(owner);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateOwnerEmailById(String ownerId, UserEmailPayload userEmailPayload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Users owner = usersRepository.findByUserId(ownerId);
+        if (owner == null){
+            return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Users oldOwner = new ObjectMapper().convertValue(owner, Users.class);
+        String newEmail = userEmailPayload.newEmail();
+
+        if (usersRepository.existsByEmailIdAndUserIdNot(newEmail, ownerId)) {
+            return new ResponseEntity<>(Utils.EMAIL_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
+        owner.setEmailId(newEmail);
+        owner = usersRepository.save(owner);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.OWNERS,
+                ownerId, oldOwner, owner);
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

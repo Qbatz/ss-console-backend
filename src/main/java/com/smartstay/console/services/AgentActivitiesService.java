@@ -50,24 +50,26 @@ public class AgentActivitiesService {
         agentActivity.setSource(source.name());
         agentActivity.setSourceId(sourceId);
 
+        String idName = AgentActivityUtil.getIdName(source);
+
         switch (activityType) {
 
             case CREATE:
                 agentActivity.setOldObject(null);
-                agentActivity.setNewObject(AgentActivityUtil.singleObjectMap(newObject));
-                agentActivity.setChangesJson(AgentActivityUtil.changesMap(newObject, true));
+                agentActivity.setNewObject(AgentActivityUtil.objectWrapper(newObject));
+                agentActivity.setChangesJson(AgentActivityUtil.changesMap(newObject, true, idName));
                 break;
 
             case UPDATE:
-                agentActivity.setOldObject(AgentActivityUtil.singleObjectMap(oldObject));
-                agentActivity.setNewObject(AgentActivityUtil.singleObjectMap(newObject));
-                agentActivity.setChangesJson(AgentActivityUtil.differences(oldObject, newObject));
+                agentActivity.setOldObject(AgentActivityUtil.objectWrapper(oldObject));
+                agentActivity.setNewObject(AgentActivityUtil.objectWrapper(newObject));
+                agentActivity.setChangesJson(AgentActivityUtil.differences(oldObject, newObject, idName));
                 break;
 
             case DELETE:
-                agentActivity.setOldObject(AgentActivityUtil.singleObjectMap(oldObject));
+                agentActivity.setOldObject(AgentActivityUtil.objectWrapper(oldObject));
                 agentActivity.setNewObject(null);
-                agentActivity.setChangesJson(AgentActivityUtil.changesMap(oldObject, false));
+                agentActivity.setChangesJson(AgentActivityUtil.changesMap(oldObject, false, idName));
                 break;
 
             default:

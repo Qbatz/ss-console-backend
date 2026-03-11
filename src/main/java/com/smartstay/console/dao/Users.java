@@ -1,5 +1,6 @@
 package com.smartstay.console.dao;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -23,6 +24,7 @@ public class Users {
     private String lastName;
     private String mobileNo;
     private String emailId;
+    @JsonIgnore
     private String password;
     private String profileUrl;
     private int roleId;
@@ -42,6 +44,7 @@ public class Users {
     private Address address;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private UsersConfig config;
 }
 

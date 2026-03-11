@@ -14,6 +14,27 @@ public class AgentActivityUtil {
 
     private static final ObjectMapper mapper = new ObjectMapper();
 
+    public static Map<String, Object> objectWrapper(Object obj) {
+
+        if (obj == null) {
+            return null;
+        }
+
+        Map<String, Object> wrapper = new HashMap<>();
+
+        if (obj instanceof List<?> list) {
+            wrapper.put("type", "LIST");
+            wrapper.put("data", mapper.convertValue(list,
+                    new TypeReference<List<Map<String, Object>>>() {}));
+        } else {
+            wrapper.put("type", "OBJECT");
+            wrapper.put("data", mapper.convertValue(obj,
+                    new TypeReference<Map<String, Object>>() {}));
+        }
+
+        return wrapper;
+    }
+
     /**
      * Convert any object to Map<String, Object>
      * Used for oldObject / newObject snapshots
@@ -31,28 +52,53 @@ public class AgentActivityUtil {
      * CREATE  -> old = null, new = value
      * DELETE  -> old = value, new = null
      */
-    public static Map<String, Map<String, Object>> changesMap(Object obj, boolean isCreate) {
+    public static Map<String, Map<String, Object>> changesMap(Object obj, boolean isCreate, String idName) {
 
-        Map<String, Object> objectMap = singleObjectMap(obj);
-        Map<String, Map<String, Object>> changes = new HashMap<>();
-
-        if (objectMap == null || objectMap.isEmpty()) {
+        if (obj == null) {
             return null;
         }
 
-        for (Map.Entry<String, Object> entry : objectMap.entrySet()) {
-            Map<String, Object> diff = new HashMap<>();
+        Map<String, Map<String, Object>> changes = new HashMap<>();
 
-            if (isCreate) {
-                diff.put("old", null);
-                diff.put("new", entry.getValue());
-            } else {
-                diff.put("old", entry.getValue());
-                diff.put("new", null);
+        // LIST SUPPORT
+        if (obj instanceof List<?> list) {
+
+            for (Object item : list) {
+
+                Map<String, Object> record = singleObjectMap(item);
+                String id = extractId(idName, record);
+
+                Map<String, Object> diff = new HashMap<>();
+
+                if (isCreate) {
+                    diff.put("old", null);
+                    diff.put("new", record);
+                } else {
+                    diff.put("old", record);
+                    diff.put("new", null);
+                }
+
+                changes.put(id, diff);
             }
 
-            changes.put(entry.getKey(), diff);
+            return changes;
         }
+
+        // SINGLE OBJECT
+        Map<String, Object> objectMap = singleObjectMap(obj);
+        String id = extractId(idName, objectMap);
+
+        Map<String, Object> diff = new HashMap<>();
+
+        if (isCreate) {
+            diff.put("old", null);
+            diff.put("new", objectMap);
+        } else {
+            diff.put("old", objectMap);
+            diff.put("new", null);
+        }
+
+        changes.put(id, diff);
 
         return changes;
     }
@@ -61,8 +107,87 @@ public class AgentActivityUtil {
      * Used for UPDATE operations
      * Compares old and new objects and returns only changed fields
      */
-    public static Map<String, Map<String, Object>> differences(Object oldObj, Object newObj) {
+    public static Map<String, Map<String, Object>> differences(Object oldObj, Object newObj, String idName) {
 
+        if (oldObj == null || newObj == null) {
+            return null;
+        }
+
+        Map<String, Map<String, Object>> changes = new HashMap<>();
+
+        // LIST SUPPORT
+        if (oldObj instanceof List<?> oldList && newObj instanceof List<?> newList) {
+
+            Map<String, Map<String, Object>> oldById = new HashMap<>();
+            Map<String, Map<String, Object>> newById = new HashMap<>();
+
+            for (Object o : oldList) {
+                Map<String, Object> map = singleObjectMap(o);
+                String id = extractId(idName, map);
+                oldById.put(id, map);
+            }
+
+            for (Object o : newList) {
+                Map<String, Object> map = singleObjectMap(o);
+                String id = extractId(idName, map);
+                newById.put(id, map);
+            }
+
+            Map<String, Map<String, Object>> result = new HashMap<>();
+
+            for (String id : oldById.keySet()) {
+
+                Map<String, Object> oldRecord = oldById.get(id);
+                Map<String, Object> newRecord = newById.get(id);
+
+                if (newRecord == null) {
+
+                    Map<String, Object> diff = new HashMap<>();
+                    diff.put("old", oldRecord);
+                    diff.put("new", null);
+
+                    result.put(id, diff);
+                    continue;
+                }
+
+                Map<String, Object> fieldChanges = new HashMap<>();
+
+                for (String key : oldRecord.keySet()) {
+
+                    Object oldVal = oldRecord.get(key);
+                    Object newVal = newRecord.get(key);
+
+                    if (!Objects.equals(oldVal, newVal)) {
+
+                        Map<String, Object> change = new HashMap<>();
+                        change.put("old", oldVal);
+                        change.put("new", newVal);
+
+                        fieldChanges.put(key, change);
+                    }
+                }
+
+                if (!fieldChanges.isEmpty()) {
+                    result.put(id, fieldChanges);
+                }
+            }
+
+            for (String id : newById.keySet()) {
+
+                if (!oldById.containsKey(id)) {
+
+                    Map<String, Object> diff = new HashMap<>();
+                    diff.put("old", null);
+                    diff.put("new", newById.get(id));
+
+                    result.put(id, diff);
+                }
+            }
+
+            return result.isEmpty() ? null : result;
+        }
+
+        // SINGLE OBJECT (existing logic)
         Map<String, Object> oldMap = singleObjectMap(oldObj);
         Map<String, Object> newMap = singleObjectMap(newObj);
 
@@ -70,7 +195,9 @@ public class AgentActivityUtil {
             return null;
         }
 
-        Map<String, Map<String, Object>> changes = new HashMap<>();
+        String id = extractId(idName, newMap);
+
+        Map<String, Object> fieldChanges = new HashMap<>();
 
         for (String key : newMap.keySet()) {
 
@@ -83,8 +210,12 @@ public class AgentActivityUtil {
                 diff.put("old", oldVal);
                 diff.put("new", newVal);
 
-                changes.put(key, diff);
+                fieldChanges.put(key, diff);
             }
+        }
+
+        if (!fieldChanges.isEmpty()) {
+            changes.put(id, fieldChanges);
         }
 
         return changes.isEmpty() ? null : changes;
@@ -134,6 +265,7 @@ public class AgentActivityUtil {
             case SUBSCRIPTION -> "Deleted subscription";
             case TENANT -> "Deleted tenant";
             case HOSTEL -> "Deleted hostel";
+            case HOSTEL_EXPENSE -> "Deletes all expenses";
             default -> "Deleted successfully";
         };
     }
@@ -154,5 +286,21 @@ public class AgentActivityUtil {
         return source.stream()
                 .map(item -> mapper.convertValue(item, clazz))
                 .toList();
+    }
+
+    public static String getIdName(Source source) {
+        return switch (source) {
+            case HOSTEL_EXPENSE -> "expenseId";
+            case SUBSCRIPTION -> "subscriptionId";
+            case OWNERS, RESET_PASSWORD -> "userId";
+            case HOSTEL -> "hostelId";
+            case MOCK_AGENT_LOGIN, AGENT_LOGIN, AGENT, MOCK_AGENT -> "agentId";
+            case TENANT -> "customerId";
+            case AGENT_ROLE -> "roleId";
+        };
+    }
+
+    public static String extractId(String idName, Map<String, Object> record) {
+        return record.get(idName).toString();
     }
 }

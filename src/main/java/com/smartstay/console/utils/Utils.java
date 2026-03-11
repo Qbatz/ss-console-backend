@@ -43,6 +43,7 @@ public class Utils {
     public static final String INVALID_PLAN_CODE = "Invalid plan code";
     public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
+    public static final String EMAIL_ALREADY_EXISTS = "Email already exists";
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";
