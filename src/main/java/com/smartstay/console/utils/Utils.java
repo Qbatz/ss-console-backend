@@ -1,10 +1,16 @@
 package com.smartstay.console.utils;
 
+import com.smartstay.console.dao.HostelV1;
+
 import java.text.SimpleDateFormat;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Utils {
 
@@ -160,6 +166,43 @@ public class Utils {
         return initials.toString();
     }
 
+    public static String buildFullAddress(HostelV1 hostelV1) {
+        StringBuilder fullAddress = new StringBuilder();
+
+        if (hostelV1.getHouseNo() != null &&
+                !hostelV1.getHouseNo().trim().equalsIgnoreCase("")) {
+            fullAddress.append(hostelV1.getHouseNo());
+        }
+        if (hostelV1.getStreet() != null) {
+            if (fullAddress.isEmpty()) {
+                fullAddress.append(hostelV1.getStreet());
+            }
+            else {
+                fullAddress.append(", ");
+                fullAddress.append(hostelV1.getStreet());
+            }
+        }
+        if (hostelV1.getCity() != null) {
+            if (fullAddress.isEmpty()) {
+                fullAddress.append(hostelV1.getCity());
+            }
+            else {
+                fullAddress.append(", ");
+                fullAddress.append(hostelV1.getCity());
+            }
+        }
+        if (hostelV1.getState() != null) {
+            if (fullAddress.isEmpty()) {
+                fullAddress.append(hostelV1.getState());
+            }
+            else {
+                fullAddress.append(", ");
+                fullAddress.append(hostelV1.getState());
+            }
+        }
+        return fullAddress.toString();
+    }
+
     public static String formatDateDisplay(Date date) {
         if (date == null) return "";
 
@@ -180,5 +223,136 @@ public class Utils {
         }
 
         return new SimpleDateFormat("dd/MM/yyyy").format(date);
+    }
+
+    public static Integer getDayOfMonth(Date date) {
+        if (date == null) return null;
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return localDate.getDayOfMonth();
+    }
+
+    public static boolean isCurrentMonth(Date date) {
+        if (date == null) return false;
+
+        LocalDate inputDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        LocalDate now = LocalDate.now();
+
+        return inputDate.getMonth() == now.getMonth()
+                && inputDate.getYear() == now.getYear();
+    }
+
+    public static Integer getYesterdayDayOfMonth(Date date) {
+        if (date == null) return null;
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .minusDays(1);
+
+        return localDate.getDayOfMonth();
+    }
+
+    public static Integer getTwoDaysAgoDayOfMonth(Date date) {
+        if (date == null) return null;
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .minusDays(2);
+
+        return localDate.getDayOfMonth();
+    }
+
+    public static Integer getTomorrowDayOfMonth(Date date) {
+        if (date == null) return null;
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .plusDays(1);
+
+        return localDate.getDayOfMonth();
+    }
+
+    public static Set<Integer> getThisWeekDays(Date date) {
+
+        if (date == null) return Collections.emptySet();
+
+        LocalDate today = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        LocalDate monday = today.with(DayOfWeek.MONDAY);
+        LocalDate sunday = monday.plusDays(6);
+
+        Set<Integer> days = new HashSet<>();
+
+        for (LocalDate d = monday; !d.isAfter(sunday); d = d.plusDays(1)) {
+            days.add(d.getDayOfMonth());
+        }
+
+        return days;
+    }
+
+    public static Set<Integer> getLastWeekDays(Date date) {
+
+        if (date == null) return Collections.emptySet();
+
+        LocalDate today = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        LocalDate monday = today.with(DayOfWeek.MONDAY).minusWeeks(1);
+        LocalDate sunday = monday.plusDays(6);
+
+        Set<Integer> days = new HashSet<>();
+
+        for (LocalDate d = monday; !d.isAfter(sunday); d = d.plusDays(1)) {
+            days.add(d.getDayOfMonth());
+        }
+
+        return days;
+    }
+
+    public static Set<Integer> getDaysTillToday(Date date) {
+
+        if (date == null) return Collections.emptySet();
+
+        int today = getDayOfMonth(date);
+
+        Set<Integer> days = new HashSet<>();
+
+        for (int i = 1; i <= today; i++) {
+            days.add(i);
+        }
+
+        return days;
+    }
+
+    public static Set<Integer> getUpcomingDays(Date date) {
+
+        if (date == null) return Collections.emptySet();
+
+        LocalDate today = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        int todayDay = today.getDayOfMonth();
+        int lastDay = today.lengthOfMonth();
+
+        Set<Integer> days = new HashSet<>();
+
+        for (int i = todayDay + 1; i <= lastDay; i++) {
+            days.add(i);
+        }
+
+        return days;
     }
 }

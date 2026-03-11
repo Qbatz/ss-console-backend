@@ -16,8 +16,10 @@ import org.springframework.web.bind.annotation.*;
 @SecurityRequirement(name = "Authorization")
 @CrossOrigin("*")
 public class HostelsController {
+
     @Autowired
     private HostelsService hostelsService;
+
     @GetMapping("/old")
     public ResponseEntity<?> getAllHostels( @RequestParam(value = "page", defaultValue = "0") int page,
                                             @RequestParam(value = "size", defaultValue = "10") int size,
@@ -31,7 +33,6 @@ public class HostelsController {
                                            @RequestParam(value = "hostelName", required = false) String hostelName) {
         return hostelsService.getAllHostelsNew(page, size, hostelName);
     }
-
 
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getHostelByHostelId(@PathVariable("hostelId") String hostelId){
@@ -55,5 +56,13 @@ public class HostelsController {
                                                  @RequestParam(value = "size", defaultValue = "10") int size,
                                                  @RequestParam(value = "name", required = false) String name) {
         return hostelsService.getHostelActivities(hostelId, page, size, name);
+    }
+
+    @GetMapping("/recurring")
+    public ResponseEntity<?> getHostelRecurring(@RequestParam(value = "page", defaultValue = "0") int page,
+                                                @RequestParam(value = "size", defaultValue = "10") int size,
+                                                @RequestParam(value = "hostelName", required = false) String hostelName,
+                                                @RequestParam(defaultValue = "TODAY") String filterBy){
+        return hostelsService.getHostelRecurring(page, size, hostelName, filterBy);
     }
 }

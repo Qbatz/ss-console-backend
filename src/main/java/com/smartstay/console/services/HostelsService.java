@@ -3,6 +3,7 @@ package com.smartstay.console.services;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
 import com.smartstay.console.Mapper.hostels.HostelDetailsMapper;
+import com.smartstay.console.Mapper.hostels.HostelRecurringMapper;
 import com.smartstay.console.Mapper.hostels.HostelsListMapper;
 import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.Mapper.users.UsersResponseMapper;
@@ -97,6 +98,12 @@ public class HostelsService {
     private AgentActivitiesService agentActivitiesService;
     @Autowired
     private ExpenseService expenseService;
+    @Autowired
+    private BillingRulesService billingRulesService;
+    @Autowired
+    private HotelTypeService hotelTypeService;
+    @Autowired
+    private RecurringTrackerService recurringTrackerService;
 
     public ResponseEntity<?> getAllHostels(int page, int size, String hostelName) {
         if (!authentication.isAuthenticated()) {
@@ -698,5 +705,110 @@ public class HostelsService {
 
 
         return new ResponseEntity<>(hostels, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getHostelRecurring(int page, int size, String hostelName, String filterBy) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Recurring.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+        Pageable pageable = PageRequest.of(page, size);
+
+        RecurringFilterOptions filterOption =  RecurringFilterOptions.from(filterBy);
+
+        List<Map<String, String>> filterOptions = Arrays.stream(RecurringFilterOptions.values())
+                .map(field -> Map.of(
+                        "key", field.name(),
+                        "label", field.getLabel()
+                )).toList();
+
+        Date today = new Date();
+
+        Set<Integer> daySet = new HashSet<>();
+
+        switch (filterOption) {
+
+            case YESTERDAY -> daySet.add(Utils.getYesterdayDayOfMonth(today));
+
+            case TWO_DAYS_AGO -> daySet.add(Utils.getTwoDaysAgoDayOfMonth(today));
+
+            case TOMORROW -> daySet.add(Utils.getTomorrowDayOfMonth(today));
+
+            case THIS_WEEK -> daySet.addAll(Utils.getThisWeekDays(today));
+
+            case LAST_WEEK -> daySet.addAll(Utils.getLastWeekDays(today));
+
+            case TILL_TODAY -> daySet.addAll(Utils.getDaysTillToday(today));
+
+            case UP_COMING -> daySet.addAll(Utils.getUpcomingDays(today));
+
+            default -> daySet.add(Utils.getDayOfMonth(today));
+        }
+
+        Page<BillingRules> paginatedBillingRules = billingRulesService
+                .getPaginatedBillingRulesByDays(daySet,
+                        hostelName == null || hostelName.isBlank() ? null : hostelName,
+                        pageable);
+
+        List<BillingRules> billingRulesList = paginatedBillingRules.getContent();
+
+        List<HotelType> hotelTypes = hotelTypeService.getAllHotelTypes();
+        Map<Integer, HotelType> hotelTypeMap = hotelTypes.stream()
+                .collect(Collectors.toMap(HotelType::getId, hotelType -> hotelType));
+
+        Set<String> hostelIds = billingRulesList.stream()
+                .map(billingRules -> billingRules.getHostel().getHostelId())
+                .collect(Collectors.toSet());
+
+        List<RecurringTracker> recurringTrackers = hostelIds.isEmpty()
+                        ? Collections.emptyList()
+                        : recurringTrackerService.getLatestRecurringTrackersByHostelIds(hostelIds);
+
+        Map<String, RecurringTracker> recurringTrackerMap = recurringTrackers.stream()
+                .collect(Collectors.toMap(RecurringTracker::getHostelId,
+                        recurringTracker -> recurringTracker));
+
+        Set<String> createdByIds = recurringTrackers.stream()
+                .map(RecurringTracker::getCreatedBy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<Agent> agents = createdByIds.isEmpty()
+                ? Collections.emptyList()
+                : agentService.getAgentsByIds(createdByIds);
+
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        agent1 -> agent1));
+
+        List<HostelRecurringResponse> responseList = billingRulesList.stream()
+                .map(billingRules -> new HostelRecurringMapper(
+                        hotelTypeMap.get(billingRules.getHostel().getHostelType()),
+                        recurringTrackerMap.get(billingRules.getHostel().getHostelId()),
+                        agentMap
+                        ).apply(billingRules)
+                ).toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", responseList);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", paginatedBillingRules.getTotalElements());
+        response.put("totalPages", paginatedBillingRules.getTotalPages());
+        response.put("filterOptions",  filterOptions);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface AgentRepository extends JpaRepository<Agent, String> {
@@ -28,4 +29,6 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
     List<RoleCountProjection> countActiveAgentsByRoleIds(@Param("roleIds") List<Long> roleIds);
 
     List<Agent> findAllByIsMockAgentFalseAndIsActiveTrueAndAgentIdNotOrderByCreatedAtDesc(String agentId);
+
+    List<Agent> findAllByAgentIdInAndIsActiveTrue(Set<String> agentIds);
 }

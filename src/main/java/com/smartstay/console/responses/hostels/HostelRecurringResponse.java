@@ -1,0 +1,26 @@
+package com.smartstay.console.responses.hostels;
+
+public record HostelRecurringResponse(String hostelId,
+                                      String hostelType,
+                                      String hostelName,
+                                      String initials,
+                                      String mobile,
+                                      String emailId,
+                                      String houseNo,
+                                      String street,
+                                      String landmark,
+                                      String city,
+                                      String state,
+                                      int country,
+                                      int pincode,
+                                      String fullAddress,
+                                      String mainImage,
+                                      boolean isSubscriptionActive,
+                                      boolean recurringStatus,
+                                      Integer recurringDay,
+                                      String lastRecurringDate,
+                                      String recurringMode,
+                                      String recurringCreatedAtDate,
+                                      String recurringCreatedAtTime,
+                                      String createdBy) {
+}
