@@ -3,6 +3,7 @@ package com.smartstay.console.repositories;
 import com.smartstay.console.dao.InvoicesV1;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -15,4 +16,13 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
     List<InvoicesV1> findByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds);
 
     List<InvoicesV1> findAllByHostelIdAndCustomerId(String hostelId, String customerId);
+
+    @Query(value = """
+                    SELECT * FROM invoicesv1
+                    WHERE hostel_id=:hostelId AND invoice_number LIKE CONCAT(:prefix, '%')
+                    ORDER BY CAST(SUBSTRING(invoice_number, LENGTH(:prefix) + 2) AS UNSIGNED) DESC
+                    LIMIT 1
+                """, nativeQuery = true)
+    InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix,
+                                         @Param("hostelId") String hostelId);
 }

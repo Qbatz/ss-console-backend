@@ -24,4 +24,12 @@ public class CustomerWalletService {
     public List<CustomerWalletHistory> findByCustomerId(String customerId) {
         return customersWalletRepository.findByCustomerId(customerId);
     }
+
+    public List<CustomerWalletHistory> getWalletListForRecurring(List<String> customerIds) {
+        return customersWalletRepository.findByCustomerIdIn(customerIds);
+    }
+
+    public void saveAll(List<CustomerWalletHistory> customerWallets) {
+        customersWalletRepository.saveAll(customerWallets);
+    }
 }

@@ -18,4 +18,8 @@ public class BillingRulesService {
     public Page<BillingRules> getPaginatedBillingRulesByDays(Set<Integer> days, String hostelName, Pageable pageable) {
         return billingRuleRepository.findAllHostelsHavingRecurringByDays(days, hostelName, pageable);
     }
+
+    public BillingRules getCurrentMonthTemplate(String hostelId) {
+        return billingRuleRepository.findCurrentBillingRules(hostelId);
+    }
 }

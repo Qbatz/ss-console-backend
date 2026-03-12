@@ -5,12 +5,10 @@ import com.smartstay.console.dao.HostelV1;
 import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class Utils {
 
@@ -53,6 +51,10 @@ public class Utils {
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";
+    public static final String SUBSCRIPTION_NOT_ACTIVE = "Subscription is not active for this hostel";
+    public static final String RECURRING_ALREADY_CREATED = "Recurring already exists this month for this hostel";
+    public static final String IS_NOT_FIXED_DATE = "Type of billing is not fixed date";
+    public static final String DAY_NOT_MATCH = "Today or the input day doesn't match with the billing rule day";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
@@ -354,5 +356,46 @@ public class Utils {
         }
 
         return days;
+    }
+
+    public static Date findLastDate(Integer cycleStartDay, Date date) {
+        LocalDate today = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+        ;
+        LocalDate startDate = LocalDate.of(today.getYear(), today.getMonth(), cycleStartDay);
+
+        LocalDate cycleEnd;
+        if (cycleStartDay == 1) {
+            YearMonth ym = YearMonth.from(startDate);
+            cycleEnd = ym.atEndOfMonth();
+        } else {
+            LocalDate nextMonth = startDate.plusMonths(1);
+            int endDay = cycleStartDay - 1;
+
+            int lastDayOfNextMonth = YearMonth.from(nextMonth).lengthOfMonth();
+            if (endDay > lastDayOfNextMonth) {
+                endDay = lastDayOfNextMonth;
+            }
+
+            cycleEnd = nextMonth.withDayOfMonth(endDay);
+        }
+
+        return Date.from(cycleEnd.atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+    }
+
+    public static Double roundOfDouble(double number) {
+        return (double) Math.round(number);
+    }
+
+    public static int findDateFromDate(Date date) {
+        if (date != null) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+
+            return cal.get(Calendar.DAY_OF_MONTH);
+        }
+        return 0;
     }
 }
