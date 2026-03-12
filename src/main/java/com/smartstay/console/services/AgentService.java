@@ -277,4 +277,8 @@ public class AgentService {
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
+
+    public List<Agent> getAgentsByIds(Set<String> agentIds) {
+        return agentRepository.findAllByAgentIdInAndIsActiveTrue(agentIds);
+    }
 }
