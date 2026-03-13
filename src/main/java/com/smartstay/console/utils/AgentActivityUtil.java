@@ -242,6 +242,7 @@ public class AgentActivityUtil {
             case MOCK_AGENT -> "Created a new mock agent";
             case AGENT_ROLE -> "Created a new agent role";
             case SUBSCRIPTION -> "Created a new subscription";
+            case GENERATE_RECURRING -> "Generated manual recurring";
             default -> "Created successfully";
         };
     }
@@ -297,6 +298,7 @@ public class AgentActivityUtil {
             case MOCK_AGENT_LOGIN, AGENT_LOGIN, AGENT, MOCK_AGENT -> "agentId";
             case TENANT -> "customerId";
             case AGENT_ROLE -> "roleId";
+            case GENERATE_RECURRING -> "trackerId";
         };
     }
 

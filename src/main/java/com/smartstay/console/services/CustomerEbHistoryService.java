@@ -24,4 +24,8 @@ public class CustomerEbHistoryService {
     public List<CustomersEbHistory> findByCustomerId(String customerId) {
         return customerEbHistoryRepository.findByCustomerId(customerId);
     }
+
+    public List<CustomersEbHistory> getAllByCustomerIdAndReadingId(String customerId, List<Integer> ebReadingsId) {
+        return customerEbHistoryRepository.findByCustomerIdAndReadingsId(customerId, ebReadingsId);
+    }
 }

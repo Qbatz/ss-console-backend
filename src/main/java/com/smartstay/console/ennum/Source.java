@@ -11,5 +11,6 @@ public enum Source {
     TENANT,
     HOSTEL,
     HOSTEL_EXPENSE,
-    OWNERS
+    OWNERS,
+    GENERATE_RECURRING
 }
