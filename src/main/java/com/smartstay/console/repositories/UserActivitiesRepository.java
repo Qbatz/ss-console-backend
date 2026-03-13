@@ -23,8 +23,8 @@ public interface UserActivitiesRepository extends JpaRepository<UserActivities, 
 
     @Query("""
             SELECT ua FROM UserActivities ua
-            WHERE ua.createdAt = (
-                SELECT MAX(u2.createdAt)
+            WHERE ua.activityId = (
+                SELECT MAX(u2.activityId)
                 FROM UserActivities u2
                 WHERE u2.parentId = ua.parentId
             )

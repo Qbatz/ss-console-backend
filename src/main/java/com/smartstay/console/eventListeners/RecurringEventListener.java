@@ -13,6 +13,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -51,8 +52,10 @@ public class RecurringEventListener {
     public void OnRecurringSetup(RecurringEvents recurringEvents) {
 
         HostelV1 hostelV1 = hostelService.getHostelInfo(recurringEvents.getHostelId());
+
         BillingDates billingDates = hostelService
                 .getCurrentBillStartAndEndDates(recurringEvents.getHostelId());
+
         Calendar calendarPreviousBillsStartDate = Calendar.getInstance();
         calendarPreviousBillsStartDate.setTime(billingDates.currentBillStartDate());
         calendarPreviousBillsStartDate.add(Calendar.MONTH, -1);
@@ -80,18 +83,35 @@ public class RecurringEventListener {
 
         List<Customers> listCustomers = customersService
                 .getCustomerDetails(customerIds);
+
         List<ElectricityReadings> listElectricityForAHostel = electricityService
                 .getAllElectricityReadingForRecurring(recurringEvents.getHostelId(),
                 calendarPreviousBillsStartDate.getTime(),
                 calendarPreviousBillsEndDate);
 
-        customersList
-                .forEach(item -> {
+        customersList.forEach(item -> {
+
+            Date joiningDate = item.getJoiningDate();
+            int joiningDay = Utils.getDayOfMonth(joiningDate);
+            int billingDay = recurringEvents.getBillingDay();
+            LocalTime autoInvoiceTime = LocalTime.of(2, 0);
+
+            // joined after billing cycle started → auto invoice already created
+            if (joiningDay > billingDay){
+                return;
+            }
+            if (joiningDay == billingDay &&
+                    Utils.dateToLocalTime(joiningDate).isAfter(autoInvoiceTime)) {
+                return;
+            }
+
             Double rentAmount = item.getRentAmount();
+
             List<Integer> ebReadingsId = listElectricityForAHostel
                     .stream()
                     .map(ElectricityReadings::getId)
                     .toList();
+
             List<CustomersEbHistory> listCustomerEb = customerEbHistoryService
                     .getAllByCustomerIdAndReadingId(item.getCustomerId(), ebReadingsId);
 
@@ -99,6 +119,7 @@ public class RecurringEventListener {
                     .stream()
                     .mapToDouble(CustomersEbHistory::getAmount)
                     .sum();
+
             if (ebAmount > 0) {
                 ebAmount = Utils.roundOfDouble(ebAmount);
             }
@@ -121,6 +142,7 @@ public class RecurringEventListener {
                     .filter(i -> i.getCustomerId().equalsIgnoreCase(item.getCustomerId()))
                     .findFirst()
                     .orElse(null);
+
             if (customers != null) {
                 CustomerWallet customerWallet = customers.getWallet();
                 if (customerWallet != null) {
@@ -129,6 +151,7 @@ public class RecurringEventListener {
                         finalAmount = finalAmount + walletAmount;
                     }
                 }
+
                 StringBuilder prefixSuffix = new StringBuilder();
 
                 String prefix = "INV";
@@ -226,8 +249,8 @@ public class RecurringEventListener {
 
                 List<CustomerWalletHistory> wh = listCustomerWallets
                         .stream()
-                                .filter(i -> i.getCustomerId().equalsIgnoreCase(customers.getCustomerId()))
-                                        .toList();
+                        .filter(i -> i.getCustomerId().equalsIgnoreCase(customers.getCustomerId()))
+                        .toList();
                 if (!wh.isEmpty()) {
                     wh.forEach(it -> {
                         InvoiceItems itms = new InvoiceItems();
@@ -254,8 +277,8 @@ public class RecurringEventListener {
 
                 CustomerWallet updateWallet = customers.getWallet();
                 if (updateWallet != null) {
-                  updateWallet.setAmount(0.0);
-                  customers.setWallet(updateWallet);
+                    updateWallet.setAmount(0.0);
+                    customers.setWallet(updateWallet);
                 }
 
                 customersService.updateCustomersFromRecurring(customers);
@@ -284,9 +307,8 @@ public class RecurringEventListener {
                 })
                 .toList();
 
-
         electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
-        recurringTrackerService.markAsInvoiceGenerated(hostelV1.getHostelId());
+        recurringTrackerService.markAsInvoiceGenerated(hostelV1.getHostelId(), recurringEvents.getBillingDay());
         notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
     }
 }
