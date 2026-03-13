@@ -808,7 +808,7 @@ public class HostelsService {
                 ).toList();
 
         Map<String, Object> response = new HashMap<>();
-        response.put("content", responseList);
+        response.put("hostelList", responseList);
         response.put("currentPage", page + 1);
         response.put("pageSize", size);
         response.put("totalItems", paginatedBillingRules.getTotalElements());

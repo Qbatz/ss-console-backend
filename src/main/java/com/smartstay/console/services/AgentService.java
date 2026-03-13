@@ -71,6 +71,10 @@ public class AgentService {
             return new ResponseEntity<>(Constants.EMAIL_ID_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
+        if (agentRepository.existsByAgentEmailIdAndIsMockAgentFalse(addAdmin.emailId())){
+            return new ResponseEntity<>(Utils.EMAIL_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
         Agent newAgent = new Agent();
         newAgent.setAgentEmailId(addAdmin.emailId());
         newAgent.setIsProfileCompleted(false);
@@ -176,6 +180,10 @@ public class AgentService {
 
         String email = addMockAgent.email().trim();
         Long roleId = addMockAgent.roleId();
+
+        if (agentRepository.existsByAgentEmailId(email)){
+            return new ResponseEntity<>(Utils.EMAIL_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+        }
 
         int atIndex = email.indexOf("@");
         String firstName = atIndex > 0 ? email.substring(0, atIndex) : email;
