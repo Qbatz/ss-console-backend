@@ -1,6 +1,7 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.HostelV1;
+import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -43,8 +44,6 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             nativeQuery = true)
     Page<HostelV1> findAllHostelsNew(String name, Pageable pageable);
 
-    List<HostelV1> findAllByParentIdIn(List<String> parentIds);
-
     HostelV1 findByHostelId(String hostelId);
 
     List<HostelV1> findAllByHostelIdIn(Set<String> hostelIds);
@@ -52,4 +51,15 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
     List<HostelV1> findByHostelNameContainingIgnoreCase(String hostelName);
 
     List<HostelV1> findAllByParentId(String parentId);
+
+    @Query("""
+            SELECT new com.smartstay.console.dto.hostelPlans.HostelPlanProjection(
+                   h.parentId,
+                   hp.currentPlanEndsAt
+            )
+            FROM hostelv1 h
+            LEFT JOIN h.hostelPlan hp
+            WHERE h.parentId IN :parentIds
+            """)
+    List<HostelPlanProjection> findHostelPlanProjectionData(@Param("parentIds") Set<String> parentIds);
 }

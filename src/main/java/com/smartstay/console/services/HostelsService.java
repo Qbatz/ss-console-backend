@@ -11,6 +11,7 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dto.hostel.HostelResetSnapshot;
+import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.events.RecurringEvents;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
@@ -172,10 +173,6 @@ public class HostelsService {
                 hostelsList);
 
         return new ResponseEntity<>(hostels, HttpStatus.OK);
-    }
-
-    public List<HostelV1> getHostelsByParentIds(List<String> parentIds) {
-        return hostelRepository.findAllByParentIdIn(parentIds);
     }
 
     public ResponseEntity<?> getHostelByHostelId(String hostelId) {
@@ -884,5 +881,9 @@ public class HostelsService {
         }
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public List<HostelPlanProjection> getHostelPlanProjectionData(Set<String> parentIds) {
+        return hostelRepository.findHostelPlanProjectionData(parentIds);
     }
 }
