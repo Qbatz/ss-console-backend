@@ -342,4 +342,16 @@ public class CustomersService {
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
+    public List<Customers> getCustomerDetails(List<String> customerIds) {
+        List<Customers> listCustomers = new ArrayList<>();
+        if (!customerIds.isEmpty()) {
+            listCustomers = customersRepository.findByCustomerIdIn(customerIds);
+        }
+        return listCustomers;
+    }
+
+    public void updateCustomersFromRecurring(Customers customers) {
+        customersRepository.save(customers);
+    }
 }

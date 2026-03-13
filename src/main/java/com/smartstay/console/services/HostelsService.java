@@ -12,14 +12,18 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dto.hostel.HostelResetSnapshot;
 import com.smartstay.console.ennum.*;
+import com.smartstay.console.events.RecurringEvents;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
+import com.smartstay.console.payloads.hostel.HostelRecDatePayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
 import com.smartstay.console.utils.Utils;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -104,6 +108,8 @@ public class HostelsService {
     private HotelTypeService hotelTypeService;
     @Autowired
     private RecurringTrackerService recurringTrackerService;
+    @Autowired
+    private ApplicationEventPublisher applicationEventPublisher;
 
     public ResponseEntity<?> getAllHostels(int page, int size, String hostelName) {
         if (!authentication.isAuthenticated()) {
@@ -802,7 +808,7 @@ public class HostelsService {
                 ).toList();
 
         Map<String, Object> response = new HashMap<>();
-        response.put("content", responseList);
+        response.put("hostelList", responseList);
         response.put("currentPage", page + 1);
         response.put("pageSize", size);
         response.put("totalItems", paginatedBillingRules.getTotalElements());
@@ -810,5 +816,66 @@ public class HostelsService {
         response.put("filterOptions",  filterOptions);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> generateRecurring(String hostelId, HostelRecDatePayload hostelRecDatePayload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Recurring.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelRepository.findByHostelId(hostelId);
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        HostelPlan hostelPlan = hostel.getHostelPlan();
+        boolean isSubscriptionActive = false;
+        if (hostelPlan != null && hostelPlan.getCurrentPlanEndsAt() != null) {
+            isSubscriptionActive = Utils.compareWithTwoDates(
+                    hostelPlan.getCurrentPlanEndsAt(), new Date()) >= 0;
+        }
+
+        if (!isSubscriptionActive){
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_ACTIVE, HttpStatus.BAD_REQUEST);
+        }
+
+        RecurringTracker recurringTracker = recurringTrackerService
+                .getLatestRecurringTrackerByHostelId(hostelId);
+
+        if (recurringTracker != null){
+            if (Utils.isCurrentMonth(recurringTracker.getCreatedAt())){
+                return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        int day = Utils.getDayOfMonth(new Date());
+        if (hostelRecDatePayload.inputDay() != null){
+            day = hostelRecDatePayload.inputDay();
+        }
+
+        BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
+
+        if (billingRules != null){
+            if (!billingRules.getBillingStartDate().equals(day)){
+                return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
+            }
+            if (!billingRules.getTypeOfBilling().equals("FIXED_DATE")){
+                return new ResponseEntity<>(Utils.IS_NOT_FIXED_DATE, HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId));
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

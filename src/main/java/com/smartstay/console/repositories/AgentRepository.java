@@ -31,4 +31,8 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
     List<Agent> findAllByIsMockAgentFalseAndIsActiveTrueAndAgentIdNotOrderByCreatedAtDesc(String agentId);
 
     List<Agent> findAllByAgentIdInAndIsActiveTrue(Set<String> agentIds);
+
+    boolean existsByAgentEmailIdAndIsMockAgentFalse(String email);
+
+    boolean existsByAgentEmailId(String email);
 }

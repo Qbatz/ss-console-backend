@@ -28,4 +28,9 @@ public class BookingsService {
     public List<BookingsV1> findByHostelIdAndCustomerId(String hostelId, String customerId) {
         return bookingsRepository.findAllByHostelIdAndCustomerId(hostelId, customerId);
     }
+
+    public List<BookingsV1> getAllCheckedInCustomersByListOfCustomerIdsAndHostelId(List<String> customerIds,
+                                                                                   String hostelId) {
+        return bookingsRepository.findBookingsByListOfCustomersAndHostelId(customerIds, hostelId);
+    }
 }

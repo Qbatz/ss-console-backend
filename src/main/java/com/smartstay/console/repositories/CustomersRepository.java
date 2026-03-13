@@ -21,4 +21,6 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     List<Customers> findByHostelId(String hostelId);
 
     Customers findByCustomerIdAndHostelId(String customerId, String hostelId);
+
+    List<Customers> findByCustomerIdIn(List<String> customerId);
 }
