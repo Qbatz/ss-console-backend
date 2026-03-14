@@ -20,4 +20,6 @@ public interface DemoRequestRepository extends JpaRepository<DemoRequest, Long> 
             order by dr.requestId desc
             """)
     Page<DemoRequest> findAllPaginated(@Param("name") String name, Pageable pageable);
+
+    DemoRequest findByRequestId(Long demoRequestId);
 }
