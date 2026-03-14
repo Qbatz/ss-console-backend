@@ -5,6 +5,7 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.DemoRequest;
 import com.smartstay.console.ennum.ActivityType;
+import com.smartstay.console.ennum.RequestStatus;
 import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.agent.AgentIdPayload;
 import com.smartstay.console.repositories.DemoRequestRepository;
@@ -111,7 +112,7 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        demoRequest.setDemoRequestStatus("ASSIGNED");
+        demoRequest.setDemoRequestStatus(RequestStatus.OPEN.name());
         demoRequest.setIsAssigned(true);
         demoRequest.setAssignedTo(assignedTo.getAgentId());
         demoRequest.setAssignedBy(agent.getAgentId());
