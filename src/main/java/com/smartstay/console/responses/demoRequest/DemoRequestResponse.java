@@ -1,0 +1,25 @@
+package com.smartstay.console.responses.demoRequest;
+
+public record DemoRequestResponse(Long requestId,
+                                  String name,
+                                  String emailId,
+                                  String contactNo,
+                                  String countryCode,
+                                  String organization,
+                                  Integer noOfHostels,
+                                  Integer noOfTenant,
+                                  String city,
+                                  String state,
+                                  String country,
+                                  String demoRequestStatus,
+                                  Boolean isDemoCompleted,
+                                  Boolean isAssigned,
+                                  String assignedTo,
+                                  String assignedBy,
+                                  String presentedBy,
+                                  String comments,
+                                  String requestedDate,
+                                  String requestedTime,
+                                  String presentedAtDate,
+                                  String presentedAtTime) {
+}
