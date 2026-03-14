@@ -1,8 +1,7 @@
 package com.smartstay.console.Mapper.users;
 
-import com.smartstay.console.dao.Address;
 import com.smartstay.console.dao.UserActivities;
-import com.smartstay.console.dao.Users;
+import com.smartstay.console.dto.users.OwnerWithAddressProjection;
 import com.smartstay.console.responses.users.AddressResponse;
 import com.smartstay.console.responses.users.OwnerResponse;
 import com.smartstay.console.utils.Utils;
@@ -10,60 +9,28 @@ import com.smartstay.console.utils.Utils;
 import java.util.Date;
 import java.util.function.Function;
 
-public class OwnerListMapper implements Function<Users, OwnerResponse> {
+public class OwnerListMapper implements Function<OwnerWithAddressProjection, OwnerResponse> {
 
     int noOfProperties;
-    Address address;
     UserActivities userActivities;
 
-    public OwnerListMapper(int noOfProperties, Address address,
+    public OwnerListMapper(int noOfProperties,
                            UserActivities userActivities) {
         this.noOfProperties = noOfProperties;
-        this.address = address;
         this.userActivities = userActivities;
     }
 
     @Override
-    public OwnerResponse apply(Users users) {
+    public OwnerResponse apply(OwnerWithAddressProjection owner) {
 
-        StringBuilder fullName = new StringBuilder();
-        StringBuilder initials = new StringBuilder();
-        String firstName = null;
-        String lastName = null;
-
-        if (users.getFirstName() != null) {
-            firstName = users.getFirstName().trim();
-            fullName.append(firstName);
-            initials.append(firstName.toUpperCase().charAt(0));
-        }
-
-        if (users.getLastName() != null && !users.getLastName().isBlank()) {
-            lastName = users.getLastName().trim();
-            fullName.append(" ");
-            fullName.append(lastName);
-            initials.append(lastName.toUpperCase().charAt(0));
-        }
-        else {
-            if (firstName != null) {
-                String[] nameArr = firstName.split(" ");
-                if (nameArr.length > 1) {
-                    initials.append(nameArr[nameArr.length - 1].toUpperCase().charAt(0));
-                }
-                else {
-                    String lastPart = nameArr[nameArr.length - 1].toUpperCase();
-
-                    if (lastPart.length() > 1) {
-                        initials.append(lastPart.charAt(1));
-                    }
-                }
-            }
-        }
+        String fullName = Utils.getFullName(owner.getFirstName(), owner.getLastName());
+        String initials = Utils.getInitials(owner.getFirstName(), owner.getLastName());
 
         AddressResponse addressRes = null;
 
-        if (address != null){
-            addressRes = new AddressResponse(address.getAddressId(), address.getHouseNo(), address.getStreet(),
-                    address.getLandMark(), address.getCity(), address.getState(), address.getPincode());
+        if (owner.getAddressId() != null){
+            addressRes = new AddressResponse(owner.getAddressId(), owner.getHouseNo(), owner.getStreet(),
+                    owner.getLandMark(), owner.getCity(), owner.getState(), owner.getPincode());
         }
 
         Date latestActivityDate = null;
@@ -71,9 +38,9 @@ public class OwnerListMapper implements Function<Users, OwnerResponse> {
             latestActivityDate = userActivities.getCreatedAt();
         }
 
-        return new OwnerResponse(users.getUserId(), users.getParentId(), firstName,
-                lastName, fullName.toString(), initials.toString(), users.getMobileNo(),
-                noOfProperties, addressRes, Utils.dateToString(users.getCreatedAt()),
+        return new OwnerResponse(owner.getUserId(), owner.getParentId(), owner.getFirstName(),
+                owner.getLastName(), fullName, initials, owner.getMobileNo(), noOfProperties,
+                addressRes, Utils.dateToString(owner.getCreatedAt()),
                 latestActivityDate != null ? Utils.dateToString(latestActivityDate) : null,
                 latestActivityDate != null ? Utils.dateToTime(latestActivityDate) : null
         );

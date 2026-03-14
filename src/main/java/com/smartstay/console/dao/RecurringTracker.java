@@ -20,6 +20,8 @@ public class RecurringTracker {
     private Long trackerId;
     private String hostelId;
     private Integer creationDay;
+    private Integer creationMonth;
+    private Integer creationYear;
     private Date createdAt;
     //Recurring creation Mode enum
     private String mode;

@@ -11,7 +11,6 @@ import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -32,20 +31,22 @@ public class RecurringTrackerService {
         return recurringTrackerRepository.getLatestRecurringTrackersByHostelIds(hostelIds);
     }
 
-    public RecurringTracker getLatestRecurringTrackerByHostelId(String hostelId) {
-        return recurringTrackerRepository.getLatestRecurringTrackerByHostelId(hostelId);
+    public boolean checkRecurringTrackerExists(String hostelId, int day, int month, int year){
+        return recurringTrackerRepository
+                .existsByHostelIdAndCreationDayAndCreationMonthAndCreationYear(hostelId, day, month, year);
     }
 
-    public void markAsInvoiceGenerated(String hostelId) {
+    public void markAsInvoiceGenerated(String hostelId, int billingDay) {
 
-        Calendar calendar = Calendar.getInstance();
+        Date today = new Date();
 
-        int billingDay = Utils.findDateFromDate(calendar.getTime());
         RecurringTracker rt = new RecurringTracker();
-        rt.setCreatedAt(new Date());
+        rt.setCreatedAt(today);
         rt.setMode(RecurringModeEnum.MANUAL.name());
         rt.setHostelId(hostelId);
         rt.setCreationDay(billingDay);
+        rt.setCreationMonth(Utils.getCurrentMonth(today));
+        rt.setCreationYear(Utils.getCurrentYear(today));
         rt.setCreatedBy(authentication.getName());
 
         rt = recurringTrackerRepository.save(rt);

@@ -5,6 +5,8 @@ import com.smartstay.console.Mapper.users.OwnerDetailsMapper;
 import com.smartstay.console.Mapper.users.OwnerListMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
+import com.smartstay.console.dto.users.OwnerWithAddressProjection;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.OwnerSortField;
@@ -126,7 +128,7 @@ public class OwnersService {
         boolean expired = Boolean.TRUE.equals(isPropertiesExpired);
         boolean aboutToExpire = Boolean.TRUE.equals(isAboutToExpire);
 
-        List<Users> owners = usersRepository.findAllOwners(name);
+        List<OwnerWithAddressProjection> owners = usersRepository.findAllOwnersWithAddressProjection(name);
 
         List<Map<String, String>> sortOptions = Arrays.stream(OwnerSortField.values())
                 .map(field -> Map.of(
@@ -148,21 +150,60 @@ public class OwnersService {
             ));
         }
 
-        List<String> parentIds = owners.stream()
-                .map(Users::getParentId)
+        Set<String> parentIds = owners.stream()
+                .map(OwnerWithAddressProjection::getParentId)
+                .collect(Collectors.toSet());
+
+        List<HostelPlanProjection> hostels = hostelsService.getHostelPlanProjectionData(parentIds);
+
+        Map<String, Integer> hostelCountMap = new HashMap<>();
+
+        Map<String, Boolean> expiredOwnerMap = new HashMap<>();
+        Map<String, Boolean> aboutToExpireOwnerMap = new HashMap<>();
+
+        Date today = new Date();
+        Date plus10 = Utils.addDaysToDate(today, 10);
+
+        for (HostelPlanProjection hostel : hostels) {
+
+            String parentId = hostel.parentId();
+            Date end = hostel.currentPlanEndsAt();
+
+            hostelCountMap.merge(parentId, 1, Integer::sum);
+
+            if (end == null) {
+                expiredOwnerMap.put(parentId, true);
+                continue;
+            }
+
+            int cmpToday = Utils.compareWithTwoDates(end, today);
+            int cmpPlus10 = Utils.compareWithTwoDates(end, plus10);
+
+            if (cmpToday < 0) {
+                expiredOwnerMap.put(parentId, true);
+            }
+
+            if (cmpToday >= 0 && cmpPlus10 < 0) {
+                aboutToExpireOwnerMap.put(parentId, true);
+            }
+        }
+
+        List<OwnerWithAddressProjection> filteredOwners = owners.stream()
+                .filter(owner -> {
+
+                    String parentId = owner.getParentId();
+
+                    if (expired && expiredOwnerMap.getOrDefault(parentId, false)) {
+                        return true;
+                    }
+
+                    if (aboutToExpire && aboutToExpireOwnerMap.getOrDefault(parentId, false)) {
+                        return true;
+                    }
+
+                    return !expired && !aboutToExpire;
+                })
                 .toList();
-
-        List<HostelV1> hostels = hostelsService.getHostelsByParentIds(parentIds);
-
-        Map<String, List<HostelV1>> hostelMap = hostels.stream()
-                .collect(Collectors.groupingBy(HostelV1::getParentId));
-
-        Map<HostelV1, HostelPlan> hostelPlanMap = hostels.stream()
-                .collect(Collectors.toMap(hostelV1 -> hostelV1,
-                        HostelV1::getHostelPlan));
-
-        Map<Users, Address> addressMap = owners.stream()
-                .collect(Collectors.toMap(owner -> owner, Users::getAddress));
 
         List<UserActivities> userActivitiesList =
                 userActivitiesService.findLatestActivitiesByParentIds(parentIds);
@@ -170,40 +211,7 @@ public class OwnersService {
         Map<String, UserActivities> userActivitiesMap = userActivitiesList.stream()
                 .collect(Collectors.toMap(UserActivities::getParentId, ua -> ua));
 
-        Date today = new Date();
-        Date plus10 = Utils.addDaysToDate(today, 10);
-
-        List<Users> filteredOwners = owners.stream()
-                .filter(owner -> {
-
-                    List<HostelV1> ownerHostels =
-                            hostelMap.getOrDefault(owner.getParentId(), Collections.emptyList());
-
-                    if (expired || aboutToExpire) {
-
-                        return ownerHostels.stream().anyMatch(h -> {
-                            HostelPlan hp = hostelPlanMap.get(h);
-                            if (hp == null || hp.getCurrentPlanEndsAt() == null) {
-                                return expired;
-                            }
-
-                            Date end = hp.getCurrentPlanEndsAt();
-
-                            int cmpToday = Utils.compareWithTwoDates(end, today);
-                            int cmpPlus10 = Utils.compareWithTwoDates(end, plus10);
-
-                            if (expired && cmpToday < 0) {
-                                return true;
-                            }
-
-                            return aboutToExpire && (cmpToday >= 0 && cmpPlus10 < 0);
-                        });
-                    }
-
-                    return true;
-                }).toList();
-
-        Comparator<Users> comparator;
+        Comparator<OwnerWithAddressProjection> comparator;
 
         switch (sortField) {
 
@@ -212,7 +220,7 @@ public class OwnersService {
             );
 
             case HOSTEL_COUNT -> comparator = Comparator.comparing(
-                    u -> hostelMap.getOrDefault(u.getParentId(), Collections.emptyList()).size()
+                    u -> hostelCountMap.getOrDefault(u.getParentId(), 0)
             );
 
             case LATEST_ACTIVITY -> comparator = Comparator.comparing(
@@ -223,14 +231,14 @@ public class OwnersService {
                     Comparator.nullsFirst(Comparator.naturalOrder())
             );
 
-            default -> comparator = Comparator.comparing(Users::getCreatedAt);
+            default -> comparator = Comparator.comparing(OwnerWithAddressProjection::getCreatedAt);
         }
 
         if (isDesc) {
             comparator = comparator.reversed();
         }
 
-        List<Users> sortedOwners = filteredOwners.stream()
+        List<OwnerWithAddressProjection> sortedOwners = filteredOwners.stream()
                 .sorted(comparator)
                 .toList();
 
@@ -239,12 +247,11 @@ public class OwnersService {
         int toIndex = Math.min(fromIndex + size, totalItems);
         int totalPages = (int) Math.ceil((double) totalItems / size);
 
-        List<Users> pagedOwners = sortedOwners.subList(fromIndex, toIndex);
+        List<OwnerWithAddressProjection> pagedOwners = sortedOwners.subList(fromIndex, toIndex);
 
         List<OwnerResponse> ownersList = pagedOwners.stream()
                 .map(owner -> new OwnerListMapper(
-                        hostelMap.getOrDefault(owner.getParentId(), Collections.emptyList()).size(),
-                        addressMap.get(owner),
+                        hostelCountMap.getOrDefault(owner.getParentId(), 0),
                         userActivitiesMap.get(owner.getParentId())
                 ).apply(owner))
                 .toList();

@@ -16,23 +16,13 @@ public interface RecurringTrackerRepository extends JpaRepository<RecurringTrack
        SELECT rt
        FROM RecurringTracker rt
        WHERE rt.hostelId IN :hostelIds
-       AND rt.createdAt = (
-            SELECT MAX(rt2.createdAt)
+       AND rt.trackerId = (
+            SELECT MAX(rt2.trackerId)
             FROM RecurringTracker rt2
             WHERE rt2.hostelId = rt.hostelId
        )
        """)
     List<RecurringTracker> getLatestRecurringTrackersByHostelIds(@Param("hostelIds") Set<String> hostelIds);
 
-    @Query("""
-       SELECT rt
-       FROM RecurringTracker rt
-       WHERE rt.hostelId = :hostelId
-       AND rt.createdAt = (
-            SELECT MAX(rt2.createdAt)
-            FROM RecurringTracker rt2
-            WHERE rt2.hostelId = rt.hostelId
-       )
-       """)
-    RecurringTracker getLatestRecurringTrackerByHostelId(@Param("hostelId") String hostelId);
+    boolean existsByHostelIdAndCreationDayAndCreationMonthAndCreationYear(String hostelId, int day, int month, int year);
 }

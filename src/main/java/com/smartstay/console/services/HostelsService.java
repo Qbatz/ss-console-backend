@@ -11,6 +11,7 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dto.hostel.HostelResetSnapshot;
+import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.events.RecurringEvents;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
@@ -21,7 +22,6 @@ import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
 import com.smartstay.console.utils.Utils;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -173,10 +173,6 @@ public class HostelsService {
                 hostelsList);
 
         return new ResponseEntity<>(hostels, HttpStatus.OK);
-    }
-
-    public List<HostelV1> getHostelsByParentIds(List<String> parentIds) {
-        return hostelRepository.findAllByParentIdIn(parentIds);
     }
 
     public ResponseEntity<?> getHostelByHostelId(String hostelId) {
@@ -849,33 +845,45 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_ACTIVE, HttpStatus.BAD_REQUEST);
         }
 
-        RecurringTracker recurringTracker = recurringTrackerService
-                .getLatestRecurringTrackerByHostelId(hostelId);
-
-        if (recurringTracker != null){
-            if (Utils.isCurrentMonth(recurringTracker.getCreatedAt())){
-                return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
-            }
-        }
-
-        int day = Utils.getDayOfMonth(new Date());
+        Date today = new Date();
+        int day = Utils.getDayOfMonth(today);
         if (hostelRecDatePayload.inputDay() != null){
             day = hostelRecDatePayload.inputDay();
         }
 
         BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
-
-        if (billingRules != null){
-            if (!billingRules.getBillingStartDate().equals(day)){
-                return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
-            }
-            if (!billingRules.getTypeOfBilling().equals("FIXED_DATE")){
-                return new ResponseEntity<>(Utils.IS_NOT_FIXED_DATE, HttpStatus.BAD_REQUEST);
-            }
+        if (billingRules == null){
+            return new ResponseEntity<>(Utils.NO_BILLING_RULE_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId));
+        if (!billingRules.getBillingStartDate().equals(day)) {
+            return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
+        }
+        if (!billingRules.getTypeOfBilling().equals("FIXED_DATE")){
+            return new ResponseEntity<>(Utils.IS_NOT_FIXED_DATE, HttpStatus.BAD_REQUEST);
+        }
+
+        int billingDay = billingRules.getBillingStartDate();
+
+        if (day < billingDay) {
+            return new ResponseEntity<>(Utils.BILLING_DAY_NOT_REACHED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (recurringTrackerService.checkRecurringTrackerExists(hostelId, billingRules.getBillingStartDate(),
+                Utils.getCurrentMonth(today), Utils.getCurrentYear(today))){
+            return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId, billingDay));
+        } catch (Exception e){
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public List<HostelPlanProjection> getHostelPlanProjectionData(Set<String> parentIds) {
+        return hostelRepository.findHostelPlanProjectionData(parentIds);
     }
 }

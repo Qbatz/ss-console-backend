@@ -1,21 +1,19 @@
 package com.smartstay.console.events;
 
+import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 
+@Getter
 public class RecurringEvents extends ApplicationEvent {
 
-    private String hostelId;
+    private final String hostelId;
+    private final int billingDay;
 
-    public RecurringEvents(Object source, String hostelId) {
+    public RecurringEvents(Object source,
+                           String hostelId,
+                           int  billingDay) {
         super(source);
         this.hostelId = hostelId;
-    }
-
-    public String getHostelId() {
-        return hostelId;
-    }
-
-    public void setHostelId(String hostelId) {
-        this.hostelId = hostelId;
+        this.billingDay = billingDay;
     }
 }
