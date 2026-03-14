@@ -22,15 +22,16 @@ public interface UserActivitiesRepository extends JpaRepository<UserActivities, 
     List<UserActivities> findLatestActivity(@Param("hostelIds") List<String> hostelIds);
 
     @Query("""
-            SELECT ua FROM UserActivities ua
-            WHERE ua.createdAt = (
-                SELECT MAX(u2.createdAt)
+            SELECT ua
+            FROM UserActivities ua
+            WHERE ua.activityId IN (
+                SELECT MAX(u2.activityId)
                 FROM UserActivities u2
-                WHERE u2.parentId = ua.parentId
+                WHERE u2.parentId IN :parentIds
+                GROUP BY u2.parentId
             )
-            AND ua.parentId IN :parentIds
             """)
-    List<UserActivities> findLatestActivityPerParent(@Param("parentIds") List<String> parentIds);
+    List<UserActivities> findLatestActivityPerParent(@Param("parentIds") Set<String> parentIds);
 
     Page<UserActivities> findByHostelIdOrderByCreatedAtDesc(String hostelId, Pageable pageable);
 

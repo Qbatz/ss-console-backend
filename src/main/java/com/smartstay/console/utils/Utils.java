@@ -1,12 +1,10 @@
 package com.smartstay.console.utils;
 
 import com.smartstay.console.dao.HostelV1;
+import com.smartstay.console.dao.RecurringTracker;
 
 import java.text.SimpleDateFormat;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -55,6 +53,8 @@ public class Utils {
     public static final String RECURRING_ALREADY_CREATED = "Recurring already exists this month for this hostel";
     public static final String IS_NOT_FIXED_DATE = "Type of billing is not fixed date";
     public static final String DAY_NOT_MATCH = "Today or the input day doesn't match with the billing rule day";
+    public static final String BILLING_DAY_NOT_REACHED = "This month's billing day has not reached";
+    public static final String NO_BILLING_RULE_FOUND = "No billing rule found for this hostel";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
@@ -237,19 +237,6 @@ public class Utils {
         return localDate.getDayOfMonth();
     }
 
-    public static boolean isCurrentMonth(Date date) {
-        if (date == null) return false;
-
-        LocalDate inputDate = date.toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate();
-
-        LocalDate now = LocalDate.now();
-
-        return inputDate.getMonth() == now.getMonth()
-                && inputDate.getYear() == now.getYear();
-    }
-
     public static Integer getYesterdayDayOfMonth(Date date) {
         if (date == null) return null;
 
@@ -397,5 +384,50 @@ public class Utils {
             return cal.get(Calendar.DAY_OF_MONTH);
         }
         return 0;
+    }
+
+    public static Integer getCurrentMonth(Date date) {
+        if (date == null) return null;
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return localDate.getMonth().getValue();
+    }
+
+    public static Integer getCurrentYear(Date date) {
+        if (date == null) return null;
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return localDate.getYear();
+    }
+
+    public static boolean isSameBillingCycle(int billingStartDay, RecurringTracker tracker) {
+
+        if (tracker == null || tracker.getCreationDay() == null ||
+                tracker.getCreationMonth() == null || tracker.getCreationYear() == null) {
+            return false;
+        }
+
+        LocalDate today = LocalDate.now();
+
+        return tracker.getCreationDay() == billingStartDay
+                && tracker.getCreationMonth() == today.getMonthValue()
+                && tracker.getCreationYear() == today.getYear();
+    }
+
+    public static LocalTime dateToLocalTime(Date date) {
+        if (date == null) {
+            return null;
+        }
+        LocalDateTime dateTime = date
+                .toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDateTime();
+        return dateTime.toLocalTime();
     }
 }
