@@ -55,7 +55,6 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
             recurringStatus = Utils.isSameBillingCycle(
                     billingRules.getBillingStartDate(), recurringTracker);
 
-            recurringDay = recurringTracker.getCreationDay();
             recurringMode = recurringTracker.getMode();
 
             recurringCreatedAtDate = Utils.dateToString(createdAt);
