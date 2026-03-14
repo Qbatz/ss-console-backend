@@ -112,7 +112,7 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        demoRequest.setDemoRequestStatus(RequestStatus.OPEN.name());
+        demoRequest.setDemoRequestStatus(RequestStatus.ASSIGNED.name());
         demoRequest.setIsAssigned(true);
         demoRequest.setAssignedTo(assignedTo.getAgentId());
         demoRequest.setAssignedBy(agent.getAgentId());
