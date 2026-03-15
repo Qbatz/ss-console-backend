@@ -12,5 +12,6 @@ public enum Source {
     HOSTEL,
     HOSTEL_EXPENSE,
     OWNERS,
-    GENERATE_RECURRING
+    GENERATE_RECURRING,
+    DEMO_REQUEST
 }
