@@ -5,6 +5,7 @@ import com.smartstay.console.dao.RecurringTracker;
 
 import java.text.SimpleDateFormat;
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -430,5 +431,17 @@ public class Utils {
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime();
         return dateTime.toLocalTime();
+    }
+
+    public static String localDateToString(LocalDate date) {
+        DateTimeFormatter dateFormat =
+                DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        return date != null ? date.format(dateFormat) : null;
+    }
+
+    public static String localTimeToString(LocalTime time) {
+        DateTimeFormatter timeFormat =
+                DateTimeFormatter.ofPattern("HH:mm");
+        return time != null ? time.format(timeFormat) : null;
     }
 }

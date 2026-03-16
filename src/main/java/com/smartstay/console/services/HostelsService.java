@@ -651,7 +651,6 @@ public class HostelsService {
         return new ResponseEntity<>(hostels, HttpStatus.OK);
     }
 
-
     public ResponseEntity<?> getHostelRecurring(int page, int size, String hostelName, String filterBy) {
 
         if (!authentication.isAuthenticated()) {

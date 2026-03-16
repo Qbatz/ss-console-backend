@@ -243,6 +243,7 @@ public class AgentActivityUtil {
             case AGENT_ROLE -> "Created a new agent role";
             case SUBSCRIPTION -> "Created a new subscription";
             case GENERATE_RECURRING -> "Generated manual recurring";
+            case DEMO_REQUEST -> "Created a demo request";
             default -> "Created successfully";
         };
     }
