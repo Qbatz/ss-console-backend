@@ -18,6 +18,7 @@ public record HostelList(String hostelName,
                          String lastUpdateDate,
                          String lastUpdateTime,
                          String lastUpdateDateDisplay,
+                         String platform,
                          OwnerInfo ownerInfo,
                          HostelPlan hostelPlan) {
 }

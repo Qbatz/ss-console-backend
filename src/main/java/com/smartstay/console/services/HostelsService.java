@@ -110,70 +110,8 @@ public class HostelsService {
     private RecurringTrackerService recurringTrackerService;
     @Autowired
     private ApplicationEventPublisher applicationEventPublisher;
-
-    public ResponseEntity<?> getAllHostels(int page, int size, String hostelName) {
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        Agent agent = agentService.findUserByUserId(authentication.getName());
-        if (agent == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-        if (page > 0) {
-            page = page - 1;
-        }
-
-        long totalHostels = hostelRepository.findHostelCount();
-
-        int currentPage = page;
-
-        List<HostelPlan> actHostels = hostelPlansService.findActiveHostels();
-
-
-        List<HostelV1> allHostels = hostelRepository.findAllHostels(size, page*size, hostelName);
-
-        List<HostelV1> hostelsFromPlan = allHostels
-                .stream()
-                .toList();
-
-        List<String> parentId = hostelsFromPlan
-                .stream()
-                .map(HostelV1::getParentId)
-                .toList();
-        List<String> hostelIds = hostelsFromPlan
-                .stream()
-                .map(HostelV1::getHostelId)
-                .toList();
-
-        List<Users> createdUsers = usersService.getOwners(parentId);
-        List<OwnerInfo> ownerInfos = createdUsers
-                .stream()
-                .map(i -> new UserOnerInfoMapper().apply(i))
-                .toList();
-        List<UserActivities> listActivities = userActivitiesService.findLatestActivities(hostelIds);
-
-        List<HostelList> hostelsList = hostelsFromPlan
-                .stream()
-                .map(i -> new HostelsListMapper(ownerInfos, listActivities).apply(i))
-                .toList();
-
-        long inactiveHostels = totalHostels - actHostels.size();
-
-        int totalPages = (int) Math.ceil((double) totalHostels / size);
-
-        Hostels hostels = new Hostels(totalHostels,
-                actHostels.size(),
-                inactiveHostels,
-                currentPage,
-                size,
-                totalPages,
-                hostelsList);
-
-        return new ResponseEntity<>(hostels, HttpStatus.OK);
-    }
+    @Autowired
+    private LoginHistoryService loginHistoryService;
 
     public ResponseEntity<?> getHostelByHostelId(String hostelId) {
 
@@ -663,9 +601,9 @@ public class HostelsService {
 
         long totalHostels = hostelRepository.findHostelCount();
 
-        List<HostelPlan> actHostels = hostelPlansService.findActiveHostels();
+        long activeHostels = hostelPlansService.findActiveHostels();
 
-        long inactiveHostels = totalHostels - actHostels.size();
+        long inactiveHostels = totalHostels - activeHostels;
 
 
         Pageable pagebleRequest = PageRequest.of(page-1, size);
@@ -682,6 +620,10 @@ public class HostelsService {
                 .stream()
                 .map(HostelV1::getHostelId)
                 .toList();
+        List<String> parentIds = listHostels
+                .stream()
+                .map(HostelV1::getParentId)
+                .toList();
 
         List<Users> createdUsers = usersService.getOwners(parentId);
         List<OwnerInfo> ownerInfos = createdUsers
@@ -689,16 +631,16 @@ public class HostelsService {
                 .map(i -> new UserOnerInfoMapper().apply(i))
                 .toList();
         List<UserActivities> listActivities = userActivitiesService.findLatestActivities(hostelIds);
-
+        List<LoginHistory> loginHistories = loginHistoryService.getLoginHistoriesByHostelIds(parentIds);
 
         List<HostelList> hostelsList = listHostels
                 .stream()
-                .map(i -> new HostelsListMapper(ownerInfos, listActivities).apply(i))
+                .map(i -> new HostelsListMapper(ownerInfos, listActivities, loginHistories).apply(i))
                 .toList();
 
 
         Hostels hostels = new Hostels(totalHostels,
-                actHostels.size(),
+                activeHostels,
                 inactiveHostels,
                 pageableHostelV1.getPageable().getPageNumber()+1,
                 size,
@@ -708,6 +650,7 @@ public class HostelsService {
 
         return new ResponseEntity<>(hostels, HttpStatus.OK);
     }
+
 
     public ResponseEntity<?> getHostelRecurring(int page, int size, String hostelName, String filterBy) {
 
