@@ -156,6 +156,10 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
             }
 
         }
+
+        if (platform == null) {
+            platform = "NA";
+        }
         return new HostelList(hostelV1.getHostelName(),
                 hostelV1.getHostelId(),
                 hostelV1.getMainImage(),

@@ -21,7 +21,7 @@ public class DemoRequestController {
     @Autowired
     DemoRequestService demoRequestService;
 
-    @GetMapping("/")
+    @GetMapping("")
     public ResponseEntity<?> getAllDemoRequests(@RequestParam(value = "page", defaultValue = "0") int page,
                                                 @RequestParam(value = "size", defaultValue = "10") int size,
                                                 @RequestParam(value = "name", required = false) String name) {
