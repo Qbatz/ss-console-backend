@@ -28,4 +28,16 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     Page<Subscription> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     Page<Subscription> findByHostelIdInOrderByCreatedAtDesc(Set<String> hostelIds, Pageable pageable);
+
+    @Query("""
+           select count(s)
+           from Subscription s
+           where s.planEndsAt < CURRENT_TIMESTAMP
+           and s.planStartsAt = (
+               select max(s2.planStartsAt)
+               from Subscription s2
+               where s2.hostelId = s.hostelId
+           )
+           """)
+    long getExpiredLatestSubscriptionCount();
 }

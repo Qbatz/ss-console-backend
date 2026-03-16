@@ -339,4 +339,8 @@ public class OwnersService {
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
+    public long getOwnerCount(){
+        return usersRepository.getCount();
+    }
 }

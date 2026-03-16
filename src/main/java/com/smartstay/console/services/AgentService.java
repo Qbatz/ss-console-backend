@@ -34,7 +34,6 @@ public class AgentService {
 
     @Autowired
     private AgentRepository agentRepository;
-
     @Autowired
     private AgentRolesService agentRolesService;
     @Autowired
@@ -288,5 +287,9 @@ public class AgentService {
 
     public List<Agent> getAgentsByIds(Set<String> agentIds) {
         return agentRepository.findAllByAgentIdInAndIsActiveTrue(agentIds);
+    }
+
+    public long getAgentCount(){
+        return agentRepository.getCount();
     }
 }
