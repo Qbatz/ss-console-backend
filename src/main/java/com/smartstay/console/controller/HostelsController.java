@@ -21,19 +21,13 @@ public class HostelsController {
     @Autowired
     private HostelsService hostelsService;
 
-    @GetMapping("/old")
-    public ResponseEntity<?> getAllHostels( @RequestParam(value = "page", defaultValue = "0") int page,
-                                            @RequestParam(value = "size", defaultValue = "10") int size,
-                                            @RequestParam(value = "hostelName", required = false) String hostelName) {
-        return hostelsService.getAllHostels(page, size, hostelName);
-    }
-
     @GetMapping("")
     public ResponseEntity<?> getAllHostelsNew(@RequestParam(value = "page", defaultValue = "1") int page,
                                            @RequestParam(value = "size", defaultValue = "10") int size,
                                            @RequestParam(value = "hostelName", required = false) String hostelName) {
         return hostelsService.getAllHostelsNew(page, size, hostelName);
     }
+
 
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getHostelByHostelId(@PathVariable("hostelId") String hostelId){

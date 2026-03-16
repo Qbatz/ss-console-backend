@@ -23,7 +23,7 @@ public class HostelPlanService {
         return hostelPlanRepository.findAllHostelPlans(size, offset);
     }
 
-    public List<HostelPlan> findActiveHostels() {
+    public Long findActiveHostels() {
         return hostelPlanRepository.findActiveHostels(new Date());
     }
 

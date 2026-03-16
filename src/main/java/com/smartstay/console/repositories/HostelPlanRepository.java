@@ -21,10 +21,10 @@ public interface HostelPlanRepository extends JpaRepository<HostelPlan, Long> {
             """, nativeQuery = true)
     List<HostelPlan> findAllHostelPlans(@Param("limit") int size, @Param("offset") int offset);
 
-    @Query("""
-            SELECT hp FROM HostelPlan hp WHERE DATE(hp.currentPlanEndsAt) >= DATE(:todaysDate)
-            """)
-    List<HostelPlan> findActiveHostels(@Param("todaysDate") Date todaysDate);
+    @Query(value = """
+            SELECT count(hp.hostel_plan_id) as count FROM hostel_plan hp WHERE DATE(hp.current_plan_ends_at) >= DATE(:todaysDate)
+            """, nativeQuery = true)
+    long findActiveHostels(@Param("todaysDate") Date todaysDate);
 
     List<HostelPlan> findByHostel_HostelIdIn(List<String> hostelIds);
 }

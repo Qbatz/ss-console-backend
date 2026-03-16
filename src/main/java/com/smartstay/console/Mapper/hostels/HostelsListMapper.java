@@ -1,9 +1,6 @@
 package com.smartstay.console.Mapper.hostels;
 
-import com.smartstay.console.dao.HostelPlan;
-import com.smartstay.console.dao.HostelV1;
-import com.smartstay.console.dao.UserActivities;
-import com.smartstay.console.dao.Users;
+import com.smartstay.console.dao.*;
 import com.smartstay.console.ennum.PlanType;
 import com.smartstay.console.responses.hostels.HostelList;
 import com.smartstay.console.responses.hostels.OwnerInfo;
@@ -18,10 +15,12 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
 
     List<OwnerInfo> owners = null;
     List<UserActivities> userActivities = null;
+    List<LoginHistory> listLoginHistory = null;
 
-    public HostelsListMapper(List<OwnerInfo> owners, List<UserActivities> userActivities) {
+    public HostelsListMapper(List<OwnerInfo> owners, List<UserActivities> userActivities, List<LoginHistory> listHistory) {
         this.owners = owners;
         this.userActivities = userActivities;
+        this.listLoginHistory = listHistory;
     }
 
     @Override
@@ -38,6 +37,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         long noOfDaysSubscriptionActive = 0;
         StringBuilder initials = new StringBuilder();
         boolean isTrial = false;
+        Date lastActivity = null;
 
         if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")) {
             fullAddress.append(hostelV1.getHouseNo());
@@ -100,6 +100,29 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                 lastUpdateAt = Utils.dateToString(ua.getCreatedAt());
                 lastUpdateTime = Utils.dateToTime(ua.getCreatedAt());
                 lastUpdateDateDisplay = Utils.formatDateDisplay(ua.getCreatedAt());
+                lastActivity = ua.getCreatedAt();
+            }
+        }
+
+        if (listLoginHistory != null) {
+            LoginHistory lh = listLoginHistory
+                    .stream()
+                    .filter(i -> i.getParentId().equalsIgnoreCase(hostelV1.getParentId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (lh != null) {
+                if (lastActivity != null) {
+                    if (Utils.compareWithTwoDates(lastActivity, lh.getLoginAt()) < 0) {
+                        lastUpdateAt = Utils.dateToString(lh.getLoginAt());
+                        lastUpdateTime = Utils.dateToTime(lh.getLoginAt());
+                    }
+                }
+                else {
+                    lastUpdateAt = Utils.dateToString(lh.getLoginAt());
+                    lastUpdateTime = Utils.dateToTime(lh.getLoginAt());
+                }
+
             }
         }
 
