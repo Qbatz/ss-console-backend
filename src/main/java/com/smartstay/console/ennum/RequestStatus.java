@@ -2,6 +2,7 @@ package com.smartstay.console.ennum;
 
 public enum RequestStatus {
     PENDING("Pending"),
+    REQUESTED("REQUESTED"),
     ASSIGNED("Assigned"),
     OPEN("Open"),
     ONHOLD("Hold"),
