@@ -38,6 +38,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         StringBuilder initials = new StringBuilder();
         boolean isTrial = false;
         Date lastActivity = null;
+        String platform = null;
 
         if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")) {
             fullAddress.append(hostelV1.getHouseNo());
@@ -101,6 +102,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                 lastUpdateTime = Utils.dateToTime(ua.getCreatedAt());
                 lastUpdateDateDisplay = Utils.formatDateDisplay(ua.getCreatedAt());
                 lastActivity = ua.getCreatedAt();
+                platform = ua.getPlatform();
             }
         }
 
@@ -116,14 +118,20 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                     if (Utils.compareWithTwoDates(lastActivity, lh.getLoginAt()) < 0) {
                         lastUpdateAt = Utils.dateToString(lh.getLoginAt());
                         lastUpdateTime = Utils.dateToTime(lh.getLoginAt());
+                        platform = lh.getPlatform();
                     }
                 }
                 else {
                     lastUpdateAt = Utils.dateToString(lh.getLoginAt());
                     lastUpdateTime = Utils.dateToTime(lh.getLoginAt());
                 }
+                if (platform == null) {
+                    platform = lh.getPlatform();
+                }
 
             }
+
+
         }
 
 
@@ -166,6 +174,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                 lastUpdateAt,
                 lastUpdateTime,
                 lastUpdateDateDisplay,
+                platform,
                 ownerInfo,
                 hp);
     }
