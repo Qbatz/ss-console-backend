@@ -125,7 +125,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                     lastUpdateAt = Utils.dateToString(lh.getLoginAt());
                     lastUpdateTime = Utils.dateToTime(lh.getLoginAt());
                 }
-                if (platform == null) {
+                if (platform == null || !platform.isBlank()) {
                     platform = lh.getPlatform();
                 }
 
