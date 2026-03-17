@@ -1,6 +1,8 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.RecurringTracker;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -25,4 +27,6 @@ public interface RecurringTrackerRepository extends JpaRepository<RecurringTrack
     List<RecurringTracker> getLatestRecurringTrackersByHostelIds(@Param("hostelIds") Set<String> hostelIds);
 
     boolean existsByHostelIdAndCreationDayAndCreationMonthAndCreationYear(String hostelId, int day, int month, int year);
+
+    Page<RecurringTracker> findAllByHostelIdOrderByTrackerIdDesc(String hostelId, Pageable pageable);
 }

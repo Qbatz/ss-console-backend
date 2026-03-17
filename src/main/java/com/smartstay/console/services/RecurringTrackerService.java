@@ -9,6 +9,8 @@ import com.smartstay.console.ennum.Source;
 import com.smartstay.console.repositories.RecurringTrackerRepository;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -55,5 +57,9 @@ public class RecurringTrackerService {
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.GENERATE_RECURRING,
                 String.valueOf(rt.getTrackerId()), null, rt);
+    }
+
+    public Page<RecurringTracker> getPaginatedRecurringTrackersByHostelId(String hostelId, Pageable pageable) {
+        return recurringTrackerRepository.findAllByHostelIdOrderByTrackerIdDesc(hostelId, pageable);
     }
 }

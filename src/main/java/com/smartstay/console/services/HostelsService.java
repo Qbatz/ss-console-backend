@@ -5,6 +5,7 @@ import com.smartstay.console.Mapper.customers.CustomerResMapper;
 import com.smartstay.console.Mapper.hostels.HostelDetailsMapper;
 import com.smartstay.console.Mapper.hostels.HostelRecurringMapper;
 import com.smartstay.console.Mapper.hostels.HostelsListMapper;
+import com.smartstay.console.Mapper.hostels.RecurringTrackerResMapper;
 import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.Mapper.users.UsersResponseMapper;
 import com.smartstay.console.config.Authentication;
@@ -712,9 +713,19 @@ public class HostelsService {
         Map<Integer, HotelType> hotelTypeMap = hotelTypes.stream()
                 .collect(Collectors.toMap(HotelType::getId, hotelType -> hotelType));
 
-        Set<String> hostelIds = billingRulesList.stream()
-                .map(billingRules -> billingRules.getHostel().getHostelId())
-                .collect(Collectors.toSet());
+        Set<String> hostelIds = new HashSet<>();
+        Set<String> parentIds = new HashSet<>();
+
+        for (BillingRules billingRules : billingRulesList) {
+            hostelIds.add(billingRules.getHostel().getHostelId());
+            parentIds.add(billingRules.getHostel().getParentId());
+        }
+
+        List<Users> owners = usersService.getOwners(new ArrayList<>(parentIds));
+
+        Map<String, Users> ownerMap = owners.stream()
+                .collect(Collectors.toMap(Users::getParentId,
+                        user -> user));
 
         List<RecurringTracker> recurringTrackers = hostelIds.isEmpty()
                         ? Collections.emptyList()
@@ -739,6 +750,7 @@ public class HostelsService {
 
         List<HostelRecurringResponse> responseList = billingRulesList.stream()
                 .map(billingRules -> new HostelRecurringMapper(
+                        ownerMap.get(billingRules.getHostel().getParentId()),
                         hotelTypeMap.get(billingRules.getHostel().getHostelType()),
                         recurringTrackerMap.get(billingRules.getHostel().getHostelId()),
                         agentMap
@@ -831,5 +843,63 @@ public class HostelsService {
 
     public long getHostelCount(){
         return hostelRepository.findHostelCount();
+    }
+
+    public ResponseEntity<?> getRecurringHistory(String hostelId, int page, int size) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Recurring.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+        Pageable pageable = PageRequest.of(page, size);
+
+        HostelV1 hostel = hostelRepository.findByHostelId(hostelId);
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Page<RecurringTracker> paginatedRecurringTrackers = recurringTrackerService
+                .getPaginatedRecurringTrackersByHostelId(hostelId, pageable);
+
+        List<RecurringTracker> recurringTrackers = paginatedRecurringTrackers.getContent();
+
+        Set<String> createdByIds = recurringTrackers.stream()
+                .map(RecurringTracker::getCreatedBy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<Agent> agents = createdByIds.isEmpty()
+                ? Collections.emptyList()
+                : agentService.getAgentsByIds(createdByIds);
+
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        agent1 -> agent1));
+
+        List<RecurringTrackerRes> recurringHistory = recurringTrackers.stream()
+                .map(recurringTracker -> new RecurringTrackerResMapper(
+                        hostel, agentMap
+                ).apply(recurringTracker))
+                .toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("recurringHistory", recurringHistory);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", paginatedRecurringTrackers.getTotalElements());
+        response.put("totalPages", paginatedRecurringTrackers.getTotalPages());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
