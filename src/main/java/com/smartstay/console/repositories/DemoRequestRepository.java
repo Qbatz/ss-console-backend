@@ -22,4 +22,10 @@ public interface DemoRequestRepository extends JpaRepository<DemoRequest, Long> 
     Page<DemoRequest> findAllPaginated(@Param("name") String name, Pageable pageable);
 
     DemoRequest findByRequestId(Long demoRequestId);
+
+    @Query("""
+            select count(dr)
+            from DemoRequest dr
+            """)
+    long getCount();
 }

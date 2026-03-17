@@ -192,4 +192,8 @@ public class DemoRequestService {
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
+    public long getDemoRequestCount(){
+        return demoRequestRepository.getCount();
+    }
 }

@@ -828,4 +828,8 @@ public class HostelsService {
     public List<HostelPlanProjection> getHostelPlanProjectionData(Set<String> parentIds) {
         return hostelRepository.findHostelPlanProjectionData(parentIds);
     }
+
+    public long getHostelCount(){
+        return hostelRepository.findHostelCount();
+    }
 }
