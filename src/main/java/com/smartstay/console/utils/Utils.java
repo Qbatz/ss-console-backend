@@ -57,6 +57,9 @@ public class Utils {
     public static final String DAY_NOT_MATCH = "Today or the input day doesn't match with the billing rule day";
     public static final String BILLING_DAY_NOT_REACHED = "This month's billing day has not reached";
     public static final String NO_BILLING_RULE_FOUND = "No billing rule found for this hostel";
+    public static final String DEMO_REQUEST_STATUS_NOT_FOUND = "Demo request status not found";
+    public static final String PRESENTED_BY_REQUIRED = "Presented by can't be null or empty when status is completed";
+    public static final String PRESENTED_AT_REQUIRED = "Presented at can't be null when status is completed";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
@@ -443,5 +446,13 @@ public class Utils {
         DateTimeFormatter timeFormat =
                 DateTimeFormatter.ofPattern("HH:mm");
         return time != null ? time.format(timeFormat) : null;
+    }
+
+    public static Date localDateTimeToDate(LocalDateTime localDateTime) {
+        if (localDateTime == null) return null;
+
+        return Date.from(
+                localDateTime.atZone(ZoneId.systemDefault()).toInstant()
+        );
     }
 }

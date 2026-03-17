@@ -15,6 +15,7 @@ import com.smartstay.console.payloads.AddAdmin;
 import com.smartstay.console.payloads.agent.AddMockAgent;
 import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.responses.agents.AgentDetails;
+import com.smartstay.console.responses.agents.AgentDropdown;
 import com.smartstay.console.responses.agents.AgentResponse;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.Utils;
@@ -291,5 +292,31 @@ public class AgentService {
 
     public long getAgentCount(){
         return agentRepository.getCount();
+    }
+
+    public ResponseEntity<?> getAgentsDropdown() {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Agents.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<Agent> agents = agentRepository
+                .findAllByIsMockAgentFalseAndIsActiveTrueOrderByCreatedAtDesc();
+
+        List<AgentDropdown> response = agents.stream()
+                .map(a -> new AgentDropdown(a.getAgentId(),
+                        Utils.getFullName(a.getFirstName(), a.getLastName())))
+                .toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

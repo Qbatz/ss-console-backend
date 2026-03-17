@@ -45,4 +45,9 @@ public class  AgentController {
     public ResponseEntity<?> deactivateAgent(@PathVariable String agentId){
         return agentService.deactivateAgent(agentId);
     }
+
+    @GetMapping("/agents-dropdown")
+    public ResponseEntity<?> getAgentsDropdown(){
+        return agentService.getAgentsDropdown();
+    }
 }

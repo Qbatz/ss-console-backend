@@ -1,16 +1,24 @@
 package com.smartstay.console.ennum;
 
+import lombok.Getter;
+
+@Getter
 public enum RequestStatus {
     PENDING("Pending"),
-    REQUESTED("REQUESTED"),
+    REQUESTED("Requested"),
+    COMPLETED("Completed"),
+    ONBOARDED("Onboarded"),
     ASSIGNED("Assigned"),
     OPEN("Open"),
     ONHOLD("Hold"),
     REJECTED("Rejected"),
     CLOSED("Closed"),
-    INPROGRESS("In-Progress");
+    IN_PROGRESS("In-Progress");
 
 
-    RequestStatus(String pending) {
+    private final String value;
+
+    RequestStatus(String value) {
+        this.value = value;
     }
 }

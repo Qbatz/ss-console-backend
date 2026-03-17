@@ -255,7 +255,7 @@ public class AgentActivityUtil {
             case AGENT_ROLE -> "Updated an agent role";
             case SUBSCRIPTION -> "Updated subscription";
             case RESET_PASSWORD -> "Updated password";
-            case DEMO_REQUEST -> "Assigned agent to demo request";
+            case DEMO_REQUEST -> "Updated a demo request";
             default -> "Updated successfully";
         };
     }

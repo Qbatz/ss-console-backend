@@ -5,14 +5,14 @@ import lombok.Getter;
 @Getter
 public enum RecurringFilterOptions {
 
-    TODAY("today"),
-    YESTERDAY("yesterday"),
+    TODAY("Today"),
+    YESTERDAY("Yesterday"),
     TWO_DAYS_AGO("2 days ago"),
-    TOMORROW("tomorrow"),
-    THIS_WEEK("this week"),
-    LAST_WEEK("last week"),
-    TILL_TODAY("till today"),
-    UP_COMING("up coming");
+    TOMORROW("Tomorrow"),
+    THIS_WEEK("This week"),
+    LAST_WEEK("Last week"),
+    TILL_TODAY("Till today"),
+    UP_COMING("Up coming");
 
     private final String label;
 
