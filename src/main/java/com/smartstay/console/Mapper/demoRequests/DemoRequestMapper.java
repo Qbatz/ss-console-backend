@@ -44,6 +44,7 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
                 demoRequest.getCity(), demoRequest.getState(), demoRequest.getCountry(), demoRequest.getDemoRequestStatus(),
                 demoRequest.getIsDemoCompleted(), demoRequest.getIsAssigned(), assignedTo, assignedBy,
                 presentedBy, demoRequest.getComments(), demoRequest.getRequestedDate(), demoRequest.getRequestedTime(),
-                Utils.dateToString(demoRequest.getPresentedAt()), Utils.dateToTime(demoRequest.getPresentedAt()));
+                demoRequest.getPresentedAt() != null ? Utils.dateToString(demoRequest.getPresentedAt()) :  null,
+                demoRequest.getPresentedAt() != null ? Utils.dateToTime(demoRequest.getPresentedAt()) : null);
     }
 }

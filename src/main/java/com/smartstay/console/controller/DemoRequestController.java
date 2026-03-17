@@ -1,9 +1,9 @@
 package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.agent.AgentIdPayload;
+import com.smartstay.console.payloads.demoRequest.DemoRequestPayload;
 import com.smartstay.console.services.DemoRequestService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
-import io.swagger.v3.oas.annotations.parameters.RequestBody;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
@@ -32,5 +32,15 @@ public class DemoRequestController {
     public ResponseEntity<?> assignDemoRequest(@PathVariable("demoRequestId") Long demoRequestId,
                                                @Valid @RequestBody AgentIdPayload agentIdPayload) {
         return demoRequestService.assignDemoRequest(demoRequestId, agentIdPayload);
+    }
+
+    @GetMapping("/{demoRequestId}")
+    public ResponseEntity<?> getDemoRequest(@PathVariable("demoRequestId") Long demoRequestId) {
+        return demoRequestService.getDemoRequest(demoRequestId);
+    }
+
+    @PostMapping("/")
+    public ResponseEntity<?> addDemoRequest(@Valid @RequestBody DemoRequestPayload demoRequestPayload) {
+        return demoRequestService.addDemoRequest(demoRequestPayload);
     }
 }

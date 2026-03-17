@@ -262,4 +262,8 @@ public class SubscriptionService {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    public long getExpiredSubscriptionsCount(){
+        return subscriptionRepository.getExpiredLatestSubscriptionCount();
+    }
 }

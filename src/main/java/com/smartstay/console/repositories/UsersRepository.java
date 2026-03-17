@@ -60,4 +60,11 @@ public interface UsersRepository extends JpaRepository<Users, String> {
             )
             """)
     List<OwnerWithAddressProjection> findAllOwnersWithAddressProjection(String name);
+
+    @Query("""
+            select count(u)
+            from Users u
+            where u.roleId = 1
+            """)
+    long getCount();
 }

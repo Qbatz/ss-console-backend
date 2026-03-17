@@ -8,6 +8,7 @@ import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.RequestStatus;
 import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.agent.AgentIdPayload;
+import com.smartstay.console.payloads.demoRequest.DemoRequestPayload;
 import com.smartstay.console.repositories.DemoRequestRepository;
 import com.smartstay.console.responses.demoRequest.DemoRequestResponse;
 import com.smartstay.console.utils.Utils;
@@ -123,5 +124,76 @@ public class DemoRequestService {
                 String.valueOf(oldRequest.getRequestId()), oldRequest, demoRequest);
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getDemoRequest(Long demoRequestId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        DemoRequest demoRequest = demoRequestRepository.findByRequestId(demoRequestId);
+        if (demoRequest == null) {
+            return new ResponseEntity<>(Utils.DEMO_REQUEST_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Set<String> agentIds = new HashSet<>();
+        agentIds.add(demoRequest.getAssignedTo());
+        agentIds.add(demoRequest.getAssignedBy());
+        agentIds.add(demoRequest.getPresentedBy());
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId, a -> a));
+
+        DemoRequestResponse response = new DemoRequestMapper(agentMap).apply(demoRequest);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> addDemoRequest(DemoRequestPayload demoRequestPayload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        DemoRequest demoRequest = new DemoRequest();
+        demoRequest.setName(demoRequestPayload.name());
+        demoRequest.setEmailId(demoRequestPayload.email());
+        demoRequest.setContactNo(demoRequestPayload.contactNo());
+        demoRequest.setCountryCode(demoRequestPayload.countryCode());
+        demoRequest.setOrganization(demoRequestPayload.organization());
+        demoRequest.setNoOfHostels(demoRequestPayload.noOfHostels());
+        demoRequest.setNoOfTenant(demoRequestPayload.noOfTenants());
+        demoRequest.setCity(demoRequestPayload.city());
+        demoRequest.setState(demoRequestPayload.state());
+        demoRequest.setCountry(demoRequestPayload.country());
+        demoRequest.setDemoRequestStatus(RequestStatus.REQUESTED.name());
+        demoRequest.setIsDemoCompleted(false);
+        demoRequest.setIsAssigned(false);
+        demoRequest.setComments(demoRequestPayload.comments());
+        demoRequest.setRequestedDate(Utils.localDateToString(demoRequestPayload.requestedDate()));
+        demoRequest.setRequestedTime(Utils.localTimeToString(demoRequestPayload.requestedTime()));
+
+        demoRequest = demoRequestRepository.save(demoRequest);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.DEMO_REQUEST,
+                String.valueOf(demoRequest.getRequestId()), null, demoRequest);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public long getDemoRequestCount(){
+        return demoRequestRepository.getCount();
     }
 }

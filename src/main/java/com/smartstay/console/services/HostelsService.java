@@ -651,7 +651,6 @@ public class HostelsService {
         return new ResponseEntity<>(hostels, HttpStatus.OK);
     }
 
-
     public ResponseEntity<?> getHostelRecurring(int page, int size, String hostelName, String filterBy) {
 
         if (!authentication.isAuthenticated()) {
@@ -828,5 +827,9 @@ public class HostelsService {
 
     public List<HostelPlanProjection> getHostelPlanProjectionData(Set<String> parentIds) {
         return hostelRepository.findHostelPlanProjectionData(parentIds);
+    }
+
+    public long getHostelCount(){
+        return hostelRepository.findHostelCount();
     }
 }

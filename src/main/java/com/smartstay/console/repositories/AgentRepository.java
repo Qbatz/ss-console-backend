@@ -35,4 +35,12 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
     boolean existsByAgentEmailIdAndIsMockAgentFalse(String email);
 
     boolean existsByAgentEmailId(String email);
+
+    @Query("""
+            select count(a)
+            from Agent a
+            where a.isActive = true
+            and a.isMockAgent = false
+            """)
+    long getCount();
 }
