@@ -66,4 +66,11 @@ public class HostelsController {
                                                @Valid @RequestBody HostelRecDatePayload hostelRecDatePayload){
         return hostelsService.generateRecurring(hostelId, hostelRecDatePayload);
     }
+
+    @GetMapping("/recurring/{hostelId}")
+    public ResponseEntity<?> getRecurringHistoryByHostelId(@PathVariable("hostelId") String hostelId,
+                                                           @RequestParam(value = "page", defaultValue = "0") int page,
+                                                           @RequestParam(value = "size", defaultValue = "10") int size){
+        return hostelsService.getRecurringHistory(hostelId, page, size);
+    }
 }

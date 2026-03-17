@@ -1,7 +1,9 @@
 package com.smartstay.console.Mapper.hostels;
 
+import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.responses.hostels.HostelRecurringResponse;
+import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.utils.Utils;
 
 import java.util.Date;
@@ -10,13 +12,16 @@ import java.util.function.Function;
 
 public class HostelRecurringMapper implements Function<BillingRules, HostelRecurringResponse> {
 
+    Users owner;
     HotelType hotelType;
     RecurringTracker recurringTracker;
     Map<String, Agent> agentMap;
 
-    public HostelRecurringMapper(HotelType hotelType,
+    public HostelRecurringMapper(Users owner,
+                                 HotelType hotelType,
                                  RecurringTracker recurringTracker,
                                  Map<String, Agent> agentMap) {
+        this.owner = owner;
         this.hotelType = hotelType;
         this.recurringTracker = recurringTracker;
         this.agentMap = agentMap;
@@ -29,6 +34,11 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
         String hostelName = hostel.getHostelName();
 
         String fullAddress = Utils.buildFullAddress(hostel);
+
+        OwnerInfo ownerInfo = null;
+        if (owner != null){
+            ownerInfo = new UserOnerInfoMapper().apply(owner);
+        }
 
         HostelPlan hostelPlan = hostel.getHostelPlan();
         boolean isSubscriptionActive = false;
@@ -73,8 +83,8 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
         return new HostelRecurringResponse(hostel.getHostelId(), hostelType, hostelName, Utils.getInitials(hostelName),
                 hostel.getMobile(), hostel.getEmailId(), hostel.getHouseNo(), hostel.getStreet(), hostel.getLandmark(),
                 hostel.getCity(), hostel.getState(), hostel.getCountry(), hostel.getPincode(), fullAddress, hostel.getMainImage(),
-                isSubscriptionActive, recurringStatus, recurringDay, lastRecurringDate, recurringMode, recurringCreatedAtDate,
-                recurringCreatedAtTime, createdBy
+                ownerInfo, isSubscriptionActive, recurringStatus, recurringDay, lastRecurringDate, recurringMode,
+                recurringCreatedAtDate, recurringCreatedAtTime, createdBy
         );
     }
 }
