@@ -43,4 +43,6 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
             and a.isMockAgent = false
             """)
     long getCount();
+
+    List<Agent> findAllByIsMockAgentFalseAndIsActiveTrueOrderByCreatedAtDesc();
 }
