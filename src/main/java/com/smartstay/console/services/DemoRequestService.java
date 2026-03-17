@@ -9,8 +9,10 @@ import com.smartstay.console.ennum.RequestStatus;
 import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.agent.AgentIdPayload;
 import com.smartstay.console.payloads.demoRequest.DemoRequestPayload;
+import com.smartstay.console.payloads.demoRequest.DemoRequestStatusPayload;
 import com.smartstay.console.repositories.DemoRequestRepository;
 import com.smartstay.console.responses.demoRequest.DemoRequestResponse;
+import com.smartstay.console.responses.demoRequest.DemoRequestStatusResponse;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -195,5 +197,86 @@ public class DemoRequestService {
 
     public long getDemoRequestCount(){
         return demoRequestRepository.getCount();
+    }
+
+    public ResponseEntity<?> updateDemoRequestStatus(Long demoRequestId,
+                                                     DemoRequestStatusPayload demoRequestStatusPayload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        DemoRequest demoRequest = demoRequestRepository.findByRequestId(demoRequestId);
+        if (demoRequest == null){
+            return new ResponseEntity<>(Utils.DEMO_REQUEST_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        DemoRequest oldRequest = new ObjectMapper().convertValue(demoRequest, DemoRequest.class);
+
+        RequestStatus requestStatus;
+
+        try {
+            requestStatus = RequestStatus.valueOf(
+                    demoRequestStatusPayload.demoRequestStatus().toUpperCase()
+            );
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return new ResponseEntity<>(Utils.DEMO_REQUEST_STATUS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        demoRequest.setDemoRequestStatus(requestStatus.name());
+
+        if (demoRequestStatusPayload.comments() != null && !demoRequestStatusPayload.comments().isBlank()){
+            demoRequest.setComments(demoRequestStatusPayload.comments());
+        }
+
+        if (requestStatus.name().equals(RequestStatus.COMPLETED.name())) {
+
+            if (demoRequestStatusPayload.presentedBy() == null || demoRequestStatusPayload.presentedBy().isBlank()){
+                return new ResponseEntity<>(Utils.PRESENTED_BY_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+            if (demoRequestStatusPayload.presentedAt() == null){
+                return new ResponseEntity<>(Utils.PRESENTED_AT_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            Agent presentedBy = agentService.findUserByUserId(demoRequestStatusPayload.presentedBy());
+            if (presentedBy == null){
+                return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            demoRequest.setIsDemoCompleted(true);
+            demoRequest.setPresentedBy(presentedBy.getAgentId());
+            demoRequest.setPresentedAt(Utils.localDateTimeToDate(demoRequestStatusPayload.presentedAt()));
+        }
+
+        demoRequest = demoRequestRepository.save(demoRequest);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.DEMO_REQUEST,
+                String.valueOf(oldRequest.getRequestId()), oldRequest, demoRequest);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getDemoRequestStatus() {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        List<DemoRequestStatusResponse> responseList = Arrays.stream(RequestStatus.values())
+                .map(requestStatus -> new DemoRequestStatusResponse(
+                        requestStatus.name(),
+                        requestStatus.getValue()
+                )).toList();
+
+        return new ResponseEntity<>(responseList, HttpStatus.OK);
     }
 }

@@ -2,6 +2,7 @@ package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.agent.AgentIdPayload;
 import com.smartstay.console.payloads.demoRequest.DemoRequestPayload;
+import com.smartstay.console.payloads.demoRequest.DemoRequestStatusPayload;
 import com.smartstay.console.services.DemoRequestService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -42,5 +43,16 @@ public class DemoRequestController {
     @PostMapping("/")
     public ResponseEntity<?> addDemoRequest(@Valid @RequestBody DemoRequestPayload demoRequestPayload) {
         return demoRequestService.addDemoRequest(demoRequestPayload);
+    }
+
+    @PutMapping("/update-status/{demoRequestId}")
+    public ResponseEntity<?> updateDemoRequestStatus(@PathVariable("demoRequestId") Long demoRequestId,
+                                                     @Valid @RequestBody DemoRequestStatusPayload demoRequestStatusPayload){
+        return demoRequestService.updateDemoRequestStatus(demoRequestId, demoRequestStatusPayload);
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<?> getDemoRequestStatus() {
+        return demoRequestService.getDemoRequestStatus();
     }
 }
