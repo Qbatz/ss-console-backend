@@ -22,8 +22,8 @@ public class BankTransactionService {
         bankTransactionRepositories.deleteAll(listItemsOtherThanExpense);
     }
 
-    public void deleteExpenseItems(List<BankTransactionsV1> listItemsOtherThanExpense) {
-        bankTransactionRepositories.deleteAll(listItemsOtherThanExpense);
+    public void deleteExpenseItems(List<BankTransactionsV1> expenseTransactions) {
+        bankTransactionRepositories.deleteAll(expenseTransactions);
     }
 
     public List<BankTransactionsV1> getTransactionsByTransactionIds(Set<String> transactionIds) {
