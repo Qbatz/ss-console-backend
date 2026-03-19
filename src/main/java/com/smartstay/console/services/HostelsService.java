@@ -291,20 +291,16 @@ public class HostelsService {
     }
 
     public ResponseEntity<?> resetHostelTenant(String hostelId, HostelIdPayload hostelIdPayload) {
-
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-
         Agent agent = agentService.findUserByUserId(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-
         if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostel_Reset.getId(), Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-
         HostelV1 hostelV1 = hostelRepository.findByHostelId(hostelId);
         if (hostelV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
@@ -449,13 +445,14 @@ public class HostelsService {
             List<BankingV1> newBalanceAmounts = bankingList
                     .stream()
                     .map(i -> {
-                        if (bankBalances.get(i.getBankId()) != null) {
+                        if (bankBalances != null && bankBalances.get(i.getBankId()) != null) {
                             double amount = bankBalances.get(i.getBankId());
                             i.setBalance(i.getBalance() - amount);
                         }
 
                         return i;
-                    }).toList();
+                    })
+                    .toList();
             bankingService.updateBankAccount(newBalanceAmounts);
         }
 
