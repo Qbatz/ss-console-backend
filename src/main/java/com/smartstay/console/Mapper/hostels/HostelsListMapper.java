@@ -115,7 +115,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
 
             if (lh != null) {
                 if (lastActivity != null) {
-                    if (Utils.compareWithTwoDates(lastActivity, lh.getLoginAt()) < 0) {
+                    if (Utils.compareWithTwoDates(lastActivity, lh.getLoginAt()) > 0) {
                         lastUpdateAt = Utils.dateToString(lh.getLoginAt());
                         lastUpdateTime = Utils.dateToTime(lh.getLoginAt());
                         platform = lh.getPlatform();
@@ -126,7 +126,12 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                     lastUpdateTime = Utils.dateToTime(lh.getLoginAt());
                 }
                 if (platform == null || !platform.isBlank()) {
-                    platform = lh.getPlatform();
+                    if (lh.getSource().equalsIgnoreCase("WEB")) {
+                        platform = "Web";
+                    }
+                    else {
+                        platform = lh.getPlatform();
+                    }
                 }
 
             }

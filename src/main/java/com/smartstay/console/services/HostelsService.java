@@ -472,8 +472,8 @@ public class HostelsService {
             bankingService.updateBankAccount(newBalanceAmounts);
         }
 
-        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
-                hostelId, snapshot, null);
+//        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
+//                hostelId, snapshot, null);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
