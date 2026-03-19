@@ -291,16 +291,20 @@ public class HostelsService {
     }
 
     public ResponseEntity<?> resetHostelTenant(String hostelId, HostelIdPayload hostelIdPayload) {
+
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         Agent agent = agentService.findUserByUserId(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostel_Reset.getId(), Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
+
         HostelV1 hostelV1 = hostelRepository.findByHostelId(hostelId);
         if (hostelV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
@@ -345,37 +349,32 @@ public class HostelsService {
                 .filter(i -> !i.getSource().equalsIgnoreCase(BankSource.EXPENSE.name()))
                 .toList();
 
-        double expenseAmount = listItemsExpense
-                .stream()
-                .mapToDouble(BankTransactionsV1::getAmount)
-                .sum();
-
         HashMap<String, Double> bankBalances = new HashMap<>();
 
-        HostelV1 oldHostel = new ObjectMapper().convertValue(hostelV1, HostelV1.class);
+//        HostelV1 oldHostel = new ObjectMapper().convertValue(hostelV1, HostelV1.class);
 
-        HostelResetSnapshot snapshot = new HostelResetSnapshot(
-                oldHostel,
-                cloneList(customersList, Customers.class),
-                cloneList(invoicesList, InvoicesV1.class),
-                cloneList(listBookings, BookingsV1.class),
-                cloneList(listTransactions, TransactionV1.class),
-                cloneList(listCustomersWallet, CustomerWalletHistory.class),
-                cloneList(listCreditDebits, CreditDebitNotes.class),
-                cloneList(complaints, ComplaintsV1.class),
-                cloneList(listCustomerDocuments, CustomerDocuments.class),
-                cloneList(listCustomerBedHistory, CustomersBedHistory.class),
-                cloneList(listCustomerEbHistory, CustomersEbHistory.class),
-                cloneList(listCustomersAmenity, CustomersAmenity.class),
-                cloneList(listAmenityRequests, AmenityRequest.class),
-                cloneList(listConfigs, CustomersConfig.class),
-                cloneList(listCustomerCredentials, CustomerCredentials.class),
-                cloneList(listElectricityReadings, ElectricityReadings.class),
-                cloneList(listHostelReadings, HostelReadings.class),
-                cloneList(listBeds, Beds.class),
-                cloneList(listBankTransactions, BankTransactionsV1.class),
-                cloneList(bankingList, BankingV1.class)
-        );
+//        HostelResetSnapshot snapshot = new HostelResetSnapshot(
+//                oldHostel,
+//                cloneList(customersList, Customers.class),
+//                cloneList(invoicesList, InvoicesV1.class),
+//                cloneList(listBookings, BookingsV1.class),
+//                cloneList(listTransactions, TransactionV1.class),
+//                cloneList(listCustomersWallet, CustomerWalletHistory.class),
+//                cloneList(listCreditDebits, CreditDebitNotes.class),
+//                cloneList(complaints, ComplaintsV1.class),
+//                cloneList(listCustomerDocuments, CustomerDocuments.class),
+//                cloneList(listCustomerBedHistory, CustomersBedHistory.class),
+//                cloneList(listCustomerEbHistory, CustomersEbHistory.class),
+//                cloneList(listCustomersAmenity, CustomersAmenity.class),
+//                cloneList(listAmenityRequests, AmenityRequest.class),
+//                cloneList(listConfigs, CustomersConfig.class),
+//                cloneList(listCustomerCredentials, CustomerCredentials.class),
+//                cloneList(listElectricityReadings, ElectricityReadings.class),
+//                cloneList(listHostelReadings, HostelReadings.class),
+//                cloneList(listBeds, Beds.class),
+//                cloneList(listBankTransactions, BankTransactionsV1.class),
+//                cloneList(bankingList, BankingV1.class)
+//        );
 
         if (invoicesList != null && !invoicesList.isEmpty()) {
             invoiceV1Service.deleteAllInvoices(invoicesList);
@@ -420,60 +419,53 @@ public class HostelsService {
             hostelReadingService.deleteAll(listHostelReadings);
         }
         if (listTransactions != null && !listTransactions.isEmpty()) {
-            double transactionAmount = 0.0;
-            listTransactions.forEach(item -> {
-                if (bankBalances.containsKey(item.getBankId())) {
-                    if (item.getType() == null) {
-                        double amount = bankBalances.get(item.getBankId());
-                        amount = amount + item.getPaidAmount();
-                        bankBalances.put(item.getBankId(), amount);
-                    }
-                    else {
-                        double amount = bankBalances.get(item.getBankId());
-                        amount = amount  + (-1 * item.getPaidAmount());
-                        bankBalances.put(item.getBankId(), amount);
-                    }
-
-
-                }
-                else {
-                    if (item.getType() == null) {
-                        bankBalances.put(item.getBankId(), item.getPaidAmount());
-                    }
-                    else {
-                        bankBalances.put(item.getBankId(), item.getPaidAmount() * -1);
-                    }
-                }
-
-            });
             transactionV1Service.deleteALl(listTransactions);
         }
         if (listBeds != null && !listBeds.isEmpty()) {
             bedsService.makeAllBedAvailabe(listBeds);
         }
-        if (customersList != null && !listBeds.isEmpty()) {
+        if (customersList != null && !customersList.isEmpty()) {
             customersService.deleteAll(customersList);
         }
         if (listItemsOtherThanExpense != null && !listItemsOtherThanExpense.isEmpty()) {
             bankTransactionService.deleteItemsOtherThanExpense(listItemsOtherThanExpense);
         }
+
+        if (!listBankTransactions.isEmpty()) {
+            listBankTransactions.forEach(item -> {
+                double currentBalance = bankBalances.getOrDefault(item.getBankId(), 0.0);
+
+                if (BankTransactionType.CREDIT.name().equalsIgnoreCase(item.getType())) {
+                    currentBalance += item.getAmount();
+                } else if (BankTransactionType.DEBIT.name().equalsIgnoreCase(item.getType())) {
+                    currentBalance -= item.getAmount();
+                }
+
+                bankBalances.put(item.getBankId(), currentBalance);
+            });
+        }
+
         if (bankingList != null && !bankingList.isEmpty()) {
             List<BankingV1> newBalanceAmounts = bankingList
                     .stream()
                     .map(i -> {
-                        if (bankBalances != null && bankBalances.get(i.getBankId()) != null) {
+                        if (bankBalances.get(i.getBankId()) != null) {
                             double amount = bankBalances.get(i.getBankId());
                             i.setBalance(i.getBalance() - amount);
                         }
 
                         return i;
-                    })
-                    .toList();
+                    }).toList();
             bankingService.updateBankAccount(newBalanceAmounts);
         }
 
-        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
-                hostelId, snapshot, null);
+        if (!listItemsExpense.isEmpty()) {
+            bankTransactionService.deleteExpenseItems(listItemsExpense);
+            expenseService.deleteExpensesByHostelId(hostelId);
+        }
+
+//        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
+//                hostelId, snapshot, null);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

@@ -27,7 +27,7 @@ public class ExpenseService {
 
     public ResponseEntity<?> deleteExpenses(String hostelId, Agent agent) {
         List<ExpensesV1> listExpenses = expenseRepository.findByHostelId(hostelId);
-        List<ExpensesV1> oldExpenses = AgentActivityUtil.cloneList(listExpenses, ExpensesV1.class);
+//        List<ExpensesV1> oldExpenses = AgentActivityUtil.cloneList(listExpenses, ExpensesV1.class);
         List<String> bankIds = listExpenses
                 .stream()
                 .map(ExpensesV1::getBankId)
@@ -59,9 +59,14 @@ public class ExpenseService {
         bankingService.removeExpenses(bankIds, expensePerBankIds);
         expenseRepository.deleteAll(listExpenses);
 
-        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL_EXPENSE,
-                hostelId, oldExpenses, null);
+//        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL_EXPENSE,
+//                hostelId, oldExpenses, null);
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+    public void deleteExpensesByHostelId(String hostelId) {
+        List<ExpensesV1> listExpenses = expenseRepository.findByHostelId(hostelId);
+        expenseRepository.deleteAll(listExpenses);
     }
 }

@@ -28,7 +28,6 @@ public class HostelsController {
         return hostelsService.getAllHostelsNew(page, size, hostelName);
     }
 
-
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getHostelByHostelId(@PathVariable("hostelId") String hostelId){
         return hostelsService.getHostelByHostelId(hostelId);
