@@ -345,37 +345,32 @@ public class HostelsService {
                 .filter(i -> !i.getSource().equalsIgnoreCase(BankSource.EXPENSE.name()))
                 .toList();
 
-        double expenseAmount = listItemsExpense
-                .stream()
-                .mapToDouble(BankTransactionsV1::getAmount)
-                .sum();
-
         HashMap<String, Double> bankBalances = new HashMap<>();
 
-        HostelV1 oldHostel = new ObjectMapper().convertValue(hostelV1, HostelV1.class);
+//        HostelV1 oldHostel = new ObjectMapper().convertValue(hostelV1, HostelV1.class);
 
-        HostelResetSnapshot snapshot = new HostelResetSnapshot(
-                oldHostel,
-                cloneList(customersList, Customers.class),
-                cloneList(invoicesList, InvoicesV1.class),
-                cloneList(listBookings, BookingsV1.class),
-                cloneList(listTransactions, TransactionV1.class),
-                cloneList(listCustomersWallet, CustomerWalletHistory.class),
-                cloneList(listCreditDebits, CreditDebitNotes.class),
-                cloneList(complaints, ComplaintsV1.class),
-                cloneList(listCustomerDocuments, CustomerDocuments.class),
-                cloneList(listCustomerBedHistory, CustomersBedHistory.class),
-                cloneList(listCustomerEbHistory, CustomersEbHistory.class),
-                cloneList(listCustomersAmenity, CustomersAmenity.class),
-                cloneList(listAmenityRequests, AmenityRequest.class),
-                cloneList(listConfigs, CustomersConfig.class),
-                cloneList(listCustomerCredentials, CustomerCredentials.class),
-                cloneList(listElectricityReadings, ElectricityReadings.class),
-                cloneList(listHostelReadings, HostelReadings.class),
-                cloneList(listBeds, Beds.class),
-                cloneList(listBankTransactions, BankTransactionsV1.class),
-                cloneList(bankingList, BankingV1.class)
-        );
+//        HostelResetSnapshot snapshot = new HostelResetSnapshot(
+//                oldHostel,
+//                cloneList(customersList, Customers.class),
+//                cloneList(invoicesList, InvoicesV1.class),
+//                cloneList(listBookings, BookingsV1.class),
+//                cloneList(listTransactions, TransactionV1.class),
+//                cloneList(listCustomersWallet, CustomerWalletHistory.class),
+//                cloneList(listCreditDebits, CreditDebitNotes.class),
+//                cloneList(complaints, ComplaintsV1.class),
+//                cloneList(listCustomerDocuments, CustomerDocuments.class),
+//                cloneList(listCustomerBedHistory, CustomersBedHistory.class),
+//                cloneList(listCustomerEbHistory, CustomersEbHistory.class),
+//                cloneList(listCustomersAmenity, CustomersAmenity.class),
+//                cloneList(listAmenityRequests, AmenityRequest.class),
+//                cloneList(listConfigs, CustomersConfig.class),
+//                cloneList(listCustomerCredentials, CustomerCredentials.class),
+//                cloneList(listElectricityReadings, ElectricityReadings.class),
+//                cloneList(listHostelReadings, HostelReadings.class),
+//                cloneList(listBeds, Beds.class),
+//                cloneList(listBankTransactions, BankTransactionsV1.class),
+//                cloneList(bankingList, BankingV1.class)
+//        );
 
         if (invoicesList != null && !invoicesList.isEmpty()) {
             invoiceV1Service.deleteAllInvoices(invoicesList);
@@ -420,43 +415,32 @@ public class HostelsService {
             hostelReadingService.deleteAll(listHostelReadings);
         }
         if (listTransactions != null && !listTransactions.isEmpty()) {
-            double transactionAmount = 0.0;
-            listTransactions.forEach(item -> {
-                if (bankBalances.containsKey(item.getBankId())) {
-                    if (item.getType() == null) {
-                        double amount = bankBalances.get(item.getBankId());
-                        amount = amount + item.getPaidAmount();
-                        bankBalances.put(item.getBankId(), amount);
-                    }
-                    else {
-                        double amount = bankBalances.get(item.getBankId());
-                        amount = amount  + (-1 * item.getPaidAmount());
-                        bankBalances.put(item.getBankId(), amount);
-                    }
-
-
-                }
-                else {
-                    if (item.getType() == null) {
-                        bankBalances.put(item.getBankId(), item.getPaidAmount());
-                    }
-                    else {
-                        bankBalances.put(item.getBankId(), item.getPaidAmount() * -1);
-                    }
-                }
-
-            });
             transactionV1Service.deleteALl(listTransactions);
         }
         if (listBeds != null && !listBeds.isEmpty()) {
             bedsService.makeAllBedAvailabe(listBeds);
         }
-        if (customersList != null && !listBeds.isEmpty()) {
+        if (customersList != null && !customersList.isEmpty()) {
             customersService.deleteAll(customersList);
         }
         if (listItemsOtherThanExpense != null && !listItemsOtherThanExpense.isEmpty()) {
             bankTransactionService.deleteItemsOtherThanExpense(listItemsOtherThanExpense);
         }
+
+        if (!listBankTransactions.isEmpty()) {
+            listBankTransactions.forEach(item -> {
+                double currentBalance = bankBalances.getOrDefault(item.getBankId(), 0.0);
+
+                if (BankTransactionType.CREDIT.name().equalsIgnoreCase(item.getType())) {
+                    currentBalance += item.getAmount();
+                } else if (BankTransactionType.DEBIT.name().equalsIgnoreCase(item.getType())) {
+                    currentBalance -= item.getAmount();
+                }
+
+                bankBalances.put(item.getBankId(), currentBalance);
+            });
+        }
+
         if (bankingList != null && !bankingList.isEmpty()) {
             List<BankingV1> newBalanceAmounts = bankingList
                     .stream()
@@ -470,6 +454,11 @@ public class HostelsService {
                     })
                     .toList();
             bankingService.updateBankAccount(newBalanceAmounts);
+        }
+
+        if (!listItemsExpense.isEmpty()) {
+            bankTransactionService.deleteExpenseItems(listItemsExpense);
+            expenseService.deleteExpensesByHostelId(hostelId);
         }
 
 //        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
