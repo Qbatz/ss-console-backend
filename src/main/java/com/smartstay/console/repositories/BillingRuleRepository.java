@@ -59,34 +59,88 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
             """, nativeQuery = true)
     List<BillingRules> findAllHostelsHavingTodaysRecurring(@Param("day") Integer day);
 
-    @Query(
-            value = """
-            SELECT b.*
-            FROM billing_rules b
-            JOIN hostelv1 h ON h.hostel_id = b.hostel_id
-            WHERE b.billing_start_date IN :days
-              AND (:hostelName IS NULL OR LOWER(h.hostel_name) LIKE LOWER(CONCAT('%', :hostelName, '%')))
-              AND b.created_at = (
-                    SELECT MAX(b2.created_at)
-                    FROM billing_rules b2
-                    WHERE b2.hostel_id = b.hostel_id
-              )
-            """,
-            countQuery = """
-            SELECT COUNT(*)
-            FROM billing_rules b
-            JOIN hostelv1 h ON h.hostel_id = b.hostel_id
-            WHERE b.billing_start_date IN :days
-              AND (:hostelName IS NULL OR LOWER(h.hostel_name) LIKE LOWER(CONCAT('%', :hostelName, '%')))
-              AND b.created_at = (
-                    SELECT MAX(b2.created_at)
-                    FROM billing_rules b2
-                    WHERE b2.hostel_id = b.hostel_id
-              )
-            """,
-            nativeQuery = true
-    )
-    Page<BillingRules> findAllHostelsHavingRecurringByDays(@Param("days") Set<Integer> days,
-                                                           @Param("hostelName") String hostelName,
-                                                           Pageable pageable);
+    @Query("""
+            SELECT COUNT(b)
+            FROM BillingRules b
+            LEFT JOIN RecurringTracker r
+                ON b.hostel.hostelId = r.hostelId
+                AND r.trackerId = (
+                    SELECT MAX(r2.trackerId)
+                    FROM RecurringTracker r2
+                    WHERE r2.hostelId = r.hostelId
+                )
+            WHERE b.createdAt = (
+                SELECT MAX(b2.createdAt)
+                FROM BillingRules b2
+                WHERE b2.hostel.hostelId = b.hostel.hostelId
+            )
+            AND b.billingStartDate IN :days
+            AND (:hostelName IS NULL OR LOWER(b.hostel.hostelName) LIKE LOWER(CONCAT('%', :hostelName, '%')))
+            AND (
+                r IS NULL OR
+                r.creationDay != b.billingStartDate OR
+                r.creationMonth != :currentMonth OR
+                r.creationYear != :currentYear
+            )
+            """)
+    long countPendingRecurring(@Param("days") Set<Integer> days,
+                               @Param("hostelName") String hostelName,
+                               @Param("currentMonth") int currentMonth,
+                               @Param("currentYear") int currentYear);
+
+    @Query("""
+            SELECT COUNT(b)
+            FROM BillingRules b
+            JOIN b.hostel h
+            LEFT JOIN h.hostelPlan hp
+            WHERE b.createdAt = (
+                SELECT MAX(b2.createdAt)
+                FROM BillingRules b2
+                WHERE b2.hostel.hostelId = b.hostel.hostelId
+            )
+            AND b.billingStartDate IN :days
+            AND (:hostelName IS NULL OR LOWER(h.hostelName) LIKE LOWER(CONCAT('%', :hostelName, '%')))
+            AND (
+                hp IS NULL OR
+                hp.currentPlanEndsAt IS NULL OR
+                hp.currentPlanEndsAt < :now
+            )
+            """)
+    long countExpiredSubscriptions(@Param("days") Set<Integer> days,
+                                   @Param("hostelName") String hostelName,
+                                   @Param("now") Date now);
+
+    @Query("""
+            SELECT b
+            FROM BillingRules b
+            JOIN b.hostel h
+            LEFT JOIN RecurringTracker r
+                 ON r.trackerId = (
+                     SELECT MAX(r2.trackerId)
+                     FROM RecurringTracker r2
+                     WHERE r2.hostelId = b.hostel.hostelId
+                     AND r2.creationMonth = :currentMonth
+                     AND r2.creationYear = :currentYear
+                 )
+            WHERE b.createdAt = (
+                SELECT MAX(b2.createdAt)
+                FROM BillingRules b2
+                WHERE b2.hostel.hostelId = b.hostel.hostelId
+            )
+            AND b.billingStartDate IN :days
+            AND (:hostelName IS NULL OR LOWER(h.hostelName) LIKE LOWER(CONCAT('%', :hostelName, '%')))
+            AND (
+                :status = 'ALL'
+                OR (:status = 'GENERATED' AND r.creationDay = b.billingStartDate)
+                OR (:status = 'NOT_GENERATED' AND
+                    (r IS NULL OR r.creationDay != b.billingStartDate)
+                )
+            )
+            """)
+    Page<BillingRules> getPaginatedBillingRulesByDays(@Param("days") Set<Integer> days,
+                                                      @Param("hostelName") String hostelName,
+                                                      @Param("currentMonth") int currentMonth,
+                                                      @Param("currentYear") int currentYear,
+                                                      @Param("status") String status,
+                                                      Pageable pageable);
 }

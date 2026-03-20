@@ -60,6 +60,8 @@ public class Utils {
     public static final String DEMO_REQUEST_STATUS_NOT_FOUND = "Demo request status not found";
     public static final String PRESENTED_BY_REQUIRED = "Presented by can't be null or empty when status is completed";
     public static final String PRESENTED_AT_REQUIRED = "Presented at can't be null when status is completed";
+    public static final String HOSTEL_ID_REQUIRED = "HostelId is required";
+    public static final String INPUT_DAY_MUST_BE_1_TO_28 = "Day must be between 1 and 28";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
@@ -454,5 +456,50 @@ public class Utils {
         return Date.from(
                 localDateTime.atZone(ZoneId.systemDefault()).toInstant()
         );
+    }
+
+    public static Set<Integer> getAllDaysOfMonth(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+
+        int maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+
+        Set<Integer> days = new HashSet<>();
+        for (int i = 1; i <= maxDay; i++) {
+            days.add(i);
+        }
+
+        return days;
+    }
+
+    public static Date getStartOfDay(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTime();
+    }
+
+    public static int calculateEndDay(int startDay, Date date) {
+        LocalDate today = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        YearMonth currentMonth = YearMonth.from(today);
+
+        int safeStartDay = Math.min(startDay, currentMonth.lengthOfMonth());
+
+        if (safeStartDay == 1) {
+            return currentMonth.lengthOfMonth();
+        }
+
+        LocalDate nextMonth = today.withDayOfMonth(safeStartDay).plusMonths(1);
+
+        int endDay = safeStartDay - 1;
+
+        int lastDayNextMonth = YearMonth.from(nextMonth).lengthOfMonth();
+        return Math.min(endDay, lastDayNextMonth);
     }
 }

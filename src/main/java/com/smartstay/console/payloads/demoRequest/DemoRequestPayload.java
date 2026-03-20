@@ -22,11 +22,11 @@ public record DemoRequestPayload(@NotBlank(message = "Name can't be null or empt
                                  String organization,
 
                                  @NotNull(message = "NoOfHostels can't be null")
-                                 @Positive
+                                 @PositiveOrZero(message = "NoOfHostel can't be less than zero")
                                  Integer noOfHostels,
 
                                  @NotNull(message = "NoOfTenants can't be null")
-                                 @Positive
+                                 @PositiveOrZero(message = "NoOfTenants can't be less than zero")
                                  Integer noOfTenants,
 
                                  String city,

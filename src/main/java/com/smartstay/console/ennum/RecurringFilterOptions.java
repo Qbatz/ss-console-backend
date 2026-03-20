@@ -12,7 +12,8 @@ public enum RecurringFilterOptions {
     THIS_WEEK("This week"),
     LAST_WEEK("Last week"),
     TILL_TODAY("Till today"),
-    UP_COMING("Up coming");
+    UP_COMING("Up coming"),
+    THIS_MONTH("This Month");
 
     private final String label;
 
