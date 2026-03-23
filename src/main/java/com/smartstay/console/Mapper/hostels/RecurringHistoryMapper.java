@@ -14,11 +14,14 @@ public class RecurringHistoryMapper implements Function<RecurringTracker, Recurr
 
     HostelV1 hostel;
     Map<String, Agent> agentMap;
+    Long invoiceCount;
 
     public RecurringHistoryMapper(HostelV1 hostel,
-                                     Map<String, Agent> agentMap) {
+                                  Map<String, Agent> agentMap,
+                                  Long invoiceCount) {
         this.hostel = hostel;
         this.agentMap = agentMap;
+        this.invoiceCount = invoiceCount;
     }
 
     @Override
@@ -46,7 +49,7 @@ public class RecurringHistoryMapper implements Function<RecurringTracker, Recurr
         Date startDate = Utils.getDateFromDay(startDay, month, year);
         Date endDate = Utils.getEndDate(startDay, month, year);
 
-        int invoiceGeneratedCount = 0;
+        long invoiceGeneratedCount = invoiceCount;
 
         return new RecurringHistoryRes(recurringTracker.getTrackerId(), hostelName, recurringTracker.getCreationDay(),
                 recurringTracker.getCreationMonth(), recurringTracker.getCreationYear(), startDay, endDay,

@@ -27,4 +27,11 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     List<BookingsV1> findBookingsByListOfCustomersAndHostelId(List<String> customerIds, String hostelId);
 
     List<BookingsV1> findAllByHostelIdIn(Set<String> hostelIds);
+
+    @Query(value = """
+                SELECT * FROM bookingsv1
+                where customer_id IN (:customerIds)
+                AND current_status IN ('CHECKIN', 'NOTICE')
+                """, nativeQuery = true)
+    List<BookingsV1> findBookingsByListOfCustomers(List<String> customerIds);
 }

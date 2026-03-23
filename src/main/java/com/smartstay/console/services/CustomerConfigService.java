@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class CustomerConfigService {
@@ -30,6 +31,15 @@ public class CustomerConfigService {
     public List<CustomersConfig> getAllActiveAndEnabledRecurringCustomers(String hostelId) {
         List<CustomersConfig> listCustomers = customersConfigRepository
                 .findActiveAndRecurringEnabledCustomersByHostelId(hostelId);
+        if (listCustomers == null) {
+            return new ArrayList<>();
+        }
+        return listCustomers;
+    }
+
+    public List<CustomersConfig> getAllActiveAndEnabledRecurringCustomersByHostelIds(Set<String> hostelIds) {
+        List<CustomersConfig> listCustomers = customersConfigRepository
+                .findActiveAndRecurringEnabledCustomersByHostelIds(hostelIds);
         if (listCustomers == null) {
             return new ArrayList<>();
         }

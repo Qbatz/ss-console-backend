@@ -19,17 +19,20 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
     RecurringTracker recurringTracker;
     Map<String, Agent> agentMap;
     List<BookingsV1> bookings;
+    List<BookingsV1> customers;
 
     public HostelRecurringMapper(Users owner,
                                  HotelType hotelType,
                                  RecurringTracker recurringTracker,
                                  Map<String, Agent> agentMap,
-                                 List<BookingsV1> bookings) {
+                                 List<BookingsV1> bookings,
+                                 List<BookingsV1> customers) {
         this.owner = owner;
         this.hotelType = hotelType;
         this.recurringTracker = recurringTracker;
         this.agentMap = agentMap;
         this.bookings = bookings;
+        this.customers = customers;
     }
 
     @Override
@@ -104,6 +107,13 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
         int endDay = Utils.calculateEndDay(startDay, today);
 
         int invoiceAboutToBeGenerated = 0;
+        if (customers != null){
+            int billingDay = billingRules.getBillingStartDate();
+
+            invoiceAboutToBeGenerated = (int) customers.stream()
+                    .filter(customer -> Utils.isEligibleForInvoice(customer, billingDay))
+                    .count();
+        }
 
         return new HostelRecurringResponse(hostel.getHostelId(), hostelType, hostelName, Utils.getInitials(hostelName),
                 hostel.getMobile(), hostel.getEmailId(), hostel.getHouseNo(), hostel.getStreet(), hostel.getLandmark(),

@@ -18,6 +18,7 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
     HotelType hotelType;
     Users owner;
     List<BookingsV1> bookings;
+    List<BookingsV1> customers;
     BillingRules billingRules;
     RecurringTracker latestRecurringTracker;
     int page;
@@ -28,6 +29,7 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
     public RecurringTrackerResMapper(HotelType hotelType,
                                      Users owner,
                                      List<BookingsV1> bookings,
+                                     List<BookingsV1> customers,
                                      BillingRules billingRules,
                                      RecurringTracker latestRecurringTracker,
                                      int page,
@@ -37,6 +39,7 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
         this.hotelType = hotelType;
         this.owner = owner;
         this.bookings = bookings;
+        this.customers = customers;
         this.billingRules = billingRules;
         this.latestRecurringTracker = latestRecurringTracker;
         this.page = page;
@@ -77,6 +80,13 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
         int noOfActiveTenants = noOfBookedTenants + noOfCheckedInTenants;
 
         int invoiceAboutToBeGenerated = 0;
+        if (customers != null){
+            int billingDay = billingRules.getBillingStartDate();
+
+            invoiceAboutToBeGenerated = (int) customers.stream()
+                    .filter(customer -> Utils.isEligibleForInvoice(customer, billingDay))
+                    .count();
+        }
 
         Date today = new Date();
         int startDay = billingRules.getBillingStartDate();

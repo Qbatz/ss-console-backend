@@ -1,5 +1,6 @@
 package com.smartstay.console.utils;
 
+import com.smartstay.console.dao.BookingsV1;
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dao.RecurringTracker;
 
@@ -563,5 +564,29 @@ public class Utils {
         LocalDate nextDate = next.atDay(safeDay);
 
         return Date.from(nextDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    public static boolean isEligibleForInvoice(BookingsV1 booking, int billingDay) {
+
+        if (booking.getJoiningDate() == null) return false;
+
+        Date joiningDate = booking.getJoiningDate();
+
+        int joiningDay = getDayOfMonth(joiningDate);
+
+        LocalTime autoInvoiceTime = LocalTime.of(2, 0);
+
+        // joined after billing cycle started → skip
+        if (joiningDay > billingDay) {
+            return false;
+        }
+
+        // joined on same day but after invoice time → skip
+        if (joiningDay == billingDay &&
+                dateToLocalTime(joiningDate).isAfter(autoInvoiceTime)) {
+            return false;
+        }
+
+        return true;
     }
 }

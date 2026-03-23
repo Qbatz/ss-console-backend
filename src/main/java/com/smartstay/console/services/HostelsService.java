@@ -9,6 +9,7 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dto.hostel.HostelResetSnapshot;
+import com.smartstay.console.dto.hostel.InvoiceCountPerTracker;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.events.RecurringEvents;
@@ -769,13 +770,27 @@ public class HostelsService {
         Map<String, List<BookingsV1>> bookingHostelMap = bookings.stream()
                 .collect(Collectors.groupingBy(BookingsV1::getHostelId));
 
+        List<CustomersConfig> listCustomerConfig = customersConfigService
+                .getAllActiveAndEnabledRecurringCustomersByHostelIds(hostelIds);
+
+        List<String> tempCusIds = listCustomerConfig.stream()
+                .map(CustomersConfig::getCustomerId)
+                .toList();
+
+        List<BookingsV1> customersList = bookingsService
+                .getAllCheckedInCustomersByListOfCustomerIds(tempCusIds);
+
+        Map<String, List<BookingsV1>> customersMap = customersList.stream()
+                .collect(Collectors.groupingBy(BookingsV1::getHostelId));
+
         List<HostelRecurringResponse> responseList = billingRulesList.stream()
                 .map(billingRules -> new HostelRecurringMapper(
                         ownerMap.get(billingRules.getHostel().getParentId()),
                         hotelTypeMap.get(billingRules.getHostel().getHostelType()),
                         recurringTrackerMap.get(billingRules.getHostel().getHostelId()),
                         agentMap,
-                        bookingHostelMap.get(billingRules.getHostel().getHostelId())
+                        bookingHostelMap.get(billingRules.getHostel().getHostelId()),
+                        customersMap.get(billingRules.getHostel().getHostelId())
                         ).apply(billingRules)
                 ).toList();
 
@@ -979,10 +994,15 @@ public class HostelsService {
 
         List<RecurringTracker> recurringTrackers = paginatedRecurringTrackers.getContent();
 
-        Set<String> createdByIds = recurringTrackers.stream()
-                .map(RecurringTracker::getCreatedBy)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        Set<String> createdByIds = new HashSet<>();
+        Set<Long> trackerIds = new HashSet<>();
+
+        for (RecurringTracker recurringTracker : recurringTrackers) {
+            if (recurringTracker.getCreatedBy() != null){
+                createdByIds.add(recurringTracker.getCreatedBy());
+            }
+            trackerIds.add(recurringTracker.getTrackerId());
+        }
 
         List<Agent> agents = createdByIds.isEmpty()
                 ? Collections.emptyList()
@@ -992,9 +1012,18 @@ public class HostelsService {
                 .collect(Collectors.toMap(Agent::getAgentId,
                         agent1 -> agent1));
 
+        List<InvoiceCountPerTracker> invoiceCountPerTrackers = recurringTrackerService
+                .getGeneratedInvoiceCountPerTracker(trackerIds);
+
+        Map<Long, Long> invoiceCountPerTrackerMap = invoiceCountPerTrackers.stream()
+                .collect(Collectors.toMap(
+                        InvoiceCountPerTracker::trackerId,
+                        InvoiceCountPerTracker::invoiceCount
+                ));
+
         List<RecurringHistoryRes> recurringHistory = recurringTrackers.stream()
                 .map(recurringTracker -> new RecurringHistoryMapper(
-                        hostel, agentMap
+                        hostel, agentMap, invoiceCountPerTrackerMap.getOrDefault(recurringTracker.getTrackerId(), 0L)
                 ).apply(recurringTracker))
                 .toList();
 
@@ -1011,10 +1040,21 @@ public class HostelsService {
 
         BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
 
+        List<CustomersConfig> listCustomerConfig = customersConfigService
+                .getAllActiveAndEnabledRecurringCustomers(hostelId);
+
+        List<String> tempCusIds = listCustomerConfig.stream()
+                .map(CustomersConfig::getCustomerId)
+                .toList();
+
+        List<BookingsV1> customersList = bookingsService
+                .getAllCheckedInCustomersByListOfCustomerIdsAndHostelId(tempCusIds, hostelId);
+
         RecurringTrackerRes recurringTrackerRes = new RecurringTrackerResMapper(
                 hotelTypeMap.get(hostel.getHostelType()),
                 owner,
                 bookings,
+                customersList,
                 billingRules,
                 latestRecurringTracker,
                 page + 1,
