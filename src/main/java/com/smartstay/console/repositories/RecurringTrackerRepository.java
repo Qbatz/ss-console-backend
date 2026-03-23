@@ -29,4 +29,16 @@ public interface RecurringTrackerRepository extends JpaRepository<RecurringTrack
     boolean existsByHostelIdAndCreationDayAndCreationMonthAndCreationYear(String hostelId, int day, int month, int year);
 
     Page<RecurringTracker> findAllByHostelIdOrderByTrackerIdDesc(String hostelId, Pageable pageable);
+
+    @Query("""
+       SELECT rt
+       FROM RecurringTracker rt
+       WHERE rt.hostelId = :hostelId
+       AND rt.trackerId = (
+            SELECT MAX(rt2.trackerId)
+            FROM RecurringTracker rt2
+            WHERE rt2.hostelId = rt.hostelId
+       )
+       """)
+    RecurringTracker getLatestRecurringTrackerByHostelId(@Param("hostelId") String hostelId);
 }

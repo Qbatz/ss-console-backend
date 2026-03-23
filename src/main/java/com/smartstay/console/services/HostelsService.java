@@ -2,10 +2,7 @@ package com.smartstay.console.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
-import com.smartstay.console.Mapper.hostels.HostelDetailsMapper;
-import com.smartstay.console.Mapper.hostels.HostelRecurringMapper;
-import com.smartstay.console.Mapper.hostels.HostelsListMapper;
-import com.smartstay.console.Mapper.hostels.RecurringTrackerResMapper;
+import com.smartstay.console.Mapper.hostels.*;
 import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.Mapper.users.UsersResponseMapper;
 import com.smartstay.console.config.Authentication;
@@ -995,19 +992,37 @@ public class HostelsService {
                 .collect(Collectors.toMap(Agent::getAgentId,
                         agent1 -> agent1));
 
-        List<RecurringTrackerRes> recurringHistory = recurringTrackers.stream()
-                .map(recurringTracker -> new RecurringTrackerResMapper(
+        List<RecurringHistoryRes> recurringHistory = recurringTrackers.stream()
+                .map(recurringTracker -> new RecurringHistoryMapper(
                         hostel, agentMap
                 ).apply(recurringTracker))
                 .toList();
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("recurringHistory", recurringHistory);
-        response.put("currentPage", page + 1);
-        response.put("pageSize", size);
-        response.put("totalItems", paginatedRecurringTrackers.getTotalElements());
-        response.put("totalPages", paginatedRecurringTrackers.getTotalPages());
+        List<HotelType> hotelTypes = hotelTypeService.getAllHotelTypes();
+        Map<Integer, HotelType> hotelTypeMap = hotelTypes.stream()
+                .collect(Collectors.toMap(HotelType::getId, hotelType -> hotelType));
 
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        Users owner = usersService.getOwner(hostel.getParentId());
+
+        List<BookingsV1> bookings = bookingsService.getBookingsByHostelId(hostelId);
+
+        RecurringTracker latestRecurringTracker = recurringTrackerService
+                .getLatestRecurringTrackerByHostelId(hostelId);
+
+        BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
+
+        RecurringTrackerRes recurringTrackerRes = new RecurringTrackerResMapper(
+                hotelTypeMap.get(hostel.getHostelType()),
+                owner,
+                bookings,
+                billingRules,
+                latestRecurringTracker,
+                page + 1,
+                size,
+                paginatedRecurringTrackers,
+                recurringHistory
+        ).apply(hostel);
+
+        return new ResponseEntity<>(recurringTrackerRes, HttpStatus.OK);
     }
 }

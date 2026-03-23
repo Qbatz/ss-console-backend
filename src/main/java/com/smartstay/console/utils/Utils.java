@@ -512,4 +512,56 @@ public class Utils {
 
         return YearMonth.from(localDate).lengthOfMonth();
     }
+
+    public static Date getDateFromDay(int day, int month, int year) {
+        LocalDate localDate = LocalDate.of(year, month, 1)
+                .withDayOfMonth(day);
+
+        return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    public static int getEndDay(int startDay, int month, int year) {
+
+        YearMonth currentMonth = YearMonth.of(year, month);
+
+        int safeStartDay = Math.min(startDay, currentMonth.lengthOfMonth());
+
+        if (safeStartDay == 1) {
+            return currentMonth.lengthOfMonth();
+        }
+
+        YearMonth nextMonth = currentMonth.plusMonths(1);
+
+        int endDay = safeStartDay - 1;
+
+        return Math.min(endDay, nextMonth.lengthOfMonth());
+    }
+
+    public static Date getEndDate(int startDay, int month, int year) {
+
+        YearMonth currentMonth = YearMonth.of(year, month);
+
+        int safeStartDay = Math.min(startDay, currentMonth.lengthOfMonth());
+
+        LocalDate startDate = currentMonth.atDay(safeStartDay);
+
+        int endDay = getEndDay(startDay, month, year);
+
+        LocalDate endDate = (endDay < safeStartDay)
+                ? startDate.plusMonths(1).withDayOfMonth(endDay)
+                : startDate.withDayOfMonth(endDay);
+
+        return Date.from(endDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    public static Date getNextMonthDate(int day, int month, int year) {
+        YearMonth current = YearMonth.of(year, month);
+        YearMonth next = current.plusMonths(1);
+
+        int safeDay = Math.min(day, next.lengthOfMonth());
+
+        LocalDate nextDate = next.atDay(safeDay);
+
+        return Date.from(nextDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
 }

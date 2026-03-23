@@ -62,4 +62,8 @@ public class RecurringTrackerService {
     public Page<RecurringTracker> getPaginatedRecurringTrackersByHostelId(String hostelId, Pageable pageable) {
         return recurringTrackerRepository.findAllByHostelIdOrderByTrackerIdDesc(hostelId, pageable);
     }
+
+    public RecurringTracker getLatestRecurringTrackerByHostelId(String hostelId) {
+        return recurringTrackerRepository.getLatestRecurringTrackerByHostelId(hostelId);
+    }
 }
