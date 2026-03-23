@@ -62,6 +62,8 @@ public class Utils {
     public static final String PRESENTED_AT_REQUIRED = "Presented at can't be null when status is completed";
     public static final String HOSTEL_ID_REQUIRED = "HostelId is required";
     public static final String INPUT_DAY_MUST_BE_1_TO_28 = "Day must be between 1 and 28";
+    public static final String INVALID_BILLING_CYCLE_START_DAY = "Invalid billingCycleStartDay";
+    public static final String CANNOT_USE_BILLING_CYCLE_FILTER_WITH_DATE_FILTER = "Cannot use billingCycleStartDay with filterBy";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
@@ -501,5 +503,13 @@ public class Utils {
 
         int lastDayNextMonth = YearMonth.from(nextMonth).lengthOfMonth();
         return Math.min(endDay, lastDayNextMonth);
+    }
+
+    public static int getLastDayOfMonth(Date date) {
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return YearMonth.from(localDate).lengthOfMonth();
     }
 }

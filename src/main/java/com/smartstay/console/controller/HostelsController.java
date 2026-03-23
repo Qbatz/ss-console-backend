@@ -26,8 +26,8 @@ public class HostelsController {
 
     @GetMapping("")
     public ResponseEntity<?> getAllHostelsNew(@RequestParam(value = "page", defaultValue = "1") int page,
-                                           @RequestParam(value = "size", defaultValue = "10") int size,
-                                           @RequestParam(value = "hostelName", required = false) String hostelName) {
+                                              @RequestParam(value = "size", defaultValue = "10") int size,
+                                              @RequestParam(value = "hostelName", required = false) String hostelName) {
         return hostelsService.getAllHostelsNew(page, size, hostelName);
     }
 
@@ -60,8 +60,9 @@ public class HostelsController {
                                                 @RequestParam(value = "size", defaultValue = "10") int size,
                                                 @RequestParam(value = "hostelName", required = false) String hostelName,
                                                 @RequestParam(defaultValue = "TODAY") String filterBy,
-                                                @RequestParam(defaultValue = "ALL") String statusFilterBy){
-        return hostelsService.getHostelRecurring(page, size, hostelName, filterBy, statusFilterBy);
+                                                @RequestParam(defaultValue = "ALL") String statusFilterBy,
+                                                @RequestParam(defaultValue = "0") int billingCycleStartDay){
+        return hostelsService.getHostelRecurring(page, size, hostelName, filterBy, statusFilterBy, billingCycleStartDay);
     }
 
 //    @PostMapping("/recurring/{hostelId}")

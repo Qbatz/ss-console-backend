@@ -642,7 +642,9 @@ public class HostelsService {
         return new ResponseEntity<>(hostels, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getHostelRecurring(int page, int size, String hostelName, String filterBy, String statusFilterBy) {
+    public ResponseEntity<?> getHostelRecurring(int page, int size, String hostelName,
+                                                String filterBy, String statusFilterBy,
+                                                int billingCycleStartDay) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -675,29 +677,37 @@ public class HostelsService {
                         "label", field.getLabel()
                 )).toList();
 
+        if (billingCycleStartDay < 0 || billingCycleStartDay > 31) {
+            return new ResponseEntity<>(Utils.INVALID_BILLING_CYCLE_START_DAY, HttpStatus.BAD_REQUEST);
+        }
+
+        boolean isBillingCycleFilter = billingCycleStartDay > 0;
+
+        if (isBillingCycleFilter && !filterBy.equals(RecurringFilterOptions.TODAY.name())) {
+            return new ResponseEntity<>(Utils.CANNOT_USE_BILLING_CYCLE_FILTER_WITH_DATE_FILTER, HttpStatus.BAD_REQUEST);
+        }
+
         Date today = new Date();
 
         Set<Integer> daySet = new HashSet<>();
 
-        switch (filterOption) {
+        int effectiveBillingDay = billingCycleStartDay;
 
-            case YESTERDAY -> daySet.add(Utils.getYesterdayDayOfMonth(today));
-
-            case TWO_DAYS_AGO -> daySet.add(Utils.getTwoDaysAgoDayOfMonth(today));
-
-            case TOMORROW -> daySet.add(Utils.getTomorrowDayOfMonth(today));
-
-            case THIS_WEEK -> daySet.addAll(Utils.getThisWeekDays(today));
-
-            case LAST_WEEK -> daySet.addAll(Utils.getLastWeekDays(today));
-
-            case TILL_TODAY -> daySet.addAll(Utils.getDaysTillToday(today));
-
-            case UP_COMING -> daySet.addAll(Utils.getUpcomingDays(today));
-
-            case THIS_MONTH -> daySet.addAll(Utils.getAllDaysOfMonth(today));
-
-            default -> daySet.add(Utils.getDayOfMonth(today));
+        if (isBillingCycleFilter) {
+            effectiveBillingDay = Math.min(billingCycleStartDay, Utils.getLastDayOfMonth(today));
+            daySet.add(effectiveBillingDay);
+        } else {
+            switch (filterOption) {
+                case YESTERDAY -> daySet.add(Utils.getYesterdayDayOfMonth(today));
+                case TWO_DAYS_AGO -> daySet.add(Utils.getTwoDaysAgoDayOfMonth(today));
+                case TOMORROW -> daySet.add(Utils.getTomorrowDayOfMonth(today));
+                case THIS_WEEK -> daySet.addAll(Utils.getThisWeekDays(today));
+                case LAST_WEEK -> daySet.addAll(Utils.getLastWeekDays(today));
+                case TILL_TODAY -> daySet.addAll(Utils.getDaysTillToday(today));
+                case UP_COMING -> daySet.addAll(Utils.getUpcomingDays(today));
+                case THIS_MONTH -> daySet.addAll(Utils.getAllDaysOfMonth(today));
+                default -> daySet.add(Utils.getDayOfMonth(today));
+            }
         }
 
         hostelName = hostelName == null || hostelName.isBlank() ? null : hostelName;
@@ -782,6 +792,9 @@ public class HostelsService {
         response.put("subscriptionExpiredCount", subscriptionExpiredCount);
         response.put("filterOptions",  filterOptions);
         response.put("statusFilterOptions", statusFilterOptions);
+        response.put("billingCycleStartDay", billingCycleStartDay);
+        response.put("effectiveBillingDay", effectiveBillingDay);
+        response.put("appliedFilterType", isBillingCycleFilter ? "BILLING_CYCLE" : "DATE_FILTER");
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
