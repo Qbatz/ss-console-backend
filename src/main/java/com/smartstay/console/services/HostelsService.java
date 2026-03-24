@@ -1,6 +1,5 @@
 package com.smartstay.console.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
 import com.smartstay.console.Mapper.hostels.*;
 import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
@@ -8,20 +7,22 @@ import com.smartstay.console.Mapper.users.UsersResponseMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
-import com.smartstay.console.dto.hostel.HostelResetSnapshot;
 import com.smartstay.console.dto.hostel.InvoiceCountPerTracker;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.events.RecurringEvents;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdRecDatePayload;
-import com.smartstay.console.payloads.hostel.HostelRecDatePayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
 import com.smartstay.console.utils.Utils;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletResponse;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -30,11 +31,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.smartstay.console.utils.AgentActivityUtil.cloneList;
 
 @Service
 public class HostelsService {
@@ -576,14 +577,17 @@ public class HostelsService {
         return expenseService.deleteExpenses(hostelId, agent);
     }
 
-    public ResponseEntity<?> getAllHostelsNew(int page, int size, String hostelName) {
+    public ResponseEntity<?> getAllHostelsNew(int page, int size, String hostelName, Date startDate, Date endDate) {
+
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         Agent agent = agentService.findUserByUserId(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
@@ -594,17 +598,23 @@ public class HostelsService {
 
         long inactiveHostels = totalHostels - activeHostels;
 
+        if (hostelName == null || hostelName.isBlank()){
+            hostelName = null;
+        }
+
+        if (endDate != null) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(endDate);
+            cal.add(Calendar.DAY_OF_MONTH, 1);
+            endDate = cal.getTime();
+        }
 
         Pageable pagebleRequest = PageRequest.of(page-1, size);
-        Page<HostelV1> pageableHostelV1 = hostelRepository.findAllHostelsNew(hostelName, pagebleRequest);
-        pageableHostelV1.getTotalElements();
+        Page<HostelV1> pageableHostelV1 = hostelRepository
+                .findAllHostelsNew(hostelName, startDate, endDate, pagebleRequest);
 
         List<HostelV1> listHostels = pageableHostelV1.stream().toList();
 
-        List<String> parentId = listHostels
-                .stream()
-                .map(HostelV1::getParentId)
-                .toList();
         List<String> hostelIds = listHostels
                 .stream()
                 .map(HostelV1::getHostelId)
@@ -614,7 +624,7 @@ public class HostelsService {
                 .map(HostelV1::getParentId)
                 .toList();
 
-        List<Users> createdUsers = usersService.getOwners(parentId);
+        List<Users> createdUsers = usersService.getOwners(parentIds);
         List<OwnerInfo> ownerInfos = createdUsers
                 .stream()
                 .map(i -> new UserOnerInfoMapper().apply(i))
@@ -627,7 +637,6 @@ public class HostelsService {
                 .map(i -> new HostelsListMapper(ownerInfos, listActivities, loginHistories).apply(i))
                 .toList();
 
-
         Hostels hostels = new Hostels(totalHostels,
                 activeHostels,
                 inactiveHostels,
@@ -636,8 +645,46 @@ public class HostelsService {
                 pageableHostelV1.getTotalPages(),
                 hostelsList);
 
-
         return new ResponseEntity<>(hostels, HttpStatus.OK);
+    }
+
+    public List<HostelList> getHostelsDataForExport(String hostelName, Date startDate, Date endDate){
+
+        if (hostelName == null || hostelName.isBlank()){
+            hostelName = null;
+        }
+
+        if (endDate != null) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(endDate);
+            cal.add(Calendar.DAY_OF_MONTH, 1);
+            endDate = cal.getTime();
+        }
+
+        List<HostelV1> listHostels = hostelRepository
+                .findAllHostelsByNameAndJoiningDate(hostelName, startDate, endDate);
+
+        List<String> hostelIds = listHostels
+                .stream()
+                .map(HostelV1::getHostelId)
+                .toList();
+        List<String> parentIds = listHostels
+                .stream()
+                .map(HostelV1::getParentId)
+                .toList();
+
+        List<Users> createdUsers = usersService.getOwners(parentIds);
+        List<OwnerInfo> ownerInfos = createdUsers
+                .stream()
+                .map(i -> new UserOnerInfoMapper().apply(i))
+                .toList();
+        List<UserActivities> listActivities = userActivitiesService.findLatestActivities(hostelIds);
+        List<LoginHistory> loginHistories = loginHistoryService.getLoginHistoriesByHostelIds(parentIds);
+
+        return listHostels
+                .stream()
+                .map(i -> new HostelsListMapper(ownerInfos, listActivities, loginHistories).apply(i))
+                .toList();
     }
 
     public ResponseEntity<?> getHostelRecurring(int page, int size, String hostelName,
@@ -1066,5 +1113,91 @@ public class HostelsService {
         ).apply(hostel);
 
         return new ResponseEntity<>(recurringTrackerRes, HttpStatus.OK);
+    }
+
+    public void exportHostels(String hostelName, Date startDate, Date endDate, HttpServletResponse response) throws IOException {
+
+        if (!authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Utils.UN_AUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Utils.UN_AUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, Utils.ACCESS_RESTRICTED);
+        }
+
+        List<HostelList> hostels = getHostelsDataForExport(hostelName, startDate, endDate);
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Hostels");
+
+        // Header
+        Row header = sheet.createRow(0);
+        header.createCell(0).setCellValue("Hostel Name");
+        header.createCell(1).setCellValue("Country Code");
+        header.createCell(2).setCellValue("Mobile");
+        header.createCell(3).setCellValue("City");
+        header.createCell(4).setCellValue("State");
+        header.createCell(5).setCellValue("Address");
+        header.createCell(6).setCellValue("Owner Name");
+        header.createCell(7).setCellValue("Owner Country Code");
+        header.createCell(8).setCellValue("Owner Mobile");
+        header.createCell(9).setCellValue("Hostel Plan Name");
+        header.createCell(10).setCellValue("Hostel Plan Code");
+        header.createCell(11).setCellValue("Hostel Plan Amount");
+        header.createCell(12).setCellValue("Hostel Joined On");
+        header.createCell(13).setCellValue("Plan Expired On");
+        header.createCell(14).setCellValue("Plan Expiring At");
+        header.createCell(15).setCellValue("Is Trial");
+        header.createCell(16).setCellValue("Is Subscription Active");
+        header.createCell(17).setCellValue("Subscription Active Days");
+        header.createCell(18).setCellValue("Last Updated Date");
+        header.createCell(19).setCellValue("Last Updated Time");
+        header.createCell(20).setCellValue("Platform");
+
+        int rowIdx = 1;
+        for (HostelList h : hostels) {
+            Row row = sheet.createRow(rowIdx++);
+            row.createCell(0).setCellValue(h.hostelName() != null ? h.hostelName() : "");
+            row.createCell(1).setCellValue(h.countryCode() != null ? h.countryCode() : "");
+            row.createCell(2).setCellValue(h.mobile() != null ? h.mobile() : "");
+            row.createCell(3).setCellValue(h.city() != null ? h.city() : "");
+            row.createCell(4).setCellValue(h.state() != null ? h.state() : "");
+            row.createCell(5).setCellValue(h.fullAddress() != null  ? h.fullAddress() : "");
+            row.createCell(6).setCellValue(h.ownerInfo() != null ? h.ownerInfo().fullName() != null ? h.ownerInfo().fullName() : "" : "");
+            row.createCell(7).setCellValue(h.ownerInfo() != null ? h.ownerInfo().countryCode() != null ? h.ownerInfo().countryCode() : "" : "");
+            row.createCell(8).setCellValue(h.ownerInfo() != null ? h.ownerInfo().mobile() != null ? h.ownerInfo().mobile() : "" : "");
+            row.createCell(9).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlan() != null ? h.hostelPlan().currentPlan() : "" : "");
+            row.createCell(10).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlanCode() != null ? h.hostelPlan().currentPlanCode() : "" : "");
+            row.createCell(11).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlanAmount() != null ? h.hostelPlan().currentPlanAmount() : 0D : 0D);
+            row.createCell(12).setCellValue(h.joinedOn() != null ? h.joinedOn() : "");
+            row.createCell(13).setCellValue(h.expiredOn() != null ? h.expiredOn() : "");
+            row.createCell(14).setCellValue(h.expiringAt() !=  null ? h.expiringAt() : "");
+            row.createCell(15).setCellValue(h.isTrial());
+            row.createCell(16).setCellValue(h.subscriptionIsActive());
+            row.createCell(17).setCellValue(h.noOfdaysSubscriptionActive());
+            row.createCell(18).setCellValue(h.lastUpdateDate() != null ? h.lastUpdateDate() : "");
+            row.createCell(19).setCellValue(h.lastUpdateTime() != null ? h.lastUpdateTime() : "");
+            row.createCell(20).setCellValue(h.platform() != null ? h.platform() : "");
+        }
+
+        Row headerRow = sheet.getRow(0);
+        int totalColumns = headerRow.getLastCellNum();
+
+        for (int col = 0; col < totalColumns; col++) {
+            sheet.autoSizeColumn(col);
+        }
+
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=\"hostels.xlsx\"");
+
+        ServletOutputStream out = response.getOutputStream();
+        workbook.write(out);
+        out.flush();
+        workbook.close();
     }
 }

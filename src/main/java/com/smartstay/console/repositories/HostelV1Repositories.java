@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -49,6 +50,8 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
         FROM hostel_plan hp
         LEFT JOIN hostelv1 h ON h.hostel_id = hp.hostel_id
         WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+            AND (:startDate IS NULL OR h.created_at >= :startDate)
+            AND (:endDate IS NULL OR h.created_at < :endDate)
         ORDER BY hp.current_plan_ends_at ASC
         """,
             countQuery = """
@@ -56,9 +59,14 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
         FROM hostelv1 h
         LEFT JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
         WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+            AND (:startDate IS NULL OR h.created_at >= :startDate)
+            AND (:endDate IS NULL OR h.created_at < :endDate)
         """,
             nativeQuery = true)
-    Page<HostelV1> findAllHostelsNew(String name, Pageable pageable);
+    Page<HostelV1> findAllHostelsNew(@Param("name") String name,
+                                     @Param("startDate") Date startDate,
+                                     @Param("endDate") Date endDate,
+                                     Pageable pageable);
 
     HostelV1 findByHostelId(String hostelId);
 
@@ -78,4 +86,18 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             WHERE h.parentId IN :parentIds
             """)
     List<HostelPlanProjection> findHostelPlanProjectionData(@Param("parentIds") Set<String> parentIds);
+
+    @Query(value = """
+                    SELECT h.*
+                    FROM hostel_plan hp
+                    LEFT JOIN hostelv1 h ON h.hostel_id = hp.hostel_id
+                    WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+                        AND (:startDate IS NULL OR h.created_at >= :startDate)
+                        AND (:endDate IS NULL OR h.created_at < :endDate)
+                    ORDER BY hp.current_plan_ends_at ASC
+                    """,
+            nativeQuery = true)
+    List<HostelV1> findAllHostelsByNameAndJoiningDate(@Param("name") String name,
+                                                      @Param("startDate") Date startDate,
+                                                      @Param("endDate") Date endDate);
 }

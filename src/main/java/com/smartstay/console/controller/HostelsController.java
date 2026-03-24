@@ -7,11 +7,15 @@ import com.smartstay.console.services.HostelsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -27,8 +31,18 @@ public class HostelsController {
     @GetMapping("")
     public ResponseEntity<?> getAllHostelsNew(@RequestParam(value = "page", defaultValue = "1") int page,
                                               @RequestParam(value = "size", defaultValue = "10") int size,
-                                              @RequestParam(value = "hostelName", required = false) String hostelName) {
-        return hostelsService.getAllHostelsNew(page, size, hostelName);
+                                              @RequestParam(value = "hostelName", required = false) String hostelName,
+                                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
+                                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate) {
+        return hostelsService.getAllHostelsNew(page, size, hostelName, startDate, endDate);
+    }
+
+    @GetMapping("/export")
+    public void exportHostels(@RequestParam(required = false) String hostelName,
+                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
+                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
+                              HttpServletResponse response) throws IOException {
+        hostelsService.exportHostels(hostelName, startDate, endDate, response);
     }
 
     @GetMapping("/{hostelId}")

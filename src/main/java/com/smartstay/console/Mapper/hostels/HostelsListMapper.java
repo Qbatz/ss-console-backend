@@ -133,13 +133,8 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                         platform = lh.getPlatform();
                     }
                 }
-
             }
-
-
         }
-
-
 
         HostelPlan plan = hostelV1.getHostelPlan();
         if (plan != null) {
@@ -159,7 +154,6 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                 expiringAt = Utils.dateToString(plan.getCurrentPlanEndsAt());
                 noOfDaysSubscriptionActive = Utils.findNumberOfDays(new Date(), plan.getCurrentPlanEndsAt());
             }
-
         }
 
         if (platform == null) {
