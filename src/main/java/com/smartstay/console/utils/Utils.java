@@ -1,5 +1,6 @@
 package com.smartstay.console.utils;
 
+import com.smartstay.console.dao.BookingsV1;
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dao.RecurringTracker;
 
@@ -54,12 +55,16 @@ public class Utils {
     public static final String SUBSCRIPTION_NOT_ACTIVE = "Subscription is not active for this hostel";
     public static final String RECURRING_ALREADY_CREATED = "Recurring already exists this month for this hostel";
     public static final String IS_NOT_FIXED_DATE = "Type of billing is not fixed date";
-    public static final String DAY_NOT_MATCH = "Today or the input day doesn't match with the billing rule day";
-    public static final String BILLING_DAY_NOT_REACHED = "This month's billing day has not reached";
+    //public static final String DAY_NOT_MATCH = "Today or the input day doesn't match with the billing rule day";
+    //public static final String BILLING_DAY_NOT_REACHED = "This month's billing day has not reached";
     public static final String NO_BILLING_RULE_FOUND = "No billing rule found for this hostel";
     public static final String DEMO_REQUEST_STATUS_NOT_FOUND = "Demo request status not found";
     public static final String PRESENTED_BY_REQUIRED = "Presented by can't be null or empty when status is completed";
     public static final String PRESENTED_AT_REQUIRED = "Presented at can't be null when status is completed";
+    public static final String HOSTEL_ID_REQUIRED = "HostelId is required";
+   // public static final String INPUT_DAY_MUST_BE_1_TO_28 = "Day must be between 1 and 28";
+    public static final String INVALID_BILLING_CYCLE_START_DAY = "Invalid billingCycleStartDay";
+    public static final String CANNOT_USE_BILLING_CYCLE_FILTER_WITH_DATE_FILTER = "Cannot use billingCycleStartDay with filterBy";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
@@ -454,5 +459,134 @@ public class Utils {
         return Date.from(
                 localDateTime.atZone(ZoneId.systemDefault()).toInstant()
         );
+    }
+
+    public static Set<Integer> getAllDaysOfMonth(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+
+        int maxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+
+        Set<Integer> days = new HashSet<>();
+        for (int i = 1; i <= maxDay; i++) {
+            days.add(i);
+        }
+
+        return days;
+    }
+
+    public static Date getStartOfDay(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTime();
+    }
+
+    public static int calculateEndDay(int startDay, Date date) {
+        LocalDate today = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        YearMonth currentMonth = YearMonth.from(today);
+
+        int safeStartDay = Math.min(startDay, currentMonth.lengthOfMonth());
+
+        if (safeStartDay == 1) {
+            return currentMonth.lengthOfMonth();
+        }
+
+        LocalDate nextMonth = today.withDayOfMonth(safeStartDay).plusMonths(1);
+
+        int endDay = safeStartDay - 1;
+
+        int lastDayNextMonth = YearMonth.from(nextMonth).lengthOfMonth();
+        return Math.min(endDay, lastDayNextMonth);
+    }
+
+    public static int getLastDayOfMonth(Date date) {
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return YearMonth.from(localDate).lengthOfMonth();
+    }
+
+    public static Date getDateFromDay(int day, int month, int year) {
+        LocalDate localDate = LocalDate.of(year, month, 1)
+                .withDayOfMonth(day);
+
+        return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    public static int getEndDay(int startDay, int month, int year) {
+
+        YearMonth currentMonth = YearMonth.of(year, month);
+
+        int safeStartDay = Math.min(startDay, currentMonth.lengthOfMonth());
+
+        if (safeStartDay == 1) {
+            return currentMonth.lengthOfMonth();
+        }
+
+        YearMonth nextMonth = currentMonth.plusMonths(1);
+
+        int endDay = safeStartDay - 1;
+
+        return Math.min(endDay, nextMonth.lengthOfMonth());
+    }
+
+    public static Date getEndDate(int startDay, int month, int year) {
+
+        YearMonth currentMonth = YearMonth.of(year, month);
+
+        int safeStartDay = Math.min(startDay, currentMonth.lengthOfMonth());
+
+        LocalDate startDate = currentMonth.atDay(safeStartDay);
+
+        int endDay = getEndDay(startDay, month, year);
+
+        LocalDate endDate = (endDay < safeStartDay)
+                ? startDate.plusMonths(1).withDayOfMonth(endDay)
+                : startDate.withDayOfMonth(endDay);
+
+        return Date.from(endDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    public static Date getNextMonthDate(int day, int month, int year) {
+        YearMonth current = YearMonth.of(year, month);
+        YearMonth next = current.plusMonths(1);
+
+        int safeDay = Math.min(day, next.lengthOfMonth());
+
+        LocalDate nextDate = next.atDay(safeDay);
+
+        return Date.from(nextDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    public static boolean isEligibleForInvoice(BookingsV1 booking, int billingDay) {
+
+        if (booking.getJoiningDate() == null) return false;
+
+        Date joiningDate = booking.getJoiningDate();
+
+        int joiningDay = getDayOfMonth(joiningDate);
+
+        LocalTime autoInvoiceTime = LocalTime.of(2, 0);
+
+        // joined after billing cycle started → skip
+        if (joiningDay > billingDay) {
+            return false;
+        }
+
+        // joined on same day but after invoice time → skip
+        if (joiningDay == billingDay &&
+                dateToLocalTime(joiningDate).isAfter(autoInvoiceTime)) {
+            return false;
+        }
+
+        return true;
     }
 }

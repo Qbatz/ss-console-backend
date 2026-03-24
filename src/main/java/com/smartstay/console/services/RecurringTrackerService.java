@@ -3,6 +3,7 @@ package com.smartstay.console.services;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.RecurringTracker;
+import com.smartstay.console.dto.hostel.InvoiceCountPerTracker;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.RecurringModeEnum;
 import com.smartstay.console.ennum.Source;
@@ -61,5 +62,13 @@ public class RecurringTrackerService {
 
     public Page<RecurringTracker> getPaginatedRecurringTrackersByHostelId(String hostelId, Pageable pageable) {
         return recurringTrackerRepository.findAllByHostelIdOrderByTrackerIdDesc(hostelId, pageable);
+    }
+
+    public RecurringTracker getLatestRecurringTrackerByHostelId(String hostelId) {
+        return recurringTrackerRepository.getLatestRecurringTrackerByHostelId(hostelId);
+    }
+
+    public List<InvoiceCountPerTracker> getGeneratedInvoiceCountPerTracker(Set<Long> trackerIds) {
+        return recurringTrackerRepository.getGeneratedInvoiceCountPerTracker(trackerIds);
     }
 }

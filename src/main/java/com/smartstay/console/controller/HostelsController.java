@@ -1,6 +1,7 @@
 package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
+import com.smartstay.console.payloads.hostel.HostelIdRecDatePayload;
 import com.smartstay.console.payloads.hostel.HostelRecDatePayload;
 import com.smartstay.console.services.HostelsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -10,6 +11,8 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("v2/hostels")
@@ -23,8 +26,8 @@ public class HostelsController {
 
     @GetMapping("")
     public ResponseEntity<?> getAllHostelsNew(@RequestParam(value = "page", defaultValue = "1") int page,
-                                           @RequestParam(value = "size", defaultValue = "10") int size,
-                                           @RequestParam(value = "hostelName", required = false) String hostelName) {
+                                              @RequestParam(value = "size", defaultValue = "10") int size,
+                                              @RequestParam(value = "hostelName", required = false) String hostelName) {
         return hostelsService.getAllHostelsNew(page, size, hostelName);
     }
 
@@ -56,14 +59,21 @@ public class HostelsController {
     public ResponseEntity<?> getHostelRecurring(@RequestParam(value = "page", defaultValue = "0") int page,
                                                 @RequestParam(value = "size", defaultValue = "10") int size,
                                                 @RequestParam(value = "hostelName", required = false) String hostelName,
-                                                @RequestParam(defaultValue = "TODAY") String filterBy){
-        return hostelsService.getHostelRecurring(page, size, hostelName, filterBy);
+                                                @RequestParam(defaultValue = "TODAY") String filterBy,
+                                                @RequestParam(defaultValue = "ALL") String statusFilterBy,
+                                                @RequestParam(defaultValue = "0") int billingCycleStartDay){
+        return hostelsService.getHostelRecurring(page, size, hostelName, filterBy, statusFilterBy, billingCycleStartDay);
     }
 
-    @PostMapping("/recurring/{hostelId}")
-    public ResponseEntity<?> generateRecurring(@PathVariable("hostelId") String hostelId,
-                                               @Valid @RequestBody HostelRecDatePayload hostelRecDatePayload){
-        return hostelsService.generateRecurring(hostelId, hostelRecDatePayload);
+//    @PostMapping("/recurring/{hostelId}")
+//    public ResponseEntity<?> generateRecurring(@PathVariable("hostelId") String hostelId,
+//                                               @Valid @RequestBody HostelRecDatePayload hostelRecDatePayload){
+//        return hostelsService.generateRecurring(hostelId, hostelRecDatePayload);
+//    }
+
+    @PostMapping("/recurring")
+    public ResponseEntity<?> generateRecurring(@RequestBody List<HostelIdRecDatePayload> payloads){
+        return hostelsService.generateRecurring(payloads);
     }
 
     @GetMapping("/recurring/{hostelId}")

@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class BookingsService {
@@ -32,5 +33,13 @@ public class BookingsService {
     public List<BookingsV1> getAllCheckedInCustomersByListOfCustomerIdsAndHostelId(List<String> customerIds,
                                                                                    String hostelId) {
         return bookingsRepository.findBookingsByListOfCustomersAndHostelId(customerIds, hostelId);
+    }
+
+    public List<BookingsV1> getBookingsByHostelIds(Set<String> hostelIds) {
+        return bookingsRepository.findAllByHostelIdIn(hostelIds);
+    }
+
+    public List<BookingsV1> getAllCheckedInCustomersByListOfCustomerIds(List<String> customerIds) {
+        return bookingsRepository.findBookingsByListOfCustomers(customerIds);
     }
 }

@@ -2,11 +2,13 @@ package com.smartstay.console.Mapper.hostels;
 
 import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.ennum.BookingsStatus;
 import com.smartstay.console.responses.hostels.HostelRecurringResponse;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.utils.Utils;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -16,15 +18,21 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
     HotelType hotelType;
     RecurringTracker recurringTracker;
     Map<String, Agent> agentMap;
+    List<BookingsV1> bookings;
+    List<BookingsV1> customers;
 
     public HostelRecurringMapper(Users owner,
                                  HotelType hotelType,
                                  RecurringTracker recurringTracker,
-                                 Map<String, Agent> agentMap) {
+                                 Map<String, Agent> agentMap,
+                                 List<BookingsV1> bookings,
+                                 List<BookingsV1> customers) {
         this.owner = owner;
         this.hotelType = hotelType;
         this.recurringTracker = recurringTracker;
         this.agentMap = agentMap;
+        this.bookings = bookings;
+        this.customers = customers;
     }
 
     @Override
@@ -80,11 +88,38 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
             lastRecurringDate = Utils.dateToString(createdAt);
         }
 
+        int noOfBookedTenants = 0;
+        int noOfCheckedInTenants = 0;
+        if (bookings != null && !bookings.isEmpty()){
+            for (BookingsV1 booking : bookings){
+                if (booking.getCurrentStatus().equalsIgnoreCase(BookingsStatus.BOOKED.name())){
+                    noOfBookedTenants++;
+                } else if (booking.getCurrentStatus().equalsIgnoreCase(BookingsStatus.CHECKIN.name())) {
+                    noOfCheckedInTenants++;
+                }
+            }
+        }
+
+        int noOfActiveTenants = noOfBookedTenants + noOfCheckedInTenants;
+
+        Date today = new Date();
+        int startDay = billingRules.getBillingStartDate();
+        int endDay = Utils.calculateEndDay(startDay, today);
+
+        int invoiceAboutToBeGenerated = 0;
+        if (customers != null){
+            int billingDay = billingRules.getBillingStartDate();
+
+            invoiceAboutToBeGenerated = (int) customers.stream()
+                    .filter(customer -> Utils.isEligibleForInvoice(customer, billingDay))
+                    .count();
+        }
+
         return new HostelRecurringResponse(hostel.getHostelId(), hostelType, hostelName, Utils.getInitials(hostelName),
                 hostel.getMobile(), hostel.getEmailId(), hostel.getHouseNo(), hostel.getStreet(), hostel.getLandmark(),
                 hostel.getCity(), hostel.getState(), hostel.getCountry(), hostel.getPincode(), fullAddress, hostel.getMainImage(),
-                ownerInfo, isSubscriptionActive, recurringStatus, recurringDay, lastRecurringDate, recurringMode,
-                recurringCreatedAtDate, recurringCreatedAtTime, createdBy
+                ownerInfo, noOfActiveTenants, invoiceAboutToBeGenerated, startDay, endDay, isSubscriptionActive, recurringStatus,
+                recurringDay, lastRecurringDate, recurringMode, recurringCreatedAtDate, recurringCreatedAtTime, createdBy
         );
     }
 }

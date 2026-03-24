@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface CustomersConfigRepository extends JpaRepository<CustomersConfig, Long> {
@@ -21,4 +22,9 @@ public interface CustomersConfigRepository extends JpaRepository<CustomersConfig
         SELECT * FROM customers_config WHERE hostel_id=:hostelId AND is_active=true AND enabled=true
         """, nativeQuery = true)
     List<CustomersConfig> findActiveAndRecurringEnabledCustomersByHostelId(@Param("hostelId") String hostelId);
+
+    @Query(value = """
+            SELECT * FROM customers_config WHERE hostel_id IN :hostelIds AND is_active=true AND enabled=true
+            """, nativeQuery = true)
+    List<CustomersConfig> findActiveAndRecurringEnabledCustomersByHostelIds(@Param("hostelIds") Set<String> hostelIds);
 }
