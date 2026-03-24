@@ -901,9 +901,9 @@ public class HostelsService {
             if (hostelId == null || hostelId.isBlank()){
                 return new ResponseEntity<>(Utils.HOSTEL_ID_REQUIRED, HttpStatus.BAD_REQUEST);
             }
-            if (payload.inputDay() == null || payload.inputDay() < 1 || payload.inputDay() > 28){
-                return new ResponseEntity<>(Utils.INPUT_DAY_MUST_BE_1_TO_28, HttpStatus.BAD_REQUEST);
-            }
+//            if (payload.inputDay() == null || payload.inputDay() < 1 || payload.inputDay() > 28){
+//                return new ResponseEntity<>(Utils.INPUT_DAY_MUST_BE_1_TO_28, HttpStatus.BAD_REQUEST);
+//            }
 
             HostelV1 hostel = hostelRepository.findByHostelId(hostelId);
             if (hostel == null){
@@ -922,25 +922,27 @@ public class HostelsService {
             }
 
             Date today = new Date();
-            int day = payload.inputDay();
+            //int day = payload.inputDay();
 
             BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
             if (billingRules == null){
                 return new ResponseEntity<>(Utils.NO_BILLING_RULE_FOUND, HttpStatus.BAD_REQUEST);
             }
 
-            if (!billingRules.getBillingStartDate().equals(day)) {
-                return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
-            }
+            int billingDay = billingRules.getBillingStartDate();
+
+//            if (!billingRules.getBillingStartDate().equals(day)) {
+//                return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
+//            }
             if (!billingRules.getTypeOfBilling().equals("FIXED_DATE")){
                 return new ResponseEntity<>(Utils.IS_NOT_FIXED_DATE, HttpStatus.BAD_REQUEST);
             }
 
-            int billingDay = billingRules.getBillingStartDate();
-
-            if (day < billingDay) {
-                return new ResponseEntity<>(Utils.BILLING_DAY_NOT_REACHED, HttpStatus.BAD_REQUEST);
-            }
+//            int billingDay = billingRules.getBillingStartDate();
+//
+//            if (day < billingDay) {
+//                return new ResponseEntity<>(Utils.BILLING_DAY_NOT_REACHED, HttpStatus.BAD_REQUEST);
+//            }
 
             if (recurringTrackerService.checkRecurringTrackerExists(hostelId, billingRules.getBillingStartDate(),
                     Utils.getCurrentMonth(today), Utils.getCurrentYear(today))){
