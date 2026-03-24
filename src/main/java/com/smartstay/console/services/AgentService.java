@@ -1,6 +1,8 @@
 package com.smartstay.console.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.smartstay.console.Mapper.agent.AgentActivitiesResMapper;
+import com.smartstay.console.Mapper.agent.AgentDetailsResMapper;
 import com.smartstay.console.Mapper.agent.AgentResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
@@ -14,9 +16,7 @@ import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.AddAdmin;
 import com.smartstay.console.payloads.agent.AddMockAgent;
 import com.smartstay.console.repositories.AgentRepository;
-import com.smartstay.console.responses.agents.AgentDetails;
-import com.smartstay.console.responses.agents.AgentDropdown;
-import com.smartstay.console.responses.agents.AgentResponse;
+import com.smartstay.console.responses.agents.*;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +39,6 @@ public class AgentService {
     private AgentRolesService agentRolesService;
     @Autowired
     private Authentication authentication;
-
     @Autowired
     private AgentActivitiesService agentActivitiesService;
 
@@ -228,7 +227,7 @@ public class AgentService {
         }
 
         List<Agent> agents = agentRepository
-                .findAllByIsMockAgentFalseAndIsActiveTrueAndAgentIdNotOrderByCreatedAtDesc(agent.getAgentId());
+                .findAllByIsMockAgentFalseAndAgentIdNotOrderByCreatedAtDesc(agent.getAgentId());
 
         Set<Long> roleIds = agents.stream()
                 .map(Agent::getRoleId)
@@ -246,14 +245,25 @@ public class AgentService {
                 .collect(Collectors.toMap(AgentActivities::getAgentId,
                         agentAct -> agentAct));
 
-        List<AgentResponse> agentsRes = agents.stream()
+        List<AgentResponse> activeAgents = agents.stream()
+                .filter(a -> a.getIsActive() == true)
                 .map(a -> new AgentResMapper(
                         rolesMap.get(a.getRoleId()),
                         agentActivitiesMap.get(a.getAgentId())
                 ).apply(a))
                 .toList();
 
-        return new ResponseEntity<>(agentsRes, HttpStatus.OK);
+        List<AgentResponse> inActiveAgents = agents.stream()
+                .filter(a -> a.getIsActive() == false)
+                .map(a -> new AgentResMapper(
+                        rolesMap.get(a.getRoleId()),
+                        agentActivitiesMap.get(a.getAgentId())
+                ).apply(a))
+                .toList();
+
+        AgentListRes response = new AgentListRes(activeAgents, inActiveAgents);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public ResponseEntity<?> deactivateAgent(String agentId) {
@@ -278,6 +288,8 @@ public class AgentService {
         }
 
         deactivatingAgent.setIsActive(false);
+        deactivatingAgent.setUpdatedBy(agent.getAgentId());
+        deactivatingAgent.setUpdatedAt(new Date());
         deactivatingAgent = agentRepository.save(deactivatingAgent);
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.AGENT,
@@ -316,6 +328,92 @@ public class AgentService {
                 .map(a -> new AgentDropdown(a.getAgentId(),
                         Utils.getFullName(a.getFirstName(), a.getLastName())))
                 .toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> reactivateAgent(String agentId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Agents.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Agent reactivatingAgent = agentRepository.findByAgentIdAndIsActiveFalse(agentId);
+        Agent oldAgent = new ObjectMapper().convertValue(reactivatingAgent, Agent.class);
+        if (reactivatingAgent == null){
+            return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        reactivatingAgent.setIsActive(true);
+        reactivatingAgent.setUpdatedBy(agent.getAgentId());
+        reactivatingAgent.setUpdatedAt(new Date());
+        reactivatingAgent = agentRepository.save(reactivatingAgent);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.AGENT,
+                agentId, oldAgent, reactivatingAgent);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAgentDetailsByAgentId(String agentId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Agents.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Agent inputAgent = agentRepository.findByAgentId(agentId);
+        if (inputAgent == null){
+            return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<AgentActivities> agentActivities = agentActivitiesService
+                .getLimitedActivitiesByAgentId(agentId, 50);
+
+        Set<String> agentIds = agentActivities.stream()
+                .map(AgentActivities::getAgentId)
+                .collect(Collectors.toSet());
+
+        List<Agent> agents = agentRepository
+                .findAllByAgentIdIn(agentIds);
+
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId, a -> a));
+
+        List<AgentActivitiesRes> agentActivitiesRes = agentActivities.stream()
+                .map(agentActivity -> new AgentActivitiesResMapper(
+                        agentMap.getOrDefault(agentActivity.getAgentId(), null)
+                ).apply(agentActivity))
+                .toList();
+
+        AgentRoles agentRole = agentRolesService.getAgentRoleById(inputAgent.getRoleId());
+
+        Agent createdBy = agentRepository.findByAgentId(inputAgent.getCreatedBy());
+        Agent updatedBy = null;
+        if (inputAgent.getUpdatedBy() != null){
+            updatedBy = agentRepository.findByAgentId(inputAgent.getUpdatedBy());
+        }
+
+        AgentDetailsRes response = new AgentDetailsResMapper(
+                agentActivitiesRes, agentRole, createdBy, updatedBy
+        ).apply(inputAgent);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
