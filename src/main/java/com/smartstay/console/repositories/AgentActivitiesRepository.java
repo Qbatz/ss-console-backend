@@ -1,6 +1,8 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.AgentActivities;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -22,4 +24,6 @@ public interface AgentActivitiesRepository extends JpaRepository<AgentActivities
             )
             """)
     List<AgentActivities> findLatestActivityByAgentIds(Set<String> agentIds);
+
+    Page<AgentActivities> findAllByAgentIdOrderByCreatedAtDesc(String agentId, Pageable pageable);
 }

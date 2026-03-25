@@ -12,12 +12,19 @@ import java.util.Set;
 
 @Repository
 public interface AgentRepository extends JpaRepository<Agent, String> {
+
     @Query("""
             SELECT ag FROM Agent ag WHERE ag.agentEmailId=:agentEmailId
             AND ag.isActive = true
             """)
     Agent findByAgentEmailId(String agentEmailId);
-    Agent findByAgentIdAndIsActiveTrue(String userId);
+
+    Agent findByAgentId(String agentId);
+
+    Agent findByAgentIdAndIsActiveFalse(String agentId);
+
+    Agent findByAgentIdAndIsActiveTrue(String agentId);
+
     List<Agent> findByRoleIdAndIsActiveTrue(long roleId);
     @Query("""
        SELECT a.roleId AS roleId, COUNT(a) AS count
@@ -26,11 +33,14 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
          AND a.isActive = true
        GROUP BY a.roleId
        """)
+
     List<RoleCountProjection> countActiveAgentsByRoleIds(@Param("roleIds") List<Long> roleIds);
 
-    List<Agent> findAllByIsMockAgentFalseAndIsActiveTrueAndAgentIdNotOrderByCreatedAtDesc(String agentId);
+    List<Agent> findAllByIsMockAgentFalseAndAgentIdNotOrderByCreatedAtDesc(String agentId);
 
     List<Agent> findAllByAgentIdInAndIsActiveTrue(Set<String> agentIds);
+
+    List<Agent> findAllByAgentIdIn(Set<String> agentIds);
 
     boolean existsByAgentEmailIdAndIsMockAgentFalse(String email);
 
