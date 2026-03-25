@@ -12,7 +12,6 @@ import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.events.RecurringEvents;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
-import com.smartstay.console.payloads.hostel.HostelIdRecDatePayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
@@ -39,6 +38,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class HostelsService {
+
     @Autowired
     private Authentication authentication;
     @Autowired
@@ -858,76 +858,7 @@ public class HostelsService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-//    public ResponseEntity<?> generateRecurring(String hostelId, HostelRecDatePayload hostelRecDatePayload) {
-//
-//        if (!authentication.isAuthenticated()) {
-//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-//        }
-//
-//        Agent agent = agentService.findUserByUserId(authentication.getName());
-//        if (agent == null) {
-//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-//        }
-//
-//        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Recurring.getId(), Utils.PERMISSION_WRITE)) {
-//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-//        }
-//
-//        HostelV1 hostel = hostelRepository.findByHostelId(hostelId);
-//        if (hostel == null){
-//            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
-//        }
-//
-//        HostelPlan hostelPlan = hostel.getHostelPlan();
-//        boolean isSubscriptionActive = false;
-//        if (hostelPlan != null && hostelPlan.getCurrentPlanEndsAt() != null) {
-//            isSubscriptionActive = Utils.compareWithTwoDates(
-//                    hostelPlan.getCurrentPlanEndsAt(), new Date()) >= 0;
-//        }
-//
-//        if (!isSubscriptionActive){
-//            return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_ACTIVE, HttpStatus.BAD_REQUEST);
-//        }
-//
-//        Date today = new Date();
-//        int day = Utils.getDayOfMonth(today);
-//        if (hostelRecDatePayload.inputDay() != null){
-//            day = hostelRecDatePayload.inputDay();
-//        }
-//
-//        BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
-//        if (billingRules == null){
-//            return new ResponseEntity<>(Utils.NO_BILLING_RULE_FOUND, HttpStatus.BAD_REQUEST);
-//        }
-//
-//        if (!billingRules.getBillingStartDate().equals(day)) {
-//            return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
-//        }
-//        if (!billingRules.getTypeOfBilling().equals("FIXED_DATE")){
-//            return new ResponseEntity<>(Utils.IS_NOT_FIXED_DATE, HttpStatus.BAD_REQUEST);
-//        }
-//
-//        int billingDay = billingRules.getBillingStartDate();
-//
-//        if (day < billingDay) {
-//            return new ResponseEntity<>(Utils.BILLING_DAY_NOT_REACHED, HttpStatus.BAD_REQUEST);
-//        }
-//
-//        if (recurringTrackerService.checkRecurringTrackerExists(hostelId, billingRules.getBillingStartDate(),
-//                Utils.getCurrentMonth(today), Utils.getCurrentYear(today))){
-//            return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
-//        }
-//
-//        try {
-//            applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId, billingDay));
-//        } catch (Exception e){
-//            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
-//        }
-//
-//        return new ResponseEntity<>(HttpStatus.OK);
-//    }
-
-    public ResponseEntity<?> generateRecurring(List<HostelIdRecDatePayload> payloads) {
+    public ResponseEntity<?> generateRecurring(List<HostelIdPayload> payloads) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -942,15 +873,12 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        for (HostelIdRecDatePayload payload : payloads) {
+        for (HostelIdPayload payload : payloads) {
 
             String hostelId = payload.hostelId();
             if (hostelId == null || hostelId.isBlank()){
                 return new ResponseEntity<>(Utils.HOSTEL_ID_REQUIRED, HttpStatus.BAD_REQUEST);
             }
-//            if (payload.inputDay() == null || payload.inputDay() < 1 || payload.inputDay() > 28){
-//                return new ResponseEntity<>(Utils.INPUT_DAY_MUST_BE_1_TO_28, HttpStatus.BAD_REQUEST);
-//            }
 
             HostelV1 hostel = hostelRepository.findByHostelId(hostelId);
             if (hostel == null){
@@ -969,7 +897,6 @@ public class HostelsService {
             }
 
             Date today = new Date();
-            //int day = payload.inputDay();
 
             BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
             if (billingRules == null){
@@ -978,18 +905,9 @@ public class HostelsService {
 
             int billingDay = billingRules.getBillingStartDate();
 
-//            if (!billingRules.getBillingStartDate().equals(day)) {
-//                return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
-//            }
             if (!billingRules.getTypeOfBilling().equals("FIXED_DATE")){
                 return new ResponseEntity<>(Utils.IS_NOT_FIXED_DATE, HttpStatus.BAD_REQUEST);
             }
-
-//            int billingDay = billingRules.getBillingStartDate();
-//
-//            if (day < billingDay) {
-//                return new ResponseEntity<>(Utils.BILLING_DAY_NOT_REACHED, HttpStatus.BAD_REQUEST);
-//            }
 
             if (recurringTrackerService.checkRecurringTrackerExists(hostelId, billingRules.getBillingStartDate(),
                     Utils.getCurrentMonth(today), Utils.getCurrentYear(today))){
