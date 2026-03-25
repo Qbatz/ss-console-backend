@@ -38,6 +38,7 @@ public class InvoicesV1 {
     //Mode will be manual and automatic
     String invoiceMode;
     boolean isCancelled;
+    boolean isDiscounted;
     @Convert(converter = StringListConverter.class)
     @Column(columnDefinition = "TEXT")
     List<String> cancelledInvoices;
