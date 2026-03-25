@@ -7,6 +7,8 @@ import com.smartstay.console.ennum.Source;
 import com.smartstay.console.repositories.AgentActivitiesRepository;
 import com.smartstay.console.utils.AgentActivityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -85,5 +87,12 @@ public class AgentActivitiesService {
 
     public List<AgentActivities> getLatestActivityByAgentIds(Set<String> agentIds){
         return agentActivitiesRepository.findLatestActivityByAgentIds(agentIds);
+    }
+
+    public List<AgentActivities> getLimitedActivitiesByAgentId(String agentId, int size){
+        Pageable pageable = PageRequest.of(0, size);
+        return agentActivitiesRepository
+                .findAllByAgentIdOrderByCreatedAtDesc(agentId, pageable)
+                .getContent();
     }
 }

@@ -1,7 +1,6 @@
 package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.AddAdmin;
-import com.smartstay.console.payloads.agent.AddMockAgent;
 import com.smartstay.console.services.AgentService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -17,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @SecurityScheme(name = "Authorization", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
 @SecurityRequirement(name = "Authorization")
 public class  AgentController {
+
     @Autowired
     private AgentService agentService;
 
@@ -42,12 +42,22 @@ public class  AgentController {
     }
 
     @PutMapping("/deactivate-agent/{agentId}")
-    public ResponseEntity<?> deactivateAgent(@PathVariable String agentId){
+    public ResponseEntity<?> deactivateAgent(@PathVariable("agentId") String agentId){
         return agentService.deactivateAgent(agentId);
+    }
+
+    @PutMapping("/reactivate-agent/{agentId}")
+    public ResponseEntity<?> reactivateAgent(@PathVariable("agentId") String agentId){
+        return agentService.reactivateAgent(agentId);
     }
 
     @GetMapping("/agents-dropdown")
     public ResponseEntity<?> getAgentsDropdown(){
         return agentService.getAgentsDropdown();
+    }
+
+    @GetMapping("/agent-details/{agentId}")
+    public ResponseEntity<?> getAgentDetailsByAgentId(@PathVariable("agentId") String agentId){
+        return agentService.getAgentDetailsByAgentId(agentId);
     }
 }
