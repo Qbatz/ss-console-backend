@@ -52,26 +52,30 @@ public class AgentActivitiesService {
         agentActivity.setSource(source.name());
         agentActivity.setSourceId(sourceId);
 
-        String idName = AgentActivityUtil.getIdName(source);
-
         switch (activityType) {
 
             case CREATE:
                 agentActivity.setOldObject(null);
-                agentActivity.setNewObject(AgentActivityUtil.objectWrapper(newObject));
-                agentActivity.setChangesJson(AgentActivityUtil.changesMap(newObject, true, idName));
+                agentActivity.setNewObject(AgentActivityUtil.singleObjectMap(newObject));
+                agentActivity.setChangesJson(null);
                 break;
 
             case UPDATE:
-                agentActivity.setOldObject(AgentActivityUtil.objectWrapper(oldObject));
-                agentActivity.setNewObject(AgentActivityUtil.objectWrapper(newObject));
-                agentActivity.setChangesJson(AgentActivityUtil.differences(oldObject, newObject, idName));
+                agentActivity.setOldObject(AgentActivityUtil.singleObjectMap(oldObject));
+                agentActivity.setNewObject(AgentActivityUtil.singleObjectMap(newObject));
+                agentActivity.setChangesJson(AgentActivityUtil.differences(oldObject, newObject));
                 break;
 
             case DELETE:
-                agentActivity.setOldObject(AgentActivityUtil.objectWrapper(oldObject));
+                agentActivity.setOldObject(AgentActivityUtil.singleObjectMap(oldObject));
                 agentActivity.setNewObject(null);
-                agentActivity.setChangesJson(AgentActivityUtil.changesMap(oldObject, false, idName));
+                agentActivity.setChangesJson(null);
+                break;
+
+            case SNAPSHOT_UPDATE:
+                agentActivity.setOldObject(AgentActivityUtil.singleObjectMap(oldObject));
+                agentActivity.setNewObject(AgentActivityUtil.singleObjectMap(newObject));
+                agentActivity.setChangesJson(null);
                 break;
 
             default:

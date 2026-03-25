@@ -1,5 +1,6 @@
 package com.smartstay.console.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
 import com.smartstay.console.Mapper.hostels.*;
 import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
@@ -7,6 +8,7 @@ import com.smartstay.console.Mapper.users.UsersResponseMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
+import com.smartstay.console.dto.hostel.HostelResetSnapshot;
 import com.smartstay.console.dto.hostel.InvoiceCountPerTracker;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import com.smartstay.console.ennum.*;
@@ -35,6 +37,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static com.smartstay.console.utils.AgentActivityUtil.cloneList;
 
 @Service
 public class HostelsService {
@@ -347,30 +351,30 @@ public class HostelsService {
 
         HashMap<String, Double> bankBalances = new HashMap<>();
 
-//        HostelV1 oldHostel = new ObjectMapper().convertValue(hostelV1, HostelV1.class);
+        HostelV1 oldHostel = new ObjectMapper().convertValue(hostelV1, HostelV1.class);
 
-//        HostelResetSnapshot snapshot = new HostelResetSnapshot(
-//                oldHostel,
-//                cloneList(customersList, Customers.class),
-//                cloneList(invoicesList, InvoicesV1.class),
-//                cloneList(listBookings, BookingsV1.class),
-//                cloneList(listTransactions, TransactionV1.class),
-//                cloneList(listCustomersWallet, CustomerWalletHistory.class),
-//                cloneList(listCreditDebits, CreditDebitNotes.class),
-//                cloneList(complaints, ComplaintsV1.class),
-//                cloneList(listCustomerDocuments, CustomerDocuments.class),
-//                cloneList(listCustomerBedHistory, CustomersBedHistory.class),
-//                cloneList(listCustomerEbHistory, CustomersEbHistory.class),
-//                cloneList(listCustomersAmenity, CustomersAmenity.class),
-//                cloneList(listAmenityRequests, AmenityRequest.class),
-//                cloneList(listConfigs, CustomersConfig.class),
-//                cloneList(listCustomerCredentials, CustomerCredentials.class),
-//                cloneList(listElectricityReadings, ElectricityReadings.class),
-//                cloneList(listHostelReadings, HostelReadings.class),
-//                cloneList(listBeds, Beds.class),
-//                cloneList(listBankTransactions, BankTransactionsV1.class),
-//                cloneList(bankingList, BankingV1.class)
-//        );
+        HostelResetSnapshot snapshot = new HostelResetSnapshot(
+                oldHostel,
+                cloneList(customersList, Customers.class),
+                cloneList(invoicesList, InvoicesV1.class),
+                cloneList(listBookings, BookingsV1.class),
+                cloneList(listTransactions, TransactionV1.class),
+                cloneList(listCustomersWallet, CustomerWalletHistory.class),
+                cloneList(listCreditDebits, CreditDebitNotes.class),
+                cloneList(complaints, ComplaintsV1.class),
+                cloneList(listCustomerDocuments, CustomerDocuments.class),
+                cloneList(listCustomerBedHistory, CustomersBedHistory.class),
+                cloneList(listCustomerEbHistory, CustomersEbHistory.class),
+                cloneList(listCustomersAmenity, CustomersAmenity.class),
+                cloneList(listAmenityRequests, AmenityRequest.class),
+                cloneList(listConfigs, CustomersConfig.class),
+                cloneList(listCustomerCredentials, CustomerCredentials.class),
+                cloneList(listElectricityReadings, ElectricityReadings.class),
+                cloneList(listHostelReadings, HostelReadings.class),
+                cloneList(listBeds, Beds.class),
+                cloneList(listBankTransactions, BankTransactionsV1.class),
+                cloneList(bankingList, BankingV1.class)
+        );
 
         if (invoicesList != null && !invoicesList.isEmpty()) {
             invoiceV1Service.deleteAllInvoices(invoicesList);
@@ -461,8 +465,8 @@ public class HostelsService {
             expenseService.deleteExpensesByHostelId(hostelId);
         }
 
-//        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
-//                hostelId, snapshot, null);
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
+                hostelId, snapshot, null);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -563,13 +567,16 @@ public class HostelsService {
     }
 
     public ResponseEntity<?> removeExpenses(String hostelId) {
+
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         Agent agent = agentService.findUserByUserId(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.EXPENSES.getId(), Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
