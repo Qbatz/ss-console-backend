@@ -17,4 +17,8 @@ public class PlanFeaturesService {
     public List<PlanFeatures> findAllByIds(Set<Long> ids){
         return planFeaturesRepository.findAllByIdInAndIsActiveTrue(ids);
     }
+
+    public List<PlanFeatures> saveAll(List<PlanFeatures> updatedPlanFeatures) {
+        return planFeaturesRepository.saveAll(updatedPlanFeatures);
+    }
 }

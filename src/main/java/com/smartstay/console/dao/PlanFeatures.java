@@ -1,5 +1,6 @@
 package com.smartstay.console.dao;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,6 +20,6 @@ public class PlanFeatures {
 
     @ManyToOne
     @JoinColumn(name = "plan_id")
+    @JsonIgnore
     private Plans plan;
-
 }

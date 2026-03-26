@@ -82,6 +82,7 @@ public class AgentActivityUtil {
             case SUBSCRIPTION -> "Created a new subscription";
             case GENERATE_RECURRING -> "Generated manual recurring";
             case DEMO_REQUEST -> "Created a demo request";
+            case PLANS -> "Created a new plan";
             default -> "Created successfully";
         };
     }
@@ -94,6 +95,7 @@ public class AgentActivityUtil {
             case SUBSCRIPTION -> "Updated subscription";
             case RESET_PASSWORD -> "Updated password";
             case DEMO_REQUEST -> "Updated a demo request";
+            case PLANS ->  "Updated a plan";
             default -> "Updated successfully";
         };
     }

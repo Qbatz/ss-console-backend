@@ -1,10 +1,12 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.plans.PlansPayload;
 import com.smartstay.console.payloads.plans.PlansUpdatePayload;
 import com.smartstay.console.services.PlansService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,9 +26,14 @@ public class PlansController {
         return plansService.getAllPlans();
     }
 
-//    @PutMapping("/{planId}")
-//    private ResponseEntity<?> updatePlanByPlanId(@PathVariable("planId") Long planId,
-//                                                 @RequestBody PlansUpdatePayload payload){
-//        return plansService.updatePlanByPlanId(planId, payload);
-//    }
+    @PutMapping("/{planId}")
+    private ResponseEntity<?> updatePlanByPlanId(@PathVariable("planId") Long planId,
+                                                 @RequestBody @Valid PlansUpdatePayload payload){
+        return plansService.updatePlanByPlanId(planId, payload);
+    }
+
+    @PostMapping
+    private ResponseEntity<?> addPlan(@RequestBody @Valid PlansPayload payload){
+        return plansService.addPlan(payload);
+    }
 }
