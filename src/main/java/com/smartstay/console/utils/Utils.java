@@ -40,6 +40,7 @@ public class Utils {
     public static final String NO_AGENT_FOUND = "No agent found";
     public static final String NO_OWNER_FOUND = "No owner found";
     public static final String DEMO_REQUEST_NOT_FOUND = "Demo request not found";
+    public static final String PLAN_NOT_FOUND = "No plan found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -49,6 +50,7 @@ public class Utils {
     public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
     public static final String EMAIL_ALREADY_EXISTS = "Email already exists";
+    public static final String PLAN_FEATURE_MISMATCH = "Plan of plan feature does not match plan";
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";
@@ -62,6 +64,7 @@ public class Utils {
     public static final String HOSTEL_ID_REQUIRED = "HostelId is required";
     public static final String INVALID_BILLING_CYCLE_START_DAY = "Invalid billingCycleStartDay";
     public static final String CANNOT_USE_BILLING_CYCLE_FILTER_WITH_DATE_FILTER = "Cannot use billingCycleStartDay with filterBy";
+    public static final String PLAN_FEATURE_NAME_REQUIRED = "Plan feature name is required";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {

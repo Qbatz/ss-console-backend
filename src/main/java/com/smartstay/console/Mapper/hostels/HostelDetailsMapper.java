@@ -94,7 +94,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
 
         EbConfig ebConfig = new EbConfig(electricityConfig.getId(),
                 electricityConfig.isShouldIncludeInRent(), electricityConfig.getTypeOfReading(),
-                electricityConfig.isProRate(), electricityConfig.getCharge(), electricityConfig.getBillDate());
+                electricityConfig.getCharge(), electricityConfig.getBillDate());
 
         String subscriptionStatus;
         int subscriptionRenewalTimeLeftDays = 0;

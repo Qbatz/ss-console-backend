@@ -32,5 +32,4 @@ public class Plans {
 
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PlanFeatures> featuresList;
-
 }
