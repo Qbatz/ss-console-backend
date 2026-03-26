@@ -236,26 +236,26 @@ public class CustomersService {
 
         HashMap<String, Double> bankBalances = new HashMap<>();
 
-//        Customers oldCustomer = new ObjectMapper().convertValue(customer, Customers.class);
-//
-//        CustomerResetSnapshot snapshot = new CustomerResetSnapshot(
-//                oldCustomer,
-//                cloneList(invoicesList, InvoicesV1.class),
-//                cloneList(listBookings, BookingsV1.class),
-//                cloneList(listTransactions, TransactionV1.class),
-//                cloneList(listCustomersWallet, CustomerWalletHistory.class),
-//                cloneList(listCreditDebits, CreditDebitNotes.class),
-//                cloneList(complaints, ComplaintsV1.class),
-//                cloneList(listCustomerDocuments, CustomerDocuments.class),
-//                cloneList(listCustomerBedHistory, CustomersBedHistory.class),
-//                cloneList(listCustomerEbHistory, CustomersEbHistory.class),
-//                cloneList(listCustomersAmenity, CustomersAmenity.class),
-//                cloneList(listAmenityRequests, AmenityRequest.class),
-//                cloneList(listConfigs, CustomersConfig.class),
-//                cloneList(listBankTransactions, BankTransactionsV1.class),
-//                cloneList(bankingList, BankingV1.class),
-//                cloneList(listBeds, Beds.class)
-//        );
+        Customers oldCustomer = new ObjectMapper().convertValue(customer, Customers.class);
+
+        CustomerResetSnapshot snapshot = new CustomerResetSnapshot(
+                oldCustomer,
+                cloneList(invoicesList, InvoicesV1.class),
+                cloneList(listBookings, BookingsV1.class),
+                cloneList(listTransactions, TransactionV1.class),
+                cloneList(listCustomersWallet, CustomerWalletHistory.class),
+                cloneList(listCreditDebits, CreditDebitNotes.class),
+                cloneList(complaints, ComplaintsV1.class),
+                cloneList(listCustomerDocuments, CustomerDocuments.class),
+                cloneList(listCustomerBedHistory, CustomersBedHistory.class),
+                cloneList(listCustomerEbHistory, CustomersEbHistory.class),
+                cloneList(listCustomersAmenity, CustomersAmenity.class),
+                cloneList(listAmenityRequests, AmenityRequest.class),
+                cloneList(listConfigs, CustomersConfig.class),
+                cloneList(listBankTransactions, BankTransactionsV1.class),
+                cloneList(bankingList, BankingV1.class),
+                cloneList(listBeds, Beds.class)
+        );
 
         if (invoicesList != null && !invoicesList.isEmpty()) {
             invoiceV1Service.deleteAllInvoices(invoicesList);
@@ -337,8 +337,8 @@ public class CustomersService {
 
         customersRepository.delete(customer);
 
-//        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.TENANT,
-//                customerId, snapshot, null);
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.TENANT,
+                customerId, snapshot, null);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

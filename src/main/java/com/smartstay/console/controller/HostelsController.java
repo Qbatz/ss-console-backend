@@ -1,8 +1,6 @@
 package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
-import com.smartstay.console.payloads.hostel.HostelIdRecDatePayload;
-import com.smartstay.console.payloads.hostel.HostelRecDatePayload;
 import com.smartstay.console.services.HostelsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -79,14 +77,8 @@ public class HostelsController {
         return hostelsService.getHostelRecurring(page, size, hostelName, filterBy, statusFilterBy, billingCycleStartDay);
     }
 
-//    @PostMapping("/recurring/{hostelId}")
-//    public ResponseEntity<?> generateRecurring(@PathVariable("hostelId") String hostelId,
-//                                               @Valid @RequestBody HostelRecDatePayload hostelRecDatePayload){
-//        return hostelsService.generateRecurring(hostelId, hostelRecDatePayload);
-//    }
-
     @PostMapping("/recurring")
-    public ResponseEntity<?> generateRecurring(@RequestBody List<HostelIdRecDatePayload> payloads){
+    public ResponseEntity<?> generateRecurring(@RequestBody List<HostelIdPayload> payloads){
         return hostelsService.generateRecurring(payloads);
     }
 
