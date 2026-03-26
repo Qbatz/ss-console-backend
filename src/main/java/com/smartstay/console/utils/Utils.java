@@ -40,6 +40,7 @@ public class Utils {
     public static final String NO_AGENT_FOUND = "No agent found";
     public static final String NO_OWNER_FOUND = "No owner found";
     public static final String DEMO_REQUEST_NOT_FOUND = "Demo request not found";
+    public static final String PLAN_NOT_FOUND = "No plan found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
