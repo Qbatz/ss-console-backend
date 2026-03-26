@@ -1,6 +1,5 @@
 package com.smartstay.console.controller;
 
-
 import com.smartstay.console.payloads.roles.AddRoles;
 import com.smartstay.console.payloads.roles.UpdateRoles;
 import com.smartstay.console.services.AgentRolesService;
@@ -46,6 +45,4 @@ public class RolesController {
     public ResponseEntity<?> getRoleById(@PathVariable("roleId") Long roleId) {
         return agentRolesService.getRoleById(roleId);
     }
-
-
 }

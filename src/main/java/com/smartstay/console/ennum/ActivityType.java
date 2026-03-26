@@ -4,5 +4,6 @@ public enum ActivityType {
     CREATE,
     UPDATE,
     DELETE,
-    LOGIN
+    LOGIN,
+    SNAPSHOT_UPDATE
 }

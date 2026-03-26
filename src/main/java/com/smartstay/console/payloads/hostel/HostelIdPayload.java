@@ -1,9 +1,7 @@
 package com.smartstay.console.payloads.hostel;
 
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
-public record HostelIdPayload(@NotNull(message = "HostelId can't be null")
-                              @NotEmpty(message = "HostelId is required")
+public record HostelIdPayload(@NotBlank(message = "HostelId is required")
                               String hostelId) {
 }

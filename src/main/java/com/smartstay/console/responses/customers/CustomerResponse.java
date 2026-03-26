@@ -7,5 +7,6 @@ public record CustomerResponse(String customerId,
                                String initials,
                                String mobile,
                                String emailId,
-                               String currentStatus) {
+                               String currentStatus,
+                               String joiningDate) {
 }

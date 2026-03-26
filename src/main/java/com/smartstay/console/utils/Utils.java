@@ -55,14 +55,11 @@ public class Utils {
     public static final String SUBSCRIPTION_NOT_ACTIVE = "Subscription is not active for this hostel";
     public static final String RECURRING_ALREADY_CREATED = "Recurring already exists this month for this hostel";
     public static final String IS_NOT_FIXED_DATE = "Type of billing is not fixed date";
-    //public static final String DAY_NOT_MATCH = "Today or the input day doesn't match with the billing rule day";
-    //public static final String BILLING_DAY_NOT_REACHED = "This month's billing day has not reached";
     public static final String NO_BILLING_RULE_FOUND = "No billing rule found for this hostel";
     public static final String DEMO_REQUEST_STATUS_NOT_FOUND = "Demo request status not found";
     public static final String PRESENTED_BY_REQUIRED = "Presented by can't be null or empty when status is completed";
     public static final String PRESENTED_AT_REQUIRED = "Presented at can't be null when status is completed";
     public static final String HOSTEL_ID_REQUIRED = "HostelId is required";
-   // public static final String INPUT_DAY_MUST_BE_1_TO_28 = "Day must be between 1 and 28";
     public static final String INVALID_BILLING_CYCLE_START_DAY = "Invalid billingCycleStartDay";
     public static final String CANNOT_USE_BILLING_CYCLE_FILTER_WITH_DATE_FILTER = "Cannot use billingCycleStartDay with filterBy";
 

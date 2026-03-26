@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.*;
 @SecurityScheme(name = "Authorization", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
 @SecurityRequirement(name = "Authorization")
 public class SubscriptionController {
+
     @Autowired
     private SubscriptionService subscriptionService;
+
     @PostMapping("/{hostelId}")
     public ResponseEntity<?> subscribeHostel(@PathVariable("hostelId") String hostelId, @RequestBody Subscription subscription) {
         return subscriptionService.subscribeHostel(hostelId, subscription);
