@@ -1,6 +1,7 @@
 package com.smartstay.console.dao;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -22,4 +23,9 @@ public class PlanFeatures {
     @JoinColumn(name = "plan_id")
     @JsonIgnore
     private Plans plan;
+
+    @JsonProperty("planId")
+    public Long getPlanId() {
+        return plan != null ? plan.getPlanId() : null;
+    }
 }

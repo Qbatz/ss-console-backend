@@ -14,5 +14,6 @@ public enum Source {
     OWNERS,
     GENERATE_RECURRING,
     DEMO_REQUEST,
-    PLANS
+    PLANS,
+    PLAN_FEATURES
 }
