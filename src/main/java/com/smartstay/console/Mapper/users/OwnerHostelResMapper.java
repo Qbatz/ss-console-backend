@@ -26,18 +26,24 @@ public class OwnerHostelResMapper implements Function<HostelV1, OwnerHostelRespo
         String fullAddress = Utils.buildFullAddress(hostel);
 
         HostelPlan hostelPlan = hostel.getHostelPlan();
-        boolean isSubscriptionActive;
-        if (Utils.compareWithTwoDates(hostelPlan.getCurrentPlanEndsAt(), new Date()) < 0) {
-            isSubscriptionActive = false;
-        }
-        else {
-            isSubscriptionActive = true;
+        boolean isSubscriptionActive = true;
+        if (hostelPlan != null) {
+            if (Utils.compareWithTwoDates(hostelPlan.getCurrentPlanEndsAt(), new Date()) < 0) {
+                isSubscriptionActive = false;
+            }
+            else {
+                isSubscriptionActive = true;
+            }
         }
 
-        HostelPlanResponse hostelPlanRes = new HostelPlanResponse(hostelPlan.getCurrentPlanCode(),
-                hostelPlan.getCurrentPlanName(), Utils.dateToString(hostelPlan.getCurrentPlanStartsAt()),
-                Utils.dateToString(hostelPlan.getCurrentPlanEndsAt()), hostelPlan.getPaidAmount(),
-                isSubscriptionActive);
+
+        HostelPlanResponse hostelPlanRes = null;
+        if (hostelPlan != null) {
+            hostelPlanRes = new HostelPlanResponse(hostelPlan.getCurrentPlanCode(),
+                    hostelPlan.getCurrentPlanName(), Utils.dateToString(hostelPlan.getCurrentPlanStartsAt()),
+                    Utils.dateToString(hostelPlan.getCurrentPlanEndsAt()), hostelPlan.getPaidAmount(),
+                    isSubscriptionActive);
+        }
 
         String hostelType = null;
         if (hotelType != null){
