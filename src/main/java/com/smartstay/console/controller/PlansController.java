@@ -43,13 +43,13 @@ public class PlansController {
         return plansService.deactivatePlan(planId);
     }
 
-    @PostMapping("/add-plan-feature/{planId}")
+    @PostMapping("/plan-feature/{planId}")
     private ResponseEntity<?> addPlanFeature(@PathVariable("planId") Long planId,
                                              @RequestBody @Valid PlanFeaturesPayload payload){
         return plansService.addPlanFeature(planId, payload);
     }
 
-    @PutMapping("/deactivate-plan-feature/{planFeatureId}")
+    @PutMapping("/plan-feature/{planFeatureId}")
     private ResponseEntity<?> deactivatePlanFeature(@PathVariable("planFeatureId") Long planFeatureId){
         return plansService.deactivatePlanFeature(planFeatureId);
     }

@@ -23,4 +23,8 @@ public interface PlansRepository extends JpaRepository<Plans, Long> {
     List<Plans> findActivePlansExcludingTrial();
 
     Plans findByPlanIdAndIsActiveTrue(Long planId);
+
+    boolean existsByPlanCode(String planCode);
+
+    boolean existsByPlanCodeAndPlanIdNot(String planCode, Long planId);
 }
