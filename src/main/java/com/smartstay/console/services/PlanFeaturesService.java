@@ -21,4 +21,12 @@ public class PlanFeaturesService {
     public List<PlanFeatures> saveAll(List<PlanFeatures> updatedPlanFeatures) {
         return planFeaturesRepository.saveAll(updatedPlanFeatures);
     }
+
+    public PlanFeatures save(PlanFeatures planFeatures) {
+        return planFeaturesRepository.save(planFeatures);
+    }
+
+    public PlanFeatures findById(Long id){
+        return planFeaturesRepository.findByIdAndIsActiveTrue(id);
+    }
 }

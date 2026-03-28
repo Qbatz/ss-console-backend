@@ -40,8 +40,20 @@ public class AgentActivitiesService {
             throw new IllegalArgumentException("oldObject and newObject required for UPDATE");
         }
 
+        if (activityType == ActivityType.SNAPSHOT_UPDATE && (oldObject == null || newObject == null)) {
+            throw new IllegalArgumentException("oldObject and newObject required for UPDATE");
+        }
+
         if (activityType == ActivityType.DELETE && oldObject == null) {
             throw new IllegalArgumentException("oldObject required for DELETE");
+        }
+
+        if (activityType == ActivityType.DEACTIVATE && oldObject == null) {
+            throw new IllegalArgumentException("oldObject required for DEACTIVATE");
+        }
+
+        if (activityType == ActivityType.REACTIVATE && newObject == null) {
+            throw new IllegalArgumentException("newObject cannot be null for REACTIVATE");
         }
 
         AgentActivities agentActivity = new AgentActivities();
@@ -54,7 +66,7 @@ public class AgentActivitiesService {
 
         switch (activityType) {
 
-            case CREATE:
+            case CREATE, REACTIVATE:
                 agentActivity.setOldObject(null);
                 agentActivity.setNewObject(AgentActivityUtil.singleObjectMap(newObject));
                 agentActivity.setChangesJson(null);
@@ -66,15 +78,15 @@ public class AgentActivitiesService {
                 agentActivity.setChangesJson(AgentActivityUtil.differences(oldObject, newObject));
                 break;
 
-            case DELETE:
-                agentActivity.setOldObject(AgentActivityUtil.singleObjectMap(oldObject));
-                agentActivity.setNewObject(null);
-                agentActivity.setChangesJson(null);
-                break;
-
             case SNAPSHOT_UPDATE:
                 agentActivity.setOldObject(AgentActivityUtil.singleObjectMap(oldObject));
                 agentActivity.setNewObject(AgentActivityUtil.singleObjectMap(newObject));
+                agentActivity.setChangesJson(null);
+                break;
+
+            case DELETE, DEACTIVATE:
+                agentActivity.setOldObject(AgentActivityUtil.singleObjectMap(oldObject));
+                agentActivity.setNewObject(null);
                 agentActivity.setChangesJson(null);
                 break;
 

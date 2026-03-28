@@ -282,18 +282,19 @@ public class AgentService {
         }
 
         Agent deactivatingAgent = agentRepository.findByAgentIdAndIsActiveTrue(agentId);
-        Agent oldAgent = new ObjectMapper().convertValue(deactivatingAgent, Agent.class);
         if (deactivatingAgent == null){
             return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
         }
+        Agent oldAgent = new ObjectMapper().convertValue(deactivatingAgent, Agent.class);
 
         deactivatingAgent.setIsActive(false);
         deactivatingAgent.setUpdatedBy(agent.getAgentId());
         deactivatingAgent.setUpdatedAt(new Date());
-        deactivatingAgent = agentRepository.save(deactivatingAgent);
 
-        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.AGENT,
-                agentId, oldAgent, deactivatingAgent);
+        agentRepository.save(deactivatingAgent);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DEACTIVATE, Source.AGENT,
+                agentId, oldAgent, null);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
@@ -348,7 +349,6 @@ public class AgentService {
         }
 
         Agent reactivatingAgent = agentRepository.findByAgentIdAndIsActiveFalse(agentId);
-        Agent oldAgent = new ObjectMapper().convertValue(reactivatingAgent, Agent.class);
         if (reactivatingAgent == null){
             return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
         }
@@ -358,8 +358,8 @@ public class AgentService {
         reactivatingAgent.setUpdatedAt(new Date());
         reactivatingAgent = agentRepository.save(reactivatingAgent);
 
-        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.AGENT,
-                agentId, oldAgent, reactivatingAgent);
+        agentActivitiesService.createAgentActivity(agent, ActivityType.REACTIVATE, Source.AGENT,
+                agentId, null, reactivatingAgent);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }

@@ -5,5 +5,7 @@ public enum ActivityType {
     UPDATE,
     DELETE,
     LOGIN,
-    SNAPSHOT_UPDATE
+    SNAPSHOT_UPDATE,
+    DEACTIVATE,
+    REACTIVATE
 }

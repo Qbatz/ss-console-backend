@@ -43,4 +43,17 @@ public class CloneUtility {
 
         return copy;
     }
+
+    public static PlanFeatures clonePlanFeatures(PlanFeatures oldPlanFeatures) {
+        PlanFeatures copy = new PlanFeatures();
+
+        copy.setId(oldPlanFeatures.getId());
+        copy.setFeatureName(oldPlanFeatures.getFeatureName());
+        copy.setPrice(oldPlanFeatures.getPrice());
+        copy.setActive(oldPlanFeatures.isActive());
+
+        copy.setPlan(oldPlanFeatures.getPlan());
+
+        return copy;
+    }
 }

@@ -1,6 +1,7 @@
 package com.smartstay.console.dao;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.SQLRestriction;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,5 +32,6 @@ public class Plans {
     private Date updatedAt;
 
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, orphanRemoval = true)
+    @SQLRestriction("is_active = true")
     private List<PlanFeatures> featuresList;
 }
