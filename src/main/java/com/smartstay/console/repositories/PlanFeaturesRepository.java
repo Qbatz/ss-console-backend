@@ -11,4 +11,6 @@ import java.util.Set;
 public interface PlanFeaturesRepository extends JpaRepository<PlanFeatures, Long> {
 
     List<PlanFeatures> findAllByIdInAndIsActiveTrue(Set<Long> ids);
+
+    PlanFeatures findByIdAndIsActiveTrue(Long id);
 }

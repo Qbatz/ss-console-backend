@@ -1,5 +1,6 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.plans.PlanFeaturesPayload;
 import com.smartstay.console.payloads.plans.PlansPayload;
 import com.smartstay.console.payloads.plans.PlansUpdatePayload;
 import com.smartstay.console.services.PlansService;
@@ -35,5 +36,21 @@ public class PlansController {
     @PostMapping
     private ResponseEntity<?> addPlan(@RequestBody @Valid PlansPayload payload){
         return plansService.addPlan(payload);
+    }
+
+    @PutMapping("/deactivate-plan/{planId}")
+    private ResponseEntity<?> deactivatePlan(@PathVariable("planId") Long planId){
+        return plansService.deactivatePlan(planId);
+    }
+
+    @PostMapping("/add-plan-feature/{planId}")
+    private ResponseEntity<?> addPlanFeature(@PathVariable("planId") Long planId,
+                                             @RequestBody @Valid PlanFeaturesPayload payload){
+        return plansService.addPlanFeature(planId, payload);
+    }
+
+    @PutMapping("/deactivate-plan-feature/{planFeatureId}")
+    private ResponseEntity<?> deactivatePlanFeature(@PathVariable("planFeatureId") Long planFeatureId){
+        return plansService.deactivatePlanFeature(planFeatureId);
     }
 }

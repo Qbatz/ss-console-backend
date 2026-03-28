@@ -45,14 +45,14 @@ public class PlansService {
         if (!authentication.isAuthenticated()) {
             return null;
         }
-        return plansRepository.findPlanByPlanType(PlanType.TRIAL.name());
+        return plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.TRIAL.name());
     }
 
     public Plans findPlanByPlanCode(String planCode) {
         if (!authentication.isAuthenticated()) {
             return null;
         }
-        return plansRepository.findByPlanCode(planCode);
+        return plansRepository.findByPlanCodeAndIsActiveTrue(planCode);
     }
 
     public ResponseEntity<?> getAllPlans() {
@@ -224,6 +224,110 @@ public class PlansService {
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.PLANS,
                 String.valueOf(plan.getPlanId()), null, plan);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> deactivatePlan(Long planId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Plans plan = plansRepository.findByPlanIdAndIsActiveTrue(planId);
+        if (plan == null) {
+            return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Plans oldPlan = CloneUtility.clonePlans(plan);
+
+        plan.setActive(false);
+        plan.setUpdatedAt(new Date());
+
+        for (PlanFeatures feature : plan.getFeaturesList()) {
+            feature.setActive(false);
+        }
+
+        plansRepository.save(plan);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DEACTIVATE, Source.PLANS,
+                String.valueOf(planId), oldPlan, null);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> addPlanFeature(Long planId, PlanFeaturesPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Plans plan = plansRepository.findByPlanIdAndIsActiveTrue(planId);
+        if (plan == null) {
+            return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        PlanFeatures planFeature = new PlanFeatures();
+
+        planFeature.setFeatureName(payload.featureName());
+        planFeature.setPrice(payload.price() != null ? payload.price() : 0);
+        planFeature.setActive(true);
+        planFeature.setPlan(plan);
+
+        planFeaturesService.save(planFeature);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.PLAN_FEATURES,
+                String.valueOf(planFeature.getId()), null, planFeature);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> deactivatePlanFeature(Long planFeatureId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        PlanFeatures planFeature = planFeaturesService.findById(planFeatureId);
+        if (planFeature == null) {
+            return new ResponseEntity<>(Utils.PLAN_FEATURE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        PlanFeatures oldPlanFeature = CloneUtility.clonePlanFeatures(planFeature);
+
+        planFeature.setActive(false);
+
+        planFeaturesService.save(planFeature);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DEACTIVATE, Source.PLAN_FEATURES,
+                String.valueOf(planFeatureId), oldPlanFeature, null);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

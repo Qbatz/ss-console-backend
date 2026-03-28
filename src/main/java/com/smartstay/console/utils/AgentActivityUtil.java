@@ -71,6 +71,8 @@ public class AgentActivityUtil {
             case DELETE -> getDeleteDescription(source);
             case LOGIN -> getLoginDescription(source);
             case SNAPSHOT_UPDATE -> getSnapshotUpdateDescription(source);
+            case DEACTIVATE -> getDeactivateDescription(source);
+            case REACTIVATE -> getReactivateDescription(source);
         };
     }
 
@@ -83,7 +85,15 @@ public class AgentActivityUtil {
             case GENERATE_RECURRING -> "Generated manual recurring";
             case DEMO_REQUEST -> "Created a demo request";
             case PLANS -> "Created a new plan";
+            case PLAN_FEATURES -> "Created a new plan features";
             default -> "Created successfully";
+        };
+    }
+
+    private static String getReactivateDescription(Source source) {
+        return switch (source) {
+            case AGENT -> "Reactivated an agent";
+            default -> "Reactivated successfully";
         };
     }
 
@@ -100,6 +110,12 @@ public class AgentActivityUtil {
         };
     }
 
+    private static String getSnapshotUpdateDescription(Source source) {
+        return switch (source){
+            default -> "Updated successfully";
+        };
+    }
+
     private static String getDeleteDescription(Source source) {
         return switch (source) {
             case AGENT -> "Deleted an agent";
@@ -109,7 +125,18 @@ public class AgentActivityUtil {
             case TENANT -> "Deleted tenant";
             case HOSTEL -> "Deleted hostel";
             case HOSTEL_EXPENSE -> "Deletes all expenses";
+            case PLANS -> "Deleted a plan";
+            case PLAN_FEATURES -> "Deletes a plan feature";
             default -> "Deleted successfully";
+        };
+    }
+
+    private static String getDeactivateDescription(Source source) {
+        return switch (source) {
+            case PLANS -> "Deactivated a plan";
+            case PLAN_FEATURES -> "Deactivated a plan feature";
+            case AGENT -> "Deactivated an agent";
+            default -> "Deactivated successfully";
         };
     }
 
@@ -118,12 +145,6 @@ public class AgentActivityUtil {
             case AGENT_LOGIN -> "Agent logged in";
             case MOCK_AGENT_LOGIN -> "Mock agent logged in";
             default -> "Login successful";
-        };
-    }
-
-    private static String getSnapshotUpdateDescription(Source source) {
-        return switch (source){
-            default -> "Updated successfully";
         };
     }
 
