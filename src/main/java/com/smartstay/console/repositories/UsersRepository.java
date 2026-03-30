@@ -13,7 +13,10 @@ import java.util.Set;
 public interface UsersRepository extends JpaRepository<Users, String> {
 
     @Query("""
-            SELECT usr FROM Users usr WHERE usr.parentId IN (:parentId) AND usr.roleId=1
+            SELECT usr
+            FROM Users usr
+            WHERE usr.roleId = 1
+              AND usr.parentId IN :parentId
             """)
     List<Users> findOwners(List<String> parentId);
 

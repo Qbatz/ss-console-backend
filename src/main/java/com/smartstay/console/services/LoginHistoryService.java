@@ -12,6 +12,7 @@ public class LoginHistoryService {
 
     @Autowired
     private LoginHistoryRepository loginHistoryRepository;
+
     public List<LoginHistory> getLoginHistoriesByHostelIds(List<String> hostelIds) {
         return loginHistoryRepository.loginHistoryByParentId(hostelIds);
     }

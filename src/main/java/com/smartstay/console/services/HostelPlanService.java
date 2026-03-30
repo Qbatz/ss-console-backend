@@ -1,6 +1,5 @@
 package com.smartstay.console.services;
 
-import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.repositories.HostelPlanRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,17 +10,9 @@ import java.util.List;
 
 @Service
 public class HostelPlanService {
-    @Autowired
-    private Authentication authentication;
 
     @Autowired
     private HostelPlanRepository hostelPlanRepository;
-    @Autowired
-    private SubscriptionService subscriptionService;
-
-    public List<HostelPlan> findAllHostelPlans(int size, int offset) {
-        return hostelPlanRepository.findAllHostelPlans(size, offset);
-    }
 
     public Long findActiveHostels() {
         return hostelPlanRepository.findActiveHostels(new Date());
