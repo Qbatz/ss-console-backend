@@ -41,6 +41,10 @@ public class PlansService {
     @Autowired
     private PlanFeaturesService planFeaturesService;
 
+    private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final Random RANDOM = new Random();
+
     public Plans findTrialPlan(String hostelId) {
         if (!authentication.isAuthenticated()) {
             return null;
@@ -105,6 +109,10 @@ public class PlansService {
             plan.setPlanName(payload.planName());
         }
         if (payload.planCode() != null && !payload.planCode().isBlank()){
+            if (!payload.planCode().equals(plan.getPlanCode()) &&
+                    plansRepository.existsByPlanCodeAndPlanIdNot(payload.planCode(), planId)){
+                return new ResponseEntity<>(Utils.PLAN_CODE_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+            }
             plan.setPlanCode(payload.planCode());
         }
         if (payload.planType() != null && !payload.planType().isBlank()){
@@ -193,7 +201,20 @@ public class PlansService {
         plan.setDuration(payload.duration());
         plan.setDiscounts(payload.discountPercentage());
         plan.setPlanType(payload.planType());
-        plan.setPlanCode(payload.planCode());
+
+        String planCode = null;
+        if (payload.planCode() != null && !payload.planCode().isBlank()) {
+            if (plansRepository.existsByPlanCode(payload.planCode())){
+                return new ResponseEntity<>(Utils.PLAN_CODE_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+            }
+            planCode = payload.planCode();
+        } else {
+            do {
+                planCode = generatePlanCode();
+            } while (plansRepository.existsByPlanCode(planCode));
+        }
+        plan.setPlanCode(planCode);
+
         plan.setShouldShow(payload.shouldShow());
         plan.setCanCustomize(payload.canCustomize());
         plan.setActive(true);
@@ -330,5 +351,27 @@ public class PlansService {
                 String.valueOf(planFeatureId), oldPlanFeature, null);
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public static String generatePlanCode() {
+        StringBuilder ref = new StringBuilder();
+
+        // 4 letters
+        for (int i = 0; i < 2; i++) {
+            ref.append(ALPHABETS.charAt(RANDOM.nextInt(ALPHABETS.length())));
+        }
+
+        // 4 digits
+        for (int i = 0; i < 2; i++) {
+            ref.append(RANDOM.nextInt(10));
+        }
+        ref.append("-");
+
+        // 4 alphanumeric
+        for (int i = 0; i < 3; i++) {
+            ref.append(ALPHANUMERIC.charAt(RANDOM.nextInt(ALPHANUMERIC.length())));
+        }
+
+        return ref.toString();
     }
 }

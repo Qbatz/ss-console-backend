@@ -7,7 +7,6 @@ import java.util.List;
 
 public record PlansPayload(@NotBlank(message = "Plan name is required")
                            String planName,
-                           @NotBlank(message = "Plan code is required")
                            String planCode,
                            @NotBlank(message = "Plan type is required")
                            String planType,
