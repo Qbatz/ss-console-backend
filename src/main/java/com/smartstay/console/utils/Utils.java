@@ -67,6 +67,8 @@ public class Utils {
     public static final String CANNOT_USE_BILLING_CYCLE_FILTER_WITH_DATE_FILTER = "Cannot use billingCycleStartDay with filterBy";
     public static final String PLAN_FEATURE_NAME_REQUIRED = "Plan feature name is required";
     public static final String PLAN_CODE_ALREADY_EXISTS = "Plan code already exists";
+    public static final String PLAN_NAME_ALREADY_EXISTS = "Plan name already exists";
+    public static final String PLAN_TYPE_ALREADY_EXISTS = "Plan type already exists";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
