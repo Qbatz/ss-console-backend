@@ -1,13 +1,13 @@
 package com.smartstay.console.Mapper.hostels;
 
 import com.smartstay.console.dao.*;
-import com.smartstay.console.ennum.PlanType;
 import com.smartstay.console.responses.hostels.HostelList;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.utils.CountryUtils;
 import com.smartstay.console.utils.Utils;
 
 import java.util.Date;
+import java.util.List;
 import java.util.function.Function;
 
 public class HostelsListMapper implements Function<HostelV1, HostelList> {
@@ -15,13 +15,19 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
     OwnerInfo owner;
     UserActivities latestActivity;
     LoginHistory lastLogin;
+    Plans trialPlan;
+    List<Subscription> subscriptions;
 
     public HostelsListMapper(OwnerInfo owner,
                              UserActivities latestActivity,
-                             LoginHistory lastLogin) {
+                             LoginHistory lastLogin,
+                             Plans trialPlan,
+                             List<Subscription> subscriptions) {
         this.owner = owner;
         this.latestActivity = latestActivity;
         this.lastLogin = lastLogin;
+        this.trialPlan = trialPlan;
+        this.subscriptions = subscriptions;
     }
 
     @Override
@@ -39,6 +45,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         long noOfDaysSubscriptionActive = 0;
         StringBuilder initials = new StringBuilder();
         boolean isTrial = false;
+        boolean trialExtendable = false;
         Date lastActivity = null;
         String platform = null;
 
@@ -124,8 +131,27 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
             hp = new com.smartstay.console.responses.hostels.HostelPlan(plan.getCurrentPlanCode(),
                     plan.getPaidAmount(),
                     plan.getCurrentPlanName());
-            if (plan.getCurrentPlanName().equalsIgnoreCase(PlanType.TRIAL.name())) {
+            if (trialPlan != null && trialPlan.getPlanCode().equalsIgnoreCase(plan.getCurrentPlanCode())) {
                 isTrial = true;
+                if (subscriptions != null) {
+                    long trialCount = 0;
+                    long subscriptionCount = 0;
+
+                    for (Subscription subscription : subscriptions) {
+                        if (subscription.getPlanCode().equalsIgnoreCase(trialPlan.getPlanCode())) {
+                            trialCount++;
+                        } else {
+                            subscriptionCount++;
+                        }
+                    }
+
+                    if (trialCount <= 3) {
+                        trialExtendable = true;
+                    }
+                    if (subscriptionCount > 0) {
+                        trialExtendable = false;
+                    }
+                }
             }
             if (Utils.compareWithTwoDates(plan.getCurrentPlanEndsAt(), new Date()) < 0) {
                 isSubscriptionActive = false;
@@ -156,6 +182,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                 expiredOn,
                 expiringAt,
                 isTrial,
+                trialExtendable,
                 isSubscriptionActive,
                 noOfDaysSubscriptionActive,
                 lastUpdateAt,

@@ -44,6 +44,7 @@ public interface UsersRepository extends JpaRepository<Users, String> {
                 u.firstName AS firstName,
                 u.lastName AS lastName,
                 u.mobileNo AS mobileNo,
+                u.emailId AS emailId,
                 u.createdAt AS createdAt,
             
                 a.addressId AS addressId,

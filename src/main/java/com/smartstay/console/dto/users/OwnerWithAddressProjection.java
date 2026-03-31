@@ -8,6 +8,7 @@ public interface OwnerWithAddressProjection {
     String getFirstName();
     String getLastName();
     String getMobileNo();
+    String getEmailId();
     Date getCreatedAt();
 
     Integer getAddressId();

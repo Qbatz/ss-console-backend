@@ -59,6 +59,6 @@ public class UsersResponseMapper implements Function<Users, UsersResponse> {
 
         return new UsersResponse(users.getUserId(), users.getParentId(), firstName,
                 lastName, fullName.toString(), initials.toString(), users.getMobileNo(),
-                addressRes);
+                users.getEmailId(), addressRes);
     }
 }
