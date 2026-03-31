@@ -15,8 +15,16 @@ import java.util.Set;
 public interface UserActivitiesRepository extends JpaRepository<UserActivities, Long> {
 
     @Query(value = """
-            SELECT * FROM user_activities ua WHERE ua.hostel_id in (:hostelIds) AND ua.created_at=(SELECT MAX(ua2.created_at) FROM user_activities ua2 
-            WHERE ua2.hostel_id=ua.hostel_id) 
+                    SELECT ua.*
+                    FROM user_activities ua
+                    JOIN (
+                        SELECT hostel_id, MAX(created_at) AS max_created_at
+                        FROM user_activities
+                        WHERE hostel_id IN (:hostelIds)
+                        GROUP BY hostel_id
+                    ) latest
+                    ON ua.hostel_id = latest.hostel_id
+                    AND ua.created_at = latest.max_created_at
             """, nativeQuery = true)
     List<UserActivities> findLatestActivity(@Param("hostelIds") List<String> hostelIds);
 

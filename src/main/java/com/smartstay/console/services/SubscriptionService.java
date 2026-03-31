@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class SubscriptionService {
+
     @Autowired
     private Authentication authentication;
     @Autowired
@@ -43,13 +44,16 @@ public class SubscriptionService {
     private AgentActivitiesService agentActivitiesService;
 
     public ResponseEntity<?> subscribeHostel(String hostelId, Subscription subscription) {
+
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         Agent agent = agentService.findUserByUserId(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_WRITE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
@@ -127,7 +131,6 @@ public class SubscriptionService {
             }
         }
 
-
         if (Utils.compareWithTwoDates(latestSubscription.getPlanEndsAt(), new Date()) < 0) {
             HostelPlan hostelPlan = hostelV1.getHostelPlan();
             if (hostelPlan == null) {
@@ -146,18 +149,12 @@ public class SubscriptionService {
             hostelService.updateHostel(hostelV1);
         }
 
-
         newSubscription = subscriptionRepository.save(newSubscription);
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.SUBSCRIPTION,
                 String.valueOf(newSubscription.getSubscriptionId()), null, newSubscription);
 
         return new ResponseEntity<>(HttpStatus.OK);
-
-    }
-
-    public List<com.smartstay.console.dao.Subscription> getAllSubscriptions(List<String> hostelIds) {
-        return null;
     }
 
     public List<com.smartstay.console.dto.hostelPlans.HostelPlan> getHostelsActivatingToday() {

@@ -106,16 +106,24 @@ public class PlansService {
         Plans oldPlan = CloneUtility.clonePlans(plan);
 
         if (payload.planName() != null && !payload.planName().isBlank()){
+            if (!payload.planName().equalsIgnoreCase(plan.getPlanName()) &&
+                    plansRepository.existsByPlanNameIgnoreCaseAndPlanIdNot(payload.planName(), planId)){
+                return new ResponseEntity<>(Utils.PLAN_NAME_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+            }
             plan.setPlanName(payload.planName());
         }
         if (payload.planCode() != null && !payload.planCode().isBlank()){
-            if (!payload.planCode().equals(plan.getPlanCode()) &&
-                    plansRepository.existsByPlanCodeAndPlanIdNot(payload.planCode(), planId)){
+            if (!payload.planCode().equalsIgnoreCase(plan.getPlanCode()) &&
+                    plansRepository.existsByPlanCodeIgnoreCaseAndPlanIdNot(payload.planCode(), planId)){
                 return new ResponseEntity<>(Utils.PLAN_CODE_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
             }
             plan.setPlanCode(payload.planCode());
         }
         if (payload.planType() != null && !payload.planType().isBlank()){
+            if (!payload.planType().equalsIgnoreCase(plan.getPlanType()) &&
+                    plansRepository.existsByPlanTypeIgnoreCaseAndPlanIdNot(payload.planType(), planId)){
+                return new ResponseEntity<>(Utils.PLAN_TYPE_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+            }
             plan.setPlanType(payload.planType());
         }
         if (payload.duration() != null){
@@ -196,6 +204,12 @@ public class PlansService {
 
         Plans plan = new Plans();
 
+        if (plansRepository.existsByPlanNameIgnoreCase(payload.planName())){
+            return new ResponseEntity<>(Utils.PLAN_NAME_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+        if (plansRepository.existsByPlanTypeIgnoreCase(payload.planType())){
+            return new ResponseEntity<>(Utils.PLAN_TYPE_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+        }
         plan.setPlanName(payload.planName());
         plan.setPrice(payload.price());
         plan.setDuration(payload.duration());
@@ -204,14 +218,14 @@ public class PlansService {
 
         String planCode = null;
         if (payload.planCode() != null && !payload.planCode().isBlank()) {
-            if (plansRepository.existsByPlanCode(payload.planCode())){
+            if (plansRepository.existsByPlanCodeIgnoreCase(payload.planCode())){
                 return new ResponseEntity<>(Utils.PLAN_CODE_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
             }
             planCode = payload.planCode();
         } else {
             do {
                 planCode = generatePlanCode();
-            } while (plansRepository.existsByPlanCode(planCode));
+            } while (plansRepository.existsByPlanCodeIgnoreCase(planCode));
         }
         plan.setPlanCode(planCode);
 

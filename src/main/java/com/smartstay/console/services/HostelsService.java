@@ -36,6 +36,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.smartstay.console.utils.AgentActivityUtil.cloneList;
@@ -616,9 +617,9 @@ public class HostelsService {
             endDate = cal.getTime();
         }
 
-        Pageable pagebleRequest = PageRequest.of(page-1, size);
+        Pageable pageableRequest = PageRequest.of(page-1, size);
         Page<HostelV1> pageableHostelV1 = hostelRepository
-                .findAllHostelsNew(hostelName, startDate, endDate, pagebleRequest);
+                .findAllHostelsNew(hostelName, startDate, endDate, pageableRequest);
 
         List<HostelV1> listHostels = pageableHostelV1.stream().toList();
 
@@ -636,12 +637,28 @@ public class HostelsService {
                 .stream()
                 .map(i -> new UserOnerInfoMapper().apply(i))
                 .toList();
-        List<UserActivities> listActivities = userActivitiesService.findLatestActivities(hostelIds);
-        List<LoginHistory> loginHistories = loginHistoryService.getLoginHistoriesByHostelIds(parentIds);
+        List<UserActivities> listActivities = userActivitiesService
+                .findLatestActivities(hostelIds);
+        List<LoginHistory> loginHistories = loginHistoryService
+                .getLoginHistoriesByHostelIds(parentIds);
+
+        Map<String, OwnerInfo> ownerMap = ownerInfos.stream()
+                .collect(Collectors.toMap(OwnerInfo::parentId, Function.identity(),
+                        (a, b) -> a));
+        Map<String, UserActivities> activityMap = listActivities.stream()
+                .collect(Collectors.toMap(UserActivities::getHostelId, Function.identity(),
+                        (a, b) -> a));
+        Map<String, LoginHistory> loginMap = loginHistories.stream()
+                .collect(Collectors.toMap(LoginHistory::getParentId, Function.identity(),
+                        (a, b) -> a));
 
         List<HostelList> hostelsList = listHostels
                 .stream()
-                .map(i -> new HostelsListMapper(ownerInfos, listActivities, loginHistories).apply(i))
+                .map(i -> new HostelsListMapper(
+                        ownerMap.getOrDefault(i.getParentId(), null),
+                        activityMap.getOrDefault(i.getHostelId(), null),
+                        loginMap.getOrDefault(i.getParentId(), null)
+                ).apply(i))
                 .toList();
 
         Hostels hostels = new Hostels(totalHostels,
@@ -671,26 +688,47 @@ public class HostelsService {
         List<HostelV1> listHostels = hostelRepository
                 .findAllHostelsByNameAndJoiningDate(hostelName, startDate, endDate);
 
-        List<String> hostelIds = listHostels
+        Set<String> hostelIds = listHostels
                 .stream()
                 .map(HostelV1::getHostelId)
-                .toList();
-        List<String> parentIds = listHostels
+                .collect(Collectors.toSet());
+        Set<String> parentIds = listHostels
                 .stream()
                 .map(HostelV1::getParentId)
-                .toList();
+                .collect(Collectors.toSet());
 
-        List<Users> createdUsers = usersService.getOwners(parentIds);
+        List<Users> createdUsers = usersService.getOwners(new ArrayList<>(parentIds));
+
         List<OwnerInfo> ownerInfos = createdUsers
                 .stream()
                 .map(i -> new UserOnerInfoMapper().apply(i))
                 .toList();
-        List<UserActivities> listActivities = userActivitiesService.findLatestActivities(hostelIds);
-        List<LoginHistory> loginHistories = loginHistoryService.getLoginHistoriesByHostelIds(parentIds);
+
+        List<UserActivities> listActivities = userActivitiesService
+                .findLatestActivities(new ArrayList<>(hostelIds));
+
+        List<LoginHistory> loginHistories = loginHistoryService
+                .getLoginHistoriesByHostelIds(new ArrayList<>(parentIds));
+
+        Map<String, OwnerInfo> ownerMap = ownerInfos.stream()
+                .collect(Collectors.toMap(OwnerInfo::parentId, Function.identity(),
+                        (a, b) -> a));
+
+        Map<String, UserActivities> activityMap = listActivities.stream()
+                .collect(Collectors.toMap(UserActivities::getHostelId, Function.identity(),
+                        (a, b) -> a));
+
+        Map<String, LoginHistory> loginMap = loginHistories.stream()
+                .collect(Collectors.toMap(LoginHistory::getParentId, Function.identity(),
+                        (a, b) -> a));
 
         return listHostels
                 .stream()
-                .map(i -> new HostelsListMapper(ownerInfos, listActivities, loginHistories).apply(i))
+                .map(i -> new HostelsListMapper(
+                        ownerMap.getOrDefault(i.getParentId(), null),
+                        activityMap.getOrDefault(i.getHostelId(), null),
+                        loginMap.getOrDefault(i.getParentId(), null)
+                ).apply(i))
                 .toList();
     }
 
