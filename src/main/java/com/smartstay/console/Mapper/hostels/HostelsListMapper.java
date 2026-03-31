@@ -8,23 +8,25 @@ import com.smartstay.console.utils.CountryUtils;
 import com.smartstay.console.utils.Utils;
 
 import java.util.Date;
-import java.util.List;
 import java.util.function.Function;
 
 public class HostelsListMapper implements Function<HostelV1, HostelList> {
 
-    List<OwnerInfo> owners = null;
-    List<UserActivities> userActivities = null;
-    List<LoginHistory> listLoginHistory = null;
+    OwnerInfo owner;
+    UserActivities latestActivity;
+    LoginHistory lastLogin;
 
-    public HostelsListMapper(List<OwnerInfo> owners, List<UserActivities> userActivities, List<LoginHistory> listHistory) {
-        this.owners = owners;
-        this.userActivities = userActivities;
-        this.listLoginHistory = listHistory;
+    public HostelsListMapper(OwnerInfo owner,
+                             UserActivities latestActivity,
+                             LoginHistory lastLogin) {
+        this.owner = owner;
+        this.latestActivity = latestActivity;
+        this.lastLogin = lastLogin;
     }
 
     @Override
     public HostelList apply(HostelV1 hostelV1) {
+
         OwnerInfo ownerInfo = null;
         String lastUpdateAt = null;
         String lastUpdateTime = null;
@@ -43,7 +45,8 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")) {
             fullAddress.append(hostelV1.getHouseNo());
         }
-        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("") && hostelV1.getStreet() != null) {
+        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("") &&
+                hostelV1.getStreet() != null) {
             fullAddress.append(", ");
             fullAddress.append(hostelV1.getStreet());
         }
@@ -82,56 +85,36 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
             }
         }
 
-        if (owners != null) {
-            ownerInfo = owners
-                    .stream()
-                    .filter(i -> i.parentId().equalsIgnoreCase(hostelV1.getParentId()))
-                    .findFirst()
-                    .orElse(null);
+        if (owner != null) {
+            ownerInfo = owner;
         }
 
-        if (userActivities != null) {
-            UserActivities ua = userActivities
-                    .stream()
-                    .filter(i -> i.getHostelId().equalsIgnoreCase(hostelV1.getHostelId()))
-                    .findFirst()
-                    .orElse(null);
+        if (latestActivity != null) {
+            lastUpdateAt = Utils.dateToString(latestActivity.getCreatedAt());
+            lastUpdateTime = Utils.dateToTime(latestActivity.getCreatedAt());
+            lastUpdateDateDisplay = Utils.formatDateDisplay(latestActivity.getCreatedAt());
+            lastActivity = latestActivity.getCreatedAt();
+            platform = latestActivity.getPlatform();
+        }
 
-            if (ua != null) {
-                lastUpdateAt = Utils.dateToString(ua.getCreatedAt());
-                lastUpdateTime = Utils.dateToTime(ua.getCreatedAt());
-                lastUpdateDateDisplay = Utils.formatDateDisplay(ua.getCreatedAt());
-                lastActivity = ua.getCreatedAt();
-                platform = ua.getPlatform();
+        if (lastLogin != null) {
+            if (lastActivity != null) {
+                if (Utils.compareWithTwoDates(lastActivity, lastLogin.getLoginAt()) > 0) {
+                    lastUpdateAt = Utils.dateToString(lastLogin.getLoginAt());
+                    lastUpdateTime = Utils.dateToTime(lastLogin.getLoginAt());
+                    platform = lastLogin.getPlatform();
+                }
             }
-        }
-
-        if (listLoginHistory != null) {
-            LoginHistory lh = listLoginHistory
-                    .stream()
-                    .filter(i -> i.getParentId().equalsIgnoreCase(hostelV1.getParentId()))
-                    .findFirst()
-                    .orElse(null);
-
-            if (lh != null) {
-                if (lastActivity != null) {
-                    if (Utils.compareWithTwoDates(lastActivity, lh.getLoginAt()) > 0) {
-                        lastUpdateAt = Utils.dateToString(lh.getLoginAt());
-                        lastUpdateTime = Utils.dateToTime(lh.getLoginAt());
-                        platform = lh.getPlatform();
-                    }
+            else {
+                lastUpdateAt = Utils.dateToString(lastLogin.getLoginAt());
+                lastUpdateTime = Utils.dateToTime(lastLogin.getLoginAt());
+            }
+            if (platform == null || !platform.isBlank()) {
+                if (lastLogin.getSource().equalsIgnoreCase("WEB")) {
+                    platform = "Web";
                 }
                 else {
-                    lastUpdateAt = Utils.dateToString(lh.getLoginAt());
-                    lastUpdateTime = Utils.dateToTime(lh.getLoginAt());
-                }
-                if (platform == null || !platform.isBlank()) {
-                    if (lh.getSource().equalsIgnoreCase("WEB")) {
-                        platform = "Web";
-                    }
-                    else {
-                        platform = lh.getPlatform();
-                    }
+                    platform = lastLogin.getPlatform();
                 }
             }
         }
@@ -159,6 +142,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         if (platform == null) {
             platform = "NA";
         }
+
         return new HostelList(hostelV1.getHostelName(),
                 hostelV1.getHostelId(),
                 hostelV1.getMainImage(),

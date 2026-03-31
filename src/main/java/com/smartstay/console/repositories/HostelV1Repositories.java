@@ -15,40 +15,16 @@ import java.util.Set;
 
 @Repository
 public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
+
     @Query("""
             SELECT COUNT(h.hostelId) FROM hostelv1 h
             """)
     Long findHostelCount();
 
     @Query(value = """
-            SELECT h.*
-                FROM hostelv1 h
-                LEFT JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
-                WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%')) 
-                ORDER BY hp.current_plan_ends_at LIMIT :offset, :limit
-            """, nativeQuery = true)
-    List<HostelV1> findAllHostels(@Param("limit") int size, @Param("offset") int offset, @Param("name") String name);
-
-    @Query(value = """
         SELECT h.*
         FROM hostelv1 h
-        LEFT JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
-        WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
-        ORDER BY hp.current_plan_ends_at ASC
-        """,
-            countQuery = """
-        SELECT COUNT(*)
-        FROM hostelv1 h
-        LEFT JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
-        WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
-        """,
-            nativeQuery = true)
-    Page<HostelV1> findAllHostelsNew2(String name, Pageable pageable);
-
-    @Query(value = """
-        SELECT h.*
-        FROM hostel_plan hp
-        LEFT JOIN hostelv1 h ON h.hostel_id = hp.hostel_id
+        INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
         WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
             AND (:startDate IS NULL OR h.created_at >= :startDate)
             AND (:endDate IS NULL OR h.created_at < :endDate)
@@ -57,7 +33,7 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             countQuery = """
         SELECT COUNT(*)
         FROM hostelv1 h
-        LEFT JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+        INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
         WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
             AND (:startDate IS NULL OR h.created_at >= :startDate)
             AND (:endDate IS NULL OR h.created_at < :endDate)
@@ -82,18 +58,18 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                    hp.currentPlanEndsAt
             )
             FROM hostelv1 h
-            LEFT JOIN h.hostelPlan hp
+            INNER JOIN h.hostelPlan hp
             WHERE h.parentId IN :parentIds
             """)
     List<HostelPlanProjection> findHostelPlanProjectionData(@Param("parentIds") Set<String> parentIds);
 
     @Query(value = """
                     SELECT h.*
-                    FROM hostel_plan hp
-                    LEFT JOIN hostelv1 h ON h.hostel_id = hp.hostel_id
+                    FROM hostelv1 h
+                    INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
                     WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
-                        AND (:startDate IS NULL OR h.created_at >= :startDate)
-                        AND (:endDate IS NULL OR h.created_at < :endDate)
+                      AND (:startDate IS NULL OR h.created_at >= :startDate)
+                      AND (:endDate IS NULL OR h.created_at < :endDate)
                     ORDER BY hp.current_plan_ends_at ASC
                     """,
             nativeQuery = true)
