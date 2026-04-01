@@ -1,7 +1,9 @@
 package com.smartstay.console.dao;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
@@ -19,9 +21,13 @@ public class BillTemplateType {
     Double sgst;
     String bankAccountId;
     String qrCode;
+    @Column(columnDefinition = "LONGTEXT")
     String invoiceNotes;
+    @Column(columnDefinition = "LONGTEXT")
     String receiptNotes;
+    @Column(columnDefinition = "LONGTEXT")
     String invoiceTermsAndCondition;
+    @Column(columnDefinition = "LONGTEXT")
     String receiptTermsAndCondition;
     String invoiceTemplateColor;
     String receiptTemplateColor;

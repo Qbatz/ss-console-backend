@@ -184,6 +184,7 @@ public class DemoRequestService {
         demoRequest.setIsDemoCompleted(false);
         demoRequest.setIsAssigned(false);
         demoRequest.setComments(demoRequestPayload.comments());
+        demoRequest.setBookedFor(Utils.localDateToDate(demoRequestPayload.requestedDate()));
         demoRequest.setRequestedDate(Utils.localDateToString(demoRequestPayload.requestedDate()));
         demoRequest.setRequestedTime(Utils.localTimeToString(demoRequestPayload.requestedTime()));
 

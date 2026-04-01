@@ -8,5 +8,6 @@ public record OwnerInfo(String firstName,
                         String ownerId,
                         String parentId,
                         String countryCode,
-                        String mobile) {
+                        String mobile,
+                        String emailId) {
 }

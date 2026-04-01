@@ -14,7 +14,11 @@ import java.util.Set;
 
 @Repository
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
+
     List<Subscription> findByHostelId(String hostelId);
+
+    List<Subscription> findAllByHostelIdIn(Set<String> hostelIds);
+
     @Query(value = """
             SELECT * FROM subscription WHERE hostel_id=:hostelId order by plan_starts_at DESC LIMIT 1
             """, nativeQuery = true)
