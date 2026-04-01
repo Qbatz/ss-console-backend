@@ -145,7 +145,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                         }
                     }
 
-                    if (trialCount <= 3) {
+                    if (trialCount < 2) {
                         trialExtendable = true;
                     }
                     if (subscriptionCount > 0) {
