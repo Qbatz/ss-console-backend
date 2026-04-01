@@ -7,6 +7,7 @@ import com.smartstay.console.dao.RecurringTracker;
 import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -109,6 +110,22 @@ public class Utils {
             return "";
         }
         return new SimpleDateFormat(OUTPUT_TIME_FORMAT).format(date);
+    }
+
+    public static String formatDateString(String inputDate) {
+        if (inputDate == null || inputDate.isBlank()) {
+            return "";
+        }
+
+        try {
+            DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+            DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern(OUTPUT_DATE_FORMAT);
+
+            LocalDate date = LocalDate.parse(inputDate, inputFormatter);
+            return date.format(outputFormatter);
+        } catch (DateTimeParseException e) {
+            return "";
+        }
     }
 
     public static String getFullName(String firstName, String lastName){
@@ -462,6 +479,16 @@ public class Utils {
 
         return Date.from(
                 localDateTime.atZone(ZoneId.systemDefault()).toInstant()
+        );
+    }
+
+    public static Date localDateToDate(LocalDate localDate) {
+        if (localDate == null) {
+            return null;
+        }
+
+        return Date.from(
+                localDate.atStartOfDay(ZoneId.systemDefault()).toInstant()
         );
     }
 

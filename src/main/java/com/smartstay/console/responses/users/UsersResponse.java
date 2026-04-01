@@ -7,5 +7,6 @@ public record UsersResponse(String userId,
                             String fullName,
                             String initials,
                             String mobileNo,
+                            String emailId,
                             AddressResponse address) {
 }

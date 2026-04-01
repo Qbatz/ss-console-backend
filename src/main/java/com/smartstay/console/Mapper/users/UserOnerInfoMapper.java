@@ -3,13 +3,14 @@ package com.smartstay.console.Mapper.users;
 import com.smartstay.console.dao.Users;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.utils.CountryUtils;
-import org.springframework.security.core.parameters.P;
 
 import java.util.function.Function;
 
 public class UserOnerInfoMapper implements Function<Users, OwnerInfo> {
+
     @Override
     public OwnerInfo apply(Users users) {
+
         StringBuilder fullName = new StringBuilder();
         StringBuilder initials = new StringBuilder();
 
@@ -43,6 +44,7 @@ public class UserOnerInfoMapper implements Function<Users, OwnerInfo> {
                 users.getUserId(),
                 users.getParentId(),
                 CountryUtils.COUNTRY_CODE_IN,
-                users.getMobileNo());
+                users.getMobileNo(),
+                users.getEmailId());
     }
 }

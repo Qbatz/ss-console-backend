@@ -14,6 +14,7 @@ import com.smartstay.console.payloads.plans.PlanFeaturesUpdatePayload;
 import com.smartstay.console.payloads.plans.PlansPayload;
 import com.smartstay.console.payloads.plans.PlansUpdatePayload;
 import com.smartstay.console.repositories.PlansRepository;
+import com.smartstay.console.responses.plans.PlanTypeResponse;
 import com.smartstay.console.responses.plans.PlansResponse;
 import com.smartstay.console.utils.CloneUtility;
 import com.smartstay.console.utils.Utils;
@@ -45,7 +46,7 @@ public class PlansService {
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final Random RANDOM = new Random();
 
-    public Plans findTrialPlan(String hostelId) {
+    public Plans findTrialPlan() {
         if (!authentication.isAuthenticated()) {
             return null;
         }
@@ -387,5 +388,27 @@ public class PlansService {
         }
 
         return ref.toString();
+    }
+
+    public ResponseEntity<?> getPlanType() {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<PlanTypeResponse> responseList = Arrays.stream(PlanType.values())
+                .map(planType -> new PlanTypeResponse(planType.name()))
+                .toList();
+
+        return new ResponseEntity<>(responseList, HttpStatus.OK);
     }
 }

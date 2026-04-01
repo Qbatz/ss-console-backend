@@ -118,6 +118,8 @@ public class HostelsService {
     private ApplicationEventPublisher applicationEventPublisher;
     @Autowired
     private LoginHistoryService loginHistoryService;
+    @Autowired
+    private PlansService plansService;
 
     public ResponseEntity<?> getHostelByHostelId(String hostelId) {
 
@@ -623,14 +625,13 @@ public class HostelsService {
 
         List<HostelV1> listHostels = pageableHostelV1.stream().toList();
 
-        List<String> hostelIds = listHostels
-                .stream()
-                .map(HostelV1::getHostelId)
-                .toList();
-        List<String> parentIds = listHostels
-                .stream()
-                .map(HostelV1::getParentId)
-                .toList();
+        List<String> hostelIds = new ArrayList<>();
+        List<String> parentIds = new ArrayList<>();
+
+        for (HostelV1 hostel : listHostels) {
+            hostelIds.add(hostel.getHostelId());
+            parentIds.add(hostel.getParentId());
+        }
 
         List<Users> createdUsers = usersService.getOwners(parentIds);
         List<OwnerInfo> ownerInfos = createdUsers
@@ -652,12 +653,21 @@ public class HostelsService {
                 .collect(Collectors.toMap(LoginHistory::getParentId, Function.identity(),
                         (a, b) -> a));
 
+        Plans trialPlan = plansService.findTrialPlan();
+
+        List<Subscription> subscriptions = subscriptionService
+                .getSubscriptionsByHostelIds(new HashSet<>(hostelIds));
+        Map<String, List<Subscription>> subscriptionHostelMap = subscriptions.stream()
+                .collect(Collectors.groupingBy(Subscription::getHostelId));
+
         List<HostelList> hostelsList = listHostels
                 .stream()
                 .map(i -> new HostelsListMapper(
                         ownerMap.getOrDefault(i.getParentId(), null),
                         activityMap.getOrDefault(i.getHostelId(), null),
-                        loginMap.getOrDefault(i.getParentId(), null)
+                        loginMap.getOrDefault(i.getParentId(), null),
+                        trialPlan,
+                        subscriptionHostelMap.getOrDefault(i.getHostelId(), null)
                 ).apply(i))
                 .toList();
 
@@ -688,14 +698,13 @@ public class HostelsService {
         List<HostelV1> listHostels = hostelRepository
                 .findAllHostelsByNameAndJoiningDate(hostelName, startDate, endDate);
 
-        Set<String> hostelIds = listHostels
-                .stream()
-                .map(HostelV1::getHostelId)
-                .collect(Collectors.toSet());
-        Set<String> parentIds = listHostels
-                .stream()
-                .map(HostelV1::getParentId)
-                .collect(Collectors.toSet());
+        Set<String> hostelIds = new HashSet<>();
+        Set<String> parentIds = new HashSet<>();
+
+        for (HostelV1 hostel : listHostels) {
+            hostelIds.add(hostel.getHostelId());
+            parentIds.add(hostel.getParentId());
+        }
 
         List<Users> createdUsers = usersService.getOwners(new ArrayList<>(parentIds));
 
@@ -722,12 +731,21 @@ public class HostelsService {
                 .collect(Collectors.toMap(LoginHistory::getParentId, Function.identity(),
                         (a, b) -> a));
 
+        Plans trialPlan = plansService.findTrialPlan();
+
+        List<Subscription> subscriptions = subscriptionService
+                .getSubscriptionsByHostelIds(new HashSet<>(hostelIds));
+        Map<String, List<Subscription>> subscriptionHostelMap = subscriptions.stream()
+                .collect(Collectors.groupingBy(Subscription::getHostelId));
+
         return listHostels
                 .stream()
                 .map(i -> new HostelsListMapper(
                         ownerMap.getOrDefault(i.getParentId(), null),
                         activityMap.getOrDefault(i.getHostelId(), null),
-                        loginMap.getOrDefault(i.getParentId(), null)
+                        loginMap.getOrDefault(i.getParentId(), null),
+                        trialPlan,
+                        subscriptionHostelMap.getOrDefault(i.getHostelId(), null)
                 ).apply(i))
                 .toList();
     }

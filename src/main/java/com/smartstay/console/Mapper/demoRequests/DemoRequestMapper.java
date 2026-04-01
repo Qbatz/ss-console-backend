@@ -38,12 +38,19 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
             }
         }
 
+        String requestedDate = null;
+        if (demoRequest.getBookedFor() != null) {
+            requestedDate = Utils.dateToString(demoRequest.getBookedFor());
+        } else if (demoRequest.getRequestedDate() != null) {
+            requestedDate = Utils.formatDateString(demoRequest.getRequestedDate());
+        }
+
         return new DemoRequestResponse(demoRequest.getRequestId(), demoRequest.getName(),
                 demoRequest.getEmailId(), demoRequest.getContactNo(), demoRequest.getCountryCode(),
                 demoRequest.getOrganization(), demoRequest.getNoOfHostels(), demoRequest.getNoOfTenant(),
                 demoRequest.getCity(), demoRequest.getState(), demoRequest.getCountry(), demoRequest.getDemoRequestStatus(),
                 demoRequest.getIsDemoCompleted(), demoRequest.getIsAssigned(), assignedTo, assignedBy,
-                presentedBy, demoRequest.getComments(), demoRequest.getRequestedDate(), demoRequest.getRequestedTime(),
+                presentedBy, demoRequest.getComments(), requestedDate, demoRequest.getRequestedTime(),
                 demoRequest.getPresentedAt() != null ? Utils.dateToString(demoRequest.getPresentedAt()) :  null,
                 demoRequest.getPresentedAt() != null ? Utils.dateToTime(demoRequest.getPresentedAt()) : null);
     }

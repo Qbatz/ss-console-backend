@@ -68,7 +68,7 @@ public class SubscriptionService {
             return new ResponseEntity<>(Utils.INVALID_SUBSCRIPTION, HttpStatus.BAD_REQUEST);
         }
 
-        Plans plans = plansService.findTrialPlan(hostelId);
+        Plans plans = plansService.findTrialPlan();
         String planCode = null;
         String planName = null;
         if (subscription == null) {
@@ -173,6 +173,10 @@ public class SubscriptionService {
 
     public List<com.smartstay.console.dao.Subscription> getSubscriptionsByHostelId(String hostelId){
         return subscriptionRepository.findByHostelId(hostelId);
+    }
+
+    public List<com.smartstay.console.dao.Subscription> getSubscriptionsByHostelIds(Set<String> hostelIds){
+        return subscriptionRepository.findAllByHostelIdIn(hostelIds);
     }
 
     public ResponseEntity<?> getSubscriptions(int page, int size, String hostelName) {

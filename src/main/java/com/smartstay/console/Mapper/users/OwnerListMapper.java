@@ -39,8 +39,8 @@ public class OwnerListMapper implements Function<OwnerWithAddressProjection, Own
         }
 
         return new OwnerResponse(owner.getUserId(), owner.getParentId(), owner.getFirstName(),
-                owner.getLastName(), fullName, initials, owner.getMobileNo(), noOfProperties,
-                addressRes, Utils.dateToString(owner.getCreatedAt()),
+                owner.getLastName(), fullName, initials, owner.getMobileNo(), owner.getEmailId(),
+                noOfProperties, addressRes, Utils.dateToString(owner.getCreatedAt()),
                 latestActivityDate != null ? Utils.dateToString(latestActivityDate) : null,
                 latestActivityDate != null ? Utils.dateToTime(latestActivityDate) : null
         );
