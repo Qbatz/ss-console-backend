@@ -7,7 +7,9 @@ import com.smartstay.console.utils.CountryUtils;
 import com.smartstay.console.utils.Utils;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 
 public class HostelsListMapper implements Function<HostelV1, HostelList> {
@@ -16,17 +18,20 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
     UserActivities latestActivity;
     LoginHistory lastLogin;
     Plans trialPlan;
+    Plans trialDaysPlan;
     List<Subscription> subscriptions;
 
     public HostelsListMapper(OwnerInfo owner,
                              UserActivities latestActivity,
                              LoginHistory lastLogin,
                              Plans trialPlan,
+                             Plans trialDaysPlan,
                              List<Subscription> subscriptions) {
         this.owner = owner;
         this.latestActivity = latestActivity;
         this.lastLogin = lastLogin;
         this.trialPlan = trialPlan;
+        this.trialDaysPlan = trialDaysPlan;
         this.subscriptions = subscriptions;
     }
 
@@ -48,6 +53,14 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         boolean trialExtendable = false;
         Date lastActivity = null;
         String platform = null;
+        Set<String> trialPlanCodes = new HashSet<>();
+
+        if (trialPlan != null) {
+            trialPlanCodes.add(trialPlan.getPlanCode().toLowerCase());
+        }
+        if (trialDaysPlan != null) {
+            trialPlanCodes.add(trialDaysPlan.getPlanCode().toLowerCase());
+        }
 
         if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")) {
             fullAddress.append(hostelV1.getHouseNo());
@@ -131,14 +144,14 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
             hp = new com.smartstay.console.responses.hostels.HostelPlan(plan.getCurrentPlanCode(),
                     plan.getPaidAmount(),
                     plan.getCurrentPlanName());
-            if (trialPlan != null && trialPlan.getPlanCode().equalsIgnoreCase(plan.getCurrentPlanCode())) {
+            if (trialPlanCodes.contains(plan.getCurrentPlanCode().toLowerCase())) {
                 isTrial = true;
                 if (subscriptions != null) {
                     long trialCount = 0;
                     long subscriptionCount = 0;
 
                     for (Subscription subscription : subscriptions) {
-                        if (subscription.getPlanCode().equalsIgnoreCase(trialPlan.getPlanCode())) {
+                        if (trialPlanCodes.contains(subscription.getPlanCode().toLowerCase())) {
                             trialCount++;
                         } else {
                             subscriptionCount++;

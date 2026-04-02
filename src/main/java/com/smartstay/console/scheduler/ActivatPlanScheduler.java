@@ -1,6 +1,5 @@
 package com.smartstay.console.scheduler;
 
-import com.smartstay.console.dao.Subscription;
 import com.smartstay.console.dto.hostelPlans.HostelPlan;
 import com.smartstay.console.services.HostelPlanService;
 import com.smartstay.console.services.SubscriptionService;

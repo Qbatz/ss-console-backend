@@ -2,6 +2,8 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.subscription.SubscriptionsResMapper;
 import com.smartstay.console.config.Authentication;
+import com.smartstay.console.config.FilesConfig;
+import com.smartstay.console.config.UploadFileToS3;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dao.HostelV1;
@@ -9,6 +11,7 @@ import com.smartstay.console.dao.Plans;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.Source;
+import com.smartstay.console.ennum.UserType;
 import com.smartstay.console.payloads.subscription.Subscription;
 import com.smartstay.console.repositories.SubscriptionRepository;
 import com.smartstay.console.responses.subscriptions.SubscriptionsResponse;
@@ -21,8 +24,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,8 +47,10 @@ public class SubscriptionService {
     private SubscriptionRepository subscriptionRepository;
     @Autowired
     private AgentActivitiesService agentActivitiesService;
+    @Autowired
+    private UploadFileToS3 uploadFileToS3;
 
-    public ResponseEntity<?> subscribeHostel(String hostelId, Subscription subscription) {
+    public ResponseEntity<?> subscribeHostel(String hostelId, Subscription payload, MultipartFile paymentProof) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -68,36 +75,102 @@ public class SubscriptionService {
             return new ResponseEntity<>(Utils.INVALID_SUBSCRIPTION, HttpStatus.BAD_REQUEST);
         }
 
-        Plans plans = plansService.findTrialPlan();
+        Plans trialPlan = plansService.findTrialPlan();
+
         String planCode = null;
         String planName = null;
-        if (subscription == null) {
-            if (!latestSubscription.getPlanCode().equalsIgnoreCase(plans.getPlanCode())) {
+        double paidAmount = 0;
+        double planAmount = 0;
+        double discountAmount = 0;
+        long duration = 30;
+        boolean isTrial = false;
+        String paymentProofUrl = null;
+
+        if (payload.isTrial()) {
+            Plans trialDaysPlan = plansService.findLatestTrialPlan();
+
+            List<com.smartstay.console.dao.Subscription> subscriptions = subscriptionRepository.findByHostelId(hostelId);
+
+            Set<String> trialPlanCodes = new HashSet<>();
+
+            if (trialPlan != null) {
+                trialPlanCodes.add(trialPlan.getPlanCode().toLowerCase());
+            }
+            if (trialDaysPlan != null) {
+                trialPlanCodes.add(trialDaysPlan.getPlanCode().toLowerCase());
+            }
+
+            if (subscriptions != null) {
+                long trialCount = 0;
+                long subscriptionCount = 0;
+
+                for (com.smartstay.console.dao.Subscription subscription : subscriptions) {
+                    if (trialPlanCodes.contains(subscription.getPlanCode().toLowerCase())) {
+                        trialCount++;
+                    } else {
+                        subscriptionCount++;
+                    }
+                }
+
+                if (trialCount >= 2) {
+                    return new ResponseEntity<>(Utils.TRIAL_EXTENSION_LIMIT_REACHED, HttpStatus.BAD_REQUEST);
+                }
+                if (subscriptionCount > 0) {
+                    return new ResponseEntity<>(Utils.HOSTEL_HAS_SUBSCRIBED_BEFORE, HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            if (payload.trialDays() > 0){
+                if (trialDaysPlan != null) {
+                    if (payload.trialDays() > trialDaysPlan.getDuration()){
+                        return new ResponseEntity<>(Utils.DAYS_CAN_NOT_BE_HIGHER_THAN_PLAN_DURATION, HttpStatus.BAD_REQUEST);
+                    }
+                    planCode = trialDaysPlan.getPlanCode();
+                    planName = trialDaysPlan.getPlanName();
+                    planAmount = trialDaysPlan.getPrice();
+                    duration = payload.trialDays();
+                }
+            } else {
+                if (trialPlan != null) {
+                    planCode = trialPlan.getPlanCode();
+                    planName = trialPlan.getPlanName();
+                    planAmount = trialPlan.getPrice();
+                    duration = trialPlan.getDuration();
+                }
+            }
+
+            isTrial = true;
+        } else {
+            if (payload.planCode() == null) {
                 return new ResponseEntity<>(Utils.PLAN_CODE_REQUIRED, HttpStatus.BAD_REQUEST);
-            }
-            else {
-                planCode = plans.getPlanCode();
-                planName = plans.getPlanName();
-            }
-        }
-        else {
-            if (subscription.planCode() == null) {
-                if (!latestSubscription.getPlanCode().equalsIgnoreCase(plans.getPlanCode())) {
-                    return new ResponseEntity<>(Utils.PLAN_CODE_REQUIRED, HttpStatus.BAD_REQUEST);
-                }
-                else {
-                    planCode = plans.getPlanCode();
-                    planName = plans.getPlanName();
-                }
-            }
-            else {
-                Plans pla = plansService.findPlanByPlanCode(subscription.planCode());
-                if (pla == null) {
+            } else {
+                Plans plan = plansService.findPlanByPlanCode(payload.planCode());
+                if (plan == null) {
                     return new ResponseEntity<>(Utils.INVALID_PLAN_CODE, HttpStatus.BAD_REQUEST);
                 }
-                planCode = subscription.planCode();
-                planName = pla.getPlanName();
+                planCode = payload.planCode();
+                planName = plan.getPlanName();
+                paidAmount = payload.paidAmount();
+                planAmount = plan.getPrice();
+                discountAmount = payload.discountAmount();
+                duration = plan.getDuration();
+
+                if (paymentProof == null || paymentProof.isEmpty()) {
+                    return new ResponseEntity<>(Utils.PAYMENT_PROOF_REQUIRED, HttpStatus.BAD_REQUEST);
+                } else {
+                    paymentProofUrl = uploadFileToS3.uploadFileToS3(
+                            FilesConfig.convertMultipartToFileNew(paymentProof), "subscription/payment-proof");
+                }
             }
+        }
+
+        if (discountAmount < 0 || discountAmount > planAmount) {
+            return new ResponseEntity<>(Utils.INVALID_DISCOUNT, HttpStatus.BAD_REQUEST);
+        }
+
+        double discountPercentage = 0;
+        if (planAmount > 0) {
+            discountPercentage = (discountAmount / planAmount) * 100;
         }
 
         com.smartstay.console.dao.Subscription newSubscription = new com.smartstay.console.dao.Subscription();
@@ -106,50 +179,54 @@ public class SubscriptionService {
         newSubscription.setPlanCode(planCode);
         newSubscription.setPlanName(planName);
         newSubscription.setPlanStartsAt(new Date());
-        newSubscription.setPaidAmount(0.0);
-        newSubscription.setPlanAmount(0.0);
-        newSubscription.setDiscount(0.0);
-        newSubscription.setDiscountAmount(0.0);
+        newSubscription.setPaidAmount(paidAmount);
+        newSubscription.setPlanAmount(planAmount);
+        newSubscription.setDiscount(discountPercentage);
+        newSubscription.setDiscountAmount(discountAmount);
         newSubscription.setCreatedAt(new Date());
         newSubscription.setIsActive(true);
+        newSubscription.setPaymentProof(paymentProofUrl);
+        newSubscription.setCreatedBy(agent.getAgentId());
+        newSubscription.setCreatedByUserType(UserType.AGENT.name());
 
         if (latestSubscription.getPlanEndsAt() != null) {
             if (Utils.compareWithTwoDates(latestSubscription.getPlanEndsAt(), new Date()) < 0) {
                 newSubscription.setPlanStartsAt(new Date());
-                Date endDate = Utils.addDaysToDate(new Date(), 30);
+                Date endDate = Utils.addDaysToDate(new Date(), (int) duration);
                 newSubscription.setPlanEndsAt(endDate);
                 newSubscription.setNextBillingAt(endDate);
-                newSubscription.setActivatedAt(endDate);
-            }
-            else {
+                newSubscription.setActivatedAt(new Date());
+            } else {
                 Date startDate = Utils.addDaysToDate(latestSubscription.getPlanEndsAt(), 1);
                 newSubscription.setPlanStartsAt(startDate);
-                Date endDate = Utils.addDaysToDate(startDate, 30);
+                Date endDate = Utils.addDaysToDate(startDate, (int) duration);
                 newSubscription.setPlanEndsAt(endDate);
                 newSubscription.setNextBillingAt(endDate);
                 newSubscription.setActivatedAt(new Date());
             }
         }
 
-        if (Utils.compareWithTwoDates(latestSubscription.getPlanEndsAt(), new Date()) < 0) {
-            HostelPlan hostelPlan = hostelV1.getHostelPlan();
-            if (hostelPlan == null) {
-                hostelPlan = new HostelPlan();
-                hostelPlan.setCurrentPlanCode(latestSubscription.getPlanCode());
-                hostelPlan.setCurrentPlanName(latestSubscription.getPlanName());
-                hostelPlan.setHostel(hostelV1);
-            }
-            hostelPlan.setCurrentPlanStartsAt(newSubscription.getPlanStartsAt());
-            hostelPlan.setCurrentPlanEndsAt(newSubscription.getPlanEndsAt());
-            hostelPlan.setCurrentPlanPrice(0.0);
-            hostelPlan.setPaidAmount(0.0);
-            hostelPlan.setTrial(true);
-            hostelPlan.setTrialEndingAt(newSubscription.getPlanEndsAt());
-
-            hostelService.updateHostel(hostelV1);
-        }
-
         newSubscription = subscriptionRepository.save(newSubscription);
+
+        if (latestSubscription.getPlanEndsAt() != null) {
+            if (Utils.compareWithTwoDates(latestSubscription.getPlanEndsAt(), new Date()) < 0) {
+                HostelPlan hostelPlan = hostelV1.getHostelPlan();
+                if (hostelPlan == null) {
+                    hostelPlan = new HostelPlan();
+                    hostelPlan.setCurrentPlanCode(planCode);
+                    hostelPlan.setCurrentPlanName(planName);
+                    hostelPlan.setHostel(hostelV1);
+                }
+                hostelPlan.setCurrentPlanStartsAt(newSubscription.getPlanStartsAt());
+                hostelPlan.setCurrentPlanEndsAt(newSubscription.getPlanEndsAt());
+                hostelPlan.setCurrentPlanPrice(planAmount);
+                hostelPlan.setPaidAmount(paidAmount);
+                hostelPlan.setTrial(isTrial);
+                hostelPlan.setTrialEndingAt(isTrial ? newSubscription.getPlanEndsAt() : null);
+
+                hostelService.updateHostel(hostelV1);
+            }
+        }
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.SUBSCRIPTION,
                 String.valueOf(newSubscription.getSubscriptionId()), null, newSubscription);
@@ -249,10 +326,23 @@ public class SubscriptionService {
                             hostel -> hostel));
         }
 
+        Set<String> createdByIds = subscriptions.stream()
+                .filter(s -> UserType.AGENT.name().equalsIgnoreCase(s.getCreatedByUserType()))
+                .map(com.smartstay.console.dao.Subscription::getCreatedBy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<Agent> agents = agentService.getAgentsByIds(createdByIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        Function.identity(), (a, b) -> a));
+
         List<SubscriptionsResponse> responseList = subscriptions.stream()
-                .map(subscription -> new SubscriptionsResMapper(
-                        hostelMap.getOrDefault(subscription.getHostelId(), null)
-                ).apply(subscription)).toList();
+                .map(subscription -> {
+                    HostelV1 hostel = hostelMap.getOrDefault(subscription.getHostelId(), null);
+                    Agent createdByAgent = agentMap.getOrDefault(subscription.getCreatedBy(), null);
+                    return new SubscriptionsResMapper(hostel, createdByAgent).apply(subscription);
+                }).toList();
 
         Map<String, Object> response = new HashMap<>();
         response.put("content", responseList);

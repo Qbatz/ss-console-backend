@@ -1,6 +1,7 @@
 package com.smartstay.console.Mapper.hostels;
 
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.responses.bills.BillingRulesResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
@@ -31,6 +32,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
     List<UsersResponse> staffs;
     List<UserActivities> activities;
     Map<String, Users> userLookup;
+    Plans trialPlan;
+    Plans trialDaysPlan;
 
     public HostelDetailsMapper(OwnerInfo ownerInfo,
                                int noOfFloors,
@@ -49,7 +52,9 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                                List<UsersResponse> masters,
                                List<UsersResponse> staffs,
                                List<UserActivities> activities,
-                               Map<String, Users> userLookup) {
+                               Map<String, Users> userLookup,
+                               Plans trialPlan,
+                               Plans trialDaysPlan) {
         this.ownerInfo = ownerInfo;
         this.noOfFloors = noOfFloors;
         this.noOfRooms = noOfRooms;
@@ -68,6 +73,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
         this.staffs = staffs;
         this.activities = activities;
         this.userLookup = userLookup;
+        this.trialPlan = trialPlan;
+        this.trialDaysPlan = trialDaysPlan;
     }
 
     @Override
@@ -161,7 +168,10 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                     Utils.dateToString(currentSubscription.getPlanStartsAt()),
                     Utils.dateToString(currentSubscription.getPlanEndsAt()),
                     currentSubscription.getPlanAmount(),
-                    currentSubscription.getPaidAmount()
+                    currentSubscription.getPaidAmount(),
+                    currentSubscription.getDiscount(),
+                    currentSubscription.getDiscountAmount(),
+                    currentSubscription.getPaymentProof()
             );
         }
 
@@ -175,7 +185,10 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                         Utils.dateToString(subscription.getPlanStartsAt()),
                         Utils.dateToString(subscription.getPlanEndsAt()),
                         subscription.getPlanAmount(),
-                        subscription.getPaidAmount()
+                        subscription.getPaidAmount(),
+                        subscription.getDiscount(),
+                        subscription.getDiscountAmount(),
+                        subscription.getPaymentProof()
                 )).toList();
 
         List<UserActivitiesResponse> activitiesRes = activities.stream()
@@ -198,11 +211,46 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                         amenity.getIsProRate()))
                 .toList();
 
+        boolean trialExtendable = false;
+        Set<String> trialPlanCodes = new HashSet<>();
+
+        if (trialPlan != null) {
+            trialPlanCodes.add(trialPlan.getPlanCode().toLowerCase());
+        }
+        if (trialDaysPlan != null) {
+            trialPlanCodes.add(trialDaysPlan.getPlanCode().toLowerCase());
+        }
+
+        HostelPlan currentPlan = hostelV1.getHostelPlan();
+        if (currentPlan != null) {
+            if (trialPlanCodes.contains(currentPlan.getCurrentPlanCode().toLowerCase())) {
+                if (subscriptions != null) {
+                    long trialCount = 0;
+                    long subscriptionCount = 0;
+
+                    for (Subscription subscription : subscriptions) {
+                        if (trialPlanCodes.contains(subscription.getPlanCode().toLowerCase())) {
+                            trialCount++;
+                        } else {
+                            subscriptionCount++;
+                        }
+                    }
+
+                    if (trialCount < 2) {
+                        trialExtendable = true;
+                    }
+                    if (subscriptionCount > 0) {
+                        trialExtendable = false;
+                    }
+                }
+            }
+        }
+
         return new HostelResponse(hostelV1.getHostelId(), hostelV1.getHostelName(), Utils.getInitials(hostelV1.getHostelName()),
                 hostelV1.getMobile(), hostelV1.getHouseNo(), hostelV1.getStreet(), hostelV1.getLandmark(), hostelV1.getCity(),
                 hostelV1.getState(), hostelV1.getCountry(), hostelV1.getPincode(), fullAddress, hostelV1.getMainImage(),
-                addImages, amenitiesRes, sharingTypeList, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
-                noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants, tenantList,
+                trialExtendable, addImages, amenitiesRes, sharingTypeList, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants,
+                noOfBookedTenants, noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants, tenantList,
                 Utils.dateToString(hostelV1.getCreatedAt()), Utils.dateToTime(hostelV1.getCreatedAt()), ownerInfo, masters, staffs,
                 billingRules, ebConfig, currentSubRes, otherSubsRes, subscriptionStatus, subscriptionRenewalTimeLeftDays,
                 activitiesRes);
