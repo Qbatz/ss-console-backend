@@ -53,9 +53,4 @@ public class PlansController {
     private ResponseEntity<?> deactivatePlanFeature(@PathVariable("planFeatureId") Long planFeatureId){
         return plansService.deactivatePlanFeature(planFeatureId);
     }
-
-//    @GetMapping("/plan-type")
-//    public ResponseEntity<?> getPlanType() {
-//        return plansService.getPlanType();
-//    }
 }

@@ -10,14 +10,16 @@ import java.util.List;
 @Repository
 public interface PlansRepository extends JpaRepository<Plans, Long> {
 
-    Plans findPlanByPlanTypeAndIsActiveTrue(String planType);
+    Plans findTopByPlanTypeAndIsActiveTrueOrderByPlanIdAsc(String planType);
+
+    Plans findTopByPlanTypeAndIsActiveTrueOrderByPlanIdDesc(String planType);
 
     Plans findByPlanCodeAndIsActiveTrue(String planCode);
 
     @Query("""
                 SELECT p FROM Plans p
                 WHERE p.isActive = true
-                  AND p.planId <> 1
+                  AND p.planType <> 'TRIAL'
                 ORDER BY p.planId ASC
             """)
     List<Plans> findActivePlansExcludingTrial();

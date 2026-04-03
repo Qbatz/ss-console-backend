@@ -15,6 +15,7 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Subscription {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long subscriptionId;
@@ -30,8 +31,9 @@ public class Subscription {
     private Double discount;
     private Double discountAmount;
     private Date nextBillingAt;
+    private String createdBy;
+    private String createdByUserType;
     private Date createdAt;
     private Boolean isActive;
-
-
+    private String paymentProof;
 }

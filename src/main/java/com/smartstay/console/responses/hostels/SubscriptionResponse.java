@@ -7,5 +7,8 @@ public record SubscriptionResponse(Long subscriptionId,
                                    String planStartsAt,
                                    String planEndsAt,
                                    Double planAmount,
-                                   Double paidAmount) {
+                                   Double paidAmount,
+                                   Double discount,
+                                   Double discountAmount,
+                                   String paymentProof) {
 }

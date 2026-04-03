@@ -14,7 +14,6 @@ import com.smartstay.console.payloads.plans.PlanFeaturesUpdatePayload;
 import com.smartstay.console.payloads.plans.PlansPayload;
 import com.smartstay.console.payloads.plans.PlansUpdatePayload;
 import com.smartstay.console.repositories.PlansRepository;
-import com.smartstay.console.responses.plans.PlanTypeResponse;
 import com.smartstay.console.responses.plans.PlansResponse;
 import com.smartstay.console.utils.CloneUtility;
 import com.smartstay.console.utils.Utils;
@@ -50,7 +49,11 @@ public class PlansService {
         if (!authentication.isAuthenticated()) {
             return null;
         }
-        return plansRepository.findPlanByPlanTypeAndIsActiveTrue(PlanType.TRIAL.name());
+        return plansRepository.findTopByPlanTypeAndIsActiveTrueOrderByPlanIdAsc(PlanType.TRIAL.name());
+    }
+
+    public Plans findLatestTrialPlan() {
+        return plansRepository.findTopByPlanTypeAndIsActiveTrueOrderByPlanIdDesc(PlanType.TRIAL.name());
     }
 
     public Plans findPlanByPlanCode(String planCode) {
@@ -388,27 +391,5 @@ public class PlansService {
         }
 
         return ref.toString();
-    }
-
-    public ResponseEntity<?> getPlanType() {
-
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        Agent agent = agentService.findUserByUserId(authentication.getName());
-        if (agent == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        List<PlanTypeResponse> responseList = Arrays.stream(PlanType.values())
-                .map(planType -> new PlanTypeResponse(planType.name()))
-                .toList();
-
-        return new ResponseEntity<>(responseList, HttpStatus.OK);
     }
 }
