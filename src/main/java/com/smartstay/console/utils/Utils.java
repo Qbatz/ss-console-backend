@@ -70,6 +70,11 @@ public class Utils {
     public static final String PLAN_CODE_ALREADY_EXISTS = "Plan code already exists";
     public static final String PLAN_NAME_ALREADY_EXISTS = "Plan name already exists";
     public static final String PLAN_TYPE_ALREADY_EXISTS = "Plan type already exists";
+    public static final String PAYMENT_PROOF_REQUIRED = "Payment proof is required for subscription";
+    public static final String INVALID_DISCOUNT = "Invalid discount amount";
+    public static final String DAYS_CAN_NOT_BE_HIGHER_THAN_PLAN_DURATION = "Trial days can not be higher than plan duration";
+    public static final String TRIAL_EXTENSION_LIMIT_REACHED = "Trial extension limit reached";
+    public static final String HOSTEL_HAS_SUBSCRIBED_BEFORE = "Hostel has been subscribed before";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {

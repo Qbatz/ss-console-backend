@@ -10,5 +10,11 @@ public record SubscriptionsResponse(Long subscriptionId,
                                     String planStartsAt,
                                     String planEndsAt,
                                     Double planAmount,
-                                    Double paidAmount) {
+                                    Double paidAmount,
+                                    Double discount,
+                                    Double discountAmount,
+                                    String paymentProof,
+                                    String createdBy,
+                                    String createdAtDate,
+                                    String createdAtTime) {
 }
