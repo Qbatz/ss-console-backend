@@ -75,6 +75,10 @@ public class Utils {
     public static final String DAYS_CAN_NOT_BE_HIGHER_THAN_PLAN_DURATION = "Trial days can not be higher than plan duration";
     public static final String TRIAL_EXTENSION_LIMIT_REACHED = "Trial extension limit reached";
     public static final String HOSTEL_HAS_SUBSCRIBED_BEFORE = "Hostel has been subscribed before";
+    public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
+    public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
+    public static final String INVALID_DISCOUNT_PERCENTAGE = "Invalid discount percentage";
+    public static final String TRIAL_PLAN_NOT_ALLOWED = "Trial plan not allowed";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
@@ -624,5 +628,54 @@ public class Utils {
         }
 
         return true;
+    }
+
+    public static String maskUpiId(String upiId) {
+        if (upiId == null || !upiId.contains("@")) {
+            return upiId;
+        }
+
+        String[] parts = upiId.split("@");
+
+        String username = parts[0];
+        String domain = parts.length > 1 ? parts[1] : "";
+
+        if (username.length() <= 4) {
+            return upiId;
+        }
+
+        String visiblePart = username.substring(0, 4);
+        String maskedPart = "*".repeat(username.length() - 4);
+
+        return visiblePart + maskedPart + "@" + domain;
+    }
+
+    public static String maskCardNo(String cardNo) {
+        if (cardNo == null) {
+            return null;
+        }
+
+        String clean = cardNo.replaceAll("\\D", "");
+        int len = clean.length();
+
+        if (len <= 4) {
+            return "****-****-****-" + clean;
+        }
+
+        String last4 = clean.substring(len - 4);
+        return "****-****-****-" + last4;
+    }
+
+    public static Date getStartDateOfMonth(LocalDate date){
+        return Date.from(date.withDayOfMonth(1)
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant());
+    }
+
+    public static Date getEndDateOfMonth(LocalDate date){
+        return Date.from(date.withDayOfMonth(date.lengthOfMonth())
+                .atTime(LocalTime.MAX)
+                .atZone(ZoneId.systemDefault())
+                .toInstant());
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface PlansRepository extends JpaRepository<Plans, Long> {
@@ -15,6 +16,8 @@ public interface PlansRepository extends JpaRepository<Plans, Long> {
     Plans findTopByPlanTypeAndIsActiveTrueOrderByPlanIdDesc(String planType);
 
     Plans findByPlanCodeAndIsActiveTrue(String planCode);
+
+    List<Plans> findByPlanCodeInAndIsActiveTrue(Set<String> planCodes);
 
     @Query("""
                 SELECT p FROM Plans p

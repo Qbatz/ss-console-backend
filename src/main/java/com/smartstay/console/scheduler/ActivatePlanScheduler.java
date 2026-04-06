@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
-public class ActivatPlanScheduler {
+public class ActivatePlanScheduler {
 
     @Autowired
     private SubscriptionService subscriptionService;
@@ -30,12 +30,11 @@ public class ActivatPlanScheduler {
                 List<com.smartstay.console.dao.HostelPlan> listNewPlans = subscriptionPlanMapper(listHostelPlans, hp);
                 hostelPlanService.saveAll(listNewPlans);
             }
-
         }
     }
 
-
-    List<com.smartstay.console.dao.HostelPlan> subscriptionPlanMapper(List<com.smartstay.console.dao.HostelPlan> hp, List<HostelPlan> newScubscription) {
+    List<com.smartstay.console.dao.HostelPlan> subscriptionPlanMapper(List<com.smartstay.console.dao.HostelPlan> hp,
+                                                                      List<HostelPlan> newScubscription) {
         List<com.smartstay.console.dao.HostelPlan> newPlan = hp
                 .stream()
                 .map(i -> {
