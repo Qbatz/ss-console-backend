@@ -691,10 +691,7 @@ public class HostelsService {
         }
 
         if (endDate != null) {
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(endDate);
-            cal.add(Calendar.DAY_OF_MONTH, 1);
-            endDate = cal.getTime();
+            endDate = Utils.addDaysToDate(endDate, 1);
         }
 
         List<HostelV1> listHostels = hostelRepository
