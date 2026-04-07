@@ -8,10 +8,7 @@ import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dao.Plans;
-import com.smartstay.console.ennum.ActivityType;
-import com.smartstay.console.ennum.ModuleId;
-import com.smartstay.console.ennum.Source;
-import com.smartstay.console.ennum.UserType;
+import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.subscription.Subscription;
 import com.smartstay.console.repositories.SubscriptionRepository;
 import com.smartstay.console.responses.subscriptions.SubscriptionsResponse;
@@ -148,6 +145,11 @@ public class SubscriptionService {
                 if (plan == null) {
                     return new ResponseEntity<>(Utils.INVALID_PLAN_CODE, HttpStatus.BAD_REQUEST);
                 }
+
+                if (plan.getPlanType() != null && PlanType.TRIAL.name().equals(plan.getPlanType())) {
+                    return new ResponseEntity<>(Utils.TRIAL_PLAN_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
+                }
+
                 planCode = payload.planCode();
                 planName = plan.getPlanName();
                 paidAmount = payload.paidAmount();

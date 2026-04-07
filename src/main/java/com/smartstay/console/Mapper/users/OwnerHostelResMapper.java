@@ -29,8 +29,7 @@ public class OwnerHostelResMapper implements Function<HostelV1, OwnerHostelRespo
         boolean isSubscriptionActive;
         if (Utils.compareWithTwoDates(hostelPlan.getCurrentPlanEndsAt(), new Date()) < 0) {
             isSubscriptionActive = false;
-        }
-        else {
+        } else {
             isSubscriptionActive = true;
         }
 
