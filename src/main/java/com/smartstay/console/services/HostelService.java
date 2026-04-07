@@ -2,6 +2,7 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.BillingRules;
+import com.smartstay.console.dao.ElectricityConfig;
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.repositories.HostelV1Repositories;
@@ -17,6 +18,7 @@ import java.util.Set;
 
 @Service
 public class HostelService {
+
     @Autowired
     private Authentication authentication;
     @Autowired
@@ -76,5 +78,13 @@ public class HostelService {
         return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate,
                 billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(),
                 billingRules.getTypeOfBilling());
+    }
+
+    public ElectricityConfig getElectricityConfig(String hostelId) {
+        HostelV1 hostelV1 = hostelRepository.findById(hostelId).orElse(null);
+        if (hostelV1 == null) {
+            return null;
+        }
+        return hostelV1.getElectricityConfig();
     }
 }

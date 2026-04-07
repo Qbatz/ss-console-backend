@@ -16,22 +16,23 @@ public class BillingRulesService {
     @Autowired
     BillingRuleRepository billingRuleRepository;
 
-    public Page<BillingRules> getPaginatedBillingRulesByDays(Set<Integer> days, String hostelName,
-                                                             int currentMonth, int currentYear,
-                                                             String status, Pageable pageable) {
-        return billingRuleRepository.getPaginatedBillingRulesByDays(
-                days, hostelName, currentMonth, currentYear, status, pageable);
+    public Page<BillingRules> getPaginatedBillingRulesByDays(Set<Integer> days, String billingType,
+                                                             String hostelName, int currentMonth,
+                                                             int currentYear, String status,
+                                                             String billingModel, Pageable pageable) {
+        return billingRuleRepository.getPaginatedBillingRulesByDays(days, billingType, hostelName,
+                currentMonth, currentYear, status, billingModel, pageable);
     }
 
     public BillingRules getCurrentMonthTemplate(String hostelId) {
         return billingRuleRepository.findCurrentBillingRules(hostelId);
     }
 
-    public long getPendingRecurringCount(Set<Integer> days, String hostelName, int currentMonth, int currentYear){
-        return billingRuleRepository.countPendingRecurring(days, hostelName, currentMonth, currentYear);
+    public long getPendingRecurringCount(Set<Integer> days, String billingType, String hostelName, int currentMonth, int currentYear){
+        return billingRuleRepository.countPendingRecurring(days, billingType, hostelName, currentMonth, currentYear);
     }
 
-    public long getExpiredSubscriptionsCount(Set<Integer> days, String hostelName, Date date){
-        return billingRuleRepository.countExpiredSubscriptions(days, hostelName, date);
+    public long getExpiredSubscriptionsCount(Set<Integer> days, String billingType, String hostelName, Date date){
+        return billingRuleRepository.countExpiredSubscriptions(days, billingType, hostelName, date);
     }
 }

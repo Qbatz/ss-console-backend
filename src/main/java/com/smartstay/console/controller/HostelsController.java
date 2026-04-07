@@ -73,8 +73,10 @@ public class HostelsController {
                                                 @RequestParam(value = "hostelName", required = false) String hostelName,
                                                 @RequestParam(defaultValue = "TODAY") String filterBy,
                                                 @RequestParam(defaultValue = "ALL") String statusFilterBy,
+                                                @RequestParam(defaultValue = "ALL") String billingModelFilterBy,
                                                 @RequestParam(defaultValue = "0") int billingCycleStartDay){
-        return hostelsService.getHostelRecurring(page, size, hostelName, filterBy, statusFilterBy, billingCycleStartDay);
+        return hostelsService.getHostelRecurring(page, size, hostelName, filterBy, statusFilterBy,
+                billingModelFilterBy, billingCycleStartDay);
     }
 
     @PostMapping("/recurring")

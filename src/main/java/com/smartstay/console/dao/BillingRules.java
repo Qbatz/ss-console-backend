@@ -2,11 +2,10 @@ package com.smartstay.console.dao;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.Date;
+import java.util.List;
 
 @Entity
 @Data
@@ -24,6 +23,11 @@ public class BillingRules {
     private Integer gracePeriodDays;
     //From billing type enum
     private String typeOfBilling;
+    //Billing model enum
+    private String billingModel;
+    @Transient
+    private List<Integer> reminderDays;
+    private boolean shouldNotify;
     private Date startFrom;
     private Date endTill;
     private Date createdAt;
@@ -33,5 +37,4 @@ public class BillingRules {
     @JoinColumn(name = "hostel_id")
     @JsonIgnore
     private HostelV1 hostel;
-
 }

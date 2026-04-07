@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -56,13 +55,34 @@ public class RecurringEventListener {
         BillingDates billingDates = hostelService
                 .getCurrentBillStartAndEndDates(recurringEvents.getHostelId());
 
-        Calendar calendarPreviousBillsStartDate = Calendar.getInstance();
-        calendarPreviousBillsStartDate.setTime(billingDates.currentBillStartDate());
-        calendarPreviousBillsStartDate.add(Calendar.MONTH, -1);
+        ElectricityConfig ebConfig = hostelService.getElectricityConfig(hostelV1.getHostelId());
 
-        Date calendarPreviousBillsEndDate = Utils
-                .findLastDate(calendarPreviousBillsStartDate.get(Calendar.DAY_OF_MONTH),
-                calendarPreviousBillsStartDate.getTime());
+        boolean shouldIncludeEb;
+        double flatEbAmount;
+        boolean isFlatRate;
+        if (ebConfig != null) {
+            if (ebConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.FLAT_RATE.name())) {
+                if (!ebConfig.isShouldIncludeInRent()) {
+                    flatEbAmount = ebConfig.getFlatCharge();
+                    isFlatRate = true;
+                    shouldIncludeEb = false;
+                }
+                else {
+                    shouldIncludeEb = false;
+                    isFlatRate = false;
+                    flatEbAmount = 0.0;
+                }
+            }
+            else {
+                flatEbAmount = 0.0;
+                isFlatRate = false;
+                shouldIncludeEb = true;
+            }
+        } else {
+            flatEbAmount = 0.0;
+            isFlatRate = false;
+            shouldIncludeEb = true;
+        }
 
         List<CustomersConfig> listCustomerConfig = customersConfigService
                 .getAllActiveAndEnabledRecurringCustomers(recurringEvents.getHostelId());
@@ -84,10 +104,14 @@ public class RecurringEventListener {
         List<Customers> listCustomers = customersService
                 .getCustomerDetails(customerIds);
 
-        List<ElectricityReadings> listElectricityForAHostel = electricityService
-                .getAllElectricityReadingForRecurring(recurringEvents.getHostelId(),
-                calendarPreviousBillsStartDate.getTime(),
-                calendarPreviousBillsEndDate);
+        List<ElectricityReadings> listElectricityForAHostel;
+        if (shouldIncludeEb) {
+            listElectricityForAHostel = electricityService
+                    .getAllElectricityReadingForRecurring(recurringEvents.getHostelId());
+        } else {
+            listElectricityForAHostel = new ArrayList<>();
+        }
+        List<ElectricityReadings> finalListElectricityForAHostel = listElectricityForAHostel;
 
         customersList.forEach(item -> {
 
@@ -106,25 +130,30 @@ public class RecurringEventListener {
             }
 
             Double rentAmount = item.getRentAmount();
+            Double ebAmount = 0.0;
 
-            List<Integer> ebReadingsId = listElectricityForAHostel
-                    .stream()
-                    .map(ElectricityReadings::getId)
-                    .toList();
+            if (shouldIncludeEb) {
+                List<Integer> ebReadingsId = finalListElectricityForAHostel
+                        .stream()
+                        .map(ElectricityReadings::getId)
+                        .toList();
 
-            List<CustomersEbHistory> listCustomerEb = customerEbHistoryService
-                    .getAllByCustomerIdAndReadingId(item.getCustomerId(), ebReadingsId);
+                List<CustomersEbHistory> listCustomerEb = customerEbHistoryService
+                        .getAllByCustomerIdAndReadingId(item.getCustomerId(), ebReadingsId);
 
-            Double ebAmount = listCustomerEb
-                    .stream()
-                    .mapToDouble(CustomersEbHistory::getAmount)
-                    .sum();
+                ebAmount = listCustomerEb
+                        .stream()
+                        .mapToDouble(CustomersEbHistory::getAmount)
+                        .sum();
 
-            if (ebAmount > 0) {
-                ebAmount = Utils.roundOfDouble(ebAmount);
+                if (ebAmount > 0) {
+                    ebAmount = Utils.roundOfDouble(ebAmount);
+                }
+            }
+            else if (isFlatRate) {
+                ebAmount = flatEbAmount;
             }
 
-//            List<CustomersAmenity> listCustomersAmenity = customersAmenityService.getAllAmenitiesByCustomerId(item.getCustomerId());
             List<CustomersAmenity> listCustomersAmenity = customersAmenityService
                     .getAllCustomerAmenitiesForRecurring(item.getCustomerId(), billingDates.currentBillStartDate());
             Double amenityAmount = listCustomersAmenity
@@ -297,17 +326,18 @@ public class RecurringEventListener {
             }
         });
 
-        List<ElectricityReadings> listReadingForMakingInvoiceGenerated = listElectricityForAHostel
-                .stream()
-                .map(i -> {
-                    i.setBillStatus(ElectricityBillStatus.INVOICE_GENERATED.name());
-                    i.setUpdatedAt(new Date());
-                    i.setUpdatedBy(hostelV1.getCreatedBy());
-                    return i;
-                })
-                .toList();
-
-        electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
+        if (shouldIncludeEb) {
+            List<ElectricityReadings> listReadingForMakingInvoiceGenerated = listElectricityForAHostel
+                    .stream()
+                    .map(i -> {
+                        i.setBillStatus(ElectricityBillStatus.INVOICE_GENERATED.name());
+                        i.setUpdatedAt(new Date());
+                        i.setUpdatedBy(hostelV1.getCreatedBy());
+                        return i;
+                    })
+                    .toList();
+            electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
+        }
         recurringTrackerService.markAsInvoiceGenerated(hostelV1.getHostelId(), recurringEvents.getBillingDay());
         notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
     }

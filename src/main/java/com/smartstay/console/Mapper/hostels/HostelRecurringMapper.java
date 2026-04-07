@@ -118,8 +118,9 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
         return new HostelRecurringResponse(hostel.getHostelId(), hostelType, hostelName, Utils.getInitials(hostelName),
                 hostel.getMobile(), hostel.getEmailId(), hostel.getHouseNo(), hostel.getStreet(), hostel.getLandmark(),
                 hostel.getCity(), hostel.getState(), hostel.getCountry(), hostel.getPincode(), fullAddress, hostel.getMainImage(),
-                ownerInfo, noOfActiveTenants, invoiceAboutToBeGenerated, startDay, endDay, isSubscriptionActive, recurringStatus,
-                recurringDay, lastRecurringDate, recurringMode, recurringCreatedAtDate, recurringCreatedAtTime, createdBy
+                ownerInfo, noOfActiveTenants, invoiceAboutToBeGenerated, startDay, endDay, billingRules.getTypeOfBilling(),
+                billingRules.getBillingModel(), isSubscriptionActive, recurringStatus, recurringDay, lastRecurringDate,
+                recurringMode, recurringCreatedAtDate, recurringCreatedAtTime, createdBy
         );
     }
 }

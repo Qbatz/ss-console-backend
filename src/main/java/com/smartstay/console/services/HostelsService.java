@@ -12,6 +12,7 @@ import com.smartstay.console.dto.hostel.HostelResetSnapshot;
 import com.smartstay.console.dto.hostel.InvoiceCountPerTracker;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import com.smartstay.console.ennum.*;
+import com.smartstay.console.events.PostpaidRecurringEvents;
 import com.smartstay.console.events.RecurringEvents;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
@@ -753,7 +754,7 @@ public class HostelsService {
 
     public ResponseEntity<?> getHostelRecurring(int page, int size, String hostelName,
                                                 String filterBy, String statusFilterBy,
-                                                int billingCycleStartDay) {
+                                                String billingModelFilterBy, int billingCycleStartDay) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -774,6 +775,7 @@ public class HostelsService {
 
         RecurringFilterOptions filterOption =  RecurringFilterOptions.from(filterBy);
         RecurringStatusFilterOptions statusFilterOption = RecurringStatusFilterOptions.from(statusFilterBy);
+        BillingModelFilterOptions billingModelFilterOption = BillingModelFilterOptions.from(billingModelFilterBy);
 
         List<Map<String, String>> filterOptions = Arrays.stream(RecurringFilterOptions.values())
                 .map(field -> Map.of(
@@ -781,6 +783,11 @@ public class HostelsService {
                         "label", field.getLabel()
                 )).toList();
         List<Map<String, String>> statusFilterOptions = Arrays.stream(RecurringStatusFilterOptions.values())
+                .map(field -> Map.of(
+                        "key", field.name(),
+                        "label", field.getLabel()
+                )).toList();
+        List<Map<String, String>> billingModelFilterOptions = Arrays.stream(BillingModelFilterOptions.values())
                 .map(field -> Map.of(
                         "key", field.name(),
                         "label", field.getLabel()
@@ -826,14 +833,16 @@ public class HostelsService {
         int currentMonth = Utils.getCurrentMonth(today);
         int currentYear = Utils.getCurrentYear(today);
 
+        String billingType = BillingType.FIXED_DATE.name();
+
         long subscriptionExpiredCount = billingRulesService
-                .getExpiredSubscriptionsCount(daySet, hostelName, startOfToday);
+                .getExpiredSubscriptionsCount(daySet, billingType, hostelName, startOfToday);
         long recurringPendingCount = billingRulesService
-                .getPendingRecurringCount(daySet, hostelName, currentMonth, currentYear);
+                .getPendingRecurringCount(daySet, billingType, hostelName, currentMonth, currentYear);
 
         Page<BillingRules> paginatedBillingRules = billingRulesService
-                .getPaginatedBillingRulesByDays(daySet,
-                        hostelName, currentMonth, currentYear, statusFilterOption.name(), pageable);
+                .getPaginatedBillingRulesByDays(daySet, billingType, hostelName, currentMonth,
+                        currentYear, statusFilterOption.name(), billingModelFilterOption.name(), pageable);
 
         List<BillingRules> billingRulesList = paginatedBillingRules.getContent();
 
@@ -915,6 +924,7 @@ public class HostelsService {
         response.put("subscriptionExpiredCount", subscriptionExpiredCount);
         response.put("filterOptions",  filterOptions);
         response.put("statusFilterOptions", statusFilterOptions);
+        response.put("billingModelFilterOptions", billingModelFilterOptions);
         response.put("billingCycleStartDay", billingCycleStartDay);
         response.put("effectiveBillingDay", effectiveBillingDay);
         response.put("appliedFilterType", isBillingCycleFilter ? "BILLING_CYCLE" : "DATE_FILTER");
@@ -969,7 +979,7 @@ public class HostelsService {
 
             int billingDay = billingRules.getBillingStartDate();
 
-            if (!billingRules.getTypeOfBilling().equals("FIXED_DATE")){
+            if (!BillingType.FIXED_DATE.name().equals(billingRules.getTypeOfBilling())){
                 return new ResponseEntity<>(Utils.IS_NOT_FIXED_DATE, HttpStatus.BAD_REQUEST);
             }
 
@@ -979,7 +989,11 @@ public class HostelsService {
             }
 
             try {
-                applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId, billingDay));
+                if (BillingModel.PREPAID.name().equals(billingRules.getBillingModel())){
+                    applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId, billingDay));
+                } else if (BillingModel.POSTPAID.name().equals(billingRules.getBillingModel())) {
+                    applicationEventPublisher.publishEvent(new PostpaidRecurringEvents(this, hostelId, billingDay));
+                }
             } catch (Exception e){
                 return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
             }
