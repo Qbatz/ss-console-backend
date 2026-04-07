@@ -63,6 +63,10 @@ public class PlansService {
         return plansRepository.findByPlanCodeAndIsActiveTrue(planCode);
     }
 
+    public List<Plans> findPlansByPlanCodes(Set<String> planCodes) {
+        return plansRepository.findByPlanCodeInAndIsActiveTrue(planCodes);
+    }
+
     public ResponseEntity<?> getAllPlans() {
 
         if (!authentication.isAuthenticated()) {
@@ -131,14 +135,21 @@ public class PlansService {
             plan.setPlanType(payload.planType());
         }
         if (payload.duration() != null){
+            if (payload.duration() <= 0){
+                return new ResponseEntity<>(Utils.DURATION_NEED_TO_BE_HIGHER_THAN_ZERO, HttpStatus.BAD_REQUEST);
+            }
             plan.setDuration(payload.duration());
         }
-        if (payload.price() != null && payload.price() >= 0){
+        if (payload.price() != null){
+            if (payload.price() <= 0) {
+                return new ResponseEntity<>(Utils.PRICE_SHOULD_BE_HIGHER_THAN_ZERO, HttpStatus.BAD_REQUEST);
+            }
             plan.setPrice(payload.price());
         }
-        if (payload.discountPercentage() != null
-                && payload.discountPercentage() >= 0
-                && payload.discountPercentage() <= 100){
+        if (payload.discountPercentage() != null){
+            if (payload.discountPercentage() < 0 || payload.discountPercentage() > 100){
+                return new ResponseEntity<>(Utils.INVALID_DISCOUNT_PERCENTAGE, HttpStatus.BAD_REQUEST);
+            }
             plan.setDiscounts(payload.discountPercentage());
         }
         if (payload.shouldShow() != null) {

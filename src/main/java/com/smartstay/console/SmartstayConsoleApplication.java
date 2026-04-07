@@ -152,7 +152,13 @@ public class SmartstayConsoleApplication {
                 module19.setModuleName("Recurring");
                 repository.save(module19);
             }
+
+            AgentModules module20 = repository.findByModuleName("Payments");
+            if (module20 == null) {
+                module20 = new AgentModules();
+                module20.setModuleName("Payments");
+                repository.save(module20);
+            }
         };
     }
-
 }
