@@ -8,18 +8,10 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface HostelPlanRepository extends JpaRepository<HostelPlan, Long> {
-    @Query(value = """
-            SELECT hp FROM HostelPlan hp WHERE hp.currentPlanEndsAt <= DATE(:todaysDate)
-            """)
-    List<HostelPlan> findNotActiveHostels(@Param("todaysDate") Date todaysDate);
-
-    @Query(value = """
-            SELECT * FROM hostel_plan ORDER BY current_plan_ends_at LIMIT :offset, :limit
-            """, nativeQuery = true)
-    List<HostelPlan> findAllHostelPlans(@Param("limit") int size, @Param("offset") int offset);
 
     @Query(value = """
             SELECT count(hp.hostel_plan_id) as count FROM hostel_plan hp WHERE DATE(hp.current_plan_ends_at) >= DATE(:todaysDate)
@@ -27,4 +19,6 @@ public interface HostelPlanRepository extends JpaRepository<HostelPlan, Long> {
     long findActiveHostels(@Param("todaysDate") Date todaysDate);
 
     List<HostelPlan> findByHostel_HostelIdIn(List<String> hostelIds);
+
+    List<HostelPlan> findByHostel_HostelIdIn(Set<String> hostelIds);
 }

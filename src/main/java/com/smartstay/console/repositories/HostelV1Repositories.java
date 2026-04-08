@@ -76,4 +76,13 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
     List<HostelV1> findAllHostelsByNameAndJoiningDate(@Param("name") String name,
                                                       @Param("startDate") Date startDate,
                                                       @Param("endDate") Date endDate);
+
+    @Query(value = """
+                    SELECT h.*
+                    FROM hostelv1 h
+                    INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+                    ORDER BY hp.current_plan_ends_at ASC
+                    """,
+            nativeQuery = true)
+    List<HostelV1> findAllHostels();
 }

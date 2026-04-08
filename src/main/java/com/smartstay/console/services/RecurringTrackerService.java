@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.YearMonth;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -34,7 +35,21 @@ public class RecurringTrackerService {
         return recurringTrackerRepository.getLatestRecurringTrackersByHostelIds(hostelIds);
     }
 
-    public boolean checkRecurringTrackerExists(String hostelId, int day, int month, int year){
+    public boolean checkRecurringTrackerExists(String hostelId, int day, Date date, boolean isPostpaid){
+
+        int month;
+        int year;
+
+        if (isPostpaid){
+            YearMonth previousYearMonth = Utils.getPreviousYearMonth(date);
+
+            month = previousYearMonth.getMonthValue();
+            year  = previousYearMonth.getYear();
+        } else {
+            month = Utils.getCurrentMonth(date);
+            year =  Utils.getCurrentYear(date);
+        }
+
         return recurringTrackerRepository
                 .existsByHostelIdAndCreationDayAndCreationMonthAndCreationYear(hostelId, day, month, year);
     }
@@ -50,6 +65,32 @@ public class RecurringTrackerService {
         rt.setCreationDay(billingDay);
         rt.setCreationMonth(Utils.getCurrentMonth(today));
         rt.setCreationYear(Utils.getCurrentYear(today));
+        rt.setCreatedBy(authentication.getName());
+
+        rt = recurringTrackerRepository.save(rt);
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.GENERATE_RECURRING,
+                String.valueOf(rt.getTrackerId()), null, rt);
+    }
+
+    public void markAsPostpaidInvoiceGenerated(String hostelId, int billingDay) {
+
+        Date today = new Date();
+
+        YearMonth previousYearMonth = Utils.getPreviousYearMonth(today);
+
+        int month = previousYearMonth.getMonthValue();
+        int year  = previousYearMonth.getYear();
+
+        RecurringTracker rt = new RecurringTracker();
+        rt.setCreatedAt(today);
+        rt.setMode(RecurringModeEnum.MANUAL.name());
+        rt.setHostelId(hostelId);
+        rt.setCreationDay(billingDay);
+        rt.setCreationMonth(month);
+        rt.setCreationYear(year);
         rt.setCreatedBy(authentication.getName());
 
         rt = recurringTrackerRepository.save(rt);

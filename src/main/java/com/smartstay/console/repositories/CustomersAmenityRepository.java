@@ -11,6 +11,7 @@ import java.util.List;
 
 @Repository
 public interface CustomersAmenityRepository extends JpaRepository<CustomersAmenity, String> {
+
     List<CustomersAmenity> findByCustomerIdIn( List<String> customerIds);
 
     List<CustomersAmenity> findByCustomerId(String customerId);

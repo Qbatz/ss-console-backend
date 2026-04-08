@@ -9,6 +9,7 @@ import java.util.Set;
 
 @Repository
 public interface BedsRepository extends JpaRepository<Beds, Integer> {
+
     List<Beds> findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
 
     List<Beds> findAllByBedIdIn(Set<Integer> occupiedBedIds);

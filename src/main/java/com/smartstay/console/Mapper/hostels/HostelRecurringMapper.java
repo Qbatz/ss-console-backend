@@ -2,7 +2,7 @@ package com.smartstay.console.Mapper.hostels;
 
 import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.dao.*;
-import com.smartstay.console.ennum.BookingsStatus;
+import com.smartstay.console.ennum.BillingModel;
 import com.smartstay.console.responses.hostels.HostelRecurringResponse;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.utils.Utils;
@@ -19,20 +19,17 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
     RecurringTracker recurringTracker;
     Map<String, Agent> agentMap;
     List<BookingsV1> bookings;
-    List<BookingsV1> customers;
 
     public HostelRecurringMapper(Users owner,
                                  HotelType hotelType,
                                  RecurringTracker recurringTracker,
                                  Map<String, Agent> agentMap,
-                                 List<BookingsV1> bookings,
-                                 List<BookingsV1> customers) {
+                                 List<BookingsV1> bookings) {
         this.owner = owner;
         this.hotelType = hotelType;
         this.recurringTracker = recurringTracker;
         this.agentMap = agentMap;
         this.bookings = bookings;
-        this.customers = customers;
     }
 
     @Override
@@ -62,6 +59,7 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
 
         boolean recurringStatus = false;
         Integer recurringDay = billingRules.getBillingStartDate();
+        boolean isPostpaid = BillingModel.POSTPAID.name().equals(billingRules.getBillingModel());
         String lastRecurringDate = null;
         String recurringMode = null;
         String recurringCreatedAtDate = null;
@@ -70,8 +68,8 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
         if (recurringTracker != null){
             Date createdAt = recurringTracker.getCreatedAt();
 
-            recurringStatus = Utils.isSameBillingCycle(
-                    billingRules.getBillingStartDate(), recurringTracker);
+            recurringStatus = Utils.isSameBillingCycle(billingRules.getBillingStartDate(),
+                    recurringTracker, isPostpaid);
 
             recurringMode = recurringTracker.getMode();
 
@@ -88,31 +86,28 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
             lastRecurringDate = Utils.dateToString(createdAt);
         }
 
-        int noOfBookedTenants = 0;
-        int noOfCheckedInTenants = 0;
-        if (bookings != null && !bookings.isEmpty()){
-            for (BookingsV1 booking : bookings){
-                if (booking.getCurrentStatus().equalsIgnoreCase(BookingsStatus.BOOKED.name())){
-                    noOfBookedTenants++;
-                } else if (booking.getCurrentStatus().equalsIgnoreCase(BookingsStatus.CHECKIN.name())) {
-                    noOfCheckedInTenants++;
-                }
-            }
-        }
-
-        int noOfActiveTenants = noOfBookedTenants + noOfCheckedInTenants;
+        int noOfActiveTenants = bookings != null ? bookings.size() : 0;
 
         Date today = new Date();
+
         int startDay = billingRules.getBillingStartDate();
-        int endDay = Utils.calculateEndDay(startDay, today);
+        Date cycleDate = today;
+        if (isPostpaid) {
+            cycleDate = Utils.getPreviousMonthDate(today);
+        }
+        int endDay = Utils.calculateEndDay(startDay, cycleDate);
 
         int invoiceAboutToBeGenerated = 0;
-        if (customers != null){
+        if (bookings != null){
             int billingDay = billingRules.getBillingStartDate();
 
-            invoiceAboutToBeGenerated = (int) customers.stream()
-                    .filter(customer -> Utils.isEligibleForInvoice(customer, billingDay))
-                    .count();
+            if (!isPostpaid){
+                invoiceAboutToBeGenerated = (int) bookings.stream()
+                        .filter(customer -> Utils.isEligibleForInvoice(customer, billingDay))
+                        .count();
+            } else {
+                invoiceAboutToBeGenerated = bookings.size();
+            }
         }
 
         return new HostelRecurringResponse(hostel.getHostelId(), hostelType, hostelName, Utils.getInitials(hostelName),

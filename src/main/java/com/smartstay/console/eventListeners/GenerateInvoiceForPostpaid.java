@@ -13,7 +13,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -48,380 +47,380 @@ public class GenerateInvoiceForPostpaid {
     @Autowired
     private RecurringTrackerService recurringTrackerService;
 
-//    @Async
-//    @EventListener
-//    public void generateInvoiceForPostpaid(PostpaidRecurringEvents postpaidRecurringEvents) {
-//
-//        HostelV1 hostelV1 = hostelService.getHostelInfo(postpaidRecurringEvents.getHostelId());
-//
-//        BillingDates newMonthBillDate = hostelService
-//                .getCurrentBillStartAndEndDates(postpaidRecurringEvents.getHostelId());
-//
-//        Calendar calendar = Calendar.getInstance();
-//        calendar.setTime(newMonthBillDate.currentBillStartDate());
-//        calendar.add(Calendar.MONTH, -1);
-//
-//        BillingDates invoiceMonthBillingDates = hostelService
-//                .getBillingRuleOnDate(postpaidRecurringEvents.getHostelId(), calendar.getTime());
-//
-//        Date currentBillingInvoiceStartDate = invoiceMonthBillingDates.currentBillStartDate();
-//        Date currentBillingInvoiceEndDate = invoiceMonthBillingDates.currentBillEndDate();
-//
-//        ElectricityConfig ebConfig = hostelService.getElectricityConfig(hostelV1.getHostelId());
-//
-//        boolean shouldIncludeEb;
-//        double flatEbAmount;
-//        boolean isFlatRate;
-//        if (ebConfig != null) {
-//            if (ebConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.FLAT_RATE.name())) {
-//                if (!ebConfig.isShouldIncludeInRent()) {
-//                    flatEbAmount = ebConfig.getFlatCharge();
-//                    isFlatRate = true;
-//                    shouldIncludeEb = false;
-//                }
-//                else {
-//                    shouldIncludeEb = false;
-//                    isFlatRate = false;
-//                    flatEbAmount = 0.0;
-//                }
-//            }
-//            else {
-//                flatEbAmount = 0.0;
-//                isFlatRate = false;
-//                shouldIncludeEb = true;
-//            }
-//        } else {
-//            flatEbAmount = 0.0;
-//            isFlatRate = false;
-//            shouldIncludeEb = true;
-//        }
-//
-//        AtomicReference<Date> invoiceStartDate = new AtomicReference<>();
-//        AtomicReference<Date> invoiceDueDate = new AtomicReference<>();
-//        Date invoiceEndDate = null;
-//
-//        List<BookingsV1> customersList = bookingsService
-//                .findCheckedInCustomers(postpaidRecurringEvents.getHostelId());
-//        List<String> customerIds = customersList
-//                .stream()
-//                .map(BookingsV1::getCustomerId)
-//                .toList();
-//
-//        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistoryService
-//                .findBedHistoriesByListOfCustomersAndDates(customerIds, invoiceMonthBillingDates.currentBillStartDate(),
-//                        invoiceMonthBillingDates.currentBillEndDate());
-//
-//        List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService.getWalletListForRecurring(customerIds);
-//
-//        List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
-//
-//        List<ElectricityReadings> listElectricityForAHostel;
-//        if (shouldIncludeEb) {
-//            listElectricityForAHostel = electricityService
-//                    .getAllElectricityReadingForRecurring(postpaidRecurringEvents.getHostelId());
-//        } else {
-//            listElectricityForAHostel = new ArrayList<>();
-//        }
-//
-//        customersList.forEach(item -> {
-//            Double rentAmount = item.getRentAmount();
-//
-//            List<CustomersBedHistory> currentHistory = listCustomerBedHistory.stream()
-//                    .filter(i -> i.getCustomerId().equalsIgnoreCase(item.getCustomerId()))
-//                    .toList();
-//            //No bed change happens
-//            if (currentHistory.size() < 2) {
-//                if (Utils.compareWithTwoDates(item.getJoiningDate(), currentBillingInvoiceStartDate) <= 0) {
-//                    rentAmount = item.getRentAmount();
-//                    invoiceStartDate.set(currentBillingInvoiceStartDate);
-//                    invoiceDueDate.set(Utils.addDaysToDate(newMonthBillDate.currentBillStartDate(),
-//                            invoiceMonthBillingDates.dueDays()));
-//                }
-//                else {
-//                    invoiceStartDate.set(item.getJoiningDate());
-//                    invoiceDueDate.set(Utils.addDaysToDate(item.getJoiningDate(), invoiceMonthBillingDates.dueDays()));
-//                    if (invoiceMonthBillingDates.hasGracePeriod()) {
-//                        Date dateAfterGracePeriod = Utils.addDaysToDate(currentBillingInvoiceStartDate,
-//                                invoiceMonthBillingDates.gracePeriodDays());
-//                        if (Utils.compareWithTwoDates(item.getJoiningDate(), dateAfterGracePeriod) <= 0) {
-//                            rentAmount = item.getRentAmount();
-//                        }
-//                        else {
-//                            rentAmount = calculateRentAmount(item.getJoiningDate(),
-//                                    item.getRentAmount(), invoiceMonthBillingDates);
-//                        }
-//                    }
-//                    else {
-//                        rentAmount = calculateRentAmount(item.getJoiningDate(),
-//                                item.getRentAmount(), invoiceMonthBillingDates);
-//                    }
-//                }
-//            }
-//            else {
-//                if (Utils.compareWithTwoDates(item.getJoiningDate(), invoiceMonthBillingDates.currentBillStartDate()) <= 0) {
-//                    invoiceStartDate.set(invoiceMonthBillingDates.currentBillStartDate());
-//                    invoiceDueDate.set(Utils.addDaysToDate(invoiceMonthBillingDates.currentBillStartDate(),
-//                            invoiceMonthBillingDates.dueDays()));
-//                }
-//                else {
-//                    invoiceStartDate.set(item.getJoiningDate());
-//                    invoiceDueDate.set(Utils.addDaysToDate(item.getJoiningDate(), invoiceMonthBillingDates.dueDays()));
-//                }
-//                //executes when bed change happens
-//                List<CustomersBedHistory> oldBedHistories = currentHistory
-//                        .stream()
-//                        .filter(i -> i.getEndDate() != null)
-//                        .toList();
-//
-//                AtomicReference<Double> oldRentAmounts = new AtomicReference<>(0.0);
-//                if (oldBedHistories != null && !oldBedHistories.isEmpty()) {
-//                    oldBedHistories.forEach(oldItems -> {
-//                        double fullRentAmount = oldItems.getRentAmount();
-//                        long totalNoOfDaysInTheMonth = Utils.findNumberOfDays(invoiceMonthBillingDates.currentBillStartDate(), invoiceMonthBillingDates.currentBillEndDate());
-//                        Date startDate = oldItems.getStartDate();
-//                        if (Utils.compareWithTwoDates(oldItems.getStartDate(), invoiceMonthBillingDates.currentBillStartDate()) < 0) {
-//                            startDate = invoiceMonthBillingDates.currentBillStartDate();
-//                        }
-//                        long noOfDaysStayed = Utils.findNumberOfDays(startDate, oldItems.getEndDate());
-//                        double rentPerDay = fullRentAmount / totalNoOfDaysInTheMonth;
-//                        double rentForStayedDays = rentPerDay * noOfDaysStayed;
-//                        oldRentAmounts.set(rentForStayedDays + oldRentAmounts.get());
-//                    });
-//                }
-//
-//                CustomersBedHistory currentBed = currentHistory
-//                        .stream()
-//                        .filter(i -> i.getEndDate() == null)
-//                        .findFirst()
-//                        .orElse(null);
-//                if (currentBed != null) {
-//                    double fullRentAmount = currentBed.getRentAmount();
-//                    long totalNoOfDaysInTheMonth = Utils.findNumberOfDays(invoiceMonthBillingDates.currentBillStartDate(),
-//                            invoiceMonthBillingDates.currentBillEndDate());
-//                    Date startDate = currentBed.getStartDate();
-//
-//                    if (Utils.compareWithTwoDates(currentBed.getStartDate(), invoiceMonthBillingDates.currentBillStartDate()) < 0) {
-//                        startDate = invoiceMonthBillingDates.currentBillStartDate();
-//                    }
-//
-//                    Date endDate = currentBed.getEndDate();
-//                    if (endDate == null) {
-//                        endDate = invoiceMonthBillingDates.currentBillEndDate();
-//                    }
-//                    long noOfDaysStayed = Utils.findNumberOfDays(startDate, endDate);
-//                    double rentPerDay = fullRentAmount / totalNoOfDaysInTheMonth;
-//                    double rentForStayedDays = rentPerDay * noOfDaysStayed;
-//                    oldRentAmounts.set(rentForStayedDays + oldRentAmounts.get());
-//
-//                    rentAmount = oldRentAmounts.get();
-//                }
-//            }
-//
-//            Double ebAmount = 0.0;
-//            if (shouldIncludeEb) {
-//                List<Integer> ebReadingsId = listElectricityForAHostel
-//                        .stream()
-//                        .map(ElectricityReadings::getId)
-//                        .toList();
-//                List<CustomersEbHistory> listCustomerEb = customerEbHistoryService
-//                        .getAllByCustomerIdAndReadingId(item.getCustomerId(), ebReadingsId);
-//
-//                ebAmount = listCustomerEb
-//                        .stream()
-//                        .mapToDouble(CustomersEbHistory::getAmount)
-//                        .sum();
-//                if (ebAmount > 0) {
-//                    ebAmount = Utils.roundOfDouble(ebAmount);
-//                }
-//            }
-//            else if (isFlatRate) {
-//                ebAmount = flatEbAmount;
-//            }
-//
-//            List<CustomersAmenity> listCustomersAmenity = customersAmenityService
-//                    .getAllCustomerAmenitiesForRecurring(item.getCustomerId(), invoiceMonthBillingDates.currentBillStartDate());
-//            Double amenityAmount = listCustomersAmenity
-//                    .stream()
-//                    .mapToDouble(CustomersAmenity::getAmenityPrice)
-//                    .sum();
-//
-//            double rentEbAmount = rentAmount + ebAmount;
-//            double rentEbAndAmenity = rentEbAmount + amenityAmount;
-//            double walletAmount = 0.0;
-//            double finalAmount = Utils.roundOfDouble(rentEbAndAmenity);
-//
-//            Customers customers = listCustomers
-//                    .stream()
-//                    .filter(i -> i.getCustomerId().equalsIgnoreCase(item.getCustomerId()))
-//                    .findFirst()
-//                    .orElse(null);
-//            if (customers != null) {
-//                CustomerWallet customerWallet = customers.getWallet();
-//                if (customerWallet != null) {
-//                    if (customerWallet.getAmount() != null) {
-//                        walletAmount = customerWallet.getAmount();
-//                        finalAmount = finalAmount + walletAmount;
-//                    }
-//                }
-//                StringBuilder prefixSuffix = new StringBuilder();
-//
-//                String prefix = "INV";
-//                BillTemplates templates = templatesService.getTemplateByHostelId(customers.getHostelId());
-//                if (templates != null && templates.getTemplateTypes() != null) {
-//                    if (!templates.getTemplateTypes().isEmpty()) {
-//                        BillTemplateType rentTemplateType = templates.getTemplateTypes()
-//                                .stream()
-//                                .filter(i -> i.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-//                                .findFirst()
-//                                .get();
-//                        prefix = rentTemplateType.getInvoicePrefix();
-//                    }
-//                    prefixSuffix.append(prefix);
-//                }
-//
-//                InvoicesV1 inv = invoicesV1Repository
-//                        .findLatestInvoiceByPrefix(prefix, hostelV1.getHostelId());
-//
-//                if (inv != null) {
-//                    String[] prefArr = inv.getInvoiceNumber().split("-");
-//                    if (prefArr.length > 1) {
-//                        int suffix = Integer.parseInt(prefArr[prefArr.length - 1]) + 1;
-//                        prefixSuffix.append("-");
-//                        if (suffix < 10) {
-//                            prefixSuffix.append("00");
-//                            prefixSuffix.append(suffix);
-//                        }
-//                        else if (suffix < 100) {
-//                            prefixSuffix.append("0");
-//                            prefixSuffix.append(suffix);
-//                        }
-//                        else {
-//                            prefixSuffix.append(suffix);
-//                        }
-//                    }
-//                }
-//                else {
-//                    //this is going to be the first invoice
-//                    prefixSuffix.append("-");
-//                    prefixSuffix.append("001");
-//                }
-//
-//                InvoicesV1 invoicesV1 = new InvoicesV1();
-//                invoicesV1.setCancelled(false);
-//                invoicesV1.setCustomerId(item.getCustomerId());
-//                invoicesV1.setCustomerMailId(customers.getEmailId());
-//                invoicesV1.setCustomerMobile(customers.getMobile());
-//                invoicesV1.setHostelId(postpaidRecurringEvents.getHostelId());
-//                invoicesV1.setInvoiceNumber(prefixSuffix.toString());
-//                invoicesV1.setInvoiceType(InvoiceType.RENT.name());
-//                invoicesV1.setBasePrice(finalAmount);
-//                invoicesV1.setTotalAmount(finalAmount);
-//                invoicesV1.setPaidAmount(0.0);
-//                invoicesV1.setCgst(0.0);
-//                invoicesV1.setSgst(0.0);
-//                invoicesV1.setGst(0.0);
-//                invoicesV1.setGstPercentile(0.0);
-//                invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
-//                invoicesV1.setOthersDescription(null);
-//                invoicesV1.setInvoiceMode(InvoiceMode.RECURRING.name());
-//                invoicesV1.setCreatedBy(hostelV1.getCreatedBy());
-//                invoicesV1.setInvoiceGeneratedDate(new Date());
-//                invoicesV1.setInvoiceDueDate(invoiceDueDate.get());
-//                invoicesV1.setInvoiceStartDate(invoiceStartDate.get());
-//                invoicesV1.setInvoiceEndDate(invoiceMonthBillingDates.currentBillEndDate());
-//                invoicesV1.setCreatedAt(new Date());
-//
-//                List<InvoiceItems> invoicesItems = new ArrayList<>();
-//                if (rentAmount > 0) {
-//                    InvoiceItems item1 = new InvoiceItems();
-//                    item1.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.RENT.name());
-//                    item1.setAmount(rentAmount);
-//                    item1.setInvoice(invoicesV1);
-//                    invoicesItems.add(item1);
-//                }
-//
-//                if (ebAmount > 0) {
-//                    InvoiceItems item1 = new InvoiceItems();
-//                    item1.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.EB.name());
-//                    item1.setAmount(ebAmount);
-//                    item1.setInvoice(invoicesV1);
-//                    invoicesItems.add(item1);
-//                }
-//
-//                if (amenityAmount > 0) {
-//                    InvoiceItems item1 = new InvoiceItems();
-//                    item1.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.AMENITY.name());
-//                    item1.setAmount(amenityAmount);
-//                    item1.setInvoice(invoicesV1);
-//                    invoicesItems.add(item1);
-//                }
-//
-//                List<CustomerWalletHistory> wh = listCustomerWallets
-//                        .stream()
-//                        .filter(i -> i.getCustomerId().equalsIgnoreCase(customers.getCustomerId()))
-//                        .toList();
-//                if (!wh.isEmpty()) {
-//                    wh.forEach(it -> {
-//                        InvoiceItems itms = new InvoiceItems();
-//                        if (it.getSourceType().equalsIgnoreCase(com.smartstay.console.ennum.InvoiceItems.EB.name())) {
-//                            itms.setInvoiceItem(it.getSourceType());
-//                        }
-//                        else if (it.getSourceType().equalsIgnoreCase(com.smartstay.console.ennum.InvoiceItems.AMENITY.name())) {
-//                            itms.setInvoiceItem(it.getSourceType());
-//                        }
-//                        else {
-//                            itms.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.OTHERS.name());
-//                            itms.setOtherItem(it.getSourceType());
-//                        }
-//                        itms.setAmount(it.getAmount());
-//                        itms.setInvoice(invoicesV1);
-//
-//                        invoicesItems.add(itms);
-//                    });
-//                }
-//
-//                invoicesV1.setInvoiceItems(invoicesItems);
-//
-//                invoicesV1Repository.save(invoicesV1);
-//
-//                CustomerWallet updateWallet = customers.getWallet();
-//                if (updateWallet != null) {
-//                    updateWallet.setAmount(0.0);
-//                    customers.setWallet(updateWallet);
-//                }
-//
-//                customersService.updateCustomersFromRecurring(customers);
-//
-//                if (!wh.isEmpty()) {
-//                    List<CustomerWalletHistory> whu = wh
-//                            .stream()
-//                            .map(im -> {
-//                                im.setBillingStatus(WalletBillingStatus.INVOICE_GENERATED.name());
-//                                return im;
-//                            })
-//                            .toList();
-//
-//                    customerWalletHistoryService.saveAll(whu);
-//                }
-//            }
-//        });
-//
-//        if (shouldIncludeEb) {
-//            List<ElectricityReadings> listReadingForMakingInvoiceGenerated = listElectricityForAHostel
-//                    .stream()
-//                    .map(i -> {
-//                        i.setBillStatus(ElectricityBillStatus.INVOICE_GENERATED.name());
-//                        i.setUpdatedAt(new Date());
-//                        i.setUpdatedBy(hostelV1.getCreatedBy());
-//                        return i;
-//                    })
-//                    .toList();
-//            electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
-//        }
-//
-//        recurringTrackerService.markAsInvoiceGenerated(hostelV1.getHostelId(), postpaidRecurringEvents.getBillingDay());
-//        notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
-//    }
+    @Async
+    @EventListener
+    public void generateInvoiceForPostpaid(PostpaidRecurringEvents postpaidRecurringEvents) {
+
+        HostelV1 hostelV1 = hostelService.getHostelInfo(postpaidRecurringEvents.getHostelId());
+
+        BillingDates newMonthBillDate = hostelService
+                .getCurrentBillStartAndEndDates(postpaidRecurringEvents.getHostelId());
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(newMonthBillDate.currentBillStartDate());
+        calendar.add(Calendar.MONTH, -1);
+
+        BillingDates invoiceMonthBillingDates = hostelService
+                .getBillingRuleOnDate(postpaidRecurringEvents.getHostelId(), calendar.getTime());
+
+        Date currentBillingInvoiceStartDate = invoiceMonthBillingDates.currentBillStartDate();
+        Date currentBillingInvoiceEndDate = invoiceMonthBillingDates.currentBillEndDate();
+
+        ElectricityConfig ebConfig = hostelService.getElectricityConfig(hostelV1.getHostelId());
+
+        boolean shouldIncludeEb;
+        double flatEbAmount;
+        boolean isFlatRate;
+        if (ebConfig != null) {
+            if (ebConfig.getTypeOfReading().equalsIgnoreCase(EBReadingType.FLAT_RATE.name())) {
+                if (!ebConfig.isShouldIncludeInRent()) {
+                    flatEbAmount = ebConfig.getFlatCharge();
+                    isFlatRate = true;
+                    shouldIncludeEb = false;
+                }
+                else {
+                    shouldIncludeEb = false;
+                    isFlatRate = false;
+                    flatEbAmount = 0.0;
+                }
+            }
+            else {
+                flatEbAmount = 0.0;
+                isFlatRate = false;
+                shouldIncludeEb = true;
+            }
+        } else {
+            flatEbAmount = 0.0;
+            isFlatRate = false;
+            shouldIncludeEb = true;
+        }
+
+        AtomicReference<Date> invoiceStartDate = new AtomicReference<>();
+        AtomicReference<Date> invoiceDueDate = new AtomicReference<>();
+        Date invoiceEndDate = null;
+
+        List<BookingsV1> customersList = bookingsService
+                .findCheckedInCustomers(postpaidRecurringEvents.getHostelId());
+        List<String> customerIds = customersList
+                .stream()
+                .map(BookingsV1::getCustomerId)
+                .toList();
+
+        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistoryService
+                .findBedHistoriesByListOfCustomersAndDates(customerIds, invoiceMonthBillingDates.currentBillStartDate(),
+                        invoiceMonthBillingDates.currentBillEndDate());
+
+        List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService.getWalletListForRecurring(customerIds);
+
+        List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
+
+        List<ElectricityReadings> listElectricityForAHostel;
+        if (shouldIncludeEb) {
+            listElectricityForAHostel = electricityService
+                    .getAllElectricityReadingForRecurring(postpaidRecurringEvents.getHostelId());
+        } else {
+            listElectricityForAHostel = new ArrayList<>();
+        }
+
+        customersList.forEach(item -> {
+            Double rentAmount = item.getRentAmount();
+
+            List<CustomersBedHistory> currentHistory = listCustomerBedHistory.stream()
+                    .filter(i -> i.getCustomerId().equalsIgnoreCase(item.getCustomerId()))
+                    .toList();
+            //No bed change happens
+            if (currentHistory.size() < 2) {
+                if (Utils.compareWithTwoDates(item.getJoiningDate(), currentBillingInvoiceStartDate) <= 0) {
+                    rentAmount = item.getRentAmount();
+                    invoiceStartDate.set(currentBillingInvoiceStartDate);
+                    invoiceDueDate.set(Utils.addDaysToDate(newMonthBillDate.currentBillStartDate(),
+                            invoiceMonthBillingDates.dueDays()));
+                }
+                else {
+                    invoiceStartDate.set(item.getJoiningDate());
+                    invoiceDueDate.set(Utils.addDaysToDate(item.getJoiningDate(), invoiceMonthBillingDates.dueDays()));
+                    if (invoiceMonthBillingDates.hasGracePeriod()) {
+                        Date dateAfterGracePeriod = Utils.addDaysToDate(currentBillingInvoiceStartDate,
+                                invoiceMonthBillingDates.gracePeriodDays());
+                        if (Utils.compareWithTwoDates(item.getJoiningDate(), dateAfterGracePeriod) <= 0) {
+                            rentAmount = item.getRentAmount();
+                        }
+                        else {
+                            rentAmount = calculateRentAmount(item.getJoiningDate(),
+                                    item.getRentAmount(), invoiceMonthBillingDates);
+                        }
+                    }
+                    else {
+                        rentAmount = calculateRentAmount(item.getJoiningDate(),
+                                item.getRentAmount(), invoiceMonthBillingDates);
+                    }
+                }
+            }
+            else {
+                if (Utils.compareWithTwoDates(item.getJoiningDate(), invoiceMonthBillingDates.currentBillStartDate()) <= 0) {
+                    invoiceStartDate.set(invoiceMonthBillingDates.currentBillStartDate());
+                    invoiceDueDate.set(Utils.addDaysToDate(invoiceMonthBillingDates.currentBillStartDate(),
+                            invoiceMonthBillingDates.dueDays()));
+                }
+                else {
+                    invoiceStartDate.set(item.getJoiningDate());
+                    invoiceDueDate.set(Utils.addDaysToDate(item.getJoiningDate(), invoiceMonthBillingDates.dueDays()));
+                }
+                //executes when bed change happens
+                List<CustomersBedHistory> oldBedHistories = currentHistory
+                        .stream()
+                        .filter(i -> i.getEndDate() != null)
+                        .toList();
+
+                AtomicReference<Double> oldRentAmounts = new AtomicReference<>(0.0);
+                if (oldBedHistories != null && !oldBedHistories.isEmpty()) {
+                    oldBedHistories.forEach(oldItems -> {
+                        double fullRentAmount = oldItems.getRentAmount();
+                        long totalNoOfDaysInTheMonth = Utils.findNumberOfDays(invoiceMonthBillingDates.currentBillStartDate(), invoiceMonthBillingDates.currentBillEndDate());
+                        Date startDate = oldItems.getStartDate();
+                        if (Utils.compareWithTwoDates(oldItems.getStartDate(), invoiceMonthBillingDates.currentBillStartDate()) < 0) {
+                            startDate = invoiceMonthBillingDates.currentBillStartDate();
+                        }
+                        long noOfDaysStayed = Utils.findNumberOfDays(startDate, oldItems.getEndDate());
+                        double rentPerDay = fullRentAmount / totalNoOfDaysInTheMonth;
+                        double rentForStayedDays = rentPerDay * noOfDaysStayed;
+                        oldRentAmounts.set(rentForStayedDays + oldRentAmounts.get());
+                    });
+                }
+
+                CustomersBedHistory currentBed = currentHistory
+                        .stream()
+                        .filter(i -> i.getEndDate() == null)
+                        .findFirst()
+                        .orElse(null);
+                if (currentBed != null) {
+                    double fullRentAmount = currentBed.getRentAmount();
+                    long totalNoOfDaysInTheMonth = Utils.findNumberOfDays(invoiceMonthBillingDates.currentBillStartDate(),
+                            invoiceMonthBillingDates.currentBillEndDate());
+                    Date startDate = currentBed.getStartDate();
+
+                    if (Utils.compareWithTwoDates(currentBed.getStartDate(), invoiceMonthBillingDates.currentBillStartDate()) < 0) {
+                        startDate = invoiceMonthBillingDates.currentBillStartDate();
+                    }
+
+                    Date endDate = currentBed.getEndDate();
+                    if (endDate == null) {
+                        endDate = invoiceMonthBillingDates.currentBillEndDate();
+                    }
+                    long noOfDaysStayed = Utils.findNumberOfDays(startDate, endDate);
+                    double rentPerDay = fullRentAmount / totalNoOfDaysInTheMonth;
+                    double rentForStayedDays = rentPerDay * noOfDaysStayed;
+                    oldRentAmounts.set(rentForStayedDays + oldRentAmounts.get());
+
+                    rentAmount = oldRentAmounts.get();
+                }
+            }
+
+            Double ebAmount = 0.0;
+            if (shouldIncludeEb) {
+                List<Integer> ebReadingsId = listElectricityForAHostel
+                        .stream()
+                        .map(ElectricityReadings::getId)
+                        .toList();
+                List<CustomersEbHistory> listCustomerEb = customerEbHistoryService
+                        .getAllByCustomerIdAndReadingId(item.getCustomerId(), ebReadingsId);
+
+                ebAmount = listCustomerEb
+                        .stream()
+                        .mapToDouble(CustomersEbHistory::getAmount)
+                        .sum();
+                if (ebAmount > 0) {
+                    ebAmount = Utils.roundOfDouble(ebAmount);
+                }
+            }
+            else if (isFlatRate) {
+                ebAmount = flatEbAmount;
+            }
+
+            List<CustomersAmenity> listCustomersAmenity = customersAmenityService
+                    .getAllCustomerAmenitiesForRecurring(item.getCustomerId(), invoiceMonthBillingDates.currentBillStartDate());
+            Double amenityAmount = listCustomersAmenity
+                    .stream()
+                    .mapToDouble(CustomersAmenity::getAmenityPrice)
+                    .sum();
+
+            double rentEbAmount = rentAmount + ebAmount;
+            double rentEbAndAmenity = rentEbAmount + amenityAmount;
+            double walletAmount = 0.0;
+            double finalAmount = Utils.roundOfDouble(rentEbAndAmenity);
+
+            Customers customers = listCustomers
+                    .stream()
+                    .filter(i -> i.getCustomerId().equalsIgnoreCase(item.getCustomerId()))
+                    .findFirst()
+                    .orElse(null);
+            if (customers != null) {
+                CustomerWallet customerWallet = customers.getWallet();
+                if (customerWallet != null) {
+                    if (customerWallet.getAmount() != null) {
+                        walletAmount = customerWallet.getAmount();
+                        finalAmount = finalAmount + walletAmount;
+                    }
+                }
+                StringBuilder prefixSuffix = new StringBuilder();
+
+                String prefix = "INV";
+                BillTemplates templates = templatesService.getTemplateByHostelId(customers.getHostelId());
+                if (templates != null && templates.getTemplateTypes() != null) {
+                    if (!templates.getTemplateTypes().isEmpty()) {
+                        BillTemplateType rentTemplateType = templates.getTemplateTypes()
+                                .stream()
+                                .filter(i -> i.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
+                                .findFirst()
+                                .get();
+                        prefix = rentTemplateType.getInvoicePrefix();
+                    }
+                    prefixSuffix.append(prefix);
+                }
+
+                InvoicesV1 inv = invoicesV1Repository
+                        .findLatestInvoiceByPrefix(prefix, hostelV1.getHostelId());
+
+                if (inv != null) {
+                    String[] prefArr = inv.getInvoiceNumber().split("-");
+                    if (prefArr.length > 1) {
+                        int suffix = Integer.parseInt(prefArr[prefArr.length - 1]) + 1;
+                        prefixSuffix.append("-");
+                        if (suffix < 10) {
+                            prefixSuffix.append("00");
+                            prefixSuffix.append(suffix);
+                        }
+                        else if (suffix < 100) {
+                            prefixSuffix.append("0");
+                            prefixSuffix.append(suffix);
+                        }
+                        else {
+                            prefixSuffix.append(suffix);
+                        }
+                    }
+                }
+                else {
+                    //this is going to be the first invoice
+                    prefixSuffix.append("-");
+                    prefixSuffix.append("001");
+                }
+
+                InvoicesV1 invoicesV1 = new InvoicesV1();
+                invoicesV1.setCancelled(false);
+                invoicesV1.setCustomerId(item.getCustomerId());
+                invoicesV1.setCustomerMailId(customers.getEmailId());
+                invoicesV1.setCustomerMobile(customers.getMobile());
+                invoicesV1.setHostelId(postpaidRecurringEvents.getHostelId());
+                invoicesV1.setInvoiceNumber(prefixSuffix.toString());
+                invoicesV1.setInvoiceType(InvoiceType.RENT.name());
+                invoicesV1.setBasePrice(finalAmount);
+                invoicesV1.setTotalAmount(finalAmount);
+                invoicesV1.setPaidAmount(0.0);
+                invoicesV1.setCgst(0.0);
+                invoicesV1.setSgst(0.0);
+                invoicesV1.setGst(0.0);
+                invoicesV1.setGstPercentile(0.0);
+                invoicesV1.setPaymentStatus(PaymentStatus.PENDING.name());
+                invoicesV1.setOthersDescription(null);
+                invoicesV1.setInvoiceMode(InvoiceMode.RECURRING.name());
+                invoicesV1.setCreatedBy(hostelV1.getCreatedBy());
+                invoicesV1.setInvoiceGeneratedDate(new Date());
+                invoicesV1.setInvoiceDueDate(invoiceDueDate.get());
+                invoicesV1.setInvoiceStartDate(invoiceStartDate.get());
+                invoicesV1.setInvoiceEndDate(invoiceMonthBillingDates.currentBillEndDate());
+                invoicesV1.setCreatedAt(new Date());
+
+                List<InvoiceItems> invoicesItems = new ArrayList<>();
+                if (rentAmount > 0) {
+                    InvoiceItems item1 = new InvoiceItems();
+                    item1.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.RENT.name());
+                    item1.setAmount(rentAmount);
+                    item1.setInvoice(invoicesV1);
+                    invoicesItems.add(item1);
+                }
+
+                if (ebAmount > 0) {
+                    InvoiceItems item1 = new InvoiceItems();
+                    item1.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.EB.name());
+                    item1.setAmount(ebAmount);
+                    item1.setInvoice(invoicesV1);
+                    invoicesItems.add(item1);
+                }
+
+                if (amenityAmount > 0) {
+                    InvoiceItems item1 = new InvoiceItems();
+                    item1.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.AMENITY.name());
+                    item1.setAmount(amenityAmount);
+                    item1.setInvoice(invoicesV1);
+                    invoicesItems.add(item1);
+                }
+
+                List<CustomerWalletHistory> wh = listCustomerWallets
+                        .stream()
+                        .filter(i -> i.getCustomerId().equalsIgnoreCase(customers.getCustomerId()))
+                        .toList();
+                if (!wh.isEmpty()) {
+                    wh.forEach(it -> {
+                        InvoiceItems itms = new InvoiceItems();
+                        if (it.getSourceType().equalsIgnoreCase(com.smartstay.console.ennum.InvoiceItems.EB.name())) {
+                            itms.setInvoiceItem(it.getSourceType());
+                        }
+                        else if (it.getSourceType().equalsIgnoreCase(com.smartstay.console.ennum.InvoiceItems.AMENITY.name())) {
+                            itms.setInvoiceItem(it.getSourceType());
+                        }
+                        else {
+                            itms.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.OTHERS.name());
+                            itms.setOtherItem(it.getSourceType());
+                        }
+                        itms.setAmount(it.getAmount());
+                        itms.setInvoice(invoicesV1);
+
+                        invoicesItems.add(itms);
+                    });
+                }
+
+                invoicesV1.setInvoiceItems(invoicesItems);
+
+                invoicesV1Repository.save(invoicesV1);
+
+                CustomerWallet updateWallet = customers.getWallet();
+                if (updateWallet != null) {
+                    updateWallet.setAmount(0.0);
+                    customers.setWallet(updateWallet);
+                }
+
+                customersService.updateCustomersFromRecurring(customers);
+
+                if (!wh.isEmpty()) {
+                    List<CustomerWalletHistory> whu = wh
+                            .stream()
+                            .map(im -> {
+                                im.setBillingStatus(WalletBillingStatus.INVOICE_GENERATED.name());
+                                return im;
+                            })
+                            .toList();
+
+                    customerWalletHistoryService.saveAll(whu);
+                }
+            }
+        });
+
+        if (shouldIncludeEb) {
+            List<ElectricityReadings> listReadingForMakingInvoiceGenerated = listElectricityForAHostel
+                    .stream()
+                    .map(i -> {
+                        i.setBillStatus(ElectricityBillStatus.INVOICE_GENERATED.name());
+                        i.setUpdatedAt(new Date());
+                        i.setUpdatedBy(hostelV1.getCreatedBy());
+                        return i;
+                    })
+                    .toList();
+            electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
+        }
+
+        recurringTrackerService.markAsPostpaidInvoiceGenerated(hostelV1.getHostelId(), postpaidRecurringEvents.getBillingDay());
+        notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
+    }
 
     public Double calculateRentAmount(Date joiningDate, Double totalRent, BillingDates billingDates) {
 

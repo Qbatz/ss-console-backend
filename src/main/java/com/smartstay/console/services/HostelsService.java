@@ -36,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.time.YearMonth;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -121,6 +122,10 @@ public class HostelsService {
     private LoginHistoryService loginHistoryService;
     @Autowired
     private PlansService plansService;
+    @Autowired
+    private HostelService hostelService;
+    @Autowired
+    private HostelPlanService hostelPlanService;
 
     public ResponseEntity<?> getHostelByHostelId(String hostelId) {
 
@@ -826,23 +831,196 @@ public class HostelsService {
             }
         }
 
+        boolean isStatusFilterApplied = !statusFilterOption.name().equals(RecurringStatusFilterOptions.ALL.name());
+        boolean isHostelNameFilterApplied = hostelName != null && !hostelName.isBlank();
+
+        Set<String> statusFilteredHostelIds = null;
+        if (isStatusFilterApplied) {
+            List<HostelV1> allHostels = hostelRepository.findAllHostels();
+            Set<String> allHostelIds = allHostels.stream()
+                    .map(HostelV1::getHostelId)
+                    .collect(Collectors.toSet());
+
+            List<BillingRules> latestBillingRules = billingRulesService
+                    .getLatestBillingRulesByHostelIds(allHostelIds);
+            Map<String, BillingRules> latestBillingRulesMap = latestBillingRules.stream()
+                    .collect(Collectors.toMap(br -> br.getHostel().getHostelId(),
+                            br -> br, (a, b) -> a));
+
+            List<RecurringTracker> latestRecurringTrackers = recurringTrackerService
+                    .getLatestRecurringTrackersByHostelIds(allHostelIds);
+            Map<String, RecurringTracker> latestRecurringTrackersMap = latestRecurringTrackers.stream()
+                            .collect(Collectors.toMap(RecurringTracker::getHostelId,
+                                    Function.identity(), (a, b) -> a));
+
+            Set<String> generatedHostelIds = new HashSet<>();
+
+            int currentMonth = Utils.getCurrentMonth(today);
+            int currentYear = Utils.getCurrentYear(today);
+
+            YearMonth previousYearMonth = Utils.getPreviousYearMonth(today);
+            int previousMonth = previousYearMonth.getMonthValue();
+            int previousYear = previousYearMonth.getYear();
+
+            for (String hostelId : allHostelIds) {
+
+                BillingRules billingRules = latestBillingRulesMap.get(hostelId);
+                RecurringTracker tracker = latestRecurringTrackersMap.get(hostelId);
+
+                if (billingRules == null) continue;
+
+                boolean isGenerated = false;
+
+                if (tracker != null) {
+
+                    int billingDay = billingRules.getBillingStartDate();
+
+                    if (BillingModel.PREPAID.name().equals(billingRules.getBillingModel())) {
+
+                        isGenerated =
+                                tracker.getCreationDay() == billingDay &&
+                                        tracker.getCreationMonth() == currentMonth &&
+                                        tracker.getCreationYear() == currentYear;
+
+                    } else if (BillingModel.POSTPAID.name().equals(billingRules.getBillingModel())) {
+
+                        isGenerated =
+                                tracker.getCreationDay() == billingDay &&
+                                        tracker.getCreationMonth() == previousMonth &&
+                                        tracker.getCreationYear() == previousYear;
+                    }
+                }
+
+                if (isGenerated) {
+                    generatedHostelIds.add(hostelId);
+                }
+            }
+
+            Set<String> notGeneratedHostelIds = new HashSet<>(allHostelIds);
+            notGeneratedHostelIds.removeAll(generatedHostelIds);
+
+            if (statusFilterOption == RecurringStatusFilterOptions.GENERATED) {
+                statusFilteredHostelIds = generatedHostelIds;
+            } else {
+                statusFilteredHostelIds = notGeneratedHostelIds;
+            }
+        }
+
         hostelName = hostelName == null || hostelName.isBlank() ? null : hostelName;
 
-        //to remove time from date
-        Date startOfToday = Utils.getStartOfDay(today);
-        int currentMonth = Utils.getCurrentMonth(today);
-        int currentYear = Utils.getCurrentYear(today);
+        Set<String> filteredHostelIds = null;
+        if (hostelName != null) {
+            List<HostelV1> filteredHostels = hostelService.getHostelsByHostelName(hostelName);
+            filteredHostelIds = filteredHostels.stream()
+                    .map(HostelV1::getHostelId)
+                    .collect(Collectors.toSet());
+        }
+
+        Set<String> finalHostelIds = new HashSet<>();
+
+        if (statusFilteredHostelIds != null && filteredHostelIds != null) {
+            finalHostelIds = new HashSet<>(statusFilteredHostelIds);
+            finalHostelIds.retainAll(filteredHostelIds);
+        } else if (statusFilteredHostelIds != null) {
+            finalHostelIds = statusFilteredHostelIds;
+        } else if (filteredHostelIds != null) {
+            finalHostelIds = filteredHostelIds;
+        }
+
+        boolean isAnyFilterApplied = isStatusFilterApplied || isHostelNameFilterApplied;
+
+        if (isAnyFilterApplied && finalHostelIds.isEmpty()) {
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("hostelList", Collections.emptyList());
+            response.put("currentPage", page + 1);
+            response.put("pageSize", size);
+            response.put("totalItems", 0);
+            response.put("totalPages", 0);
+            response.put("recurringPendingCount", 0);
+            response.put("subscriptionExpiredCount", 0);
+            response.put("filterOptions", filterOptions);
+            response.put("statusFilterOptions", statusFilterOptions);
+            response.put("billingModelFilterOptions", billingModelFilterOptions);
+            response.put("billingCycleStartDay", billingCycleStartDay);
+            response.put("effectiveBillingDay", effectiveBillingDay);
+            response.put("appliedFilterType", isBillingCycleFilter ? "BILLING_CYCLE" : "DATE_FILTER");
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        if (finalHostelIds.isEmpty()) {
+            finalHostelIds = null;
+        }
 
         String billingType = BillingType.FIXED_DATE.name();
 
-        long subscriptionExpiredCount = billingRulesService
-                .getExpiredSubscriptionsCount(daySet, billingType, hostelName, startOfToday);
-        long recurringPendingCount = billingRulesService
-                .getPendingRecurringCount(daySet, billingType, hostelName, currentMonth, currentYear);
+        List<BillingRules> latestBillingRulesList = billingRulesService
+                .getLatestBillingRulesByDays(daySet, billingType);
+
+        Set<String> latestHostelIds = latestBillingRulesList.stream()
+                .map(b -> b.getHostel().getHostelId())
+                .collect(Collectors.toSet());
+
+        List<RecurringTracker> trackers =
+                recurringTrackerService.getLatestRecurringTrackersByHostelIds(latestHostelIds);
+
+        Map<String, RecurringTracker> trackerMap = trackers.stream()
+                .collect(Collectors.toMap(
+                        RecurringTracker::getHostelId,
+                        Function.identity(),
+                        (a, b) -> a
+                ));
+
+        List<HostelPlan> plans = hostelPlanService.getPlansByHostelIds(latestHostelIds);
+
+        Map<String, HostelPlan> planMap = plans.stream()
+                .collect(Collectors.toMap(
+                        p -> p.getHostel().getHostelId(),
+                        Function.identity()
+                ));
+
+        long subscriptionExpiredCount = latestBillingRulesList.stream()
+                .filter(b -> {
+                    HostelPlan hp = planMap.get(b.getHostel().getHostelId());
+
+                    return hp == null
+                            || hp.getCurrentPlanEndsAt() == null
+                            || hp.getCurrentPlanEndsAt().before(today);
+                }).count();
+
+        int currentMonth = Utils.getCurrentMonth(today);
+        int currentYear = Utils.getCurrentYear(today);
+
+        YearMonth previousYearMonth = Utils.getPreviousYearMonth(today);
+        int previousMonth = previousYearMonth.getMonthValue();
+        int previousYear = previousYearMonth.getYear();
+
+        long recurringPendingCount = latestBillingRulesList.stream()
+                .filter(b -> {
+                    RecurringTracker r = trackerMap.get(b.getHostel().getHostelId());
+
+                    if (r == null) return true;
+
+                    int billingDay = b.getBillingStartDate();
+
+                    if (BillingModel.PREPAID.name().equals(b.getBillingModel())) {
+                        return !(r.getCreationDay() == billingDay
+                                && r.getCreationMonth() == currentMonth
+                                && r.getCreationYear() == currentYear);
+                    }
+
+                    if (BillingModel.POSTPAID.name().equals(b.getBillingModel())) {
+                        return !(r.getCreationDay() == billingDay
+                                && r.getCreationMonth() == previousMonth
+                                && r.getCreationYear() == previousYear);
+                    }
+
+                    return true;
+                }).count();
 
         Page<BillingRules> paginatedBillingRules = billingRulesService
-                .getPaginatedBillingRulesByDays(daySet, billingType, hostelName, currentMonth,
-                        currentYear, statusFilterOption.name(), billingModelFilterOption.name(), pageable);
+                .getPaginatedBillingRulesByDays(daySet, billingType, finalHostelIds, billingModelFilterOption.name(), pageable);
 
         List<BillingRules> billingRulesList = paginatedBillingRules.getContent();
 
@@ -885,22 +1063,9 @@ public class HostelsService {
                 .collect(Collectors.toMap(Agent::getAgentId,
                         agent1 -> agent1));
 
-        List<BookingsV1> bookings = bookingsService.getBookingsByHostelIds(hostelIds);
+        List<BookingsV1> bookings = bookingsService.getActiveBookingsByHostelIds(hostelIds);
 
         Map<String, List<BookingsV1>> bookingHostelMap = bookings.stream()
-                .collect(Collectors.groupingBy(BookingsV1::getHostelId));
-
-        List<CustomersConfig> listCustomerConfig = customersConfigService
-                .getAllActiveAndEnabledRecurringCustomersByHostelIds(hostelIds);
-
-        List<String> tempCusIds = listCustomerConfig.stream()
-                .map(CustomersConfig::getCustomerId)
-                .toList();
-
-        List<BookingsV1> customersList = bookingsService
-                .getAllCheckedInCustomersByListOfCustomerIds(tempCusIds);
-
-        Map<String, List<BookingsV1>> customersMap = customersList.stream()
                 .collect(Collectors.groupingBy(BookingsV1::getHostelId));
 
         List<HostelRecurringResponse> responseList = billingRulesList.stream()
@@ -909,8 +1074,7 @@ public class HostelsService {
                         hotelTypeMap.get(billingRules.getHostel().getHostelType()),
                         recurringTrackerMap.get(billingRules.getHostel().getHostelId()),
                         agentMap,
-                        bookingHostelMap.get(billingRules.getHostel().getHostelId()),
-                        customersMap.get(billingRules.getHostel().getHostelId())
+                        bookingHostelMap.get(billingRules.getHostel().getHostelId())
                         ).apply(billingRules)
                 ).toList();
 
@@ -947,6 +1111,8 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        Date today = new Date();
+
         for (HostelIdPayload payload : payloads) {
 
             String hostelId = payload.hostelId();
@@ -970,8 +1136,6 @@ public class HostelsService {
                 return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_ACTIVE, HttpStatus.BAD_REQUEST);
             }
 
-            Date today = new Date();
-
             BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
             if (billingRules == null){
                 return new ResponseEntity<>(Utils.NO_BILLING_RULE_FOUND, HttpStatus.BAD_REQUEST);
@@ -983,8 +1147,17 @@ public class HostelsService {
                 return new ResponseEntity<>(Utils.IS_NOT_FIXED_DATE, HttpStatus.BAD_REQUEST);
             }
 
-            if (recurringTrackerService.checkRecurringTrackerExists(hostelId, billingRules.getBillingStartDate(),
-                    Utils.getCurrentMonth(today), Utils.getCurrentYear(today))){
+            int day = Utils.getDayOfMonth(today);
+            if (day < billingDay) {
+                return new ResponseEntity<>(Utils.BILLING_DAY_NOT_REACHED, HttpStatus.BAD_REQUEST);
+            }
+//            if (billingDay != day) {
+//                return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
+//            }
+
+            boolean isPostPaid = BillingModel.POSTPAID.name().equals(billingRules.getBillingModel());
+            if (recurringTrackerService.checkRecurringTrackerExists(hostelId, billingDay,
+                    today, isPostPaid)){
                 return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
             }
 
@@ -1078,28 +1251,17 @@ public class HostelsService {
 
         Users owner = usersService.getOwner(hostel.getParentId());
 
-        List<BookingsV1> bookings = bookingsService.getBookingsByHostelId(hostelId);
+        List<BookingsV1> bookings = bookingsService.findCheckedInCustomers(hostelId);
 
         RecurringTracker latestRecurringTracker = recurringTrackerService
                 .getLatestRecurringTrackerByHostelId(hostelId);
 
         BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
 
-        List<CustomersConfig> listCustomerConfig = customersConfigService
-                .getAllActiveAndEnabledRecurringCustomers(hostelId);
-
-        List<String> tempCusIds = listCustomerConfig.stream()
-                .map(CustomersConfig::getCustomerId)
-                .toList();
-
-        List<BookingsV1> customersList = bookingsService
-                .getAllCheckedInCustomersByListOfCustomerIdsAndHostelId(tempCusIds, hostelId);
-
         RecurringTrackerRes recurringTrackerRes = new RecurringTrackerResMapper(
                 hotelTypeMap.get(hostel.getHostelType()),
                 owner,
                 bookings,
-                customersList,
                 billingRules,
                 latestRecurringTracker,
                 page + 1,

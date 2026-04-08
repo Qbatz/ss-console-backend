@@ -10,6 +10,7 @@ import java.util.List;
 
 @Repository
 public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
+
     @Query("""
             SELECT i FROM invoicesv1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds)
             """)

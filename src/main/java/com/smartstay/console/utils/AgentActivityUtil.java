@@ -82,7 +82,7 @@ public class AgentActivityUtil {
             case MOCK_AGENT -> "Created a new mock agent";
             case AGENT_ROLE -> "Created a new agent role";
             case SUBSCRIPTION -> "Created a new subscription";
-            case GENERATE_RECURRING -> "Generated manual recurring";
+            case GENERATE_RECURRING, GENERATE_CUSTOMER_RECURRING -> "Generated manual recurring";
             case DEMO_REQUEST -> "Created a demo request";
             case PLANS -> "Created a new plan";
             case PLAN_FEATURES -> "Created a new plan features";

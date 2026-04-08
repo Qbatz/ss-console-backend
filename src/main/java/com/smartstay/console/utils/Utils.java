@@ -79,6 +79,8 @@ public class Utils {
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
     public static final String INVALID_DISCOUNT_PERCENTAGE = "Invalid discount percentage";
     public static final String TRIAL_PLAN_NOT_ALLOWED = "Trial plan not allowed";
+    public static final String DAY_NOT_MATCH = "Today doesn't match with the billing rule day";
+    public static final String BILLING_DAY_NOT_REACHED = "This month's billing day has not reached";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
@@ -446,7 +448,9 @@ public class Utils {
         return localDate.getYear();
     }
 
-    public static boolean isSameBillingCycle(int billingStartDay, RecurringTracker tracker) {
+    public static boolean isSameBillingCycle(int billingStartDay,
+                                             RecurringTracker tracker,
+                                             boolean isPostpaid) {
 
         if (tracker == null || tracker.getCreationDay() == null ||
                 tracker.getCreationMonth() == null || tracker.getCreationYear() == null) {
@@ -455,9 +459,21 @@ public class Utils {
 
         LocalDate today = LocalDate.now();
 
+        int expectedMonth;
+        int expectedYear;
+
+        if (isPostpaid) {
+            YearMonth prev = YearMonth.from(today).minusMonths(1);
+            expectedMonth = prev.getMonthValue();
+            expectedYear = prev.getYear();
+        } else {
+            expectedMonth = today.getMonthValue();
+            expectedYear = today.getYear();
+        }
+
         return tracker.getCreationDay() == billingStartDay
-                && tracker.getCreationMonth() == today.getMonthValue()
-                && tracker.getCreationYear() == today.getYear();
+                && tracker.getCreationMonth() == expectedMonth
+                && tracker.getCreationYear() == expectedYear;
     }
 
     public static LocalTime dateToLocalTime(Date date) {
@@ -526,24 +542,25 @@ public class Utils {
     }
 
     public static int calculateEndDay(int startDay, Date date) {
-        LocalDate today = date.toInstant()
+
+        LocalDate referenceDate = date.toInstant()
                 .atZone(ZoneId.systemDefault())
                 .toLocalDate();
 
-        YearMonth currentMonth = YearMonth.from(today);
+        YearMonth currentMonth = YearMonth.from(referenceDate);
+        YearMonth nextMonth = currentMonth.plusMonths(1);
 
-        int safeStartDay = Math.min(startDay, currentMonth.lengthOfMonth());
+        // Adjust start day safely for both months
+        int safeStartDayCurrent = Math.min(startDay, currentMonth.lengthOfMonth());
+        int safeStartDayNext = Math.min(startDay, nextMonth.lengthOfMonth());
 
-        if (safeStartDay == 1) {
+        // Special case: billing starts on 1st → ends on last day of same month
+        if (safeStartDayCurrent == 1) {
             return currentMonth.lengthOfMonth();
         }
 
-        LocalDate nextMonth = today.withDayOfMonth(safeStartDay).plusMonths(1);
-
-        int endDay = safeStartDay - 1;
-
-        int lastDayNextMonth = YearMonth.from(nextMonth).lengthOfMonth();
-        return Math.min(endDay, lastDayNextMonth);
+        // Normal case: end day is (startDay of next cycle - 1)
+        return safeStartDayNext - 1;
     }
 
     public static int getLastDayOfMonth(Date date) {
@@ -555,8 +572,11 @@ public class Utils {
     }
 
     public static Date getDateFromDay(int day, int month, int year) {
-        LocalDate localDate = LocalDate.of(year, month, 1)
-                .withDayOfMonth(day);
+
+        YearMonth yearMonth = YearMonth.of(year, month);
+        int safeDay = Math.min(day, yearMonth.lengthOfMonth());
+
+        LocalDate localDate = yearMonth.atDay(safeDay);
 
         return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
@@ -677,5 +697,28 @@ public class Utils {
                 .atTime(LocalTime.MAX)
                 .atZone(ZoneId.systemDefault())
                 .toInstant());
+    }
+
+    public static YearMonth getPreviousYearMonth(Date date) {
+        return YearMonth.from(
+                date.toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+        ).minusMonths(1);
+    }
+
+    public static Date getPreviousMonthDate(Date currentDate) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(currentDate);
+
+        int currentDay = cal.get(Calendar.DAY_OF_MONTH);
+
+        cal.add(Calendar.MONTH, -1);
+
+        int lastDayOfPrevMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+
+        cal.set(Calendar.DAY_OF_MONTH, Math.min(currentDay, lastDayOfPrevMonth));
+
+        return cal.getTime();
     }
 }

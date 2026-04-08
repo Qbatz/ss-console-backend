@@ -51,8 +51,10 @@ public class HostelService {
     }
 
     public BillingDates getCurrentBillStartAndEndDates(String hostelId) {
+
         BillingRules billingRules = billingRulesService
                 .getCurrentMonthTemplate(hostelId);
+
         int billStartDate = 1;
         int billingRuleDueDate = 5;
         if (billingRules != null) {
@@ -77,7 +79,7 @@ public class HostelService {
 
         return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate,
                 billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(),
-                billingRules.getTypeOfBilling());
+                billingRules.getTypeOfBilling(), billingRules.getBillingModel());
     }
 
     public ElectricityConfig getElectricityConfig(String hostelId) {
@@ -86,5 +88,9 @@ public class HostelService {
             return null;
         }
         return hostelV1.getElectricityConfig();
+    }
+
+    public BillingDates getBillingRuleOnDate(String hostelId, Date date) {
+        return billingRulesService.getBillingRuleByDateAndHostelId(hostelId, date);
     }
 }

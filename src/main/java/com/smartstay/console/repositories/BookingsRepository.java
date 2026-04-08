@@ -3,6 +3,7 @@ package com.smartstay.console.repositories;
 import com.smartstay.console.dao.BookingsV1;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -10,9 +11,11 @@ import java.util.Set;
 
 @Repository
 public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
+
     List<BookingsV1> findAllByHostelId(String hostelId);
+
     @Query("""
-            SELECT b FROM bookingsv1 b WHERE b.hostelId=:hostelId AND b.customerId in (:customerIds)
+            SELECT b FROM bookingsv1 b WHERE b.hostelId = :hostelId AND b.customerId in (:customerIds)
             """)
     List<BookingsV1> findByHostelIdAndCustomerId(String hostelId, List<String> customerIds);
 
@@ -20,7 +23,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
 
     @Query(value = """
                 SELECT * FROM bookingsv1
-                where hostel_id=:hostelId AND
+                where hostel_id = :hostelId AND
                 customer_id IN (:customerIds)
                 AND current_status IN ('CHECKIN', 'NOTICE')
                 """, nativeQuery = true)
@@ -34,4 +37,18 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
                 AND current_status IN ('CHECKIN', 'NOTICE')
                 """, nativeQuery = true)
     List<BookingsV1> findBookingsByListOfCustomers(List<String> customerIds);
+
+    @Query(value = """
+                SELECT * FROM bookingsv1
+                where hostel_id = :hostelId
+                AND current_status IN ('CHECKIN', 'NOTICE')
+                """, nativeQuery = true)
+    List<BookingsV1> findCheckInByHostelId(String hostelId);
+
+    @Query(value = """
+                SELECT * FROM bookingsv1
+                where hostel_id IN (:hostelIds)
+                AND current_status IN ('CHECKIN', 'NOTICE')
+                """, nativeQuery = true)
+    List<BookingsV1> findBookingsByHostelIds(@Param("hostelIds") Set<String> hostelIds);
 }
