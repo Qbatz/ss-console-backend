@@ -108,4 +108,11 @@ public class HostelsController {
     public ResponseEntity<?> generateTenantRecurring(@RequestBody List<CustomerIdPayload> payloads){
         return hostelsService.generateTenantRecurring(payloads);
     }
+
+    @GetMapping("/tenant-recurring/{tenantId}")
+    public ResponseEntity<?> getTenantRecurringHistoryByHostelId(@PathVariable("tenantId") String tenantId,
+                                                                 @RequestParam(value = "page", defaultValue = "0") int page,
+                                                                 @RequestParam(value = "size", defaultValue = "10") int size){
+        return hostelsService.getTenantRecurringHistory(tenantId, page, size);
+    }
 }

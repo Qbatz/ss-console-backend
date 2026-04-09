@@ -1,6 +1,8 @@
 package com.smartstay.console.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.smartstay.console.Mapper.customers.CustomerRecHistoryMapper;
+import com.smartstay.console.Mapper.customers.CustomerRecTrackerResMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecurringMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
 import com.smartstay.console.Mapper.hostels.*;
@@ -19,6 +21,8 @@ import com.smartstay.console.events.RecurringEvents;
 import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
+import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
+import com.smartstay.console.responses.customers.CustomerRecTrackerRes;
 import com.smartstay.console.responses.customers.CustomerRecurringResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
@@ -1962,5 +1966,86 @@ public class HostelsService {
         }
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getTenantRecurringHistory(String customerId, int page, int size) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Recurring.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+        Pageable pageable = PageRequest.of(page, size);
+
+        Customers customer = customersService.getCustomerInformation(customerId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        HostelV1 hostel = hostelRepository.findByHostelId(customer.getHostelId());
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Page<CustomerRecurringTracker> paginatedRecurringTrackers = customerRecurringTrackerService
+                .getPaginatedRecurringTrackersByCustomerId(customerId, pageable);
+
+        List<CustomerRecurringTracker> recurringTrackers = paginatedRecurringTrackers.getContent();
+
+        Set<String> createdByIds = new HashSet<>();
+
+        for (CustomerRecurringTracker recurringTracker : recurringTrackers) {
+            if (recurringTracker.getCreatedBy() != null){
+                createdByIds.add(recurringTracker.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = createdByIds.isEmpty()
+                ? Collections.emptyList()
+                : agentService.getAgentsByIds(createdByIds);
+
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        agent1 -> agent1));
+
+        List<CustomerRecHistoryRes> recurringHistory = recurringTrackers.stream()
+                .map(recurringTracker -> new CustomerRecHistoryMapper(
+                        customer, hostel, agentMap.getOrDefault(recurringTracker.getCreatedBy(), null)
+                ).apply(recurringTracker)).toList();
+
+        List<HotelType> hotelTypes = hotelTypeService.getAllHotelTypes();
+        Map<Integer, HotelType> hotelTypeMap = hotelTypes.stream()
+                .collect(Collectors.toMap(HotelType::getId, hotelType -> hotelType));
+
+        Users owner = usersService.getOwner(hostel.getParentId());
+
+        CustomerRecurringTracker latestRecurringTracker = customerRecurringTrackerService
+                .getLatestTrackersByCustomerId(customerId);
+
+        BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(customer.getHostelId());
+
+        CustomerRecTrackerRes recurringTrackerRes = new CustomerRecTrackerResMapper(
+                owner,
+                hotelTypeMap.get(hostel.getHostelType()),
+                hostel,
+                billingRules,
+                latestRecurringTracker,
+                page + 1,
+                size,
+                paginatedRecurringTrackers,
+                recurringHistory
+        ).apply(customer);
+
+        return new ResponseEntity<>(recurringTrackerRes, HttpStatus.OK);
     }
 }

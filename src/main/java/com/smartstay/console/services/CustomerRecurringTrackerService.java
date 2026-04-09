@@ -9,6 +9,8 @@ import com.smartstay.console.ennum.Source;
 import com.smartstay.console.repositories.CustomerRecurringTrackerRepository;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.YearMonth;
@@ -55,6 +57,11 @@ public class CustomerRecurringTrackerService {
                 .findLatestRecurringTrackerByCustomerIds(customerIds);
     }
 
+    public CustomerRecurringTracker getLatestTrackersByCustomerId(String customerId){
+        return customerRecurringTrackerRepository
+                .findTopByCustomerIdOrderByTrackerIdDesc(customerId);
+    }
+
     public boolean checkRecurringTrackerExists(String customerId, int day, Date date, boolean isPostpaid) {
 
         int month;
@@ -72,5 +79,10 @@ public class CustomerRecurringTrackerService {
 
         return customerRecurringTrackerRepository
                 .existsByCustomerIdAndCreationDayAndCreationMonthAndCreationYear(customerId, day, month, year);
+    }
+
+    public Page<CustomerRecurringTracker> getPaginatedRecurringTrackersByCustomerId(String customerId, Pageable pageable) {
+        return customerRecurringTrackerRepository
+                .findAllByCustomerIdOrderByTrackerIdDesc(customerId, pageable);
     }
 }

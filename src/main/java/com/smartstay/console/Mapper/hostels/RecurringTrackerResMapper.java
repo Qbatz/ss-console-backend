@@ -115,8 +115,8 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
         return new RecurringTrackerRes(hostel.getHostelId(), hostelType, hostelName, Utils.getInitials(hostelName),
                 hostel.getMobile(), hostel.getEmailId(), hostel.getHouseNo(), hostel.getStreet(), hostel.getLandmark(),
                 hostel.getCity(), hostel.getState(), hostel.getCountry(), hostel.getPincode(), fullAddress, hostel.getMainImage(),
-                ownerInfo, noOfActiveTenants, invoiceAboutToBeGenerated, billingRules.getTypeOfBilling(), startDay, endDay,
-                Utils.dateToString(startDate), Utils.dateToString(endDate), Utils.dateToString(lastRecurringDate),
+                ownerInfo, noOfActiveTenants, invoiceAboutToBeGenerated, billingRules.getTypeOfBilling(), billingRules.getBillingModel(),
+                startDay, endDay, Utils.dateToString(startDate), Utils.dateToString(endDate), Utils.dateToString(lastRecurringDate),
                 Utils.dateToString(nextRecurringDate), isSubscriptionActive, recurringStatus, page, size,
                 paginatedRecurringTrackers.getTotalElements(), paginatedRecurringTrackers.getTotalPages(), recurringHistory);
     }

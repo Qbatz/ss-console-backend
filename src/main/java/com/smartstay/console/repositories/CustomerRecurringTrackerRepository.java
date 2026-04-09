@@ -1,6 +1,8 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.CustomerRecurringTracker;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -24,5 +26,9 @@ public interface CustomerRecurringTrackerRepository extends JpaRepository<Custom
        """)
     List<CustomerRecurringTracker> findLatestRecurringTrackerByCustomerIds(@Param("customerIds") Set<String> customerIds);
 
+    CustomerRecurringTracker findTopByCustomerIdOrderByTrackerIdDesc(String customerId);
+
     boolean existsByCustomerIdAndCreationDayAndCreationMonthAndCreationYear(String customerId, int day, int month, int year);
+
+    Page<CustomerRecurringTracker> findAllByCustomerIdOrderByTrackerIdDesc(String customerId, Pageable pageable);
 }
