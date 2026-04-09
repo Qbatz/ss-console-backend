@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
+import java.util.Set;
 
 @Service
 public class CustomerRecurringTrackerService {
@@ -45,5 +47,10 @@ public class CustomerRecurringTrackerService {
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.GENERATE_CUSTOMER_RECURRING,
                 String.valueOf(rt.getTrackerId()), null, rt);
+    }
+
+    public List<CustomerRecurringTracker> getLatestTrackersByCustomerIds(Set<String> customerIds){
+        return customerRecurringTrackerRepository
+                .findLatestRecurringTrackerByCustomerIds(customerIds);
     }
 }

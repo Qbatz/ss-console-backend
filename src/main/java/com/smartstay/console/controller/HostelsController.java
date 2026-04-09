@@ -90,4 +90,16 @@ public class HostelsController {
                                                            @RequestParam(value = "size", defaultValue = "10") int size){
         return hostelsService.getRecurringHistory(hostelId, page, size);
     }
+
+    @GetMapping("/tenant-recurring")
+    public ResponseEntity<?> getTenantRecurring(@RequestParam(value = "page", defaultValue = "0") int page,
+                                                @RequestParam(value = "size", defaultValue = "10") int size,
+                                                @RequestParam(value = "name", required = false) String name,
+                                                @RequestParam(defaultValue = "TODAY") String filterBy,
+                                                @RequestParam(defaultValue = "ALL") String statusFilterBy,
+                                                @RequestParam(defaultValue = "ALL") String billingModelFilterBy,
+                                                @RequestParam(defaultValue = "0") int billingCycleStartDay){
+        return hostelsService.getTenantRecurring(page, size, name, filterBy, statusFilterBy,
+                billingModelFilterBy, billingCycleStartDay);
+    }
 }

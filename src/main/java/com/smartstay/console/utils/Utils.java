@@ -1,8 +1,6 @@
 package com.smartstay.console.utils;
 
-import com.smartstay.console.dao.BookingsV1;
-import com.smartstay.console.dao.HostelV1;
-import com.smartstay.console.dao.RecurringTracker;
+import com.smartstay.console.dao.*;
 
 import java.text.SimpleDateFormat;
 import java.time.*;
@@ -248,6 +246,43 @@ public class Utils {
         return fullAddress.toString();
     }
 
+    public static String buildFullAddress(Customers customer) {
+        StringBuilder fullAddress = new StringBuilder();
+
+        if (customer.getHouseNo() != null &&
+                !customer.getHouseNo().trim().equalsIgnoreCase("")) {
+            fullAddress.append(customer.getHouseNo());
+        }
+        if (customer.getStreet() != null) {
+            if (fullAddress.isEmpty()) {
+                fullAddress.append(customer.getStreet());
+            }
+            else {
+                fullAddress.append(", ");
+                fullAddress.append(customer.getStreet());
+            }
+        }
+        if (customer.getCity() != null) {
+            if (fullAddress.isEmpty()) {
+                fullAddress.append(customer.getCity());
+            }
+            else {
+                fullAddress.append(", ");
+                fullAddress.append(customer.getCity());
+            }
+        }
+        if (customer.getState() != null) {
+            if (fullAddress.isEmpty()) {
+                fullAddress.append(customer.getState());
+            }
+            else {
+                fullAddress.append(", ");
+                fullAddress.append(customer.getState());
+            }
+        }
+        return fullAddress.toString();
+    }
+
     public static String formatDateDisplay(Date date) {
         if (date == null) return "";
 
@@ -451,6 +486,34 @@ public class Utils {
 
     public static boolean isSameBillingCycle(int billingStartDay,
                                              RecurringTracker tracker,
+                                             boolean isPostpaid) {
+
+        if (tracker == null || tracker.getCreationDay() == null ||
+                tracker.getCreationMonth() == null || tracker.getCreationYear() == null) {
+            return false;
+        }
+
+        LocalDate today = LocalDate.now();
+
+        int expectedMonth;
+        int expectedYear;
+
+        if (isPostpaid) {
+            YearMonth prev = YearMonth.from(today).minusMonths(1);
+            expectedMonth = prev.getMonthValue();
+            expectedYear = prev.getYear();
+        } else {
+            expectedMonth = today.getMonthValue();
+            expectedYear = today.getYear();
+        }
+
+        return tracker.getCreationDay() == billingStartDay
+                && tracker.getCreationMonth() == expectedMonth
+                && tracker.getCreationYear() == expectedYear;
+    }
+
+    public static boolean isSameBillingCycle(int billingStartDay,
+                                             CustomerRecurringTracker tracker,
                                              boolean isPostpaid) {
 
         if (tracker == null || tracker.getCreationDay() == null ||

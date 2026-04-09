@@ -5,6 +5,7 @@ import com.smartstay.console.repositories.CustomersWalletRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -31,5 +32,15 @@ public class CustomerWalletService {
 
     public void saveAll(List<CustomerWalletHistory> customerWallets) {
         customersWalletRepository.saveAll(customerWallets);
+    }
+
+    public  List<CustomerWalletHistory> getAllInvoiceNotGeneratedWallets(String customerId) {
+        List<CustomerWalletHistory> listCustomerWalletHistory = customersWalletRepository
+                .findInvoiceNotGeneratedByCustomerId(customerId);
+        if (listCustomerWalletHistory == null) {
+            listCustomerWalletHistory = new ArrayList<>();
+        }
+
+        return listCustomerWalletHistory;
     }
 }
