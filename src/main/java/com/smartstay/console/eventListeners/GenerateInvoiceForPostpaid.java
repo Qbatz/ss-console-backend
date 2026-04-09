@@ -4,7 +4,7 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.InvoiceItems;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.ennum.*;
-import com.smartstay.console.events.RecurringEvents;
+import com.smartstay.console.events.PostpaidRecurringEvents;
 import com.smartstay.console.repositories.InvoiceV1Repository;
 import com.smartstay.console.services.*;
 import com.smartstay.console.utils.Utils;
@@ -13,13 +13,14 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Component
-public class RecurringEventListener {
+public class GenerateInvoiceForPostpaid {
 
     @Autowired
     private HostelService hostelService;
@@ -27,6 +28,8 @@ public class RecurringEventListener {
     private CustomersService customersService;
     @Autowired
     private CustomerEbHistoryService customerEbHistoryService;
+    @Autowired
+    private CustomerBedHistoryService customerBedHistoryService;
     @Autowired
     private CustomersAmenityService customersAmenityService;
     @Autowired
@@ -40,20 +43,28 @@ public class RecurringEventListener {
     @Autowired
     private NotificationService notificationService;
     @Autowired
-    private CustomerConfigService customersConfigService;
-    @Autowired
     private CustomerWalletService customerWalletHistoryService;
     @Autowired
     private RecurringTrackerService recurringTrackerService;
 
     @Async
     @EventListener
-    public void OnRecurringSetup(RecurringEvents recurringEvents) {
+    public void generateInvoiceForPostpaid(PostpaidRecurringEvents postpaidRecurringEvents) {
 
-        HostelV1 hostelV1 = hostelService.getHostelInfo(recurringEvents.getHostelId());
+        HostelV1 hostelV1 = hostelService.getHostelInfo(postpaidRecurringEvents.getHostelId());
 
-        BillingDates billingDates = hostelService
-                .getCurrentBillStartAndEndDates(recurringEvents.getHostelId());
+        BillingDates newMonthBillDate = hostelService
+                .getCurrentBillStartAndEndDates(postpaidRecurringEvents.getHostelId());
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(newMonthBillDate.currentBillStartDate());
+        calendar.add(Calendar.MONTH, -1);
+
+        BillingDates invoiceMonthBillingDates = hostelService
+                .getBillingRuleOnDate(postpaidRecurringEvents.getHostelId(), calendar.getTime());
+
+        Date currentBillingInvoiceStartDate = invoiceMonthBillingDates.currentBillStartDate();
+        Date currentBillingInvoiceEndDate = invoiceMonthBillingDates.currentBillEndDate();
 
         ElectricityConfig ebConfig = hostelService.getElectricityConfig(hostelV1.getHostelId());
 
@@ -84,60 +95,133 @@ public class RecurringEventListener {
             shouldIncludeEb = true;
         }
 
-        List<CustomersConfig> listCustomerConfig = customersConfigService
-                .getAllActiveAndEnabledRecurringCustomers(recurringEvents.getHostelId());
-
-        List<String> tempCusIds = listCustomerConfig.stream()
-                .map(CustomersConfig::getCustomerId)
-                .toList();
+        AtomicReference<Date> invoiceStartDate = new AtomicReference<>();
+        AtomicReference<Date> invoiceDueDate = new AtomicReference<>();
+        Date invoiceEndDate = null;
 
         List<BookingsV1> customersList = bookingsService
-                .getAllCheckedInCustomersByListOfCustomerIdsAndHostelId(tempCusIds, recurringEvents.getHostelId());
+                .findCheckedInCustomers(postpaidRecurringEvents.getHostelId());
         List<String> customerIds = customersList
                 .stream()
                 .map(BookingsV1::getCustomerId)
                 .toList();
 
-        List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService
-                .getWalletListForRecurring(customerIds);
+        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistoryService
+                .findBedHistoriesByListOfCustomersAndDates(customerIds, invoiceMonthBillingDates.currentBillStartDate(),
+                        invoiceMonthBillingDates.currentBillEndDate());
 
-        List<Customers> listCustomers = customersService
-                .getCustomerDetails(customerIds);
+        List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService.getWalletListForRecurring(customerIds);
+
+        List<Customers> listCustomers = customersService.getCustomerDetails(customerIds);
 
         List<ElectricityReadings> listElectricityForAHostel;
         if (shouldIncludeEb) {
             listElectricityForAHostel = electricityService
-                    .getAllElectricityReadingForRecurring(recurringEvents.getHostelId());
+                    .getAllElectricityReadingForRecurring(postpaidRecurringEvents.getHostelId());
         } else {
             listElectricityForAHostel = new ArrayList<>();
         }
-        List<ElectricityReadings> finalListElectricityForAHostel = listElectricityForAHostel;
 
         customersList.forEach(item -> {
-
-            Date joiningDate = item.getJoiningDate();
-            int joiningDay = Utils.getDayOfMonth(joiningDate);
-            int billingDay = recurringEvents.getBillingDay();
-            LocalTime autoInvoiceTime = LocalTime.of(2, 0);
-
-            // joined after billing cycle started → auto invoice already created
-            if (joiningDay > billingDay){
-                return;
-            }
-            if (joiningDay == billingDay &&
-                    Utils.dateToLocalTime(joiningDate).isAfter(autoInvoiceTime)) {
-                return;
-            }
-
             Double rentAmount = item.getRentAmount();
-            Double ebAmount = 0.0;
 
+            List<CustomersBedHistory> currentHistory = listCustomerBedHistory.stream()
+                    .filter(i -> i.getCustomerId().equalsIgnoreCase(item.getCustomerId()))
+                    .toList();
+            //No bed change happens
+            if (currentHistory.size() < 2) {
+                if (Utils.compareWithTwoDates(item.getJoiningDate(), currentBillingInvoiceStartDate) <= 0) {
+                    rentAmount = item.getRentAmount();
+                    invoiceStartDate.set(currentBillingInvoiceStartDate);
+                    invoiceDueDate.set(Utils.addDaysToDate(newMonthBillDate.currentBillStartDate(),
+                            invoiceMonthBillingDates.dueDays()));
+                }
+                else {
+                    invoiceStartDate.set(item.getJoiningDate());
+                    invoiceDueDate.set(Utils.addDaysToDate(item.getJoiningDate(), invoiceMonthBillingDates.dueDays()));
+                    if (invoiceMonthBillingDates.hasGracePeriod()) {
+                        Date dateAfterGracePeriod = Utils.addDaysToDate(currentBillingInvoiceStartDate,
+                                invoiceMonthBillingDates.gracePeriodDays());
+                        if (Utils.compareWithTwoDates(item.getJoiningDate(), dateAfterGracePeriod) <= 0) {
+                            rentAmount = item.getRentAmount();
+                        }
+                        else {
+                            rentAmount = calculateRentAmount(item.getJoiningDate(),
+                                    item.getRentAmount(), invoiceMonthBillingDates);
+                        }
+                    }
+                    else {
+                        rentAmount = calculateRentAmount(item.getJoiningDate(),
+                                item.getRentAmount(), invoiceMonthBillingDates);
+                    }
+                }
+            }
+            else {
+                if (Utils.compareWithTwoDates(item.getJoiningDate(), invoiceMonthBillingDates.currentBillStartDate()) <= 0) {
+                    invoiceStartDate.set(invoiceMonthBillingDates.currentBillStartDate());
+                    invoiceDueDate.set(Utils.addDaysToDate(invoiceMonthBillingDates.currentBillStartDate(),
+                            invoiceMonthBillingDates.dueDays()));
+                }
+                else {
+                    invoiceStartDate.set(item.getJoiningDate());
+                    invoiceDueDate.set(Utils.addDaysToDate(item.getJoiningDate(), invoiceMonthBillingDates.dueDays()));
+                }
+                //executes when bed change happens
+                List<CustomersBedHistory> oldBedHistories = currentHistory
+                        .stream()
+                        .filter(i -> i.getEndDate() != null)
+                        .toList();
+
+                AtomicReference<Double> oldRentAmounts = new AtomicReference<>(0.0);
+                if (oldBedHistories != null && !oldBedHistories.isEmpty()) {
+                    oldBedHistories.forEach(oldItems -> {
+                        double fullRentAmount = oldItems.getRentAmount();
+                        long totalNoOfDaysInTheMonth = Utils.findNumberOfDays(invoiceMonthBillingDates.currentBillStartDate(), invoiceMonthBillingDates.currentBillEndDate());
+                        Date startDate = oldItems.getStartDate();
+                        if (Utils.compareWithTwoDates(oldItems.getStartDate(), invoiceMonthBillingDates.currentBillStartDate()) < 0) {
+                            startDate = invoiceMonthBillingDates.currentBillStartDate();
+                        }
+                        long noOfDaysStayed = Utils.findNumberOfDays(startDate, oldItems.getEndDate());
+                        double rentPerDay = fullRentAmount / totalNoOfDaysInTheMonth;
+                        double rentForStayedDays = rentPerDay * noOfDaysStayed;
+                        oldRentAmounts.set(rentForStayedDays + oldRentAmounts.get());
+                    });
+                }
+
+                CustomersBedHistory currentBed = currentHistory
+                        .stream()
+                        .filter(i -> i.getEndDate() == null)
+                        .findFirst()
+                        .orElse(null);
+                if (currentBed != null) {
+                    double fullRentAmount = currentBed.getRentAmount();
+                    long totalNoOfDaysInTheMonth = Utils.findNumberOfDays(invoiceMonthBillingDates.currentBillStartDate(),
+                            invoiceMonthBillingDates.currentBillEndDate());
+                    Date startDate = currentBed.getStartDate();
+
+                    if (Utils.compareWithTwoDates(currentBed.getStartDate(), invoiceMonthBillingDates.currentBillStartDate()) < 0) {
+                        startDate = invoiceMonthBillingDates.currentBillStartDate();
+                    }
+
+                    Date endDate = currentBed.getEndDate();
+                    if (endDate == null) {
+                        endDate = invoiceMonthBillingDates.currentBillEndDate();
+                    }
+                    long noOfDaysStayed = Utils.findNumberOfDays(startDate, endDate);
+                    double rentPerDay = fullRentAmount / totalNoOfDaysInTheMonth;
+                    double rentForStayedDays = rentPerDay * noOfDaysStayed;
+                    oldRentAmounts.set(rentForStayedDays + oldRentAmounts.get());
+
+                    rentAmount = oldRentAmounts.get();
+                }
+            }
+
+            Double ebAmount = 0.0;
             if (shouldIncludeEb) {
-                List<Integer> ebReadingsId = finalListElectricityForAHostel
+                List<Integer> ebReadingsId = listElectricityForAHostel
                         .stream()
                         .map(ElectricityReadings::getId)
                         .toList();
-
                 List<CustomersEbHistory> listCustomerEb = customerEbHistoryService
                         .getAllByCustomerIdAndReadingId(item.getCustomerId(), ebReadingsId);
 
@@ -145,7 +229,6 @@ public class RecurringEventListener {
                         .stream()
                         .mapToDouble(CustomersEbHistory::getAmount)
                         .sum();
-
                 if (ebAmount > 0) {
                     ebAmount = Utils.roundOfDouble(ebAmount);
                 }
@@ -155,7 +238,7 @@ public class RecurringEventListener {
             }
 
             List<CustomersAmenity> listCustomersAmenity = customersAmenityService
-                    .getAllCustomerAmenitiesForRecurring(item.getCustomerId(), billingDates.currentBillStartDate());
+                    .getAllCustomerAmenitiesForRecurring(item.getCustomerId(), invoiceMonthBillingDates.currentBillStartDate());
             Double amenityAmount = listCustomersAmenity
                     .stream()
                     .mapToDouble(CustomersAmenity::getAmenityPrice)
@@ -164,14 +247,13 @@ public class RecurringEventListener {
             double rentEbAmount = rentAmount + ebAmount;
             double rentEbAndAmenity = rentEbAmount + amenityAmount;
             double walletAmount = 0.0;
-            double finalAmount = rentEbAndAmenity;
+            double finalAmount = Utils.roundOfDouble(rentEbAndAmenity);
 
             Customers customers = listCustomers
                     .stream()
                     .filter(i -> i.getCustomerId().equalsIgnoreCase(item.getCustomerId()))
                     .findFirst()
                     .orElse(null);
-
             if (customers != null) {
                 CustomerWallet customerWallet = customers.getWallet();
                 if (customerWallet != null) {
@@ -180,18 +262,15 @@ public class RecurringEventListener {
                         finalAmount = finalAmount + walletAmount;
                     }
                 }
-
                 StringBuilder prefixSuffix = new StringBuilder();
 
                 String prefix = "INV";
-                BillTemplates templates = templatesService
-                        .getTemplateByHostelId(customers.getHostelId());
+                BillTemplates templates = templatesService.getTemplateByHostelId(customers.getHostelId());
                 if (templates != null && templates.getTemplateTypes() != null) {
                     if (!templates.getTemplateTypes().isEmpty()) {
                         BillTemplateType rentTemplateType = templates.getTemplateTypes()
                                 .stream()
-                                .filter(i -> i.getInvoiceType()
-                                        .equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
+                                .filter(i -> i.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
                                 .findFirst()
                                 .get();
                         prefix = rentTemplateType.getInvoicePrefix();
@@ -231,7 +310,7 @@ public class RecurringEventListener {
                 invoicesV1.setCustomerId(item.getCustomerId());
                 invoicesV1.setCustomerMailId(customers.getEmailId());
                 invoicesV1.setCustomerMobile(customers.getMobile());
-                invoicesV1.setHostelId(recurringEvents.getHostelId());
+                invoicesV1.setHostelId(postpaidRecurringEvents.getHostelId());
                 invoicesV1.setInvoiceNumber(prefixSuffix.toString());
                 invoicesV1.setInvoiceType(InvoiceType.RENT.name());
                 invoicesV1.setBasePrice(finalAmount);
@@ -246,9 +325,9 @@ public class RecurringEventListener {
                 invoicesV1.setInvoiceMode(InvoiceMode.RECURRING.name());
                 invoicesV1.setCreatedBy(hostelV1.getCreatedBy());
                 invoicesV1.setInvoiceGeneratedDate(new Date());
-                invoicesV1.setInvoiceDueDate(billingDates.dueDate());
-                invoicesV1.setInvoiceStartDate(billingDates.currentBillStartDate());
-                invoicesV1.setInvoiceEndDate(billingDates.currentBillEndDate());
+                invoicesV1.setInvoiceDueDate(invoiceDueDate.get());
+                invoicesV1.setInvoiceStartDate(invoiceStartDate.get());
+                invoicesV1.setInvoiceEndDate(invoiceMonthBillingDates.currentBillEndDate());
                 invoicesV1.setCreatedAt(new Date());
 
                 List<InvoiceItems> invoicesItems = new ArrayList<>();
@@ -338,7 +417,20 @@ public class RecurringEventListener {
                     .toList();
             electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
         }
-        recurringTrackerService.markAsInvoiceGenerated(hostelV1.getHostelId(), recurringEvents.getBillingDay());
+
+        recurringTrackerService.markAsPostpaidInvoiceGenerated(hostelV1.getHostelId(), postpaidRecurringEvents.getBillingDay());
         notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
+    }
+
+    public Double calculateRentAmount(Date joiningDate, Double totalRent, BillingDates billingDates) {
+
+        long noOfDaysInCurrentMonth = Utils
+                .findNumberOfDays(billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+        long noOfDaysStayed = Utils
+                .findNumberOfDays(joiningDate, billingDates.currentBillEndDate());
+
+        double rentPerDay = totalRent / noOfDaysInCurrentMonth;
+
+        return noOfDaysStayed * rentPerDay;
     }
 }

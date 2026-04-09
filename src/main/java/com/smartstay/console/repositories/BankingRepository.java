@@ -9,6 +9,7 @@ import java.util.Set;
 
 @Repository
 public interface BankingRepository extends JpaRepository<BankingV1, String> {
+
     List<BankingV1> findByHostelId(String hostelId);
 
     List<BankingV1> findByBankIdIn(Set<String> bankIds);

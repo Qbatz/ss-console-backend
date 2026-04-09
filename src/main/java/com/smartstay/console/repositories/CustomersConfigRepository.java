@@ -11,6 +11,7 @@ import java.util.Set;
 
 @Repository
 public interface CustomersConfigRepository extends JpaRepository<CustomersConfig, Long> {
+
     @Query("""
             SELECT cc FROM CustomersConfig cc WHERE cc.hostelId=:hostelId AND cc.customerId IN (:customerIds)
             """)

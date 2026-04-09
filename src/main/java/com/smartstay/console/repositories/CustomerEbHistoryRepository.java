@@ -10,6 +10,7 @@ import java.util.List;
 
 @Repository
 public interface CustomerEbHistoryRepository extends JpaRepository<CustomersEbHistory, Long> {
+
     List<CustomersEbHistory> findByCustomerIdIn(List<String> customerIds);
 
     List<CustomersEbHistory> findByCustomerId(String customerId);

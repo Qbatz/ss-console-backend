@@ -2,7 +2,7 @@ package com.smartstay.console.Mapper.hostels;
 
 import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.dao.*;
-import com.smartstay.console.ennum.BookingsStatus;
+import com.smartstay.console.ennum.BillingModel;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.responses.hostels.RecurringHistoryRes;
 import com.smartstay.console.responses.hostels.RecurringTrackerRes;
@@ -18,7 +18,6 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
     HotelType hotelType;
     Users owner;
     List<BookingsV1> bookings;
-    List<BookingsV1> customers;
     BillingRules billingRules;
     RecurringTracker latestRecurringTracker;
     int page;
@@ -29,7 +28,6 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
     public RecurringTrackerResMapper(HotelType hotelType,
                                      Users owner,
                                      List<BookingsV1> bookings,
-                                     List<BookingsV1> customers,
                                      BillingRules billingRules,
                                      RecurringTracker latestRecurringTracker,
                                      int page,
@@ -39,7 +37,6 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
         this.hotelType = hotelType;
         this.owner = owner;
         this.bookings = bookings;
-        this.customers = customers;
         this.billingRules = billingRules;
         this.latestRecurringTracker = latestRecurringTracker;
         this.page = page;
@@ -65,35 +62,33 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
             ownerInfo = new UserOnerInfoMapper().apply(owner);
         }
 
-        int noOfBookedTenants = 0;
-        int noOfCheckedInTenants = 0;
-        if (bookings != null && !bookings.isEmpty()){
-            for (BookingsV1 booking : bookings){
-                if (booking.getCurrentStatus().equalsIgnoreCase(BookingsStatus.BOOKED.name())){
-                    noOfBookedTenants++;
-                } else if (booking.getCurrentStatus().equalsIgnoreCase(BookingsStatus.CHECKIN.name())) {
-                    noOfCheckedInTenants++;
-                }
-            }
-        }
+        int noOfActiveTenants = bookings.size();
 
-        int noOfActiveTenants = noOfBookedTenants + noOfCheckedInTenants;
+        boolean isPostpaid = BillingModel.POSTPAID.name().equals(billingRules.getBillingModel());
 
         int invoiceAboutToBeGenerated = 0;
-        if (customers != null){
+        if (!bookings.isEmpty()){
             int billingDay = billingRules.getBillingStartDate();
 
-            invoiceAboutToBeGenerated = (int) customers.stream()
-                    .filter(customer -> Utils.isEligibleForInvoice(customer, billingDay))
-                    .count();
+            if (!isPostpaid){
+                invoiceAboutToBeGenerated = (int) bookings.stream()
+                        .filter(customer -> Utils.isEligibleForInvoice(customer, billingDay))
+                        .count();
+            } else {
+                invoiceAboutToBeGenerated = bookings.size();
+            }
         }
 
         Date today = new Date();
         int startDay = billingRules.getBillingStartDate();
-        int endDay = Utils.calculateEndDay(startDay, today);
+        Date cycleDate = today;
+        if (isPostpaid) {
+            cycleDate = Utils.getPreviousMonthDate(today);
+        }
+        int endDay = Utils.calculateEndDay(startDay, cycleDate);
 
-        int month = Utils.getCurrentMonth(today);
-        int year = Utils.getCurrentYear(today);
+        int month = Utils.getCurrentMonth(cycleDate);
+        int year = Utils.getCurrentYear(cycleDate);
 
         Date startDate = Utils.getDateFromDay(startDay, month, year);
         Date endDate = Utils.getEndDate(startDay, month, year);
@@ -114,7 +109,7 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
             nextRecurringDate = Utils.getNextMonthDate(latestRecurringTracker.getCreationDay(),
                     latestRecurringTracker.getCreationMonth(), latestRecurringTracker.getCreationYear());
             recurringStatus = Utils.isSameBillingCycle(
-                    billingRules.getBillingStartDate(), latestRecurringTracker);
+                    billingRules.getBillingStartDate(), latestRecurringTracker, isPostpaid);
         }
 
         return new RecurringTrackerRes(hostel.getHostelId(), hostelType, hostelName, Utils.getInitials(hostelName),
