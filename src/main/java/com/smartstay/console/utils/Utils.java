@@ -57,6 +57,7 @@ public class Utils {
     public static final String SUBSCRIPTION_NOT_ACTIVE = "Subscription is not active for this hostel";
     public static final String RECURRING_ALREADY_CREATED = "Recurring already exists this month for this hostel";
     public static final String IS_NOT_FIXED_DATE = "Type of billing is not fixed date";
+    public static final String IS_NOT_JOINING_BASED = "Type of billing is not joining date based";
     public static final String NO_BILLING_RULE_FOUND = "No billing rule found for this hostel";
     public static final String DEMO_REQUEST_STATUS_NOT_FOUND = "Demo request status not found";
     public static final String PRESENTED_BY_REQUIRED = "Presented by can't be null or empty when status is completed";
@@ -80,6 +81,8 @@ public class Utils {
     public static final String DAY_NOT_MATCH = "Today doesn't match with the billing rule day";
     public static final String BILLING_DAY_NOT_REACHED = "This month's billing day has not reached";
     public static final String INVALID_RECURRING_CYCLE_FOR_POSTPAID = "Hostel did not exist in previous month";
+    public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
+    public static final String NO_CUSTOMER_FOUND = "No tenant found";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {

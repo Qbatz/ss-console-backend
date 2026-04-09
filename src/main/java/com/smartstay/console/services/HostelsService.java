@@ -13,8 +13,10 @@ import com.smartstay.console.dto.hostel.HostelResetSnapshot;
 import com.smartstay.console.dto.hostel.InvoiceCountPerTracker;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import com.smartstay.console.ennum.*;
+import com.smartstay.console.events.JoiningBasedPrepaidEvents;
 import com.smartstay.console.events.PostpaidRecurringEvents;
 import com.smartstay.console.events.RecurringEvents;
+import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.responses.customers.CustomerRecurringResponse;
@@ -1850,5 +1852,115 @@ public class HostelsService {
         response.put("appliedFilterType", isBillingCycleFilter ? "BILLING_CYCLE" : "DATE_FILTER");
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> generateTenantRecurring(List<CustomerIdPayload> payloads) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Recurring.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Date today = new Date();
+
+        for (CustomerIdPayload payload : payloads) {
+
+            String customerId = payload.customerId();
+            if (customerId == null || customerId.isBlank()){
+                return new ResponseEntity<>(Utils.CUSTOMER_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            Customers customer = customersService.getCustomerInformation(customerId);
+            if (customer == null){
+                return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            String hostelId = customer.getHostelId();
+            if (hostelId == null){
+                return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            HostelV1 hostel = hostelRepository.findByHostelId(hostelId);
+            if (hostel == null){
+                return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            HostelPlan hostelPlan = hostel.getHostelPlan();
+            boolean isSubscriptionActive = false;
+            if (hostelPlan != null && hostelPlan.getCurrentPlanEndsAt() != null) {
+                isSubscriptionActive = Utils.compareWithTwoDates(
+                        hostelPlan.getCurrentPlanEndsAt(), new Date()) >= 0;
+            }
+
+            if (!isSubscriptionActive){
+                return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_ACTIVE, HttpStatus.BAD_REQUEST);
+            }
+
+            BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
+            if (billingRules == null){
+                return new ResponseEntity<>(Utils.NO_BILLING_RULE_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            if (!BillingType.JOINING_DATE_BASED.name().equals(billingRules.getTypeOfBilling())){
+                return new ResponseEntity<>(Utils.IS_NOT_JOINING_BASED, HttpStatus.BAD_REQUEST);
+            }
+
+            Date joinedDate = customer.getJoiningDate() != null ? customer.getJoiningDate() : customer.getExpJoiningDate();
+            if (joinedDate == null) continue;
+            int billingDay = Utils.getDayOfMonth(joinedDate);
+
+            int day = Utils.getDayOfMonth(today);
+            if (day < billingDay) {
+                return new ResponseEntity<>(Utils.BILLING_DAY_NOT_REACHED, HttpStatus.BAD_REQUEST);
+            }
+            if (billingDay != day) {
+                return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
+            }
+
+            boolean isPostPaid = BillingModel.POSTPAID.name().equals(billingRules.getBillingModel());
+
+            if (isPostPaid) {
+
+                Date previousCycleDate = Utils.getPreviousMonthDate(today);
+
+                Date cycleStartDate = Utils.getDateFromDay(
+                        billingRules.getBillingStartDate(),
+                        Utils.getCurrentMonth(previousCycleDate),
+                        Utils.getCurrentYear(previousCycleDate)
+                );
+
+                Date hostelCreatedDate = Utils.getStartOfDay(hostel.getCreatedAt());
+                Date cycleStart = Utils.getStartOfDay(cycleStartDate);
+
+                if (hostelCreatedDate.after(cycleStart)) {
+                    return new ResponseEntity<>(Utils.INVALID_RECURRING_CYCLE_FOR_POSTPAID, HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            if (customerRecurringTrackerService.checkRecurringTrackerExists(customerId, billingDay,
+                    today, isPostPaid)){
+                return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
+            }
+
+            try {
+                if (BillingModel.PREPAID.name().equals(billingRules.getBillingModel())){
+                    applicationEventPublisher.publishEvent(new JoiningBasedPrepaidEvents(this, customerId, hostelId, billingDay));
+                } else if (BillingModel.POSTPAID.name().equals(billingRules.getBillingModel())) {
+                   return new ResponseEntity<>("Postpaid joining date based recurring has not been implemented", HttpStatus.BAD_REQUEST);
+                }
+            } catch (Exception e){
+                return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

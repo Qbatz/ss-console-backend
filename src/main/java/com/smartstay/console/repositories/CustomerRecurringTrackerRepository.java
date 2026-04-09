@@ -23,4 +23,6 @@ public interface CustomerRecurringTrackerRepository extends JpaRepository<Custom
        )
        """)
     List<CustomerRecurringTracker> findLatestRecurringTrackerByCustomerIds(@Param("customerIds") Set<String> customerIds);
+
+    boolean existsByCustomerIdAndCreationDayAndCreationMonthAndCreationYear(String customerId, int day, int month, int year);
 }

@@ -1,5 +1,6 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.services.HostelsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -101,5 +102,10 @@ public class HostelsController {
                                                 @RequestParam(defaultValue = "0") int billingCycleStartDay){
         return hostelsService.getTenantRecurring(page, size, name, filterBy, statusFilterBy,
                 billingModelFilterBy, billingCycleStartDay);
+    }
+
+    @PostMapping("/tenant-recurring")
+    public ResponseEntity<?> generateTenantRecurring(@RequestBody List<CustomerIdPayload> payloads){
+        return hostelsService.generateTenantRecurring(payloads);
     }
 }

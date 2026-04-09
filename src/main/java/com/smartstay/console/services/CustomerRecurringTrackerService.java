@@ -11,6 +11,7 @@ import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.YearMonth;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -52,5 +53,24 @@ public class CustomerRecurringTrackerService {
     public List<CustomerRecurringTracker> getLatestTrackersByCustomerIds(Set<String> customerIds){
         return customerRecurringTrackerRepository
                 .findLatestRecurringTrackerByCustomerIds(customerIds);
+    }
+
+    public boolean checkRecurringTrackerExists(String customerId, int day, Date date, boolean isPostpaid) {
+
+        int month;
+        int year;
+
+        if (isPostpaid){
+            YearMonth previousYearMonth = Utils.getPreviousYearMonth(date);
+
+            month = previousYearMonth.getMonthValue();
+            year  = previousYearMonth.getYear();
+        } else {
+            month = Utils.getCurrentMonth(date);
+            year =  Utils.getCurrentYear(date);
+        }
+
+        return customerRecurringTrackerRepository
+                .existsByCustomerIdAndCreationDayAndCreationMonthAndCreationYear(customerId, day, month, year);
     }
 }
