@@ -11,6 +11,7 @@ import java.util.Set;
 
 @Repository
 public interface CustomersRepository extends JpaRepository<Customers, String> {
+
     List<Customers> findAllByCustomerIdIn(Set<String> customerIds);
 
     Page<Customers> findAllByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrderByCreatedAtDesc(String firstName,
@@ -18,6 +19,7 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
                                                                                                              Pageable pageable);
 
     Page<Customers> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
     List<Customers> findByHostelId(String hostelId);
 
     Customers findByCustomerIdAndHostelId(String customerId, String hostelId);

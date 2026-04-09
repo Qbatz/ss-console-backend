@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class HostelPlanService {
@@ -24,5 +25,9 @@ public class HostelPlanService {
 
     public void saveAll(List<HostelPlan> listNewPlans) {
         hostelPlanRepository.saveAll(listNewPlans);
+    }
+
+    public List<HostelPlan> getPlansByHostelIds(Set<String> hostelIds) {
+        return hostelPlanRepository.findByHostel_HostelIdIn(hostelIds);
     }
 }

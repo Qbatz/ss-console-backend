@@ -5,7 +5,6 @@ import com.smartstay.console.repositories.ElectricityReadingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
 import java.util.List;
 
 @Service
@@ -22,9 +21,8 @@ public class ElectricityReadingsService {
         electricityReadingRepository.deleteAll(listElectricityReadings);
     }
 
-    public List<ElectricityReadings> getAllElectricityReadingForRecurring(String hostelId, Date startDate, Date endDate) {
-        return electricityReadingRepository
-                .listAllReadingsForGenerateInvoice(hostelId, startDate, endDate);
+    public List<ElectricityReadings> getAllElectricityReadingForRecurring(String hostelId) {
+        return electricityReadingRepository.listAllReadingsForGenerateInvoice(hostelId);
     }
 
     public void markAsInvoiceGenerated(List<ElectricityReadings> listReadingForMakingInvoiceGenerated) {

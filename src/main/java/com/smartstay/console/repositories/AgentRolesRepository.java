@@ -10,7 +10,6 @@ import java.util.Set;
 
 public interface AgentRolesRepository extends JpaRepository<AgentRoles, Long> {
 
-
     AgentRoles findByRoleId(Long roleId);
 
     @Query(value = """
@@ -28,7 +27,6 @@ public interface AgentRolesRepository extends JpaRepository<AgentRoles, Long> {
     int existsByRoleNameNotRoleId(@Param("roleName") String roleName,@Param("roleId") long roleId);
 
     List<AgentRoles> findAllByIsActiveTrueAndIsDeletedFalse();
-    AgentRoles findByRoleName(String roleName);
 
     List<AgentRoles> findAllByRoleIdIn(Set<Long> roleIds);
 

@@ -24,8 +24,8 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
                   AND o.createdAt >= :startDate
                   AND o.createdAt < :endDate
                   AND (
-                        (:hostelIds IS NULL OR o.hostelId IN :hostelIds)
-                     OR (:userIds IS NULL OR o.createdBy IN :userIds)
+                       (:hostelIds IS NOT NULL AND o.hostelId IN :hostelIds)
+                    OR (:userIds IS NOT NULL AND o.createdBy IN :userIds)
                   )
                 ORDER BY o.createdAt DESC
             """)
