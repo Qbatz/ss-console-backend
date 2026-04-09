@@ -81,6 +81,7 @@ public class Utils {
     public static final String TRIAL_PLAN_NOT_ALLOWED = "Trial plan not allowed";
     public static final String DAY_NOT_MATCH = "Today doesn't match with the billing rule day";
     public static final String BILLING_DAY_NOT_REACHED = "This month's billing day has not reached";
+    public static final String INVALID_RECURRING_CYCLE_FOR_POSTPAID = "Hostel did not exist in previous month";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {

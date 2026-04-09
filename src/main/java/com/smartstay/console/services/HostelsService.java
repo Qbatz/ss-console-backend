@@ -840,6 +840,9 @@ public class HostelsService {
             Set<String> allHostelIds = allHostels.stream()
                     .map(HostelV1::getHostelId)
                     .collect(Collectors.toSet());
+            Map<String, HostelV1> allHostelsMap = allHostels.stream()
+                    .collect(Collectors.toMap(HostelV1::getHostelId,
+                            Function.identity(), (a, b) -> a));
 
             List<BillingRules> latestBillingRules = billingRulesService
                     .getLatestBillingRulesByHostelIds(allHostelIds);
@@ -853,6 +856,7 @@ public class HostelsService {
                             .collect(Collectors.toMap(RecurringTracker::getHostelId,
                                     Function.identity(), (a, b) -> a));
 
+            Set<String> eligibleHostelIds = new HashSet<>();
             Set<String> generatedHostelIds = new HashSet<>();
 
             int currentMonth = Utils.getCurrentMonth(today);
@@ -864,16 +868,53 @@ public class HostelsService {
 
             for (String hostelId : allHostelIds) {
 
+                HostelV1 hostel = allHostelsMap.get(hostelId);
                 BillingRules billingRules = latestBillingRulesMap.get(hostelId);
                 RecurringTracker tracker = latestRecurringTrackersMap.get(hostelId);
 
-                if (billingRules == null) continue;
+                if (billingRules == null || hostel == null) continue;
 
                 boolean isGenerated = false;
+                boolean shouldConsider = true;
+
+                int billingDay = billingRules.getBillingStartDate();
+
+                if (BillingModel.POSTPAID.name().equals(billingRules.getBillingModel())) {
+
+                    Date previousCycleDate = Utils.getPreviousMonthDate(today);
+                    Date cycleStartDate = Utils.getDateFromDay(
+                            billingDay,
+                            Utils.getCurrentMonth(previousCycleDate),
+                            Utils.getCurrentYear(previousCycleDate)
+                    );
+
+                    Date hostelCreatedDate = Utils.getStartOfDay(hostel.getCreatedAt());
+                    Date cycleStart = Utils.getStartOfDay(cycleStartDate);
+
+                    if (hostelCreatedDate.after(cycleStart)) {
+                        shouldConsider = false;
+                    }
+                }
+
+                if (!shouldConsider) {
+                    if (tracker != null){
+                        if (BillingModel.POSTPAID.name().equals(billingRules.getBillingModel())) {
+                            isGenerated =
+                                    tracker.getCreationDay() == billingDay &&
+                                            tracker.getCreationMonth() == previousMonth &&
+                                            tracker.getCreationYear() == previousYear;
+                        }
+                        if (isGenerated) {
+                            generatedHostelIds.add(hostelId);
+                            eligibleHostelIds.add(hostelId);
+                        }
+                    }
+                    continue;
+                }
+
+                eligibleHostelIds.add(hostelId);
 
                 if (tracker != null) {
-
-                    int billingDay = billingRules.getBillingStartDate();
 
                     if (BillingModel.PREPAID.name().equals(billingRules.getBillingModel())) {
 
@@ -896,7 +937,7 @@ public class HostelsService {
                 }
             }
 
-            Set<String> notGeneratedHostelIds = new HashSet<>(allHostelIds);
+            Set<String> notGeneratedHostelIds = new HashSet<>(eligibleHostelIds);
             notGeneratedHostelIds.removeAll(generatedHostelIds);
 
             if (statusFilterOption == RecurringStatusFilterOptions.GENERATED) {
@@ -1151,11 +1192,30 @@ public class HostelsService {
             if (day < billingDay) {
                 return new ResponseEntity<>(Utils.BILLING_DAY_NOT_REACHED, HttpStatus.BAD_REQUEST);
             }
-//            if (billingDay != day) {
-//                return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
-//            }
+            if (billingDay != day) {
+                return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
+            }
 
             boolean isPostPaid = BillingModel.POSTPAID.name().equals(billingRules.getBillingModel());
+
+            if (isPostPaid) {
+
+                Date previousCycleDate = Utils.getPreviousMonthDate(today);
+
+                Date cycleStartDate = Utils.getDateFromDay(
+                        billingRules.getBillingStartDate(),
+                        Utils.getCurrentMonth(previousCycleDate),
+                        Utils.getCurrentYear(previousCycleDate)
+                );
+
+                Date hostelCreatedDate = Utils.getStartOfDay(hostel.getCreatedAt());
+                Date cycleStart = Utils.getStartOfDay(cycleStartDate);
+
+                if (hostelCreatedDate.after(cycleStart)) {
+                    return new ResponseEntity<>(Utils.INVALID_RECURRING_CYCLE_FOR_POSTPAID, HttpStatus.BAD_REQUEST);
+                }
+            }
+
             if (recurringTrackerService.checkRecurringTrackerExists(hostelId, billingDay,
                     today, isPostPaid)){
                 return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
