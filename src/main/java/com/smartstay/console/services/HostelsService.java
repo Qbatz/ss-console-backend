@@ -1701,10 +1701,14 @@ public class HostelsService {
 
         List<Customers> daySetCustomers = customersService
                 .getCustomersByDays(daySet);
+
+        Map<String, Customers> daySetCustomersMap = daySetCustomers.stream()
+                .collect(Collectors.toMap(Customers::getCustomerId,
+                        Function.identity(), (a, b) -> a));
+
         Set<String> daySetCustomerIds = daySetCustomers.stream()
                 .map(Customers::getCustomerId)
                 .collect(Collectors.toSet());
-
         Set<String> hostelIds = daySetCustomers.stream()
                 .map(Customers::getHostelId)
                 .collect(Collectors.toSet());
@@ -1722,11 +1726,34 @@ public class HostelsService {
         List<BillingRules> billingRulesList = billingRulesService
                 .getLatestBillingRulesByHostelIdsAndBillingType(hostelIds, billingType);
 
+        Set<String> billingTypeFilteredHostelIds = billingRulesList.stream()
+                .map(br -> br.getHostel().getHostelId())
+                .collect(Collectors.toSet());
+        List<BookingsV1> activeCustomers = bookingsService
+                .getActiveBookingsByHostelIds(billingTypeFilteredHostelIds);
+
+        totalTenants = activeCustomers.size();
+
+        for (BookingsV1 booking : activeCustomers) {
+            Customers customer = daySetCustomersMap.getOrDefault(booking.getCustomerId(), null);
+            if (customer != null) {
+                Date joinedDate = customer.getJoiningDate() != null ? customer.getJoiningDate() : customer.getExpJoiningDate();
+                if (joinedDate != null) {
+                    int day = Utils.getDayOfMonth(joinedDate);
+                    if (day == Utils.getDayOfMonth(today)){
+                        billingToday++;
+                    } else if (day == Utils.getTomorrowDayOfMonth(today)) {
+                        billingTomorrow++;
+                    }
+                }
+            }
+        }
+
         Map<String, BillingRules> billingRulesMap = billingRulesList.stream()
                 .collect(Collectors.toMap(br -> br.getHostel().getHostelId(),
                         br -> br, (a, b) -> a));
 
-        hostelIds = billingRulesList.stream()
+        Set<String> billingModelFilteredHostelIds = billingRulesList.stream()
                 .map(br -> {
                     if (!billingModelFilterOption.name().equals(BillingModelFilterOptions.ALL.name())){
                         if (billingModelFilterOption.name().equals(br.getBillingModel())){
@@ -1740,7 +1767,7 @@ public class HostelsService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        List<BookingsV1> bookings = bookingsService.getActiveBookingsByHostelIds(hostelIds);
+        List<BookingsV1> bookings = bookingsService.getActiveBookingsByHostelIds(billingModelFilteredHostelIds);
         Set<String> bookingCustomerIds = bookings.stream()
                 .map(BookingsV1::getCustomerId)
                 .collect(Collectors.toSet());
