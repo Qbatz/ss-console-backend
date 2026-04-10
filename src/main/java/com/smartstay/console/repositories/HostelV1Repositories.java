@@ -85,4 +85,19 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                     """,
             nativeQuery = true)
     List<HostelV1> findAllHostels();
+
+    @Query(value = """
+            SELECT h.*
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE h.hostel_id IN (:hostelIds)
+            ORDER BY hp.current_plan_ends_at DESC
+            """, countQuery = """
+            SELECT COUNT(*)
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE h.hostel_id IN (:hostelIds)
+            """, nativeQuery = true)
+    Page<HostelV1> findAllByHostelIdIn(@Param("hostelIds") Set<String> hostelIds,
+                                       Pageable pageable);
 }

@@ -80,6 +80,12 @@ public class HostelsController {
                 billingModelFilterBy, billingCycleStartDay);
     }
 
+    @GetMapping("/recurring/month")
+    public ResponseEntity<?> getRecurringMonthData(@RequestParam(value = "month") int month,
+                                                   @RequestParam(value = "year") int year){
+        return hostelsService.getMonthlyRecurringSummary(month, year);
+    }
+
     @PostMapping("/recurring")
     public ResponseEntity<?> generateRecurring(@RequestBody List<HostelIdPayload> payloads){
         return hostelsService.generateRecurring(payloads);
@@ -99,9 +105,10 @@ public class HostelsController {
                                                 @RequestParam(defaultValue = "TODAY") String filterBy,
                                                 @RequestParam(defaultValue = "ALL") String statusFilterBy,
                                                 @RequestParam(defaultValue = "ALL") String billingModelFilterBy,
-                                                @RequestParam(defaultValue = "0") int billingCycleStartDay){
+                                                @RequestParam(defaultValue = "0") int billingCycleStartDay,
+                                                @RequestParam(defaultValue = "false") boolean isHostelBased){
         return hostelsService.getTenantRecurring(page, size, name, filterBy, statusFilterBy,
-                billingModelFilterBy, billingCycleStartDay);
+                billingModelFilterBy, billingCycleStartDay, isHostelBased);
     }
 
     @PostMapping("/tenant-recurring")

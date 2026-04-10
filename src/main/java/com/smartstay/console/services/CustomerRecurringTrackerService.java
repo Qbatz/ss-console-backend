@@ -62,20 +62,13 @@ public class CustomerRecurringTrackerService {
                 .findTopByCustomerIdOrderByTrackerIdDesc(customerId);
     }
 
-    public boolean checkRecurringTrackerExists(String customerId, int day, Date date, boolean isPostpaid) {
+    public boolean checkRecurringTrackerExists(String customerId, int day, Date date) {
 
         int month;
         int year;
 
-        if (isPostpaid){
-            YearMonth previousYearMonth = Utils.getPreviousYearMonth(date);
-
-            month = previousYearMonth.getMonthValue();
-            year  = previousYearMonth.getYear();
-        } else {
-            month = Utils.getCurrentMonth(date);
-            year =  Utils.getCurrentYear(date);
-        }
+        month = Utils.getCurrentMonth(date);
+        year =  Utils.getCurrentYear(date);
 
         return customerRecurringTrackerRepository
                 .existsByCustomerIdAndCreationDayAndCreationMonthAndCreationYear(customerId, day, month, year);
