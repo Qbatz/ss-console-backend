@@ -1014,6 +1014,8 @@ public class HostelsService {
         List<BillingRules> latestBillingRulesList = billingRulesService
                 .getLatestBillingRulesByDays(daySet, billingType);
 
+        long totalProperties = latestBillingRulesList.size();
+
         Set<String> latestHostelIds = latestBillingRulesList.stream()
                 .map(b -> b.getHostel().getHostelId())
                 .collect(Collectors.toSet());
@@ -1140,7 +1142,7 @@ public class HostelsService {
         response.put("pageSize", size);
         response.put("totalItems", paginatedBillingRules.getTotalElements());
         response.put("totalPages", paginatedBillingRules.getTotalPages());
-        response.put("totalProperties", latestBillingRulesList.size());
+        response.put("totalProperties", totalProperties);
         response.put("recurringPendingCount", recurringPendingCount);
         response.put("subscriptionExpiredCount", subscriptionExpiredCount);
         response.put("filterOptions",  filterOptions);
