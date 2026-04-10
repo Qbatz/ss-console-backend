@@ -1232,8 +1232,7 @@ public class HostelsService {
                 }
             }
 
-            if (recurringTrackerService.checkRecurringTrackerExists(hostelId, billingDay,
-                    currentBillStartDate, isPostPaid)){
+            if (recurringTrackerService.checkRecurringTrackerExists(hostelId, billingDay, currentBillStartDate)){
                 return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
             }
 
@@ -1984,8 +1983,7 @@ public class HostelsService {
                 }
             }
 
-            if (customerRecurringTrackerService.checkRecurringTrackerExists(customerId, billingDay,
-                    joinBasedStartDate, isPostPaid)){
+            if (customerRecurringTrackerService.checkRecurringTrackerExists(customerId, billingDay, joinBasedStartDate)){
                 return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
             }
 
