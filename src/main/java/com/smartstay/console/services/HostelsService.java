@@ -11,6 +11,7 @@ import com.smartstay.console.Mapper.users.UsersResponseMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
+import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.dto.hostel.HostelResetSnapshot;
 import com.smartstay.console.dto.hostel.InvoiceCountPerTracker;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
@@ -1203,43 +1204,43 @@ public class HostelsService {
                 return new ResponseEntity<>(Utils.IS_NOT_FIXED_DATE, HttpStatus.BAD_REQUEST);
             }
 
-            int day = Utils.getDayOfMonth(today);
-            if (day < billingDay) {
-                return new ResponseEntity<>(Utils.BILLING_DAY_NOT_REACHED, HttpStatus.BAD_REQUEST);
-            }
-            if (billingDay != day) {
-                return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
+            String billingModel = billingRules.getBillingModel();
+            boolean isPrePaid = BillingModel.PREPAID.name().equals(billingModel);
+            boolean isPostPaid = BillingModel.POSTPAID.name().equals(billingModel);
+
+            BillingDates billingDates = null;
+
+            if (isPrePaid){
+                billingDates = billingRulesService.getBillingRuleByDateAndHostelId(hostelId, today);
+            } else if (isPostPaid) {
+                Date previousMonthDate = Utils.getPreviousMonthDate(today);
+                billingDates = billingRulesService.getBillingRuleByDateAndHostelId(hostelId, previousMonthDate);
             }
 
-            boolean isPostPaid = BillingModel.POSTPAID.name().equals(billingRules.getBillingModel());
+            if (billingDates == null) {
+                return new ResponseEntity<>(Utils.NO_BILLING_RULE_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            Date currentBillStartDate = billingDates.currentBillStartDate();
 
             if (isPostPaid) {
-
-                Date previousCycleDate = Utils.getPreviousMonthDate(today);
-
-                Date cycleStartDate = Utils.getDateFromDay(
-                        billingRules.getBillingStartDate(),
-                        Utils.getCurrentMonth(previousCycleDate),
-                        Utils.getCurrentYear(previousCycleDate)
-                );
-
                 Date hostelCreatedDate = Utils.getStartOfDay(hostel.getCreatedAt());
-                Date cycleStart = Utils.getStartOfDay(cycleStartDate);
+                Date cycleStart = Utils.getStartOfDay(currentBillStartDate);
 
                 if (hostelCreatedDate.after(cycleStart)) {
-                    return new ResponseEntity<>(Utils.INVALID_RECURRING_CYCLE_FOR_POSTPAID, HttpStatus.BAD_REQUEST);
+                    return new ResponseEntity<>(Utils.INVALID_RECURRING_CYCLE_FOR_HOSTEL, HttpStatus.BAD_REQUEST);
                 }
             }
 
             if (recurringTrackerService.checkRecurringTrackerExists(hostelId, billingDay,
-                    today, isPostPaid)){
+                    currentBillStartDate, isPostPaid)){
                 return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
             }
 
             try {
-                if (BillingModel.PREPAID.name().equals(billingRules.getBillingModel())){
+                if (isPrePaid){
                     applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId, billingDay));
-                } else if (BillingModel.POSTPAID.name().equals(billingRules.getBillingModel())) {
+                } else if (isPostPaid) {
                     applicationEventPublisher.publishEvent(new PostpaidRecurringEvents(this, hostelId, billingDay));
                 }
             } catch (Exception e){
@@ -1944,47 +1945,54 @@ public class HostelsService {
                 return new ResponseEntity<>(Utils.IS_NOT_JOINING_BASED, HttpStatus.BAD_REQUEST);
             }
 
+            String billingModel = billingRules.getBillingModel();
+            boolean isPrePaid = BillingModel.PREPAID.name().equals(billingModel);
+            boolean isPostPaid = BillingModel.POSTPAID.name().equals(billingModel);
+
             Date joinedDate = customer.getJoiningDate() != null ? customer.getJoiningDate() : customer.getExpJoiningDate();
             if (joinedDate == null) continue;
             int billingDay = Utils.getDayOfMonth(joinedDate);
 
-            int day = Utils.getDayOfMonth(today);
-            if (day < billingDay) {
-                return new ResponseEntity<>(Utils.BILLING_DAY_NOT_REACHED, HttpStatus.BAD_REQUEST);
+            BillingDates joinBasedBillingDates = null;
+            if (isPrePaid){
+                joinBasedBillingDates = hostelService
+                        .getJoiningBasedCurrentMonthBillingDate(joinedDate, hostelId, today);
+            } else if (isPostPaid) {
+                Date previousMonthDate = Utils.getPreviousMonthDate(today);
+                joinBasedBillingDates = hostelService
+                        .getJoiningBasedCurrentMonthBillingDate(joinedDate, hostelId, previousMonthDate);
             }
-            if (billingDay != day) {
-                return new ResponseEntity<>(Utils.DAY_NOT_MATCH, HttpStatus.BAD_REQUEST);
+
+            if (joinBasedBillingDates == null) {
+                return new ResponseEntity<>(Utils.NO_BILLING_RULE_FOUND, HttpStatus.BAD_REQUEST);
             }
 
-            boolean isPostPaid = BillingModel.POSTPAID.name().equals(billingRules.getBillingModel());
+            Date joinBasedStartDate = joinBasedBillingDates.currentBillStartDate();
+            Date joinBasedEndDate = joinBasedBillingDates.currentBillEndDate();
 
-            if (isPostPaid) {
+            Date cycleStart = Utils.getStartOfDay(joinBasedStartDate);
+            Date cycleEnd = Utils.getStartOfDay(joinBasedEndDate);
+            Date tenantJoinedDate = Utils.getStartOfDay(joinedDate);
 
-                Date previousCycleDate = Utils.getPreviousMonthDate(today);
-
-                Date cycleStartDate = Utils.getDateFromDay(
-                        billingRules.getBillingStartDate(),
-                        Utils.getCurrentMonth(previousCycleDate),
-                        Utils.getCurrentYear(previousCycleDate)
-                );
-
-                Date hostelCreatedDate = Utils.getStartOfDay(hostel.getCreatedAt());
-                Date cycleStart = Utils.getStartOfDay(cycleStartDate);
-
-                if (hostelCreatedDate.after(cycleStart)) {
-                    return new ResponseEntity<>(Utils.INVALID_RECURRING_CYCLE_FOR_POSTPAID, HttpStatus.BAD_REQUEST);
+            if (isPrePaid) {
+                if (tenantJoinedDate.after(cycleEnd)) {
+                    return new ResponseEntity<>(Utils.INVALID_RECURRING_CYCLE_FOR_TENANT, HttpStatus.BAD_REQUEST);
+                }
+            } else if (isPostPaid){
+                if (tenantJoinedDate.after(cycleStart)) {
+                    return new ResponseEntity<>(Utils.INVALID_RECURRING_CYCLE_FOR_TENANT, HttpStatus.BAD_REQUEST);
                 }
             }
 
             if (customerRecurringTrackerService.checkRecurringTrackerExists(customerId, billingDay,
-                    today, isPostPaid)){
+                    joinBasedStartDate, isPostPaid)){
                 return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
             }
 
             try {
-                if (BillingModel.PREPAID.name().equals(billingRules.getBillingModel())){
+                if (isPrePaid){
                     applicationEventPublisher.publishEvent(new JoiningBasedPrepaidEvents(this, customerId, hostelId, billingDay));
-                } else if (BillingModel.POSTPAID.name().equals(billingRules.getBillingModel())) {
+                } else if (isPostPaid) {
                    return new ResponseEntity<>("Postpaid joining date based recurring has not been implemented", HttpStatus.BAD_REQUEST);
                 }
             } catch (Exception e){

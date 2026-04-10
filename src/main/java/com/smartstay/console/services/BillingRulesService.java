@@ -70,7 +70,7 @@ public class BillingRulesService {
             calendar.add(Calendar.MONTH, -1);
         }
 
-        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate - 1);
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
