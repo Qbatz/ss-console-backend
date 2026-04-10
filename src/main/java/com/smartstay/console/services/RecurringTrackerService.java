@@ -35,20 +35,13 @@ public class RecurringTrackerService {
         return recurringTrackerRepository.getLatestRecurringTrackersByHostelIds(hostelIds);
     }
 
-    public boolean checkRecurringTrackerExists(String hostelId, int day, Date date, boolean isPostpaid){
+    public boolean checkRecurringTrackerExists(String hostelId, int day, Date date){
 
         int month;
         int year;
 
-        if (isPostpaid){
-            YearMonth previousYearMonth = Utils.getPreviousYearMonth(date);
-
-            month = previousYearMonth.getMonthValue();
-            year  = previousYearMonth.getYear();
-        } else {
-            month = Utils.getCurrentMonth(date);
-            year =  Utils.getCurrentYear(date);
-        }
+        month = Utils.getCurrentMonth(date);
+        year =  Utils.getCurrentYear(date);
 
         return recurringTrackerRepository
                 .existsByHostelIdAndCreationDayAndCreationMonthAndCreationYear(hostelId, day, month, year);

@@ -10,10 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class BillingRulesService {
@@ -70,7 +67,7 @@ public class BillingRulesService {
             calendar.add(Calendar.MONTH, -1);
         }
 
-        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate);
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate - 1);
 
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
@@ -89,5 +86,85 @@ public class BillingRulesService {
 
     public List<BillingRules> getLatestBillingRulesByDays(Set<Integer> days, String billingType) {
         return billingRuleRepository.getLatestBillingRulesByDays(days, billingType);
+    }
+
+    public Map<String, BillingDates> getBillingDatesBulk(Set<String> hostelIds, Date baseDate) {
+
+        if (hostelIds == null || hostelIds.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        List<BillingRules> billingRulesList =
+                billingRuleRepository.findLatestBillingRulesByHostelIds(hostelIds);
+
+        Map<String, BillingDates> result = new HashMap<>();
+
+        for (BillingRules billingRules : billingRulesList) {
+
+            String hostelId = billingRules.getHostel().getHostelId();
+
+            BillingDates billingDates = computeBillingDates(billingRules, baseDate);
+
+            result.put(hostelId, billingDates);
+        }
+
+        return result;
+    }
+
+    public BillingDates computeBillingDates(BillingRules billingRules, Date dateJoiningDate) {
+
+        int billStartDate = billingRules != null ? billingRules.getBillingStartDate() : 1;
+        int billingRuleDueDate = billingRules != null ? billingRules.getBillDueDays() : 10;
+
+        boolean hasGracePeriod = false;
+        Integer gracePeriodDays = 0;
+        String typeOfBilling = null;
+        String billingModel = null;
+        if (billingRules != null){
+            hasGracePeriod = billingRules.isHasGracePeriod();
+            gracePeriodDays = billingRules.getGracePeriodDays() != null ? billingRules.getGracePeriodDays() : 0;
+            typeOfBilling = billingRules.getTypeOfBilling();
+            billingModel = billingRules.getBillingModel();
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(dateJoiningDate);
+
+        if (billingRules != null && BillingType.JOINING_DATE_BASED.name().equals(typeOfBilling)) {
+
+            calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
+            Date endDate = Utils.findLastDate(billStartDate, calendar.getTime());
+
+            return new BillingDates(
+                    calendar.getTime(),
+                    endDate,
+                    null,
+                    billingRuleDueDate,
+                    hasGracePeriod,
+                    gracePeriodDays,
+                    typeOfBilling,
+                    billingModel
+            );
+        }
+
+        calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
+
+        if (Utils.compareWithTwoDates(dateJoiningDate, calendar.getTime()) < 0) {
+            calendar.add(Calendar.MONTH, -1);
+        }
+
+        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate - 1);
+        Date endDate = Utils.findLastDate(billStartDate, calendar.getTime());
+
+        return new BillingDates(
+                calendar.getTime(),
+                endDate,
+                dueDate,
+                billingRuleDueDate,
+                hasGracePeriod,
+                gracePeriodDays,
+                typeOfBilling,
+                billingModel
+        );
     }
 }
