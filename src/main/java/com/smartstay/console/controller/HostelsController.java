@@ -80,6 +80,12 @@ public class HostelsController {
                 billingModelFilterBy, billingCycleStartDay);
     }
 
+    @GetMapping("/recurring/month")
+    public ResponseEntity<?> getRecurringMonthData(@RequestParam(value = "month") int month,
+                                                   @RequestParam(value = "year") int year){
+        return hostelsService.getMonthlyRecurringSummary(month, year);
+    }
+
     @PostMapping("/recurring")
     public ResponseEntity<?> generateRecurring(@RequestBody List<HostelIdPayload> payloads){
         return hostelsService.generateRecurring(payloads);

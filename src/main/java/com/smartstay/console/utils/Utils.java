@@ -82,6 +82,7 @@ public class Utils {
     public static final String INVALID_RECURRING_CYCLE_FOR_TENANT = "Tenant joined after billing cycle";
     public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
     public static final String NO_CUSTOMER_FOUND = "No tenant found";
+    public static final String INVALID_MONTH = "Month must be from 1 to 12";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
