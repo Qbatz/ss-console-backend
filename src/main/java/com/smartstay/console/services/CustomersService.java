@@ -71,7 +71,6 @@ public class CustomersService {
     @Autowired
     private BankingService bankingService;
 
-
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
     }
@@ -353,5 +352,22 @@ public class CustomersService {
 
     public void updateCustomersFromRecurring(Customers customers) {
         customersRepository.save(customers);
+    }
+
+    public List<Customers> getCustomersByName(String name){
+        return customersRepository
+                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(name, name);
+    }
+
+    public List<Customers> getCustomersByDays(Set<Integer> daySet){
+        return customersRepository.findByDaySet(daySet);
+    }
+
+    public Page<Customers> getPaginatedCustomersByIds(Set<String> customerIds, Pageable pageable) {
+        return customersRepository.findAllByCustomerIdInOrderByJoiningDateDesc(customerIds, pageable);
+    }
+
+    public Customers getCustomerInformation(String customerId) {
+        return customersRepository.findById(customerId).orElse(null);
     }
 }

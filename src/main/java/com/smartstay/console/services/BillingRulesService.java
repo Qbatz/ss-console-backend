@@ -31,8 +31,8 @@ public class BillingRulesService {
         return billingRuleRepository.findCurrentBillingRules(hostelId);
     }
 
-    public List<BillingRules> getLatestBillingRulesByHostelIds(Set<String> hostelIds) {
-        return billingRuleRepository.findLatestBillingRulesByHostelIds(hostelIds);
+    public List<BillingRules> getLatestBillingRulesByHostelIdsAndBillingType(Set<String> hostelIds, String billingType) {
+        return billingRuleRepository.findLatestBillingRulesByHostelIdsAndBillingType(hostelIds, billingType);
     }
 
     public BillingDates getBillingRuleByDateAndHostelId(String hostelId, Date dateJoiningDate) {
