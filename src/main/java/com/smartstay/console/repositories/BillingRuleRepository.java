@@ -28,8 +28,10 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
             ) latest
             ON br.hostel_id = latest.hostel_id
             AND br.created_at = latest.max_created_at
+            WHERE br.type_of_billing = :billingType
             """, nativeQuery = true)
-    List<BillingRules> findLatestBillingRulesByHostelIds(@Param("hostelIds") Set<String> hostelIds);
+    List<BillingRules> findLatestBillingRulesByHostelIdsAndBillingType(@Param("hostelIds") Set<String> hostelIds,
+                                                                       @Param("billingType") String billingType);
 
     @Query("""
             SELECT b

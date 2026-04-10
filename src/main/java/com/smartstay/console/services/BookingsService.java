@@ -42,4 +42,8 @@ public class BookingsService {
     public List<BookingsV1> getActiveBookingsByHostelIds(Set<String> hostelIds) {
         return bookingsRepository.findBookingsByHostelIds(hostelIds);
     }
+
+    public BookingsV1 getBookingInfoByCustomerId(String customerId) {
+        return bookingsRepository.findByCustomerId(customerId);
+    }
 }

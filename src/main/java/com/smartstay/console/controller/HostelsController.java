@@ -1,5 +1,6 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.services.HostelsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -89,5 +90,29 @@ public class HostelsController {
                                                            @RequestParam(value = "page", defaultValue = "0") int page,
                                                            @RequestParam(value = "size", defaultValue = "10") int size){
         return hostelsService.getRecurringHistory(hostelId, page, size);
+    }
+
+    @GetMapping("/tenant-recurring")
+    public ResponseEntity<?> getTenantRecurring(@RequestParam(value = "page", defaultValue = "0") int page,
+                                                @RequestParam(value = "size", defaultValue = "10") int size,
+                                                @RequestParam(value = "name", required = false) String name,
+                                                @RequestParam(defaultValue = "TODAY") String filterBy,
+                                                @RequestParam(defaultValue = "ALL") String statusFilterBy,
+                                                @RequestParam(defaultValue = "ALL") String billingModelFilterBy,
+                                                @RequestParam(defaultValue = "0") int billingCycleStartDay){
+        return hostelsService.getTenantRecurring(page, size, name, filterBy, statusFilterBy,
+                billingModelFilterBy, billingCycleStartDay);
+    }
+
+    @PostMapping("/tenant-recurring")
+    public ResponseEntity<?> generateTenantRecurring(@RequestBody List<CustomerIdPayload> payloads){
+        return hostelsService.generateTenantRecurring(payloads);
+    }
+
+    @GetMapping("/tenant-recurring/{tenantId}")
+    public ResponseEntity<?> getTenantRecurringHistoryByHostelId(@PathVariable("tenantId") String tenantId,
+                                                                 @RequestParam(value = "page", defaultValue = "0") int page,
+                                                                 @RequestParam(value = "size", defaultValue = "10") int size){
+        return hostelsService.getTenantRecurringHistory(tenantId, page, size);
     }
 }
