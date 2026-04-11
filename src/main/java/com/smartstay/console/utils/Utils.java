@@ -78,7 +78,6 @@ public class Utils {
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
     public static final String INVALID_DISCOUNT_PERCENTAGE = "Invalid discount percentage";
     public static final String TRIAL_PLAN_NOT_ALLOWED = "Trial plan not allowed";
-    public static final String INVALID_RECURRING_CYCLE_FOR_HOSTEL = "Hostel created after billing cycle";
     public static final String INVALID_RECURRING_CYCLE_FOR_TENANT = "Tenant joined after billing cycle";
     public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
     public static final String NO_CUSTOMER_FOUND = "No tenant found";

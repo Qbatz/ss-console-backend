@@ -1360,15 +1360,6 @@ public class HostelsService {
 
             Date currentBillStartDate = billingDates.currentBillStartDate();
 
-            if (isPostPaid) {
-                Date hostelCreatedDate = Utils.getStartOfDay(hostel.getCreatedAt());
-                Date cycleStart = Utils.getStartOfDay(currentBillStartDate);
-
-                if (hostelCreatedDate.after(cycleStart)) {
-                    return new ResponseEntity<>(Utils.INVALID_RECURRING_CYCLE_FOR_HOSTEL, HttpStatus.BAD_REQUEST);
-                }
-            }
-
             if (recurringTrackerService.checkRecurringTrackerExists(hostelId, billingDay, currentBillStartDate)){
                 return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
             }
@@ -2285,18 +2276,12 @@ public class HostelsService {
             }
 
             Date joinBasedStartDate = joinBasedBillingDates.currentBillStartDate();
-            Date joinBasedEndDate = joinBasedBillingDates.currentBillEndDate();
 
             Date cycleStart = Utils.getStartOfDay(joinBasedStartDate);
-            Date cycleEnd = Utils.getStartOfDay(joinBasedEndDate);
             Date tenantJoinedDate = Utils.getStartOfDay(joinedDate);
 
             if (isPrePaid) {
-                if (tenantJoinedDate.after(cycleEnd)) {
-                    return new ResponseEntity<>(Utils.INVALID_RECURRING_CYCLE_FOR_TENANT, HttpStatus.BAD_REQUEST);
-                }
-            } else if (isPostPaid){
-                if (tenantJoinedDate.after(cycleStart)) {
+                if (!tenantJoinedDate.before(cycleStart)) {
                     return new ResponseEntity<>(Utils.INVALID_RECURRING_CYCLE_FOR_TENANT, HttpStatus.BAD_REQUEST);
                 }
             }
