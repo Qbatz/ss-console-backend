@@ -489,26 +489,15 @@ public class Utils {
 
     public static boolean isSameBillingCycle(int billingStartDay,
                                              RecurringTracker tracker,
-                                             boolean isPostpaid) {
+                                             Date cycleStartDate) {
 
         if (tracker == null || tracker.getCreationDay() == null ||
                 tracker.getCreationMonth() == null || tracker.getCreationYear() == null) {
             return false;
         }
 
-        LocalDate today = LocalDate.now();
-
-        int expectedMonth;
-        int expectedYear;
-
-        if (isPostpaid) {
-            YearMonth prev = YearMonth.from(today).minusMonths(1);
-            expectedMonth = prev.getMonthValue();
-            expectedYear = prev.getYear();
-        } else {
-            expectedMonth = today.getMonthValue();
-            expectedYear = today.getYear();
-        }
+        int expectedMonth = getCurrentMonth(cycleStartDate);
+        int expectedYear = getCurrentYear(cycleStartDate);
 
         return tracker.getCreationDay() == billingStartDay
                 && tracker.getCreationMonth() == expectedMonth
@@ -517,26 +506,15 @@ public class Utils {
 
     public static boolean isSameBillingCycle(int billingStartDay,
                                              CustomerRecurringTracker tracker,
-                                             boolean isPostpaid) {
+                                             Date cycleStartDate) {
 
         if (tracker == null || tracker.getCreationDay() == null ||
                 tracker.getCreationMonth() == null || tracker.getCreationYear() == null) {
             return false;
         }
 
-        LocalDate today = LocalDate.now();
-
-        int expectedMonth;
-        int expectedYear;
-
-        if (isPostpaid) {
-            YearMonth prev = YearMonth.from(today).minusMonths(1);
-            expectedMonth = prev.getMonthValue();
-            expectedYear = prev.getYear();
-        } else {
-            expectedMonth = today.getMonthValue();
-            expectedYear = today.getYear();
-        }
+        int expectedMonth = getCurrentMonth(cycleStartDate);
+        int expectedYear = getCurrentYear(cycleStartDate);
 
         return tracker.getCreationDay() == billingStartDay
                 && tracker.getCreationMonth() == expectedMonth

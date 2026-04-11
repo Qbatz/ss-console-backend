@@ -2,6 +2,7 @@ package com.smartstay.console.Mapper.hostels;
 
 import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.ennum.BillingModel;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.responses.hostels.RecurringHistoryRes;
@@ -19,6 +20,7 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
     Users owner;
     List<BookingsV1> bookings;
     BillingRules billingRules;
+    BillingDates billingDates;
     RecurringTracker latestRecurringTracker;
     int page;
     int size;
@@ -29,6 +31,7 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
                                      Users owner,
                                      List<BookingsV1> bookings,
                                      BillingRules billingRules,
+                                     BillingDates billingDates,
                                      RecurringTracker latestRecurringTracker,
                                      int page,
                                      int size,
@@ -38,6 +41,7 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
         this.owner = owner;
         this.bookings = bookings;
         this.billingRules = billingRules;
+        this.billingDates = billingDates;
         this.latestRecurringTracker = latestRecurringTracker;
         this.page = page;
         this.size = size;
@@ -80,18 +84,27 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
         }
 
         Date today = new Date();
+        Date cycleStartDate;
+        Date cycleEndDate;
+        Date cycleDate;
         int startDay = billingRules.getBillingStartDate();
-        Date cycleDate = today;
-        if (isPostpaid) {
-            cycleDate = Utils.getPreviousMonthDate(today);
+        int endDay;
+        if (billingDates != null){
+            cycleStartDate = billingDates.currentBillStartDate();
+            cycleEndDate = billingDates.currentBillEndDate();
+        } else {
+            cycleDate = today;
+            if (isPostpaid) {
+                cycleDate = Utils.getPreviousMonthDate(today);
+            }
+
+            int month = Utils.getCurrentMonth(cycleDate);
+            int year = Utils.getCurrentYear(cycleDate);
+
+            cycleStartDate = Utils.getDateFromDay(startDay, month, year);
+            cycleEndDate = Utils.getEndDate(startDay, month, year);
         }
-        int endDay = Utils.calculateEndDay(startDay, cycleDate);
-
-        int month = Utils.getCurrentMonth(cycleDate);
-        int year = Utils.getCurrentYear(cycleDate);
-
-        Date startDate = Utils.getDateFromDay(startDay, month, year);
-        Date endDate = Utils.getEndDate(startDay, month, year);
+        endDay = Utils.calculateEndDay(startDay, cycleStartDate);
 
         HostelPlan hostelPlan = hostel.getHostelPlan();
         boolean isSubscriptionActive = false;
@@ -109,15 +122,16 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
             nextRecurringDate = Utils.getNextMonthDate(latestRecurringTracker.getCreationDay(),
                     latestRecurringTracker.getCreationMonth(), latestRecurringTracker.getCreationYear());
             recurringStatus = Utils.isSameBillingCycle(
-                    billingRules.getBillingStartDate(), latestRecurringTracker, isPostpaid);
+                    billingRules.getBillingStartDate(), latestRecurringTracker, cycleStartDate);
         }
 
         return new RecurringTrackerRes(hostel.getHostelId(), hostelType, hostelName, Utils.getInitials(hostelName),
                 hostel.getMobile(), hostel.getEmailId(), hostel.getHouseNo(), hostel.getStreet(), hostel.getLandmark(),
                 hostel.getCity(), hostel.getState(), hostel.getCountry(), hostel.getPincode(), fullAddress, hostel.getMainImage(),
                 ownerInfo, noOfActiveTenants, invoiceAboutToBeGenerated, billingRules.getTypeOfBilling(), billingRules.getBillingModel(),
-                startDay, endDay, Utils.dateToString(startDate), Utils.dateToString(endDate), Utils.dateToString(lastRecurringDate),
-                Utils.dateToString(nextRecurringDate), isSubscriptionActive, recurringStatus, page, size,
-                paginatedRecurringTrackers.getTotalElements(), paginatedRecurringTrackers.getTotalPages(), recurringHistory);
+                startDay, endDay, Utils.dateToString(cycleStartDate), Utils.dateToString(cycleEndDate),
+                Utils.dateToString(lastRecurringDate), Utils.dateToString(nextRecurringDate), isSubscriptionActive,
+                recurringStatus, page, size, paginatedRecurringTrackers.getTotalElements(), paginatedRecurringTrackers.getTotalPages(),
+                recurringHistory);
     }
 }
