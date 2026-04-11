@@ -70,19 +70,6 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
 
         boolean isPostpaid = BillingModel.POSTPAID.name().equals(billingRules.getBillingModel());
 
-        int invoiceAboutToBeGenerated = 0;
-        if (!bookings.isEmpty()){
-            int billingDay = billingRules.getBillingStartDate();
-
-            if (!isPostpaid){
-                invoiceAboutToBeGenerated = (int) bookings.stream()
-                        .filter(customer -> Utils.isEligibleForInvoice(customer, billingDay))
-                        .count();
-            } else {
-                invoiceAboutToBeGenerated = bookings.size();
-            }
-        }
-
         Date today = new Date();
         Date cycleStartDate;
         Date cycleEndDate;
@@ -105,6 +92,17 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
             cycleEndDate = Utils.getEndDate(startDay, month, year);
         }
         endDay = Utils.calculateEndDay(startDay, cycleStartDate);
+
+        int invoiceAboutToBeGenerated = 0;
+        if (!bookings.isEmpty()){
+            if (!isPostpaid){
+                invoiceAboutToBeGenerated = (int) bookings.stream()
+                        .filter(customer -> Utils.isEligibleForInvoice(customer, cycleStartDate))
+                        .count();
+            } else {
+                invoiceAboutToBeGenerated = bookings.size();
+            }
+        }
 
         HostelPlan hostelPlan = hostel.getHostelPlan();
         boolean isSubscriptionActive = false;

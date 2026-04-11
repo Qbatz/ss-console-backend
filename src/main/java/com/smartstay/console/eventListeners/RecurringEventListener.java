@@ -116,16 +116,13 @@ public class RecurringEventListener {
         customersList.forEach(item -> {
 
             Date joiningDate = item.getJoiningDate();
-            int joiningDay = Utils.getDayOfMonth(joiningDate);
-            int billingDay = recurringEvents.getBillingDay();
-            LocalTime autoInvoiceTime = LocalTime.of(2, 0);
+            Date billingCycleStartDate = recurringEvents.getBillingCycleStartDate();
 
-            // joined after billing cycle started → auto invoice already created
-            if (joiningDay > billingDay){
-                return;
-            }
-            if (joiningDay == billingDay &&
-                    Utils.dateToLocalTime(joiningDate).isAfter(autoInvoiceTime)) {
+            joiningDate = Utils.getStartOfDay(joiningDate);
+            billingCycleStartDate = Utils.getStartOfDay(billingCycleStartDate);
+
+            // Skip if joined on or after billing cycle start
+            if (!joiningDate.before(billingCycleStartDate)) {
                 return;
             }
 

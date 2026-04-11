@@ -66,13 +66,15 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
         Date today = new Date();
 
         int startDay = billingRules.getBillingStartDate();
-        Date cycleStartDate = today;
+        Date cycleStartDate;
         int endDay;
         if (billingDates != null){
             cycleStartDate = billingDates.currentBillStartDate();
         } else {
             if (isPostpaid) {
                 cycleStartDate = Utils.getPreviousMonthDate(today);
+            } else {
+                cycleStartDate = today;
             }
         }
         endDay = Utils.calculateEndDay(startDay, cycleStartDate);
@@ -110,11 +112,9 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
 
         int invoiceAboutToBeGenerated = 0;
         if (bookings != null){
-            int billingDay = billingRules.getBillingStartDate();
-
             if (!isPostpaid){
                 invoiceAboutToBeGenerated = (int) bookings.stream()
-                        .filter(customer -> Utils.isEligibleForInvoice(customer, billingDay))
+                        .filter(customer -> Utils.isEligibleForInvoice(customer, cycleStartDate))
                         .count();
             } else {
                 invoiceAboutToBeGenerated = bookings.size();

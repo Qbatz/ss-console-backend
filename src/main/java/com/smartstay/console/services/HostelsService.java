@@ -1375,7 +1375,7 @@ public class HostelsService {
 
             try {
                 if (isPrePaid){
-                    applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId, billingDay));
+                    applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId, billingDay, currentBillStartDate));
                 } else if (isPostPaid) {
                     applicationEventPublisher.publishEvent(new PostpaidRecurringEvents(this, hostelId, billingDay));
                 }

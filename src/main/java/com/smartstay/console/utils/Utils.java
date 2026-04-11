@@ -671,24 +671,17 @@ public class Utils {
         return Date.from(nextDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
-    public static boolean isEligibleForInvoice(BookingsV1 booking, int billingDay) {
+    public static boolean isEligibleForInvoice(BookingsV1 booking, Date billingCycleStartDate) {
 
-        if (booking.getJoiningDate() == null) return false;
-
-        Date joiningDate = booking.getJoiningDate();
-
-        int joiningDay = getDayOfMonth(joiningDate);
-
-        LocalTime autoInvoiceTime = LocalTime.of(2, 0);
-
-        // joined after billing cycle started → skip
-        if (joiningDay > billingDay) {
+        if (booking.getJoiningDate() == null || billingCycleStartDate == null) {
             return false;
         }
 
-        // joined on same day but after invoice time → skip
-        if (joiningDay == billingDay &&
-                dateToLocalTime(joiningDate).isAfter(autoInvoiceTime)) {
+        Date joiningDate = Utils.getStartOfDay(booking.getJoiningDate());
+        Date cycleStartDate = Utils.getStartOfDay(billingCycleStartDate);
+
+        // Skip if joined on or after billing cycle start
+        if (!joiningDate.before(cycleStartDate)) {
             return false;
         }
 
