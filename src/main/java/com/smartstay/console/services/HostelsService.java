@@ -844,45 +844,104 @@ public class HostelsService {
             }
         }
 
+        List<BillingRules> latestBillingRulesList = billingRulesService
+                .getLatestBillingRulesByDays(daySet, billingType);
+
+        long totalProperties = latestBillingRulesList.size();
+
+        Set<String> latestHostelIds = latestBillingRulesList.stream()
+                .map(b -> b.getHostel().getHostelId())
+                .collect(Collectors.toSet());
+
+        List<RecurringTracker> trackers =
+                recurringTrackerService.getLatestRecurringTrackersByHostelIds(latestHostelIds);
+
+        Map<String, RecurringTracker> trackerMap = trackers.stream()
+                .collect(Collectors.toMap(
+                        RecurringTracker::getHostelId,
+                        Function.identity(),
+                        (a, b) -> a
+                ));
+
+        Set<String> createdByIds = trackers.stream()
+                .map(RecurringTracker::getCreatedBy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<Agent> agents = createdByIds.isEmpty()
+                ? Collections.emptyList()
+                : agentService.getAgentsByIds(createdByIds);
+
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        agent1 -> agent1));
+
+        List<HostelPlan> plans = hostelPlanService.getPlansByHostelIds(latestHostelIds);
+
+        Map<String, HostelPlan> planMap = plans.stream()
+                .collect(Collectors.toMap(
+                        p -> p.getHostel().getHostelId(),
+                        Function.identity()
+                ));
+
+        long subscriptionExpiredCount = latestBillingRulesList.stream()
+                .filter(b -> {
+                    HostelPlan hp = planMap.get(b.getHostel().getHostelId());
+
+                    return hp == null
+                            || hp.getCurrentPlanEndsAt() == null
+                            || hp.getCurrentPlanEndsAt().before(today);
+                }).count();
+
+        long recurringPendingCount = latestBillingRulesList.stream()
+                .filter(b -> {
+                    RecurringTracker r = trackerMap.get(b.getHostel().getHostelId());
+
+                    if (r == null) return true;
+
+                    int billingDay = b.getBillingStartDate();
+
+                    String billingModel = b.getBillingModel();
+                    boolean isPrePaid = BillingModel.PREPAID.name().equals(billingModel);
+                    boolean isPostPaid = BillingModel.POSTPAID.name().equals(billingModel);
+
+                    BillingDates billingDates = null;
+
+                    if (isPrePaid){
+                        billingDates = billingRulesService.computeBillingDates(b, today);
+                    } else if (isPostPaid) {
+                        Date previousMonthDate = Utils.getPreviousMonthDate(today);
+                        billingDates = billingRulesService.computeBillingDates(b, previousMonthDate);
+                    }
+
+                    if (billingDates == null) {
+                        return true;
+                    }
+
+                    Date cycleStartDate = billingDates.currentBillStartDate();
+
+                    int cycleMonth = Utils.getCurrentMonth(cycleStartDate);
+                    int cycleYear = Utils.getCurrentYear(cycleStartDate);
+
+                    return !(r.getCreationDay() == billingDay
+                            && r.getCreationMonth() == cycleMonth
+                            && r.getCreationYear() == cycleYear);
+                }).count();
+
         boolean isStatusFilterApplied = !statusFilterOption.name().equals(RecurringStatusFilterOptions.ALL.name());
         boolean isHostelNameFilterApplied = hostelName != null && !hostelName.isBlank();
 
         Set<String> statusFilteredHostelIds = null;
         if (isStatusFilterApplied) {
-            List<HostelV1> allHostels = hostelRepository.findAllHostels();
-            Set<String> allHostelIds = allHostels.stream()
-                    .map(HostelV1::getHostelId)
-                    .collect(Collectors.toSet());
-            Map<String, HostelV1> allHostelsMap = allHostels.stream()
-                    .collect(Collectors.toMap(HostelV1::getHostelId,
-                            Function.identity(), (a, b) -> a));
-
-            List<BillingRules> latestBillingRules = billingRulesService
-                    .getLatestBillingRulesByHostelIdsAndBillingType(allHostelIds, billingType);
-            Map<String, BillingRules> latestBillingRulesMap = latestBillingRules.stream()
-                    .collect(Collectors.toMap(br -> br.getHostel().getHostelId(),
-                            br -> br, (a, b) -> a));
-            Set<String> billingRulesHostelIds = latestBillingRules.stream()
-                    .map(br -> br.getHostel() != null ? br.getHostel().getHostelId() : null)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
-
-            List<RecurringTracker> latestRecurringTrackers = recurringTrackerService
-                    .getLatestRecurringTrackersByHostelIds(billingRulesHostelIds);
-            Map<String, RecurringTracker> latestRecurringTrackersMap = latestRecurringTrackers.stream()
-                            .collect(Collectors.toMap(RecurringTracker::getHostelId,
-                                    Function.identity(), (a, b) -> a));
 
             Set<String> eligibleHostelIds = new HashSet<>();
             Set<String> generatedHostelIds = new HashSet<>();
 
-            for (String hostelId : billingRulesHostelIds) {
+            for (BillingRules billingRules : latestBillingRulesList) {
 
-                HostelV1 hostel = allHostelsMap.get(hostelId);
-                BillingRules billingRules = latestBillingRulesMap.get(hostelId);
-                RecurringTracker tracker = latestRecurringTrackersMap.get(hostelId);
-
-                if (billingRules == null || hostel == null) continue;
+                String hostelId = billingRules.getHostel().getHostelId();
+                HostelV1 hostel = billingRules.getHostel();
+                RecurringTracker tracker = trackerMap.get(hostelId);
 
                 int billingDay = billingRules.getBillingStartDate();
 
@@ -992,8 +1051,9 @@ public class HostelsService {
             response.put("pageSize", size);
             response.put("totalItems", 0);
             response.put("totalPages", 0);
-            response.put("recurringPendingCount", 0);
-            response.put("subscriptionExpiredCount", 0);
+            response.put("totalProperties", totalProperties);
+            response.put("recurringPendingCount", recurringPendingCount);
+            response.put("subscriptionExpiredCount", subscriptionExpiredCount);
             response.put("filterOptions", filterOptions);
             response.put("statusFilterOptions", statusFilterOptions);
             response.put("billingModelFilterOptions", billingModelFilterOptions);
@@ -1007,77 +1067,6 @@ public class HostelsService {
         if (finalHostelIds.isEmpty()) {
             finalHostelIds = null;
         }
-
-        List<BillingRules> latestBillingRulesList = billingRulesService
-                .getLatestBillingRulesByDays(daySet, billingType);
-
-        long totalProperties = latestBillingRulesList.size();
-
-        Set<String> latestHostelIds = latestBillingRulesList.stream()
-                .map(b -> b.getHostel().getHostelId())
-                .collect(Collectors.toSet());
-
-        List<RecurringTracker> trackers =
-                recurringTrackerService.getLatestRecurringTrackersByHostelIds(latestHostelIds);
-
-        Map<String, RecurringTracker> trackerMap = trackers.stream()
-                .collect(Collectors.toMap(
-                        RecurringTracker::getHostelId,
-                        Function.identity(),
-                        (a, b) -> a
-                ));
-
-        List<HostelPlan> plans = hostelPlanService.getPlansByHostelIds(latestHostelIds);
-
-        Map<String, HostelPlan> planMap = plans.stream()
-                .collect(Collectors.toMap(
-                        p -> p.getHostel().getHostelId(),
-                        Function.identity()
-                ));
-
-        long subscriptionExpiredCount = latestBillingRulesList.stream()
-                .filter(b -> {
-                    HostelPlan hp = planMap.get(b.getHostel().getHostelId());
-
-                    return hp == null
-                            || hp.getCurrentPlanEndsAt() == null
-                            || hp.getCurrentPlanEndsAt().before(today);
-                }).count();
-
-        long recurringPendingCount = latestBillingRulesList.stream()
-                .filter(b -> {
-                    RecurringTracker r = trackerMap.get(b.getHostel().getHostelId());
-
-                    if (r == null) return true;
-
-                    int billingDay = b.getBillingStartDate();
-
-                    String billingModel = b.getBillingModel();
-                    boolean isPrePaid = BillingModel.PREPAID.name().equals(billingModel);
-                    boolean isPostPaid = BillingModel.POSTPAID.name().equals(billingModel);
-
-                    BillingDates billingDates = null;
-
-                    if (isPrePaid){
-                        billingDates = billingRulesService.computeBillingDates(b, today);
-                    } else if (isPostPaid) {
-                        Date previousMonthDate = Utils.getPreviousMonthDate(today);
-                        billingDates = billingRulesService.computeBillingDates(b, previousMonthDate);
-                    }
-
-                    if (billingDates == null) {
-                        return true;
-                    }
-
-                    Date cycleStartDate = billingDates.currentBillStartDate();
-
-                    int cycleMonth = Utils.getCurrentMonth(cycleStartDate);
-                    int cycleYear = Utils.getCurrentYear(cycleStartDate);
-
-                    return !(r.getCreationDay() == billingDay
-                            && r.getCreationMonth() == cycleMonth
-                            && r.getCreationYear() == cycleYear);
-                }).count();
 
         Page<BillingRules> paginatedBillingRules = billingRulesService
                 .getPaginatedBillingRulesByDays(daySet, billingType, finalHostelIds, billingModelFilterOption.name(), pageable);
@@ -1102,27 +1091,6 @@ public class HostelsService {
                 .collect(Collectors.toMap(Users::getParentId,
                         user -> user));
 
-        List<RecurringTracker> recurringTrackers = hostelIds.isEmpty()
-                ? Collections.emptyList()
-                : recurringTrackerService.getLatestRecurringTrackersByHostelIds(hostelIds);
-
-        Map<String, RecurringTracker> recurringTrackerMap = recurringTrackers.stream()
-                .collect(Collectors.toMap(RecurringTracker::getHostelId,
-                        recurringTracker -> recurringTracker));
-
-        Set<String> createdByIds = recurringTrackers.stream()
-                .map(RecurringTracker::getCreatedBy)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        List<Agent> agents = createdByIds.isEmpty()
-                ? Collections.emptyList()
-                : agentService.getAgentsByIds(createdByIds);
-
-        Map<String, Agent> agentMap = agents.stream()
-                .collect(Collectors.toMap(Agent::getAgentId,
-                        agent1 -> agent1));
-
         List<BookingsV1> bookings = bookingsService.getActiveBookingsByHostelIds(hostelIds);
 
         Map<String, List<BookingsV1>> bookingHostelMap = bookings.stream()
@@ -1146,7 +1114,7 @@ public class HostelsService {
                             return new HostelRecurringMapper(
                                     ownerMap.get(billingRules.getHostel().getParentId()),
                                     hotelTypeMap.get(billingRules.getHostel().getHostelType()),
-                                    recurringTrackerMap.get(billingRules.getHostel().getHostelId()),
+                                    trackerMap.getOrDefault(billingRules.getHostel().getHostelId(), null),
                                     agentMap,
                                     bookingHostelMap.get(billingRules.getHostel().getHostelId()),
                                     billingDates
@@ -1664,56 +1632,105 @@ public class HostelsService {
             }
         }
 
+        List<Customers> daySetCustomers = customersService
+                .getCustomersByDays(daySet);
+
+        Map<String, Customers> daySetCustomersMap = daySetCustomers.stream()
+                .collect(Collectors.toMap(Customers::getCustomerId,
+                        Function.identity(), (a, b) -> a));
+
+        Set<String> daySetCustomerIds = daySetCustomers.stream()
+                .map(Customers::getCustomerId)
+                .collect(Collectors.toSet());
+        Set<String> hostelIds = daySetCustomers.stream()
+                .map(Customers::getHostelId)
+                .collect(Collectors.toSet());
+
+        List<HostelV1> hostels = hostelRepository.findAllByHostelIdIn(hostelIds);
+
+        Map<String, HostelV1> hostelMap = hostels.stream()
+                .collect(Collectors.toMap(HostelV1::getHostelId,
+                        Function.identity(), (a, b) -> a));
+
+        Set<String> parentIds = hostels.stream()
+                .map(HostelV1::getParentId)
+                .collect(Collectors.toSet());
+
+        List<BillingRules> billingRulesList = billingRulesService
+                .getLatestBillingRulesByHostelIdsAndBillingType(hostelIds, billingType);
+        Map<String, BillingRules> billingRulesMap = billingRulesList.stream()
+                .collect(Collectors.toMap(br -> br.getHostel().getHostelId(),
+                        br -> br, (a, b) -> a));
+
+        Set<String> billingTypeFilteredHostelIds = billingRulesList.stream()
+                .map(br -> br.getHostel().getHostelId())
+                .collect(Collectors.toSet());
+        List<BookingsV1> activeCustomers = bookingsService
+                .getActiveBookingsByHostelIds(billingTypeFilteredHostelIds);
+
+        Map<String, List<BookingsV1>> activeCustomersMap = activeCustomers.stream()
+                .collect(Collectors.groupingBy(BookingsV1::getHostelId));
+
+        Set<String> activeCustomersIds = activeCustomers.stream()
+                .map(BookingsV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        Set<String> activeDaySetCustomerIds = new HashSet<>(daySetCustomerIds);
+        activeDaySetCustomerIds.retainAll(activeCustomersIds);
+
+        totalTenants = activeDaySetCustomerIds.size();
+
+        for (String customerId : activeDaySetCustomerIds) {
+            Customers customer = daySetCustomersMap.getOrDefault(customerId, null);
+            if (customer != null) {
+                Date joinedDate = customer.getJoiningDate() != null ? customer.getJoiningDate() : customer.getExpJoiningDate();
+                if (joinedDate != null) {
+                    int day = Utils.getDayOfMonth(joinedDate);
+                    if (day == Utils.getDayOfMonth(today)){
+                        billingToday++;
+                    } else if (day == Utils.getTomorrowDayOfMonth(today)) {
+                        billingTomorrow++;
+                    }
+                }
+            }
+        }
+
+        List<CustomerRecurringTracker> latestTrackers = customerRecurringTrackerService
+                .getLatestTrackersByCustomerIds(activeDaySetCustomerIds);
+        Map<String, CustomerRecurringTracker> latestTrackerMap = latestTrackers.stream()
+                .collect(Collectors.toMap(CustomerRecurringTracker::getCustomerId,
+                        crt -> crt, (a, b) -> a));
+
+        Set<String> createdByIds = latestTrackers.stream()
+                .map(CustomerRecurringTracker::getCreatedBy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<Agent> agents = createdByIds.isEmpty()
+                ? Collections.emptyList()
+                : agentService.getAgentsByIds(createdByIds);
+
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        agent1 -> agent1, (a, b) -> a));
+
         boolean isStatusFilterApplied = !statusFilterOption.name().equals(RecurringStatusFilterOptions.ALL.name());
         boolean isNameFilterApplied = name != null && !name.isBlank();
 
         Set<String> statusFilteredCustomerIds = null;
         if (isStatusFilterApplied) {
-            List<HostelV1> allHostels = hostelRepository.findAllHostels();
-            Set<String> allHostelIds = allHostels.stream()
-                    .map(HostelV1::getHostelId)
-                    .collect(Collectors.toSet());
-            Map<String, HostelV1> allHostelsMap = allHostels.stream()
-                    .collect(Collectors.toMap(HostelV1::getHostelId,
-                            Function.identity(), (a, b) -> a));
-
-            List<BillingRules> latestBillingRules = billingRulesService
-                    .getLatestBillingRulesByHostelIdsAndBillingType(allHostelIds, billingType);
-            Map<String, BillingRules> latestBillingRulesMap = latestBillingRules.stream()
-                    .collect(Collectors.toMap(br -> br.getHostel().getHostelId(),
-                            br -> br, (a, b) -> a));
-            Set<String> billingRulesHostelIds = latestBillingRules.stream()
-                    .map(br -> br.getHostel() != null ? br.getHostel().getHostelId() : null)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
-
-            List<BookingsV1> bookings = bookingsService.getActiveBookingsByHostelIds(billingRulesHostelIds);
-            Set<String> customerIds = bookings.stream()
-                    .map(BookingsV1::getCustomerId)
-                    .collect(Collectors.toSet());
-
-            List<Customers> customers = customersService.getCustomersByIds(customerIds);
-            Map<String, Customers> customersMap = customers.stream()
-                    .collect(Collectors.toMap(Customers::getCustomerId,
-                            customer -> customer, (a, b) -> a));
-
-            List<CustomerRecurringTracker> latestTrackers = customerRecurringTrackerService
-                    .getLatestTrackersByCustomerIds(customerIds);
-            Map<String, CustomerRecurringTracker> latestTrackerMap = latestTrackers.stream()
-                    .collect(Collectors.toMap(CustomerRecurringTracker::getCustomerId,
-                            crt -> crt, (a, b) -> a));
 
             Set<String> eligibleCustomerIds = new HashSet<>();
             Set<String> generatedCustomerIds = new HashSet<>();
 
-            for (String customerId : customerIds) {
+            for (String customerId : activeDaySetCustomerIds) {
 
-                Customers customer = customersMap.get(customerId);
+                Customers customer = daySetCustomersMap.get(customerId);
                 if (customer == null) {continue;}
 
-                HostelV1 hostel = allHostelsMap.get(customer.getHostelId());
-                BillingRules billingRules = latestBillingRulesMap.get(customer.getHostelId());
-                CustomerRecurringTracker tracker = latestTrackerMap.get(customer.getCustomerId());
+                HostelV1 hostel = hostelMap.get(customer.getHostelId());
+                BillingRules billingRules = billingRulesMap.get(customer.getHostelId());
+                CustomerRecurringTracker tracker = latestTrackerMap.get(customerId);
 
                 if (billingRules == null || hostel == null) continue;
 
@@ -1826,9 +1843,9 @@ public class HostelsService {
             response.put("pageSize", size);
             response.put("totalItems", 0);
             response.put("totalPages", 0);
-            response.put("totalTenants", 0);
-            response.put("billingToday", 0);
-            response.put("billingTomorrow",  0);
+            response.put("totalTenants", totalTenants);
+            response.put("billingToday", billingToday);
+            response.put("billingTomorrow",  billingTomorrow);
             response.put("filterOptions", filterOptions);
             response.put("statusFilterOptions", statusFilterOptions);
             response.put("billingModelFilterOptions", billingModelFilterOptions);
@@ -1844,60 +1861,6 @@ public class HostelsService {
             finalCustomerIds = null;
         }
 
-        List<Customers> daySetCustomers = customersService
-                .getCustomersByDays(daySet);
-
-        Map<String, Customers> daySetCustomersMap = daySetCustomers.stream()
-                .collect(Collectors.toMap(Customers::getCustomerId,
-                        Function.identity(), (a, b) -> a));
-
-        Set<String> daySetCustomerIds = daySetCustomers.stream()
-                .map(Customers::getCustomerId)
-                .collect(Collectors.toSet());
-        Set<String> hostelIds = daySetCustomers.stream()
-                .map(Customers::getHostelId)
-                .collect(Collectors.toSet());
-
-        List<HostelV1> hostels = hostelRepository.findAllByHostelIdIn(hostelIds);
-
-        Map<String, HostelV1> hostelMap = hostels.stream()
-                .collect(Collectors.toMap(HostelV1::getHostelId,
-                        Function.identity(), (a, b) -> a));
-
-        Set<String> parentIds = hostels.stream()
-                .map(HostelV1::getParentId)
-                .collect(Collectors.toSet());
-
-        List<BillingRules> billingRulesList = billingRulesService
-                .getLatestBillingRulesByHostelIdsAndBillingType(hostelIds, billingType);
-
-        Set<String> billingTypeFilteredHostelIds = billingRulesList.stream()
-                .map(br -> br.getHostel().getHostelId())
-                .collect(Collectors.toSet());
-        List<BookingsV1> activeCustomers = bookingsService
-                .getActiveBookingsByHostelIds(billingTypeFilteredHostelIds);
-
-        totalTenants = activeCustomers.size();
-
-        for (BookingsV1 booking : activeCustomers) {
-            Customers customer = daySetCustomersMap.getOrDefault(booking.getCustomerId(), null);
-            if (customer != null) {
-                Date joinedDate = customer.getJoiningDate() != null ? customer.getJoiningDate() : customer.getExpJoiningDate();
-                if (joinedDate != null) {
-                    int day = Utils.getDayOfMonth(joinedDate);
-                    if (day == Utils.getDayOfMonth(today)){
-                        billingToday++;
-                    } else if (day == Utils.getTomorrowDayOfMonth(today)) {
-                        billingTomorrow++;
-                    }
-                }
-            }
-        }
-
-        Map<String, BillingRules> billingRulesMap = billingRulesList.stream()
-                .collect(Collectors.toMap(br -> br.getHostel().getHostelId(),
-                        br -> br, (a, b) -> a));
-
         Set<String> billingModelFilteredHostelIds = billingRulesList.stream()
                 .map(br -> {
                     if (!billingModelFilterOption.name().equals(BillingModelFilterOptions.ALL.name())){
@@ -1912,14 +1875,12 @@ public class HostelsService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        List<BookingsV1> bookings = bookingsService
-                .getActiveBookingsByHostelIds(billingModelFilteredHostelIds);
-        Set<String> bookingCustomerIds = bookings.stream()
+        Set<String> bookingCustomerIds = activeCustomers.stream()
+                .filter(b -> billingModelFilteredHostelIds.contains(b.getHostelId()))
                 .map(BookingsV1::getCustomerId)
                 .collect(Collectors.toSet());
 
         Set<String> finalFilteredCustomerIds = new HashSet<>(daySetCustomerIds);
-
         finalFilteredCustomerIds.retainAll(bookingCustomerIds);
 
         if (finalCustomerIds != null) {
@@ -1934,9 +1895,9 @@ public class HostelsService {
             response.put("pageSize", size);
             response.put("totalItems", 0);
             response.put("totalPages", 0);
-            response.put("totalTenants", 0);
-            response.put("billingToday", 0);
-            response.put("billingTomorrow",  0);
+            response.put("totalTenants", totalTenants);
+            response.put("billingToday", billingToday);
+            response.put("billingTomorrow",  billingTomorrow);
             response.put("filterOptions", filterOptions);
             response.put("statusFilterOptions", statusFilterOptions);
             response.put("billingModelFilterOptions", billingModelFilterOptions);
@@ -1980,9 +1941,9 @@ public class HostelsService {
                 response.put("pageSize", size);
                 response.put("totalItems", 0);
                 response.put("totalPages", 0);
-                response.put("totalTenants", 0);
-                response.put("billingToday", 0);
-                response.put("billingTomorrow",  0);
+                response.put("totalTenants", totalTenants);
+                response.put("billingToday", billingToday);
+                response.put("billingTomorrow",  billingTomorrow);
                 response.put("filterOptions", filterOptions);
                 response.put("statusFilterOptions", statusFilterOptions);
                 response.put("billingModelFilterOptions", billingModelFilterOptions);
@@ -1993,138 +1954,86 @@ public class HostelsService {
                 return new ResponseEntity<>(response, HttpStatus.OK);
             }
 
-           Page<HostelV1> paginatedHostels = hostelRepository
-                   .findAllByHostelIdIn(hostelBasedHostelIds, pageable);
+            Page<HostelV1> paginatedHostels = hostelRepository
+                    .findAllByHostelIdIn(hostelBasedHostelIds, pageable);
 
-           List<HostelV1> hostelBasedHostels = paginatedHostels.getContent();
+            List<HostelV1> hostelBasedHostels = paginatedHostels.getContent();
 
-            List<BookingsV1> activeHostelBasedBookings = bookingsService
-                    .getActiveBookingsByHostelIds(hostelBasedHostelIds);
+            List<HostelTenRecResponse> responseList = hostelBasedHostels.stream()
+                    .map(hostel -> {
+                        Set<String> hostelBasedCusIds = hostelToCustomerIds
+                                .getOrDefault(hostel.getHostelId(), Collections.emptySet());
+                        List<Customers> hostelBasedCustomers = hostelBasedCusIds.stream()
+                                .map(id -> daySetCustomersMap.getOrDefault(id, null))
+                                .filter(Objects::nonNull)
+                                .toList();
 
-            Map<String, List<BookingsV1>> bookingHostelMap = activeHostelBasedBookings.stream()
-                    .collect(Collectors.groupingBy(BookingsV1::getHostelId));
+                        Users owner = ownerMap.getOrDefault(hostel.getParentId(), null);;
+                        HotelType hotelType = hotelTypeMap
+                                .getOrDefault(hostel.getHostelType(), null);
+                        BillingRules hostelBillingRules = billingRulesMap
+                                .getOrDefault(hostel.getHostelId(), null);
 
-            Set<String> paginatedCustomerIds = hostelBasedHostels.stream()
-                    .flatMap(h -> hostelToCustomerIds
-                            .getOrDefault(h.getHostelId(), Collections.emptySet())
-                            .stream())
-                    .collect(Collectors.toSet());
+                        List<CustomerRecurringResponse> tenantList = hostelBasedCustomers.stream()
+                                .map(customer -> {
+                                    CustomerRecurringTracker latestTracker = latestTrackerMap
+                                            .getOrDefault(customer.getCustomerId(), null);
 
-            List<CustomerRecurringTracker> latestTrackers = customerRecurringTrackerService
-                    .getLatestTrackersByCustomerIds(paginatedCustomerIds);
-            Map<String, CustomerRecurringTracker> latestTrackerMap = latestTrackers.stream()
-                    .collect(Collectors.toMap(CustomerRecurringTracker::getCustomerId,
-                            crt -> crt, (a, b) -> a));
+                                    Agent trackerCreatedByAgent = null;
+                                    if (latestTracker != null){
+                                        String trackerCreatedBy = latestTracker.getCreatedBy();
+                                        trackerCreatedByAgent = agentMap
+                                                .getOrDefault(trackerCreatedBy, null);
+                                    }
 
-            Set<String> createdByIds = latestTrackers.stream()
-                    .map(CustomerRecurringTracker::getCreatedBy)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
+                                    BillingDates billingDates = null;
+                                    if (hostelBillingRules != null){
+                                        String billingModel = hostelBillingRules.getBillingModel();
+                                        boolean isPrePaid = BillingModel.PREPAID.name().equals(billingModel);
+                                        boolean isPostPaid = BillingModel.POSTPAID.name().equals(billingModel);
 
-            List<Agent> agents = createdByIds.isEmpty()
-                    ? Collections.emptyList()
-                    : agentService.getAgentsByIds(createdByIds);
+                                        Date joinedDate = customer.getJoiningDate() != null ? customer.getJoiningDate() : customer.getExpJoiningDate();
 
-            Map<String, Agent> agentMap = agents.stream()
-                    .collect(Collectors.toMap(Agent::getAgentId,
-                            agent1 -> agent1, (a, b) -> a));
+                                        if (joinedDate != null) {
+                                            if (isPrePaid){
+                                                billingDates = billingRulesService
+                                                        .computeJoiningBasedBillingDates(hostelBillingRules, joinedDate, today);
+                                            } else if (isPostPaid) {
+                                                Date previousMonthDate = Utils.getPreviousMonthDate(today);
+                                                billingDates = billingRulesService
+                                                        .computeJoiningBasedBillingDates(hostelBillingRules, joinedDate, previousMonthDate);
+                                            }
+                                        }
+                                    }
 
-           List<HostelTenRecResponse> responseList = hostelBasedHostels.stream()
-                   .map(hostel -> {
-                       Set<String> hostelBasedCusIds = hostelToCustomerIds
-                               .getOrDefault(hostel.getHostelId(), Collections.emptySet());
-                       List<Customers> hostelBasedCustomers = hostelBasedCusIds.stream()
-                               .map(id -> daySetCustomersMap.getOrDefault(id, null))
-                               .filter(Objects::nonNull)
-                               .toList();
+                                    return new CustomerRecurringMapper(
+                                            owner,
+                                            hotelType,
+                                            hostel,
+                                            hostelBillingRules,
+                                            billingDates,
+                                            latestTracker,
+                                            trackerCreatedByAgent
+                                    ).apply(customer);
+                                }).toList();
 
-                       Users owner = ownerMap.getOrDefault(hostel.getParentId(), null);;
-                       HotelType hotelType = hotelTypeMap
-                               .getOrDefault(hostel.getHostelType(), null);
-                       BillingRules hostelBillingRules = billingRulesMap
-                               .getOrDefault(hostel.getHostelId(), null);
+                        return new HostelTenRecResMapper(
+                                hostelBillingRules,
+                                owner,
+                                hotelType,
+                                activeCustomersMap.getOrDefault(hostel.getHostelId(), null),
+                                tenantList
+                        ).apply(hostel);
+                    }).toList();
 
-                       List<CustomerRecurringResponse> tenantList = hostelBasedCustomers.stream()
-                               .map(customer -> {
-                                   CustomerRecurringTracker latestTracker = latestTrackerMap
-                                           .getOrDefault(customer.getCustomerId(), null);
-
-                                   Agent trackerCreatedByAgent = null;
-                                   if (latestTracker != null){
-                                       String trackerCreatedBy = latestTracker.getCreatedBy();
-                                       trackerCreatedByAgent = agentMap
-                                               .getOrDefault(trackerCreatedBy, null);
-                                   }
-
-                                   BillingDates billingDates = null;
-                                   if (hostelBillingRules != null){
-                                       String billingModel = hostelBillingRules.getBillingModel();
-                                       boolean isPrePaid = BillingModel.PREPAID.name().equals(billingModel);
-                                       boolean isPostPaid = BillingModel.POSTPAID.name().equals(billingModel);
-
-                                       Date joinedDate = customer.getJoiningDate() != null ? customer.getJoiningDate() : customer.getExpJoiningDate();
-
-                                       if (joinedDate != null) {
-                                           if (isPrePaid){
-                                               billingDates = billingRulesService.computeJoiningBasedBillingDates(hostelBillingRules, joinedDate, today);
-                                           } else if (isPostPaid) {
-                                               Date previousMonthDate = Utils.getPreviousMonthDate(today);
-                                               billingDates = billingRulesService.computeJoiningBasedBillingDates(hostelBillingRules, joinedDate, previousMonthDate);
-                                           }
-                                       }
-                                   }
-
-                                   return new CustomerRecurringMapper(
-                                           owner,
-                                           hotelType,
-                                           hostel,
-                                           hostelBillingRules,
-                                           billingDates,
-                                           latestTracker,
-                                           trackerCreatedByAgent
-                                   ).apply(customer);
-                               }).toList();
-
-                       return new HostelTenRecResMapper(
-                               hostelBillingRules,
-                               owner,
-                               hotelType,
-                               bookingHostelMap.getOrDefault(hostel.getHostelId(), null),
-                               tenantList
-                       ).apply(hostel);
-                   }).toList();
-
-           totalItems = paginatedHostels.getTotalElements();
-           totalPages = paginatedHostels.getTotalPages();
-           response.put("hostelList", responseList);
+            totalItems = paginatedHostels.getTotalElements();
+            totalPages = paginatedHostels.getTotalPages();
+            response.put("hostelList", responseList);
         } else {
             Page<Customers> paginatedCustomers = customersService
                     .getPaginatedCustomersByIds(finalFilteredCustomerIds, pageable);
 
             List<Customers> customers = paginatedCustomers.getContent();
-
-            Set<String> paginatedCustomerIds = customers.stream()
-                    .map(Customers::getCustomerId)
-                    .collect(Collectors.toSet());
-
-            List<CustomerRecurringTracker> latestTrackers = customerRecurringTrackerService
-                    .getLatestTrackersByCustomerIds(paginatedCustomerIds);
-            Map<String, CustomerRecurringTracker> latestTrackerMap = latestTrackers.stream()
-                    .collect(Collectors.toMap(CustomerRecurringTracker::getCustomerId,
-                            crt -> crt, (a, b) -> a));
-
-            Set<String> createdByIds = latestTrackers.stream()
-                    .map(CustomerRecurringTracker::getCreatedBy)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toSet());
-
-            List<Agent> agents = createdByIds.isEmpty()
-                    ? Collections.emptyList()
-                    : agentService.getAgentsByIds(createdByIds);
-
-            Map<String, Agent> agentMap = agents.stream()
-                    .collect(Collectors.toMap(Agent::getAgentId,
-                            agent1 -> agent1, (a, b) -> a));
 
             List<CustomerRecurringResponse> responseList = customers.stream()
                     .map(customer -> {
@@ -2153,7 +2062,8 @@ public class HostelsService {
                                 }
                             }
                         }
-                        CustomerRecurringTracker latestTracker = latestTrackerMap.getOrDefault(customer.getCustomerId(), null);
+                        CustomerRecurringTracker latestTracker = latestTrackerMap
+                                .getOrDefault(customer.getCustomerId(), null);
                         Agent trackerCreatedByAgent = null;
                         if (latestTracker != null){
                             String trackerCreatedBy = latestTracker.getCreatedBy();
