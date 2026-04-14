@@ -2,6 +2,7 @@ package com.smartstay.console.Mapper.customers;
 
 import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.ennum.BillingModel;
 import com.smartstay.console.responses.customers.CustomerRecurringResponse;
 import com.smartstay.console.responses.hostels.OwnerInfo;
@@ -16,6 +17,7 @@ public class CustomerRecurringMapper implements Function<Customers, CustomerRecu
     HotelType hotelType;
     HostelV1 hostel;
     BillingRules hostelBillingRules;
+    BillingDates billingDates;
     CustomerRecurringTracker customerRecurringTracker;
     Agent trackerCreatedAgent;
 
@@ -23,12 +25,14 @@ public class CustomerRecurringMapper implements Function<Customers, CustomerRecu
                                    HotelType hotelType,
                                    HostelV1 hostel,
                                    BillingRules hostelBillingRules,
+                                   BillingDates billingDates,
                                    CustomerRecurringTracker customerRecurringTracker,
                                    Agent trackerCreatedAgent) {
         this.owner = owner;
         this.hotelType = hotelType;
         this.hostel = hostel;
         this.hostelBillingRules = hostelBillingRules;
+        this.billingDates = billingDates;
         this.customerRecurringTracker = customerRecurringTracker;
         this.trackerCreatedAgent = trackerCreatedAgent;
     }
@@ -102,15 +106,20 @@ public class CustomerRecurringMapper implements Function<Customers, CustomerRecu
         Date today = new Date();
         int startDay = 1;
         int endDay = Utils.calculateEndDay(startDay, today);
+        Date cycleStartDate = today;
 
         Date joinedDate = customers.getJoiningDate() != null ? customers.getJoiningDate() : customers.getExpJoiningDate();
         if (joinedDate != null){
             startDay = Utils.getDayOfMonth(joinedDate);
-            Date cycleDate = today;
-            if (isPostpaid) {
-                cycleDate = Utils.getPreviousMonthDate(today);
+            if (billingDates != null){
+                cycleStartDate = billingDates.currentBillStartDate();
+                endDay = Utils.calculateEndDay(startDay, cycleStartDate);
+            } else {
+                if (isPostpaid) {
+                    cycleStartDate = Utils.getPreviousMonthDate(today);
+                }
+                endDay = Utils.calculateEndDay(startDay, cycleStartDate);
             }
-            endDay = Utils.calculateEndDay(startDay, cycleDate);
         }
 
         boolean recurringStatus = false;
@@ -125,7 +134,7 @@ public class CustomerRecurringMapper implements Function<Customers, CustomerRecu
             Date createdAt = customerRecurringTracker.getCreatedAt();
 
             recurringStatus = Utils.isSameBillingCycle(startDay,
-                    customerRecurringTracker, isPostpaid);
+                    customerRecurringTracker, cycleStartDate);
 
             recurringMode = customerRecurringTracker.getMode();
 

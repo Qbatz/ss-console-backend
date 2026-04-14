@@ -2,6 +2,7 @@ package com.smartstay.console.Mapper.customers;
 
 import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.ennum.BillingModel;
 import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerRecTrackerRes;
@@ -19,6 +20,7 @@ public class CustomerRecTrackerResMapper implements Function<Customers, Customer
     HotelType hotelType;
     HostelV1 hostel;
     BillingRules hostelBillingRules;
+    BillingDates billingDates;
     CustomerRecurringTracker customerRecurringTracker;
     int page;
     int size;
@@ -29,6 +31,7 @@ public class CustomerRecTrackerResMapper implements Function<Customers, Customer
                                        HotelType hotelType,
                                        HostelV1 hostel,
                                        BillingRules hostelBillingRules,
+                                       BillingDates billingDates,
                                        CustomerRecurringTracker customerRecurringTracker,
                                        int page, int size,
                                        Page<CustomerRecurringTracker> paginatedRecurringTrackers,
@@ -37,6 +40,7 @@ public class CustomerRecTrackerResMapper implements Function<Customers, Customer
         this.hotelType = hotelType;
         this.hostel = hostel;
         this.hostelBillingRules = hostelBillingRules;
+        this.billingDates = billingDates;
         this.customerRecurringTracker = customerRecurringTracker;
         this.page = page;
         this.size = size;
@@ -113,24 +117,31 @@ public class CustomerRecTrackerResMapper implements Function<Customers, Customer
         Date today = new Date();
         int startDay = 1;
         int endDay = Utils.calculateEndDay(startDay, today);
-        Date startDate = null;
+        Date startDate = today;
         Date endDate = null;
 
         Date joinedDate = customers.getJoiningDate() != null ? customers.getJoiningDate() : customers.getExpJoiningDate();
         if (joinedDate != null){
             startDay = Utils.getDayOfMonth(joinedDate);
-            Date cycleDate = today;
-            if (isPostpaid) {
-                cycleDate = Utils.getPreviousMonthDate(today);
+
+            if (billingDates != null){
+                startDate = billingDates.currentBillStartDate();
+                endDate = billingDates.currentBillEndDate();
+                endDay = Utils.calculateEndDay(startDay, startDate);
+            } else {
+                Date cycleDate = today;
+                if (isPostpaid) {
+                    cycleDate = Utils.getPreviousMonthDate(today);
+                }
+
+                int month = Utils.getCurrentMonth(cycleDate);
+                int year = Utils.getCurrentYear(cycleDate);
+
+                startDate = Utils.getDateFromDay(startDay, month, year);
+                endDate = Utils.getEndDate(startDay, month, year);
+
+                endDay = Utils.calculateEndDay(startDay, cycleDate);
             }
-
-            int month = Utils.getCurrentMonth(cycleDate);
-            int year = Utils.getCurrentYear(cycleDate);
-
-            startDate = Utils.getDateFromDay(startDay, month, year);
-            endDate = Utils.getEndDate(startDay, month, year);
-
-            endDay = Utils.calculateEndDay(startDay, cycleDate);
         }
 
         boolean recurringStatus = false;
@@ -138,9 +149,7 @@ public class CustomerRecTrackerResMapper implements Function<Customers, Customer
         Date nextRecurringDate = null;
 
         if (customerRecurringTracker != null){
-            recurringStatus = Utils.isSameBillingCycle(startDay,
-                    customerRecurringTracker, isPostpaid);
-
+            recurringStatus = Utils.isSameBillingCycle(startDay, customerRecurringTracker, startDate);
             lastRecurringDate = Utils.getDateFromDay(customerRecurringTracker.getCreationDay(),
                     customerRecurringTracker.getCreationMonth(), customerRecurringTracker.getCreationYear());
             nextRecurringDate = Utils.getNextMonthDate(customerRecurringTracker.getCreationDay(),

@@ -218,7 +218,8 @@ public class RecurringSetupForJoiningBasedPrepaid {
                 customerWalletHistoryService.saveAll(whu);
             }
 
-            customerRecurringTrackerService.addToTracker(customerId, hostelV1.getHostelId(), jbpe.getBillingDay());
+            customerRecurringTrackerService.addToTracker(customerId, hostelV1.getHostelId(),
+                    jbpe.getBillingDay(), jbpe.getBillingDates());
         }
     }
 }
