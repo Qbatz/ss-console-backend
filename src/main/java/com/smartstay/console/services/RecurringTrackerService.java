@@ -3,6 +3,7 @@ package com.smartstay.console.services;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.RecurringTracker;
+import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.dto.hostel.InvoiceCountPerTracker;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.RecurringModeEnum;
@@ -47,17 +48,24 @@ public class RecurringTrackerService {
                 .existsByHostelIdAndCreationDayAndCreationMonthAndCreationYear(hostelId, day, month, year);
     }
 
-    public void markAsInvoiceGenerated(String hostelId, int billingDay) {
+    public void markAsInvoiceGenerated(String hostelId, int billingDay, BillingDates billingDates) {
 
-        Date today = new Date();
+        Date date = new Date();
+
+        if (billingDates != null){
+            date = billingDates.currentBillStartDate();
+        }
+
+        int month = Utils.getCurrentMonth(date);
+        int year = Utils.getCurrentYear(date);
 
         RecurringTracker rt = new RecurringTracker();
-        rt.setCreatedAt(today);
+        rt.setCreatedAt(date);
         rt.setMode(RecurringModeEnum.MANUAL.name());
         rt.setHostelId(hostelId);
         rt.setCreationDay(billingDay);
-        rt.setCreationMonth(Utils.getCurrentMonth(today));
-        rt.setCreationYear(Utils.getCurrentYear(today));
+        rt.setCreationMonth(month);
+        rt.setCreationYear(year);
         rt.setCreatedBy(authentication.getName());
 
         rt = recurringTrackerRepository.save(rt);
@@ -68,17 +76,19 @@ public class RecurringTrackerService {
                 String.valueOf(rt.getTrackerId()), null, rt);
     }
 
-    public void markAsPostpaidInvoiceGenerated(String hostelId, int billingDay) {
+    public void markAsPostpaidInvoiceGenerated(String hostelId, int billingDay, BillingDates billingDates) {
 
-        Date today = new Date();
+        Date date = new Date();
 
-        YearMonth previousYearMonth = Utils.getPreviousYearMonth(today);
+        if (billingDates != null){
+            date = billingDates.currentBillStartDate();
+        }
 
-        int month = previousYearMonth.getMonthValue();
-        int year  = previousYearMonth.getYear();
+        int month = Utils.getCurrentMonth(date);
+        int year = Utils.getCurrentYear(date);
 
         RecurringTracker rt = new RecurringTracker();
-        rt.setCreatedAt(today);
+        rt.setCreatedAt(date);
         rt.setMode(RecurringModeEnum.MANUAL.name());
         rt.setHostelId(hostelId);
         rt.setCreationDay(billingDay);

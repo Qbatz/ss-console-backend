@@ -3,6 +3,7 @@ package com.smartstay.console.services;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.CustomerRecurringTracker;
+import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.RecurringModeEnum;
 import com.smartstay.console.ennum.Source;
@@ -30,18 +31,25 @@ public class CustomerRecurringTrackerService {
     @Autowired
     private AgentActivitiesService agentActivitiesService;
 
-    public void addToTracker(String customerId, String hostelId, int billingDay) {
+    public void addToTracker(String customerId, String hostelId, int billingDay, BillingDates billingDates) {
 
-        Date today = new Date();
+        Date date = new Date();
+
+        if (billingDates != null){
+            date = billingDates.currentBillStartDate();
+        }
+
+        int month = Utils.getCurrentMonth(date);
+        int year = Utils.getCurrentYear(date);
 
         CustomerRecurringTracker rt = new CustomerRecurringTracker();
-        rt.setCreatedAt(today);
+        rt.setCreatedAt(date);
         rt.setMode(RecurringModeEnum.MANUAL.name());
         rt.setHostelId(hostelId);
         rt.setCustomerId(customerId);
         rt.setCreationDay(billingDay);
-        rt.setCreationMonth(Utils.getCurrentMonth(today));
-        rt.setCreationYear(Utils.getCurrentYear(today));
+        rt.setCreationMonth(month);
+        rt.setCreationYear(year);
         rt.setCreatedBy(authentication.getName());
 
         rt = customerRecurringTrackerRepository.save(rt);

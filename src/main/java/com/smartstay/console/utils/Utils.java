@@ -78,7 +78,6 @@ public class Utils {
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
     public static final String INVALID_DISCOUNT_PERCENTAGE = "Invalid discount percentage";
     public static final String TRIAL_PLAN_NOT_ALLOWED = "Trial plan not allowed";
-    public static final String INVALID_RECURRING_CYCLE_FOR_HOSTEL = "Hostel created after billing cycle";
     public static final String INVALID_RECURRING_CYCLE_FOR_TENANT = "Tenant joined after billing cycle";
     public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
     public static final String NO_CUSTOMER_FOUND = "No tenant found";
@@ -489,26 +488,15 @@ public class Utils {
 
     public static boolean isSameBillingCycle(int billingStartDay,
                                              RecurringTracker tracker,
-                                             boolean isPostpaid) {
+                                             Date cycleStartDate) {
 
         if (tracker == null || tracker.getCreationDay() == null ||
                 tracker.getCreationMonth() == null || tracker.getCreationYear() == null) {
             return false;
         }
 
-        LocalDate today = LocalDate.now();
-
-        int expectedMonth;
-        int expectedYear;
-
-        if (isPostpaid) {
-            YearMonth prev = YearMonth.from(today).minusMonths(1);
-            expectedMonth = prev.getMonthValue();
-            expectedYear = prev.getYear();
-        } else {
-            expectedMonth = today.getMonthValue();
-            expectedYear = today.getYear();
-        }
+        int expectedMonth = getCurrentMonth(cycleStartDate);
+        int expectedYear = getCurrentYear(cycleStartDate);
 
         return tracker.getCreationDay() == billingStartDay
                 && tracker.getCreationMonth() == expectedMonth
@@ -517,26 +505,15 @@ public class Utils {
 
     public static boolean isSameBillingCycle(int billingStartDay,
                                              CustomerRecurringTracker tracker,
-                                             boolean isPostpaid) {
+                                             Date cycleStartDate) {
 
         if (tracker == null || tracker.getCreationDay() == null ||
                 tracker.getCreationMonth() == null || tracker.getCreationYear() == null) {
             return false;
         }
 
-        LocalDate today = LocalDate.now();
-
-        int expectedMonth;
-        int expectedYear;
-
-        if (isPostpaid) {
-            YearMonth prev = YearMonth.from(today).minusMonths(1);
-            expectedMonth = prev.getMonthValue();
-            expectedYear = prev.getYear();
-        } else {
-            expectedMonth = today.getMonthValue();
-            expectedYear = today.getYear();
-        }
+        int expectedMonth = getCurrentMonth(cycleStartDate);
+        int expectedYear = getCurrentYear(cycleStartDate);
 
         return tracker.getCreationDay() == billingStartDay
                 && tracker.getCreationMonth() == expectedMonth
@@ -693,24 +670,17 @@ public class Utils {
         return Date.from(nextDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
-    public static boolean isEligibleForInvoice(BookingsV1 booking, int billingDay) {
+    public static boolean isEligibleForInvoice(BookingsV1 booking, Date billingCycleStartDate) {
 
-        if (booking.getJoiningDate() == null) return false;
-
-        Date joiningDate = booking.getJoiningDate();
-
-        int joiningDay = getDayOfMonth(joiningDate);
-
-        LocalTime autoInvoiceTime = LocalTime.of(2, 0);
-
-        // joined after billing cycle started → skip
-        if (joiningDay > billingDay) {
+        if (booking.getJoiningDate() == null || billingCycleStartDate == null) {
             return false;
         }
 
-        // joined on same day but after invoice time → skip
-        if (joiningDay == billingDay &&
-                dateToLocalTime(joiningDate).isAfter(autoInvoiceTime)) {
+        Date joiningDate = Utils.getStartOfDay(booking.getJoiningDate());
+        Date cycleStartDate = Utils.getStartOfDay(billingCycleStartDate);
+
+        // Skip if joined on or after billing cycle start
+        if (!joiningDate.before(cycleStartDate)) {
             return false;
         }
 
