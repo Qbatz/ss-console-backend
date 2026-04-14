@@ -1334,9 +1334,11 @@ public class HostelsService {
 
             try {
                 if (isPrePaid){
-                    applicationEventPublisher.publishEvent(new RecurringEvents(this, hostelId, billingDay, currentBillStartDate));
+                    applicationEventPublisher.publishEvent(new RecurringEvents(this,
+                            hostelId, billingDay, currentBillStartDate, billingDates));
                 } else if (isPostPaid) {
-                    applicationEventPublisher.publishEvent(new PostpaidRecurringEvents(this, hostelId, billingDay));
+                    applicationEventPublisher.publishEvent(new PostpaidRecurringEvents(this,
+                            hostelId, billingDay, billingDates));
                 }
             } catch (Exception e){
                 return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
@@ -2202,9 +2204,11 @@ public class HostelsService {
 
             try {
                 if (isPrePaid){
-                    applicationEventPublisher.publishEvent(new JoiningBasedPrepaidEvents(this, customerId, hostelId, billingDay));
+                    applicationEventPublisher.publishEvent(new JoiningBasedPrepaidEvents(this,
+                            customerId, hostelId, billingDay, joinBasedBillingDates));
                 } else if (isPostPaid) {
-                   return new ResponseEntity<>("Postpaid joining date based recurring has not been implemented", HttpStatus.BAD_REQUEST);
+                   return new ResponseEntity<>("Postpaid joining date based recurring has not been implemented",
+                           HttpStatus.BAD_REQUEST);
                 }
             } catch (Exception e){
                 return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);

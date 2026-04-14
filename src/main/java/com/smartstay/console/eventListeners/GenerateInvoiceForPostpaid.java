@@ -418,7 +418,8 @@ public class GenerateInvoiceForPostpaid {
             electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
         }
 
-        recurringTrackerService.markAsPostpaidInvoiceGenerated(hostelV1.getHostelId(), postpaidRecurringEvents.getBillingDay());
+        recurringTrackerService.markAsPostpaidInvoiceGenerated(hostelV1.getHostelId(),
+                postpaidRecurringEvents.getBillingDay(), postpaidRecurringEvents.getBillingDates());
         notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
     }
 

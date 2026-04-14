@@ -335,7 +335,8 @@ public class RecurringEventListener {
                     .toList();
             electricityService.markAsInvoiceGenerated(listReadingForMakingInvoiceGenerated);
         }
-        recurringTrackerService.markAsInvoiceGenerated(hostelV1.getHostelId(), recurringEvents.getBillingDay());
+        recurringTrackerService.markAsInvoiceGenerated(hostelV1.getHostelId(),
+                recurringEvents.getBillingDay(), recurringEvents.getBillingDates());
         notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
     }
 }
