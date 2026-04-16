@@ -6,5 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface AgentModulesRepository extends JpaRepository<AgentModules, Long> {
+
     AgentModules findByModuleName(String name);
 }

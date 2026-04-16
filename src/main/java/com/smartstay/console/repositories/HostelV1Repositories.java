@@ -17,40 +17,47 @@ import java.util.Set;
 public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
 
     @Query("""
-            SELECT COUNT(h.hostelId) FROM hostelv1 h
+            SELECT COUNT(h.hostelId)
+            FROM hostelv1 h
+            WHERE h.isActive = true
+            AND h.isDeleted = false
             """)
     Long findHostelCount();
 
     @Query(value = """
-        SELECT h.*
-        FROM hostelv1 h
-        INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
-        WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
-            AND (:startDate IS NULL OR h.created_at >= :startDate)
-            AND (:endDate IS NULL OR h.created_at < :endDate)
-        ORDER BY hp.current_plan_ends_at ASC
-        """,
-            countQuery = """
-        SELECT COUNT(*)
-        FROM hostelv1 h
-        INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
-        WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
-            AND (:startDate IS NULL OR h.created_at >= :startDate)
-            AND (:endDate IS NULL OR h.created_at < :endDate)
-        """,
+            SELECT h.*
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+                AND (:startDate IS NULL OR h.created_at >= :startDate)
+                AND (:endDate IS NULL OR h.created_at < :endDate)
+                AND h.is_active = true
+                AND h.is_deleted = false
+            ORDER BY hp.current_plan_ends_at ASC
+            """,
+                countQuery = """
+            SELECT COUNT(*)
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+                AND (:startDate IS NULL OR h.created_at >= :startDate)
+                AND (:endDate IS NULL OR h.created_at < :endDate)
+                AND h.is_active = true
+                AND h.is_deleted = false
+            """,
             nativeQuery = true)
     Page<HostelV1> findAllHostelsNew(@Param("name") String name,
                                      @Param("startDate") Date startDate,
                                      @Param("endDate") Date endDate,
                                      Pageable pageable);
 
-    HostelV1 findByHostelId(String hostelId);
+    HostelV1 findByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
 
-    List<HostelV1> findAllByHostelIdIn(Set<String> hostelIds);
+    List<HostelV1> findAllByHostelIdInAndIsActiveTrueAndIsDeletedFalse(Set<String> hostelIds);
 
-    List<HostelV1> findByHostelNameContainingIgnoreCase(String hostelName);
+    List<HostelV1> findByHostelNameContainingIgnoreCaseAndIsActiveTrueAndIsDeletedFalse(String hostelName);
 
-    List<HostelV1> findAllByParentId(String parentId);
+    List<HostelV1> findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(String parentId);
 
     @Query("""
             SELECT new com.smartstay.console.dto.hostelPlans.HostelPlanProjection(
@@ -60,6 +67,8 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             FROM hostelv1 h
             INNER JOIN h.hostelPlan hp
             WHERE h.parentId IN :parentIds
+                AND h.isActive = true
+                AND h.isDeleted = false
             """)
     List<HostelPlanProjection> findHostelPlanProjectionData(@Param("parentIds") Set<String> parentIds);
 
@@ -68,8 +77,10 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                     FROM hostelv1 h
                     INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
                     WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
-                      AND (:startDate IS NULL OR h.created_at >= :startDate)
-                      AND (:endDate IS NULL OR h.created_at < :endDate)
+                        AND (:startDate IS NULL OR h.created_at >= :startDate)
+                        AND (:endDate IS NULL OR h.created_at < :endDate)
+                        AND h.is_active = true
+                        AND h.is_deleted = false
                     ORDER BY hp.current_plan_ends_at ASC
                     """,
             nativeQuery = true)
@@ -78,25 +89,20 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                                                       @Param("endDate") Date endDate);
 
     @Query(value = """
-                    SELECT h.*
-                    FROM hostelv1 h
-                    INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
-                    ORDER BY hp.current_plan_ends_at ASC
-                    """,
-            nativeQuery = true)
-    List<HostelV1> findAllHostels();
-
-    @Query(value = """
             SELECT h.*
             FROM hostelv1 h
             INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
             WHERE h.hostel_id IN (:hostelIds)
+                AND h.is_active = true
+                AND h.is_deleted = false
             ORDER BY hp.current_plan_ends_at DESC
             """, countQuery = """
             SELECT COUNT(*)
             FROM hostelv1 h
             INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
             WHERE h.hostel_id IN (:hostelIds)
+                AND h.is_active = true
+                AND h.is_deleted = false
             """, nativeQuery = true)
     Page<HostelV1> findAllByHostelIdIn(@Param("hostelIds") Set<String> hostelIds,
                                        Pageable pageable);

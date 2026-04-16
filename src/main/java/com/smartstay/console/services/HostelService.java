@@ -43,11 +43,11 @@ public class HostelService {
     }
 
     public List<HostelV1> getHostelsByHostelIds(Set<String> hostelIds) {
-        return hostelRepository.findAllByHostelIdIn(hostelIds);
+        return hostelRepository.findAllByHostelIdInAndIsActiveTrueAndIsDeletedFalse(hostelIds);
     }
 
     public List<HostelV1> getHostelsByHostelName(String hostelName) {
-        return hostelRepository.findByHostelNameContainingIgnoreCase(hostelName);
+        return hostelRepository.findByHostelNameContainingIgnoreCaseAndIsActiveTrueAndIsDeletedFalse(hostelName);
     }
 
     public BillingDates getCurrentBillStartAndEndDates(String hostelId) {

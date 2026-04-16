@@ -60,6 +60,11 @@ public class HostelsController {
         return hostelsService.removeExpenses(hostelId);
     }
 
+    @DeleteMapping("/{hostelId}")
+    public ResponseEntity<?> deleteHostel(@PathVariable("hostelId") String hostelId) {
+        return hostelsService.deleteHostel(hostelId);
+    }
+
     @GetMapping("/activities/{hostelId}")
     public ResponseEntity<?> getHostelActivities(@PathVariable String hostelId,
                                                  @RequestParam(value = "page", defaultValue = "0") int page,

@@ -6,5 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface FloorsRepository extends JpaRepository<Floors, Integer> {
+
     int countByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
 }

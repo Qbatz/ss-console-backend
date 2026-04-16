@@ -20,12 +20,16 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     List<Subscription> findAllByHostelIdIn(Set<String> hostelIds);
 
     @Query(value = """
-            SELECT * FROM subscription WHERE hostel_id=:hostelId order by plan_starts_at DESC LIMIT 1
+            SELECT * FROM subscription
+            WHERE hostel_id = :hostelId
+            order by plan_starts_at DESC LIMIT 1
             """, nativeQuery = true)
     Subscription findLatestSubscription(String hostelId);
 
     @Query("""
-            SELECT sc FROM Subscription sc WHERE DATE(sc.planStartsAt)=DATE(:date) AND sc.isActive=true
+            SELECT sc FROM Subscription sc
+            WHERE DATE(sc.planStartsAt) = DATE(:date)
+            AND sc.isActive=true
             """)
     List<Subscription> findSubscriptionStartingToday(@Param("date") Date date);
 

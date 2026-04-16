@@ -9,5 +9,6 @@ import java.util.Set;
 
 @Repository
 public interface PaymentSummaryRepository extends JpaRepository<PaymentSummary, Integer> {
+
     List<PaymentSummary> findAllByCustomerIdIn(Set<String> customerIds);
 }

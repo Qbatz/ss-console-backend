@@ -21,7 +21,9 @@ public interface UsersRepository extends JpaRepository<Users, String> {
     List<Users> findOwners(List<String> parentId);
 
     @Query("""
-            SELECT usr FROM Users usr WHERE usr.parentId = :parentId AND usr.roleId = 1
+            SELECT usr FROM Users usr
+            WHERE usr.parentId = :parentId
+            AND usr.roleId = 1
             """)
     Users findOwner(String parentId);
 

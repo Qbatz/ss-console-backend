@@ -8,5 +8,6 @@ import java.util.List;
 
 @Repository
 public interface AmenitiesRepository extends JpaRepository<AmenitiesV1, String> {
+
     List<AmenitiesV1> findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
 }

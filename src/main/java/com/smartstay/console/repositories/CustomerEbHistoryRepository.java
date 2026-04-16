@@ -16,7 +16,9 @@ public interface CustomerEbHistoryRepository extends JpaRepository<CustomersEbHi
     List<CustomersEbHistory> findByCustomerId(String customerId);
 
     @Query("""
-        SELECT CER FROM CustomersEbHistory CER WHERE CER.customerId=:customerId AND CER.readingId IN :readings
+        SELECT CER FROM CustomersEbHistory CER
+        WHERE CER.customerId = :customerId
+            AND CER.readingId IN :readings
         """)
     List<CustomersEbHistory> findByCustomerIdAndReadingsId(@Param("customerId") String customerId,
                                                            @Param("readings") List<Integer> readings);
