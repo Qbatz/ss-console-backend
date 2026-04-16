@@ -4,6 +4,9 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.hostel.*;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
+import com.smartstay.console.dto.users.AddressSnapshot;
+import com.smartstay.console.dto.users.UserSnapshot;
+import com.smartstay.console.dto.users.UsersConfigSnapshot;
 
 import java.util.Date;
 import java.util.List;
@@ -146,6 +149,60 @@ public class SnapshotUtility {
                 config,
                 images,
                 rules
+        );
+    }
+
+    public static UserSnapshot toSnapshot(Users u) {
+
+        if (u == null) return null;
+
+        AddressSnapshot address = null;
+        if (u.getAddress() != null) {
+            var a = u.getAddress();
+            address = new AddressSnapshot(
+                    a.getAddressId(),
+                    a.getHouseNo(),
+                    a.getStreet(),
+                    a.getLandMark(),
+                    a.getCity(),
+                    a.getState(),
+                    a.getPincode(),
+                    a.getUser() != null ? a.getUser().getUserId() : null
+            );
+        }
+
+        UsersConfigSnapshot config = null;
+        if (u.getConfig() != null) {
+            var c = u.getConfig();
+            config = new UsersConfigSnapshot(
+                    c.getConfigId(),
+                    c.getFcmToken(),
+                    c.getFcmWebToken(),
+                    c.getUser() != null ? c.getUser().getUserId() : null
+            );
+        }
+
+        return new UserSnapshot(
+                u.getUserId(),
+                u.getParentId(),
+                u.getFirstName(),
+                u.getLastName(),
+                u.getMobileNo(),
+                u.getEmailId(),
+                u.getProfileUrl(),
+                u.getRoleId(),
+                u.getCountry(),
+                u.getCreatedBy(),
+                u.isTwoStepVerificationStatus(),
+                u.isEmailAuthenticationStatus(),
+                u.isSmsAuthenticationStatus(),
+                u.isActive(),
+                u.isDeleted(),
+                copyDate(u.getCreatedAt()),
+                copyDate(u.getLastUpdate()),
+                u.getDescription(),
+                address,
+                config
         );
     }
 

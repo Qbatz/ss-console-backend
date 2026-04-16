@@ -36,7 +36,7 @@ public class UsersService {
     }
 
     public List<Users> getMasters(HostelV1 hostel) {
-        return usersRepository.findAllByParentIdAndRoleId(hostel.getParentId(), 2);
+        return usersRepository.findAllByParentIdAndRoleIdAndIsActiveTrueAndIsDeletedFalse(hostel.getParentId(), 2);
     }
 
     public List<Users> getStaffs(HostelV1 hostel) {
@@ -54,15 +54,15 @@ public class UsersService {
         }
 
         return usersRepository
-                .findAllByParentIdAndRoleIdNotInAndUserIdIn(hostel.getParentId(), roleIds, userIds);
+                .findAllByParentIdAndRoleIdNotInAndUserIdInAndIsActiveTrueAndIsDeletedFalse(hostel.getParentId(), roleIds, userIds);
     }
 
     public List<Users> getUsersByIds(Set<String> userIds){
-        return usersRepository.findAllByUserIdIn(userIds);
+        return usersRepository.findAllByUserIdInAndIsActiveTrueAndIsDeletedFalse(userIds);
     }
 
     public List<Users> getUsersByName(String name){
         return usersRepository
-                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(name, name);
+                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseAndIsActiveTrueAndIsDeletedFalse(name, name);
     }
 }

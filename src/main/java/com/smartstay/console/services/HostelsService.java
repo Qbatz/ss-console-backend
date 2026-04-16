@@ -668,7 +668,7 @@ public class HostelsService {
         agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
                 hostelId, oldHostel, null);
 
-        return new ResponseEntity<>(Utils.DELETED, HttpStatus.NO_CONTENT);
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getAllHostelsNew(int page, int size, String hostelName, Date startDate, Date endDate) {

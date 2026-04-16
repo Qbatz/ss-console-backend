@@ -1,23 +1,25 @@
 package com.smartstay.console.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.users.OwnerDetailsMapper;
 import com.smartstay.console.Mapper.users.OwnerListMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import com.smartstay.console.dto.users.OwnerWithAddressProjection;
+import com.smartstay.console.dto.users.UserSnapshot;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.OwnerSortField;
 import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.owners.ResetPassword;
 import com.smartstay.console.payloads.owners.UserEmailPayload;
+import com.smartstay.console.payloads.owners.UserMobilePayload;
 import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.repositories.UsersRepository;
 import com.smartstay.console.responses.users.OwnerDetailsResponse;
 import com.smartstay.console.responses.users.OwnerResponse;
 import com.smartstay.console.utils.Constants;
+import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -53,6 +55,7 @@ public class OwnersService {
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
     public ResponseEntity<?> resetPassword(ResetPassword resetPassword) {
+
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -60,6 +63,10 @@ public class OwnersService {
         Agent agent = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
         if (resetPassword == null) {
@@ -75,23 +82,27 @@ public class OwnersService {
             return new ResponseEntity<>(Constants.USER_ID_REQUIRED, HttpStatus.BAD_REQUEST);
         }
 
-        Users users = usersRepository.findByUserId(resetPassword.userId());
+        Users users = usersRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalse(resetPassword.userId());
         if (users == null) {
             return new ResponseEntity<>(Constants.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        Users oldUser = new ObjectMapper().convertValue(users, Users.class);
+        UserSnapshot oldUser = SnapshotUtility.toSnapshot(users);
 
         if (!resetPassword.password().equals(resetPassword.confirmPassword())){
             return new ResponseEntity<>(Constants.PASSWORD_MISMATCH, HttpStatus.BAD_REQUEST);
         }
 
         String encodedPassword = encoder.encode(resetPassword.password());
+
         users.setPassword(encodedPassword);
+
         users = usersRepository.save(users);
 
+        UserSnapshot newUser = SnapshotUtility.toSnapshot(users);
+
         agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.RESET_PASSWORD,
-                users.getUserId(), oldUser, users);
+                users.getUserId(), oldUser, newUser);
 
         return new ResponseEntity<>(Constants.UPDATED_SUCCESSFULLY, HttpStatus.OK);
     }
@@ -285,7 +296,7 @@ public class OwnersService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        Users owner = usersRepository.findByUserId(ownerId);
+        Users owner = usersRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalse(ownerId);
         if (owner == null){
             return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
         }
@@ -315,32 +326,118 @@ public class OwnersService {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        Users owner = usersRepository.findByUserId(ownerId);
+        Users owner = usersRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalse(ownerId);
         if (owner == null){
             return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        Users oldOwner = new ObjectMapper().convertValue(owner, Users.class);
+        UserSnapshot oldOwner = SnapshotUtility.toSnapshot(owner);
+
         String newEmail = userEmailPayload.newEmail();
 
-        if (usersRepository.existsByEmailIdAndUserIdNot(newEmail, ownerId)) {
+        if (usersRepository.existsByEmailIdAndUserIdNotAndIsActiveTrueAndIsDeletedFalse(newEmail, ownerId)) {
             return new ResponseEntity<>(Utils.EMAIL_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
         owner.setEmailId(newEmail);
+        owner.setLastUpdate(new Date());
+
         owner = usersRepository.save(owner);
 
+        UserSnapshot newOwner = SnapshotUtility.toSnapshot(owner);
+
         agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.OWNERS,
-                ownerId, oldOwner, owner);
+                ownerId, oldOwner, newOwner);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
     public long getOwnerCount(){
         return usersRepository.getCount();
+    }
+
+    public ResponseEntity<?> deleteOwnerById(String ownerId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Users owner = usersRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalse(ownerId);
+        if (owner == null){
+            return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        UserSnapshot oldOwner = SnapshotUtility.toSnapshot(owner);
+
+        List<HostelV1> hostels = hostelsService.getHostelsByParentId(owner.getParentId());
+
+        if (!hostels.isEmpty()){
+            return new ResponseEntity<>(Utils.HOSTELS_EXISTS_FOR_THIS_OWNER, HttpStatus.BAD_REQUEST);
+        }
+
+        owner.setActive(false);
+        owner.setDeleted(true);
+        owner.setLastUpdate(new Date());
+
+        usersRepository.save(owner);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.OWNERS,
+                ownerId, oldOwner, null);
+
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateOwnerMobileById(String ownerId, UserMobilePayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Users owner = usersRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalse(ownerId);
+        if (owner == null){
+            return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        UserSnapshot oldOwner = SnapshotUtility.toSnapshot(owner);
+
+        String newMobileNo = payload.mobileNumber();
+
+        if (usersRepository.existsByMobileNoAndUserIdNotAndIsActiveTrueAndIsDeletedFalse(newMobileNo, ownerId)) {
+            return new ResponseEntity<>(Utils.MOBILE_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
+        owner.setMobileNo(newMobileNo);
+        owner.setLastUpdate(new Date());
+
+        owner = usersRepository.save(owner);
+
+        UserSnapshot newOwner = SnapshotUtility.toSnapshot(owner);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.OWNERS,
+                ownerId, oldOwner, newOwner);
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

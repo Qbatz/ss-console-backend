@@ -82,6 +82,8 @@ public class Utils {
     public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
     public static final String NO_CUSTOMER_FOUND = "No tenant found";
     public static final String INVALID_MONTH = "Month must be from 1 to 12";
+    public static final String HOSTELS_EXISTS_FOR_THIS_OWNER = "Hostels exists for this owner";
+    public static final String MOBILE_ALREADY_EXISTS = "Mobile number already exists";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
