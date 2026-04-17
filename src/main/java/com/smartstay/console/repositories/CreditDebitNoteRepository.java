@@ -11,7 +11,9 @@ import java.util.List;
 public interface CreditDebitNoteRepository extends JpaRepository<CreditDebitNotes, Integer> {
 
     @Query("""
-            SELECT cdn FROM CreditDebitNotes cdn WHERE cdn.hostelId=:hostelId AND cdn.customerId IN (:customerIds)
+            SELECT cdn FROM CreditDebitNotes cdn
+            WHERE cdn.hostelId = :hostelId
+                AND cdn.customerId IN (:customerIds)
             """)
     List<CreditDebitNotes> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds);
 

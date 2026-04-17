@@ -11,6 +11,7 @@ import lombok.*;
 @NoArgsConstructor
 @Entity
 public class HostelImages {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;

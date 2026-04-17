@@ -15,8 +15,9 @@ public interface CustomersWalletRepository extends JpaRepository<CustomerWalletH
     List<CustomerWalletHistory> findByCustomerId(String customerId);
 
     @Query("""
-        SELECT cwh FROM CustomerWalletHistory cwh WHERE cwh.customerId=:customerId AND
-        cwh.billingStatus='INVOICE_NOT_GENERATED'
+        SELECT cwh FROM CustomerWalletHistory cwh
+        WHERE cwh.customerId=:customerId
+            AND cwh.billingStatus='INVOICE_NOT_GENERATED'
         """)
     List<CustomerWalletHistory> findInvoiceNotGeneratedByCustomerId(String customerId);
 }

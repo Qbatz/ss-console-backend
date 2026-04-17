@@ -13,7 +13,9 @@ public interface ElectricityReadingRepository extends JpaRepository<ElectricityR
     List<ElectricityReadings> findByHostelId(String hostelId);
 
     @Query(value = """
-        SELECT * FROM electricity_readings WHERE hostel_id=:hostelId and bill_status='INVOICE_NOT_GENERATED'
-        """, nativeQuery = true)
+            SELECT * FROM electricity_readings
+            WHERE hostel_id = :hostelId
+                and bill_status='INVOICE_NOT_GENERATED'
+            """, nativeQuery = true)
     List<ElectricityReadings> listAllReadingsForGenerateInvoice(String hostelId);
 }

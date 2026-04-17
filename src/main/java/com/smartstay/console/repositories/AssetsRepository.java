@@ -8,5 +8,6 @@ import java.util.List;
 
 @Repository
 public interface AssetsRepository extends JpaRepository<AssetsV1, Long> {
+
     List<AssetsV1> findByHostelId(String hostelId);
 }

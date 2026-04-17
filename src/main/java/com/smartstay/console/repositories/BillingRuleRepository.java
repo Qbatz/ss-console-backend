@@ -13,7 +13,9 @@ import java.util.Set;
 public interface BillingRuleRepository extends JpaRepository<BillingRules, Integer> {
 
     @Query(value = """
-           SELECT * FROM billing_rules WHERE hostel_id=:hostelId ORDER BY created_at DESC LIMIT 1
+           SELECT * FROM billing_rules
+           WHERE hostel_id = :hostelId
+           ORDER BY created_at DESC LIMIT 1
            """, nativeQuery = true)
     BillingRules findCurrentBillingRules(@Param("hostelId") String hostelId);
 
@@ -42,13 +44,15 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
                 FROM BillingRules b2
                 WHERE b2.hostel.hostelId = b.hostel.hostelId
             )
-            AND b.billingStartDate IN :days
-            AND b.typeOfBilling = :billingType
-            AND (:hostelIds IS NULL OR h.hostelId IN :hostelIds)
-            AND (
-                :billingModel = 'ALL'
-                OR (b.billingModel = :billingModel)
-            )
+                AND b.billingStartDate IN :days
+                AND b.typeOfBilling = :billingType
+                AND (:hostelIds IS NULL OR h.hostelId IN :hostelIds)
+                AND (
+                    :billingModel = 'ALL'
+                    OR (b.billingModel = :billingModel)
+                )
+                AND h.isActive = true
+                AND h.isDeleted = false
             """)
     Page<BillingRules> getPaginatedBillingRulesByDays(@Param("days") Set<Integer> days,
                                                       @Param("billingType") String billingType,
@@ -65,8 +69,10 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
                 FROM BillingRules b2
                 WHERE b2.hostel.hostelId = b.hostel.hostelId
             )
-            AND b.billingStartDate IN :days
-            AND b.typeOfBilling = :billingType
+                AND b.billingStartDate IN :days
+                AND b.typeOfBilling = :billingType
+                AND h.isActive = true
+                AND h.isDeleted = false
             """)
     List<BillingRules> getLatestBillingRulesByDays(@Param("days") Set<Integer> days,
                                                    @Param("billingType") String billingType);

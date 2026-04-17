@@ -126,7 +126,8 @@ public class AgentActivityUtil {
             case HOSTEL -> "Deleted hostel";
             case HOSTEL_EXPENSE -> "Deletes all expenses";
             case PLANS -> "Deleted a plan";
-            case PLAN_FEATURES -> "Deletes a plan feature";
+            case PLAN_FEATURES -> "Deleted a plan feature";
+            case OWNERS -> "Deleted an owner";
             default -> "Deleted successfully";
         };
     }
