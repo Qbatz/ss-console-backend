@@ -31,6 +31,8 @@ public interface UsersRepository extends JpaRepository<Users, String> {
             """)
     Users findOwner(String parentId);
 
+    List<Users> findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(String parentId);
+
     List<Users> findAllByParentIdAndRoleIdAndIsActiveTrueAndIsDeletedFalse(String parentId, int roleId);
 
     List<Users> findAllByParentIdAndRoleIdNotInAndUserIdInAndIsActiveTrueAndIsDeletedFalse(String parentId, Set<Integer> roleIds, List<String> userIds);

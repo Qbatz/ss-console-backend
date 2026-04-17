@@ -16,4 +16,12 @@ public class UserHostelService {
     public List<UserHostel> getUsersByHostelId(String hostelId) {
         return userHostelRepository.findAllByHostelId(hostelId);
     }
+
+    public List<UserHostel> getUsersByParentId(String parentId) {
+        return userHostelRepository.findAllByParentId(parentId);
+    }
+
+    public void deleteAll(List<UserHostel> userHostels) {
+        userHostelRepository.deleteAll(userHostels);
+    }
 }
