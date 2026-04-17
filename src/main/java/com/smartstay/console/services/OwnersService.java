@@ -404,6 +404,18 @@ public class OwnersService {
                 .findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(owner.getParentId());
 
         if (!users.isEmpty()){
+
+            Set<String> userIds = users.stream()
+                    .map(Users::getUserId)
+                    .collect(Collectors.toSet());
+
+            List<UserActivities> userActivities = userActivitiesService
+                    .getUserActivitiesByUserIds(userIds);
+
+            if (!userActivities.isEmpty()){
+                userActivitiesService.deleteAll(userActivities);
+            }
+
             usersRepository.deleteAll(users);
         }
 

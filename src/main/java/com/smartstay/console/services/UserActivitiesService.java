@@ -46,4 +46,12 @@ public class UserActivitiesService {
         return userActivitiesRepository
                 .findByHostelIdAndUserIdInOrderByCreatedAtDesc(hostelId, userIds, pageable);
     }
+
+    public List<UserActivities> getUserActivitiesByUserIds(Set<String> userIds){
+        return userActivitiesRepository.findAllByUserIdInOrderByCreatedAtDesc(userIds);
+    }
+
+    public void deleteAll(List<UserActivities> userActivities) {
+        userActivitiesRepository.deleteAll(userActivities);
+    }
 }

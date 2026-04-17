@@ -215,10 +215,10 @@ public class SubscriptionService {
                 HostelPlan hostelPlan = hostelV1.getHostelPlan();
                 if (hostelPlan == null) {
                     hostelPlan = new HostelPlan();
-                    hostelPlan.setCurrentPlanCode(planCode);
-                    hostelPlan.setCurrentPlanName(planName);
                     hostelPlan.setHostel(hostelV1);
                 }
+                hostelPlan.setCurrentPlanCode(planCode);
+                hostelPlan.setCurrentPlanName(planName);
                 hostelPlan.setCurrentPlanStartsAt(newSubscription.getPlanStartsAt());
                 hostelPlan.setCurrentPlanEndsAt(newSubscription.getPlanEndsAt());
                 hostelPlan.setCurrentPlanPrice(planAmount);

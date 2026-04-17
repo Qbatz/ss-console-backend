@@ -12,6 +12,7 @@ import java.util.*;
 public class Utils {
 
     public static final int OWNER_ROLE_ID = 1;
+    public static final int MASTER_ROLE_ID = 2;
 
     public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
     public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";
