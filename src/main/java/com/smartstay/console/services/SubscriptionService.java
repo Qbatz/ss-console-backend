@@ -237,15 +237,24 @@ public class SubscriptionService {
     }
 
     public List<com.smartstay.console.dto.hostelPlans.HostelPlan> getHostelsActivatingToday() {
+
         List<com.smartstay.console.dto.hostelPlans.HostelPlan> listHostelPlans = new ArrayList<>();
-        List<com.smartstay.console.dao.Subscription> listSubscriptions = subscriptionRepository.findSubscriptionStartingToday(new Date());
+
+        Calendar cal = Calendar.getInstance();
+//        cal.add(Calendar.DAY_OF_MONTH, 1);
+
+        List<com.smartstay.console.dao.Subscription> listSubscriptions = subscriptionRepository
+                .findSubscriptionStartingToday(cal.getTime());
         if (listSubscriptions != null && !listSubscriptions.isEmpty()) {
             listHostelPlans = new ArrayList<>(listSubscriptions
                     .stream()
-                    .map(i -> new com.smartstay.console.dto.hostelPlans.HostelPlan(i.getHostelId(),  i.getPlanStartsAt(),
+                    .map(i -> new com.smartstay.console.dto.hostelPlans.HostelPlan(
+                            i.getHostelId(),
+                            i.getPlanStartsAt(),
                             i.getPlanEndsAt(),
                             i.getPlanCode(),
-                            i.getPlanCode())).toList());
+                            i.getPlanName()))
+                    .toList());
         }
         return listHostelPlans;
     }
