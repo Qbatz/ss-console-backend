@@ -112,12 +112,10 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
         }
 
         Date lastRecurringDate = null;
-        Date nextRecurringDate = null;
+        Date nextRecurringDate = Utils.getNextMonthDate(cycleStartDate);
         boolean recurringStatus = false;
         if (latestRecurringTracker != null){
             lastRecurringDate = Utils.getDateFromDay(latestRecurringTracker.getCreationDay(),
-                    latestRecurringTracker.getCreationMonth(), latestRecurringTracker.getCreationYear());
-            nextRecurringDate = Utils.getNextMonthDate(latestRecurringTracker.getCreationDay(),
                     latestRecurringTracker.getCreationMonth(), latestRecurringTracker.getCreationYear());
             recurringStatus = Utils.isSameBillingCycle(
                     billingRules.getBillingStartDate(), latestRecurringTracker, cycleStartDate);

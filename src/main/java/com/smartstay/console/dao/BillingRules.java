@@ -1,6 +1,7 @@
 package com.smartstay.console.dao;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.smartstay.console.converters.IntegerListConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,8 +27,10 @@ public class BillingRules {
     private String typeOfBilling;
     //Billing model enum
     private String billingModel;
-    @Transient
+
+    @Convert(converter = IntegerListConverter.class)
     private List<Integer> reminderDays;
+
     private boolean shouldNotify;
     private Date startFrom;
     private Date endTill;

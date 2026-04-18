@@ -31,4 +31,8 @@ public interface CustomerRecurringTrackerRepository extends JpaRepository<Custom
     boolean existsByCustomerIdAndCreationDayAndCreationMonthAndCreationYear(String customerId, int day, int month, int year);
 
     Page<CustomerRecurringTracker> findAllByCustomerIdOrderByTrackerIdDesc(String customerId, Pageable pageable);
+
+    List<CustomerRecurringTracker> findAllByHostelIdOrderByTrackerIdDesc(String hostelId);
+
+    CustomerRecurringTracker findTopByHostelIdOrderByTrackerIdDesc(String hostelId);
 }
