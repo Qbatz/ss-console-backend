@@ -322,11 +322,127 @@ public class HostelsService {
         Plans trialPlan = plansService.findTrialPlan();
         Plans trialDaysPlan = plansService.findLatestTrialPlan();
 
+        Date today = new Date();
+        Date prevMonthDate = Utils.getPreviousMonthDate(today);
+
+        List<BillingRules> billingRulesList = hostel.getBillingRulesList();
+        Map<Integer, BillingDates> billingDatesMap = new HashMap<>();
+
+        for (BillingRules br : billingRulesList){
+
+            BillingDates billingDates;
+
+            if (BillingType.FIXED_DATE.name().equals(br.getTypeOfBilling())){
+                if (BillingModel.PREPAID.name().equals(br.getBillingModel())){
+                    billingDates = billingRulesService.computeBillingDates(br, today);
+                    billingDatesMap.put(br.getId(), billingDates);
+                } else if (BillingModel.POSTPAID.name().equals(br.getBillingModel())) {
+                    billingDates = billingRulesService.computeBillingDates(br, prevMonthDate);
+                    billingDatesMap.put(br.getId(), billingDates);
+                }
+            } else if (BillingType.JOINING_DATE_BASED.name().equals(br.getTypeOfBilling())) {
+                billingDatesMap.put(br.getId(), null);
+            }
+        }
+
+        List<RecurringTracker> recurringTrackers = recurringTrackerService
+                .getRecurringTrackersByHostelId(hostelId);
+
+        Set<String> createdByIds = new HashSet<>();
+        Set<Long> trackerIds = new HashSet<>();
+
+        for (RecurringTracker recurringTracker : recurringTrackers) {
+            if (recurringTracker.getCreatedBy() != null){
+                createdByIds.add(recurringTracker.getCreatedBy());
+            }
+            trackerIds.add(recurringTracker.getTrackerId());
+        }
+
+        List<CustomerRecurringTracker> customerRecurringTrackers = customerRecurringTrackerService
+                .getRecurringTrackersByHostelId(hostelId);
+
+        Set<String> customerIds = new HashSet<>();
+        for (CustomerRecurringTracker recurringTracker : customerRecurringTrackers) {
+            if (recurringTracker.getCreatedBy() != null){
+                createdByIds.add(recurringTracker.getCreatedBy());
+            }
+            customerIds.add(recurringTracker.getCustomerId());
+        }
+
+        List<Agent> agents = createdByIds.isEmpty()
+                ? Collections.emptyList()
+                : agentService.getAgentsByIds(createdByIds);
+
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        agent1 -> agent1));
+
+        List<InvoiceCountPerTracker> invoiceCountPerTrackers = recurringTrackerService
+                .getGeneratedInvoiceCountPerTracker(trackerIds);
+
+        Map<Long, Long> invoiceCountPerTrackerMap = invoiceCountPerTrackers.stream()
+                .collect(Collectors.toMap(
+                        InvoiceCountPerTracker::trackerId,
+                        InvoiceCountPerTracker::invoiceCount
+                ));
+
+        List<RecurringHistoryRes> recurringHistory = recurringTrackers.stream()
+                .map(recurringTracker -> new RecurringHistoryMapper(
+                        hostel, agentMap, invoiceCountPerTrackerMap.getOrDefault(recurringTracker.getTrackerId(), 0L)
+                ).apply(recurringTracker))
+                .toList();
+
+        List<Customers> customers = customersService.getCustomersByIds(customerIds);
+        Map<String, Customers> customersMap = customers.stream()
+                .collect(Collectors.toMap(Customers::getCustomerId,
+                        customer -> customer, (a, b) -> a));
+
+        List<CustomerRecHistoryRes> customerRecurringHistory = customerRecurringTrackers.stream()
+                .map(recurringTracker -> new CustomerRecHistoryMapper(
+                        customersMap.getOrDefault(recurringTracker.getCustomerId(), null),
+                        hostel,
+                        agentMap.getOrDefault(recurringTracker.getCreatedBy(), null)
+                ).apply(recurringTracker)).toList();
+
+        boolean recurringStatus = false;
+        Date currentBillLastRecDate = null;
+        BillingRules currentBillingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
+
+        if (currentBillingRules != null) {
+            int startDay = currentBillingRules.getBillingStartDate();
+            BillingDates billingDates = billingDatesMap
+                    .getOrDefault(currentBillingRules.getId(), null);
+            Date startDate = today;
+
+            if (billingDates != null) {
+                startDate = billingDates.currentBillStartDate();
+            }
+
+            if (BillingType.FIXED_DATE.name().equals(currentBillingRules.getTypeOfBilling())){
+                RecurringTracker latestTracker = recurringTrackerService
+                        .getLatestRecurringTrackerByHostelId(hostelId);
+                if (latestTracker != null) {
+                    recurringStatus = Utils.isSameBillingCycle(startDay, latestTracker, startDate);
+                    currentBillLastRecDate = Utils.getDateFromDay(latestTracker.getCreationDay(),
+                            latestTracker.getCreationMonth(), latestTracker.getCreationYear());
+                }
+            } else if (BillingType.JOINING_DATE_BASED.name().equals(currentBillingRules.getTypeOfBilling())) {
+                CustomerRecurringTracker latestTracker = customerRecurringTrackerService
+                        .getLatestTrackerByHostelId(hostelId);
+                if (latestTracker != null) {
+                    recurringStatus = Utils.isSameBillingCycle(startDay, latestTracker, startDate);
+                    currentBillLastRecDate = Utils.getDateFromDay(latestTracker.getCreationDay(),
+                            latestTracker.getCreationMonth(), latestTracker.getCreationYear());
+                }
+            }
+        }
+
         HostelResponse hostelDetails = new HostelDetailsMapper(
                 ownerInfo, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
                 noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
                 sharingTypeList, amenities, customerResponses, subscriptions, mastersRes, staffsRes,
-                activities, userLookup, trialPlan, trialDaysPlan
+                activities, userLookup, trialPlan, trialDaysPlan, billingDatesMap, recurringHistory,
+                customerRecurringHistory, recurringStatus, currentBillLastRecDate, currentBillingRules
         ).apply(hostel);
 
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);

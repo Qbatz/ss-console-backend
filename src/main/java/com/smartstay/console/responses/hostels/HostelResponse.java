@@ -1,6 +1,7 @@
 package com.smartstay.console.responses.hostels;
 
 import com.smartstay.console.responses.bills.BillingRulesResponse;
+import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
@@ -39,12 +40,17 @@ public record HostelResponse(String hostelId,
                              OwnerInfo ownerInfo,
                              List<UsersResponse> masters,
                              List<UsersResponse> staffs,
+                             BillingRulesResponse currentBillingRules,
                              List<BillingRulesResponse> billingRules,
                              EbConfig ebConfig,
                              SubscriptionResponse currentSubscription,
                              List<SubscriptionResponse> subscriptions,
                              String subscriptionStatus,
                              int renewalTimeLeftDays,
+                             boolean isSubscriptionActive,
+                             boolean recurringStatus,
+                             List<RecurringHistoryRes> recurringHistory,
+                             List<CustomerRecHistoryRes> customerRecurringHistory,
                              List<UserActivitiesResponse> activities
 ) {
 }

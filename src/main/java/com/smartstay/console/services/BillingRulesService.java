@@ -88,7 +88,7 @@ public class BillingRulesService {
         return billingRuleRepository.getLatestBillingRulesByDays(days, billingType);
     }
 
-    public BillingDates computeBillingDates(BillingRules billingRules, Date dateJoiningDate) {
+    public BillingDates computeBillingDates(BillingRules billingRules, Date requestedDate) {
 
         int billStartDate = billingRules != null ? billingRules.getBillingStartDate() : 1;
         int billingRuleDueDate = billingRules != null ? billingRules.getBillDueDays() : 10;
@@ -105,11 +105,11 @@ public class BillingRulesService {
         }
 
         Calendar calendar = Calendar.getInstance();
-        calendar.setTime(dateJoiningDate);
+        calendar.setTime(requestedDate);
 
         calendar.set(Calendar.DAY_OF_MONTH, billStartDate);
 
-        if (Utils.compareWithTwoDates(dateJoiningDate, calendar.getTime()) < 0) {
+        if (Utils.compareWithTwoDates(requestedDate, calendar.getTime()) < 0) {
             calendar.add(Calendar.MONTH, -1);
         }
 

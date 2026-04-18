@@ -456,16 +456,6 @@ public class Utils {
         return (double) Math.round(number);
     }
 
-    public static int findDateFromDate(Date date) {
-        if (date != null) {
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(date);
-
-            return cal.get(Calendar.DAY_OF_MONTH);
-        }
-        return 0;
-    }
-
     public static Integer getCurrentMonth(Date date) {
         if (date == null) return null;
 
@@ -518,17 +508,6 @@ public class Utils {
         return tracker.getCreationDay() == billingStartDay
                 && tracker.getCreationMonth() == expectedMonth
                 && tracker.getCreationYear() == expectedYear;
-    }
-
-    public static LocalTime dateToLocalTime(Date date) {
-        if (date == null) {
-            return null;
-        }
-        LocalDateTime dateTime = date
-                .toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalDateTime();
-        return dateTime.toLocalTime();
     }
 
     public static String localDateToString(LocalDate date) {
@@ -670,6 +649,21 @@ public class Utils {
         return Date.from(nextDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 
+    public static Date getNextMonthDate(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+
+        int currentDay = cal.get(Calendar.DAY_OF_MONTH);
+
+        cal.add(Calendar.MONTH, 1);
+
+        int lastDayOfNextMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+
+        cal.set(Calendar.DAY_OF_MONTH, Math.min(currentDay, lastDayOfNextMonth));
+
+        return cal.getTime();
+    }
+
     public static boolean isEligibleForInvoice(BookingsV1 booking, Date billingCycleStartDate) {
 
         if (booking.getJoiningDate() == null || billingCycleStartDate == null) {
@@ -734,14 +728,6 @@ public class Utils {
                 .atTime(LocalTime.MAX)
                 .atZone(ZoneId.systemDefault())
                 .toInstant());
-    }
-
-    public static YearMonth getPreviousYearMonth(Date date) {
-        return YearMonth.from(
-                date.toInstant()
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDate()
-        ).minusMonths(1);
     }
 
     public static Date getPreviousMonthDate(Date currentDate) {

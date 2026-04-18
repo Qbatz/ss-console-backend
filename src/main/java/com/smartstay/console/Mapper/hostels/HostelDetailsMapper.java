@@ -2,7 +2,9 @@ package com.smartstay.console.Mapper.hostels;
 
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
+import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.responses.bills.BillingRulesResponse;
+import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
@@ -11,6 +13,7 @@ import com.smartstay.console.utils.Utils;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
 
@@ -34,6 +37,12 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
     Map<String, Users> userLookup;
     Plans trialPlan;
     Plans trialDaysPlan;
+    Map<Integer, BillingDates> billingDatesMap;
+    List<RecurringHistoryRes> recurringHistory;
+    List<CustomerRecHistoryRes> customerRecurringHistory;
+    boolean recurringStatus;
+    Date currentBillLastRecDate;
+    BillingRules currentBillingRules;
 
     public HostelDetailsMapper(OwnerInfo ownerInfo,
                                int noOfFloors,
@@ -54,7 +63,13 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                                List<UserActivities> activities,
                                Map<String, Users> userLookup,
                                Plans trialPlan,
-                               Plans trialDaysPlan) {
+                               Plans trialDaysPlan,
+                               Map<Integer, BillingDates> billingDatesMap,
+                               List<RecurringHistoryRes> recurringHistory,
+                               List<CustomerRecHistoryRes> customerRecurringHistory,
+                               boolean recurringStatus,
+                               Date currentBillLastRecDate,
+                               BillingRules currentBillingRules) {
         this.ownerInfo = ownerInfo;
         this.noOfFloors = noOfFloors;
         this.noOfRooms = noOfRooms;
@@ -75,6 +90,12 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
         this.userLookup = userLookup;
         this.trialPlan = trialPlan;
         this.trialDaysPlan = trialDaysPlan;
+        this.billingDatesMap = billingDatesMap;
+        this.recurringHistory = recurringHistory;
+        this.customerRecurringHistory = customerRecurringHistory;
+        this.recurringStatus = recurringStatus;
+        this.currentBillLastRecDate = currentBillLastRecDate;
+        this.currentBillingRules = currentBillingRules;
     }
 
     @Override
@@ -92,16 +113,85 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
         List<BillingRules> billingRulesList = hostelV1.getBillingRulesList();
 
         List<BillingRulesResponse> billingRules = billingRulesList.stream()
-                .map(billRules -> new BillingRulesResponse(
-                        billRules.getId(), billRules.getBillingStartDate(),
-                        billRules.getBillDueDays(), billRules.getNoticePeriod()
-                )).toList();
+                .sorted(Comparator.comparing(BillingRules::getId).reversed())
+                .map(billRules -> {
+
+                    boolean isCurrent = false;
+                    if (currentBillingRules != null){
+                        isCurrent = Objects.equals(currentBillingRules.getId(), billRules.getId());
+                    }
+
+                    Integer billingStartDay = null;
+                    Integer billingEndDay = null;
+                    String currentPeriodStartDate = null;
+                    String currentPeriodEndDate = null;
+                    String lastRecurringDate = null;
+                    String nextRecurringDate = null;
+
+                    if (billingDatesMap != null) {
+                        BillingDates billingDates = billingDatesMap.getOrDefault(billRules.getId(), null);
+
+                        if (billingDates != null) {
+                            Date cycleStartDate = billingDates.currentBillStartDate();
+                            Date cycleEndDate = billingDates.currentBillEndDate();
+
+                            billingStartDay = billRules.getBillingStartDate();
+                            billingEndDay = Utils.calculateEndDay(billingStartDay, cycleStartDate);
+                            currentPeriodStartDate = Utils.dateToString(cycleStartDate);
+                            currentPeriodEndDate = Utils.dateToString(cycleEndDate);
+
+                            lastRecurringDate = Utils.dateToString(cycleStartDate);
+                            Date nextRecurring = Utils.getNextMonthDate(cycleStartDate);
+                            nextRecurringDate = Utils.dateToString(nextRecurring);
+                        }
+                    }
+
+                    if (isCurrent && currentBillLastRecDate != null) {
+                        lastRecurringDate = Utils.dateToString(currentBillLastRecDate);
+                    }
+
+                    String billRulesCreatedBy = null;
+                    if (billRules.getCreatedBy() != null){
+                        Users billRulesCreatedByUser = userLookup.getOrDefault(billRules.getCreatedBy(), null);
+                        if (billRulesCreatedByUser != null){
+                            billRulesCreatedBy = Utils
+                                    .getFullName(billRulesCreatedByUser.getFirstName(), billRulesCreatedByUser.getLastName());
+                        }
+                    }
+
+                    return new BillingRulesResponse(
+                            billRules.getId(), billRules.getBillingStartDate(), billRules.getBillDueDays(),
+                            billRules.getNoticePeriod(), billingStartDay, billingEndDay, currentPeriodStartDate, currentPeriodEndDate,
+                            lastRecurringDate, nextRecurringDate, billRules.isInitial(), billRules.isHasGracePeriod(),
+                            billRules.getGracePeriodDays(), billRules.getTypeOfBilling(), billRules.getBillingModel(),
+                            billRules.getReminderDays(), billRules.isShouldNotify(), Utils.dateToString(billRules.getCreatedAt()),
+                            Utils.dateToTime(billRules.getCreatedAt()), billRulesCreatedBy);
+                }).toList();
+
+        BillingRulesResponse currentBillingRulesRes;
+        if (currentBillingRules != null) {
+            currentBillingRulesRes = billingRules.isEmpty() ? null : billingRules.stream()
+                            .filter(br -> Objects.equals(currentBillingRules.getId(), br.billingRulesId()))
+                            .findFirst().orElse(null);
+        } else {
+            currentBillingRulesRes = billingRules.isEmpty() ? null : billingRules.getFirst();
+        }
 
         ElectricityConfig electricityConfig = hostelV1.getElectricityConfig();
 
-        EbConfig ebConfig = new EbConfig(electricityConfig.getId(),
-                electricityConfig.isShouldIncludeInRent(), electricityConfig.getTypeOfReading(),
-                electricityConfig.getCharge(), electricityConfig.getBillDate());
+        String ebConfigUpdatedBy = null;
+        if (electricityConfig.getUpdatedBy() != null){
+            Users ebConfigUpdatedByUser = userLookup.getOrDefault(electricityConfig.getUpdatedBy(), null);
+            if (ebConfigUpdatedByUser != null){
+                ebConfigUpdatedBy = Utils
+                        .getFullName(ebConfigUpdatedByUser.getFirstName(), ebConfigUpdatedByUser.getLastName());
+            }
+        }
+
+        EbConfig ebConfig = new EbConfig(electricityConfig.getId(), electricityConfig.isShouldIncludeInRent(),
+                electricityConfig.getTypeOfReading(), electricityConfig.getCharge(), electricityConfig.getFlatCharge(),
+                electricityConfig.getBillDate(), electricityConfig.isUpdated(), Utils.dateToString(electricityConfig.getLastUpdate()),
+                Utils.dateToTime(electricityConfig.getLastUpdate()), ebConfigUpdatedBy);
 
         String subscriptionStatus;
         int subscriptionRenewalTimeLeftDays = 0;
@@ -221,7 +311,10 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
             trialPlanCodes.add(trialDaysPlan.getPlanCode().toLowerCase());
         }
 
+        boolean isSubscriptionActive = false;
+
         HostelPlan currentPlan = hostelV1.getHostelPlan();
+
         if (currentPlan != null) {
             if (trialPlanCodes.contains(currentPlan.getCurrentPlanCode().toLowerCase())) {
                 if (subscriptions != null) {
@@ -244,6 +337,11 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                     }
                 }
             }
+
+            if (currentPlan.getCurrentPlanEndsAt() != null) {
+                isSubscriptionActive = Utils.compareWithTwoDates(
+                        currentPlan.getCurrentPlanEndsAt(), new Date()) >= 0;
+            }
         }
 
         return new HostelResponse(hostelV1.getHostelId(), hostelV1.getHostelName(), Utils.getInitials(hostelV1.getHostelName()),
@@ -252,7 +350,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                 trialExtendable, addImages, amenitiesRes, sharingTypeList, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants,
                 noOfBookedTenants, noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants, tenantList,
                 Utils.dateToString(hostelV1.getCreatedAt()), Utils.dateToTime(hostelV1.getCreatedAt()), ownerInfo, masters, staffs,
-                billingRules, ebConfig, currentSubRes, otherSubsRes, subscriptionStatus, subscriptionRenewalTimeLeftDays,
+                currentBillingRulesRes, billingRules, ebConfig, currentSubRes, otherSubsRes, subscriptionStatus,
+                subscriptionRenewalTimeLeftDays, isSubscriptionActive, recurringStatus, recurringHistory, customerRecurringHistory,
                 activitiesRes);
     }
 }

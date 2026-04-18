@@ -108,6 +108,10 @@ public class RecurringTrackerService {
         return recurringTrackerRepository.findAllByHostelIdOrderByTrackerIdDesc(hostelId, pageable);
     }
 
+    public List<RecurringTracker> getRecurringTrackersByHostelId(String hostelId) {
+        return recurringTrackerRepository.findAllByHostelIdOrderByTrackerIdDesc(hostelId);
+    }
+
     public RecurringTracker getLatestRecurringTrackerByHostelId(String hostelId) {
         return recurringTrackerRepository.getLatestRecurringTrackerByHostelId(hostelId);
     }

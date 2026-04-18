@@ -70,6 +70,11 @@ public class CustomerRecurringTrackerService {
                 .findTopByCustomerIdOrderByTrackerIdDesc(customerId);
     }
 
+    public CustomerRecurringTracker getLatestTrackerByHostelId(String hostelId){
+        return customerRecurringTrackerRepository
+                .findTopByHostelIdOrderByTrackerIdDesc(hostelId);
+    }
+
     public boolean checkRecurringTrackerExists(String customerId, int day, Date date) {
 
         int month;
@@ -85,5 +90,10 @@ public class CustomerRecurringTrackerService {
     public Page<CustomerRecurringTracker> getPaginatedRecurringTrackersByCustomerId(String customerId, Pageable pageable) {
         return customerRecurringTrackerRepository
                 .findAllByCustomerIdOrderByTrackerIdDesc(customerId, pageable);
+    }
+
+    public List<CustomerRecurringTracker> getRecurringTrackersByHostelId(String hostelId) {
+        return customerRecurringTrackerRepository
+                .findAllByHostelIdOrderByTrackerIdDesc(hostelId);
     }
 }
