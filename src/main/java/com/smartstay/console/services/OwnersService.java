@@ -51,6 +51,8 @@ public class OwnersService {
     private UserActivitiesService userActivitiesService;
     @Autowired
     private HotelTypeService hotelTypeService;
+    @Autowired
+    private UserHostelService userHostelService;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
@@ -380,6 +382,10 @@ public class OwnersService {
             return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        if (Utils.OWNER_ROLE_ID != owner.getRoleId()){
+            return new ResponseEntity<>(Utils.THIS_USER_IS_NOT_AN_OWNER, HttpStatus.BAD_REQUEST);
+        }
+
         UserSnapshot oldOwner = SnapshotUtility.toSnapshot(owner);
 
         List<HostelV1> hostels = hostelsService.getHostelsByParentId(owner.getParentId());
@@ -388,11 +394,30 @@ public class OwnersService {
             return new ResponseEntity<>(Utils.HOSTELS_EXISTS_FOR_THIS_OWNER, HttpStatus.BAD_REQUEST);
         }
 
-        owner.setActive(false);
-        owner.setDeleted(true);
-        owner.setLastUpdate(new Date());
+        List<UserHostel> userHostels = userHostelService.getUsersByParentId(owner.getParentId());
 
-        usersRepository.save(owner);
+        if (!userHostels.isEmpty()){
+            userHostelService.deleteAll(userHostels);
+        }
+
+        List<Users> users = usersRepository
+                .findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(owner.getParentId());
+
+        if (!users.isEmpty()){
+
+            Set<String> userIds = users.stream()
+                    .map(Users::getUserId)
+                    .collect(Collectors.toSet());
+
+            List<UserActivities> userActivities = userActivitiesService
+                    .getUserActivitiesByUserIds(userIds);
+
+            if (!userActivities.isEmpty()){
+                userActivitiesService.deleteAll(userActivities);
+            }
+
+            usersRepository.deleteAll(users);
+        }
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.OWNERS,
                 ownerId, oldOwner, null);

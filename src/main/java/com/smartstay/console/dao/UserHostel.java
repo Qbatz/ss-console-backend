@@ -13,11 +13,11 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserHostel {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
     private String userId;
     private String hostelId;
     private String parentId;
-
 }

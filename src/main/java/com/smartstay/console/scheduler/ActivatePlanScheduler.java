@@ -19,13 +19,17 @@ public class ActivatePlanScheduler {
 
     @Scheduled(cron = "0 30 0 * * *")
     public void activatePlan() {
+
         List<HostelPlan> hp = subscriptionService.getHostelsActivatingToday();
+
         if (!hp.isEmpty()) {
+
             List<String> hostelIds = hp.stream()
                     .map(HostelPlan::hostelId)
                     .toList();
 
             List<com.smartstay.console.dao.HostelPlan> listHostelPlans = hostelPlanService.findByHostelIds(hostelIds);
+
             if (listHostelPlans != null && !listHostelPlans.isEmpty()) {
                 List<com.smartstay.console.dao.HostelPlan> listNewPlans = subscriptionPlanMapper(listHostelPlans, hp);
                 hostelPlanService.saveAll(listNewPlans);
@@ -34,11 +38,12 @@ public class ActivatePlanScheduler {
     }
 
     List<com.smartstay.console.dao.HostelPlan> subscriptionPlanMapper(List<com.smartstay.console.dao.HostelPlan> hp,
-                                                                      List<HostelPlan> newScubscription) {
+                                                                      List<HostelPlan> newSubscription) {
+
         List<com.smartstay.console.dao.HostelPlan> newPlan = hp
                 .stream()
                 .map(i -> {
-                    HostelPlan hostelPlan = newScubscription
+                    HostelPlan hostelPlan = newSubscription
                             .stream()
                             .filter(i2 -> i2.hostelId().equalsIgnoreCase(i.getHostel().getHostelId()))
                             .findFirst()

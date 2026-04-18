@@ -65,11 +65,13 @@ public class HostelsService {
     @Autowired
     private UsersService usersService;
     @Autowired
+    private UserHostelService userHostelService;
+    @Autowired
+    private UserActivitiesService userActivitiesService;
+    @Autowired
     private HostelPlanService hostelPlansService;
     @Autowired
     private SubscriptionService subscriptionService;
-    @Autowired
-    private UserActivitiesService userActivitiesService;
     @Autowired
     private HostelV1Repositories hostelRepository;
     @Autowired
@@ -646,24 +648,49 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        HostelV1 hostelV1 = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
-        if (hostelV1 == null) {
+        HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        if (hostel == null) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
-        HostelSnapshot oldHostel = SnapshotUtility.toSnapshot(hostelV1);
+        HostelSnapshot oldHostel = SnapshotUtility.toSnapshot(hostel);
 
         try {
-            resetHostel(hostelV1, agent);
+            resetHostel(hostel, agent);
         } catch (Exception e){
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        hostelV1.setActive(false);
-        hostelV1.setDeleted(true);
-        hostelV1.setUpdatedAt(new Date());
+        List<UserHostel> userHostels = userHostelService.getUsersByHostelId(hostelId);
 
-        hostelRepository.save(hostelV1);
+        if (!userHostels.isEmpty()) {
+
+            Set<String> userIds = userHostels.stream()
+                    .map(UserHostel::getUserId)
+                    .collect(Collectors.toSet());
+
+            List<Users> nonMasterUsers = usersService.getStaffs(hostel.getParentId(), userIds);
+
+            if (!nonMasterUsers.isEmpty()) {
+
+                Set<String> nonMasterUserIds = nonMasterUsers.stream()
+                        .map(Users::getUserId)
+                        .collect(Collectors.toSet());
+
+                List<UserActivities> userActivities = userActivitiesService
+                        .getUserActivitiesByUserIds(nonMasterUserIds);
+
+                if (!userActivities.isEmpty()){
+                    userActivitiesService.deleteAll(userActivities);
+                }
+
+                usersService.deleteAll(nonMasterUsers);
+            }
+
+            userHostelService.deleteAll(userHostels);
+        }
+
+        hostelRepository.delete(hostel);
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
                 hostelId, oldHostel, null);
