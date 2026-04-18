@@ -17,8 +17,10 @@ public interface CustomersAmenityRepository extends JpaRepository<CustomersAmeni
     List<CustomersAmenity> findByCustomerId(String customerId);
 
     @Query(value = """
-        SELECT * FROM customers_amenity WHERE customer_id=:customerId AND (end_date IS NULL OR DATE(end_date) >= DATE(:date))
-        """, nativeQuery = true)
+            SELECT * FROM customers_amenity
+            WHERE customer_id=:customerId
+                AND (end_date IS NULL OR DATE(end_date) >= DATE(:date))
+            """, nativeQuery = true)
     List<CustomersAmenity> getAllCustomersAmenityByCustomerIdAndEndDate(@Param("customerId") String customerId,
                                                                         @Param("date") Date date);
 }

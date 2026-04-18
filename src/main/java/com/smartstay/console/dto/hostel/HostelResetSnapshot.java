@@ -4,7 +4,7 @@ import com.smartstay.console.dao.*;
 
 import java.util.List;
 
-public record HostelResetSnapshot(HostelV1 hostel,
+public record HostelResetSnapshot(HostelSnapshot hostel,
                                   List<Customers> customersList,
                                   List<InvoicesV1> invoices,
                                   List<BookingsV1> bookings,

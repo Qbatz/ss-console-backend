@@ -2,6 +2,7 @@ package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.owners.ResetPassword;
 import com.smartstay.console.payloads.owners.UserEmailPayload;
+import com.smartstay.console.payloads.owners.UserMobilePayload;
 import com.smartstay.console.services.OwnersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -52,5 +53,16 @@ public class OwnersController {
     public ResponseEntity<?> updateOwnerEmailById(@PathVariable String ownerId,
                                                   @Valid @RequestBody UserEmailPayload userEmailPayload){
         return ownersService.updateOwnerEmailById(ownerId, userEmailPayload);
+    }
+
+    @DeleteMapping("/{ownerId}")
+    public ResponseEntity<?> deleteOwnerById(@PathVariable String ownerId){
+        return ownersService.deleteOwnerById(ownerId);
+    }
+
+    @PutMapping("/mobile/{ownerId}")
+    public ResponseEntity<?> updateOwnerMobileById(@PathVariable String ownerId,
+                                                   @Valid @RequestBody UserMobilePayload payload){
+        return ownersService.updateOwnerMobileById(ownerId, payload);
     }
 }

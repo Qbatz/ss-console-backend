@@ -8,5 +8,8 @@ import java.util.List;
 
 @Repository
 public interface UserHostelRepository extends JpaRepository<UserHostel, Integer> {
+
     List<UserHostel> findAllByHostelId(String hostelId);
+
+    List<UserHostel> findAllByParentId(String parentId);
 }

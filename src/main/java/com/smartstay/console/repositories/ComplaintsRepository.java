@@ -11,7 +11,9 @@ import java.util.List;
 public interface ComplaintsRepository extends JpaRepository<ComplaintsV1, Integer> {
 
     @Query("""
-            SELECT c FROM complaintsv1 c WHERE c.hostelId=:hostelId AND c.customerId IN (:customerIds)
+            SELECT c FROM complaintsv1 c
+            WHERE c.hostelId = :hostelId
+                AND c.customerId IN (:customerIds)
             """)
     List<ComplaintsV1> findByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds);
 

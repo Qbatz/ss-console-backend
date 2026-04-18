@@ -5,12 +5,14 @@ import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dao.UserHostel;
 import com.smartstay.console.dao.Users;
 import com.smartstay.console.repositories.UsersRepository;
+import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UsersService {
@@ -36,33 +38,45 @@ public class UsersService {
     }
 
     public List<Users> getMasters(HostelV1 hostel) {
-        return usersRepository.findAllByParentIdAndRoleId(hostel.getParentId(), 2);
+        return usersRepository
+                .findAllByParentIdAndRoleIdAndIsActiveTrueAndIsDeletedFalse(hostel.getParentId(), Utils.MASTER_ROLE_ID);
     }
 
     public List<Users> getStaffs(HostelV1 hostel) {
-        Set<Integer> roleIds = Set.of(1,2);
+        Set<Integer> roleIds = Set.of(Utils.OWNER_ROLE_ID, Utils.MASTER_ROLE_ID);
 
         List<UserHostel> userHostels = userHostelService
                 .getUsersByHostelId(hostel.getHostelId());
 
-        List<String> userIds = userHostels.stream()
+        Set<String> userIds = userHostels.stream()
                 .map(UserHostel::getUserId)
-                .toList();
+                .collect(Collectors.toSet());
 
         if (userIds.isEmpty()) {
             return Collections.emptyList();
         }
 
         return usersRepository
-                .findAllByParentIdAndRoleIdNotInAndUserIdIn(hostel.getParentId(), roleIds, userIds);
+                .findAllByParentIdAndRoleIdNotInAndUserIdInAndIsActiveTrueAndIsDeletedFalse(hostel.getParentId(), roleIds, userIds);
+    }
+
+    public List<Users> getStaffs(String parentId, Set<String> userIds){
+        Set<Integer> roleIds = Set.of(Utils.OWNER_ROLE_ID, Utils.MASTER_ROLE_ID);
+
+        return usersRepository
+                .findAllByParentIdAndRoleIdNotInAndUserIdInAndIsActiveTrueAndIsDeletedFalse(parentId, roleIds, userIds);
     }
 
     public List<Users> getUsersByIds(Set<String> userIds){
-        return usersRepository.findAllByUserIdIn(userIds);
+        return usersRepository.findAllByUserIdInAndIsActiveTrueAndIsDeletedFalse(userIds);
     }
 
     public List<Users> getUsersByName(String name){
         return usersRepository
-                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(name, name);
+                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseAndIsActiveTrueAndIsDeletedFalse(name, name);
+    }
+
+    public void deleteAll(List<Users> users) {
+        usersRepository.deleteAll(users);
     }
 }

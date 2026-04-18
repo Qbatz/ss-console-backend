@@ -11,26 +11,25 @@ import java.util.*;
 
 public class Utils {
 
+    public static final int OWNER_ROLE_ID = 1;
+    public static final int MASTER_ROLE_ID = 2;
+
     public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
     public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";
+
     public static final String CREATED = "Created Successfully";
-
     public static final String UPDATED = "Updated Successfully";
-
     public static final String DELETED = "Deleted Successfully";
-    public static final String UN_AUTHORIZED = "Unauthorized Access";
 
-    public static final String PAYLOAD_REQUIRED = "Payload is required";
+    public static final String UN_AUTHORIZED = "Unauthorized Access";
+    public static final String ACCESS_RESTRICTED = "Access Restricted";
 
     public static final String PERMISSION_READ = "READ";
     public static final String PERMISSION_WRITE = "WRITE";
     public static final String PERMISSION_UPDATE = "UPDATE";
     public static final String PERMISSION_DELETE = "DELETE";
 
-    public static final String ACCESS_RESTRICTED = "Access Restricted";
-
     public static final String ACTIVE_USERS_FOUND = "Active users found with this role, cannot delete";
-
     public static final String ROLE_NAME_EXISTS = "Role name already exists";
     public static final String ROLE_NAME_CANNOT_EDIT = "This role cannot be edited";
     public static final String NO_ROLES_FOUND = "No roles found";
@@ -41,7 +40,6 @@ public class Utils {
     public static final String DEMO_REQUEST_NOT_FOUND = "Demo request not found";
     public static final String PLAN_NOT_FOUND = "No plan found";
     public static final String PLAN_FEATURE_NOT_FOUND = "No plan feature found";
-
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
     public static final String INVALID_SUBSCRIPTION = "Invalid subscription";
@@ -51,7 +49,6 @@ public class Utils {
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
     public static final String EMAIL_ALREADY_EXISTS = "Email already exists";
     public static final String PLAN_FEATURE_MISMATCH = "Plan of plan feature does not match plan";
-
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";
     public static final String SUBSCRIPTION_NOT_ACTIVE = "Subscription is not active for this hostel";
@@ -82,6 +79,9 @@ public class Utils {
     public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
     public static final String NO_CUSTOMER_FOUND = "No tenant found";
     public static final String INVALID_MONTH = "Month must be from 1 to 12";
+    public static final String HOSTELS_EXISTS_FOR_THIS_OWNER = "Hostels exists for this owner";
+    public static final String MOBILE_ALREADY_EXISTS = "Mobile number already exists";
+    public static final String THIS_USER_IS_NOT_AN_OWNER = "This user is not an owner";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {

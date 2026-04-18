@@ -1,6 +1,5 @@
 package com.smartstay.console.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecHistoryMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecTrackerResMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecurringMapper;
@@ -13,6 +12,7 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.dto.hostel.HostelResetSnapshot;
+import com.smartstay.console.dto.hostel.HostelSnapshot;
 import com.smartstay.console.dto.hostel.InvoiceCountPerTracker;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import com.smartstay.console.ennum.*;
@@ -29,6 +29,7 @@ import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
+import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
@@ -64,11 +65,13 @@ public class HostelsService {
     @Autowired
     private UsersService usersService;
     @Autowired
+    private UserHostelService userHostelService;
+    @Autowired
+    private UserActivitiesService userActivitiesService;
+    @Autowired
     private HostelPlanService hostelPlansService;
     @Autowired
     private SubscriptionService subscriptionService;
-    @Autowired
-    private UserActivitiesService userActivitiesService;
     @Autowired
     private HostelV1Repositories hostelRepository;
     @Autowired
@@ -138,6 +141,18 @@ public class HostelsService {
     @Autowired
     private CustomerRecurringTrackerService customerRecurringTrackerService;
 
+    public List<HostelV1> getHostelsByParentId(String parentId) {
+        return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
+    }
+
+    public List<HostelPlanProjection> getHostelPlanProjectionData(Set<String> parentIds) {
+        return hostelRepository.findHostelPlanProjectionData(parentIds);
+    }
+
+    public long getHostelCount(){
+        return hostelRepository.findHostelCount();
+    }
+
     public ResponseEntity<?> getHostelByHostelId(String hostelId) {
 
         if (!authentication.isAuthenticated()) {
@@ -153,7 +168,7 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        HostelV1 hostel = hostelRepository.findByHostelId(hostelId);
+        HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
         if (hostel == null){
             return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
         }
@@ -317,25 +332,118 @@ public class HostelsService {
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> resetHostelTenant(String hostelId, HostelIdPayload hostelIdPayload) {
+    public ResponseEntity<?> getHostelActivities(String hostelId, int page, int size, String name) {
+
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         Agent agent = agentService.findUserByUserId(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostel_Reset.getId(), Utils.PERMISSION_DELETE)) {
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostel_Activities.getId(), Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        HostelV1 hostelV1 = hostelRepository.findByHostelId(hostelId);
-        if (hostelV1 == null) {
-            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+
+        HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        if (!hostelV1.getHostelId().equals(hostelIdPayload.hostelId())){
-            return new ResponseEntity<>(Utils.HOSTEL_ID_MISMATCH, HttpStatus.BAD_REQUEST);
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<UserActivities> pagedActivities;
+        List<UserActivities> userActivities;
+        List<Users> users;
+        Map<String, Users> usersMap;
+
+        if (name != null && !name.isBlank()){
+            users = usersService.getUsersByName(name);
+
+            Set<String> userIds = users.stream()
+                    .map(Users::getUserId)
+                    .collect(Collectors.toSet());
+
+            if (userIds.isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("content", List.of());
+                response.put("currentPage", page + 1);
+                response.put("pageSize", size);
+                response.put("totalItems", 0);
+                response.put("totalPages", 0);
+
+                return new ResponseEntity<>(response, HttpStatus.OK);
+            }
+
+            pagedActivities = userActivitiesService
+                    .getFilteredPaginatedActivitiesByHostelId(hostelId, userIds, pageable);
+
+            userActivities = pagedActivities.getContent();
+        } else {
+            pagedActivities = userActivitiesService
+                    .getPaginatedActivitiesByHostelId(hostelId, pageable);
+
+            userActivities = pagedActivities.getContent();
+
+            Set<String> userIds = userActivities.stream()
+                    .map(UserActivities::getUserId)
+                    .collect(Collectors.toSet());
+
+            users = usersService.getUsersByIds(userIds);
         }
+
+        usersMap = users.stream()
+                .collect(Collectors.toMap(Users::getUserId, user -> user));
+
+        List<UserActivitiesResponse> responseList = userActivities.stream()
+                .map(activity -> {
+                    Users user = usersMap.get(activity.getUserId());
+                    String userName = null;
+                    if (user != null){
+                        userName = Utils.getFullName(user.getFirstName(), user.getLastName());
+                    }
+                    return new UserActivitiesResponse(
+                            activity.getActivityId(), activity.getDescription(), activity.getUserId(), userName,
+                            Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
+                            activity.getSource(), activity.getActivityType());
+                }).toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", responseList);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedActivities.getTotalElements());
+        response.put("totalPages", pagedActivities.getTotalPages());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> removeExpenses(String hostelId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.EXPENSES.getId(), Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        return expenseService.deleteExpenses(hostelId, agent);
+    }
+
+    public void resetHostel(HostelV1 hostel, Agent loggedInAgent){
+
+        String hostelId = hostel.getHostelId();
 
         List<Customers> customersList = customersService.findCustomersByHostelId(hostelId);
         List<String> customerIds = customersList
@@ -374,7 +482,7 @@ public class HostelsService {
 
         HashMap<String, Double> bankBalances = new HashMap<>();
 
-        HostelV1 oldHostel = new ObjectMapper().convertValue(hostelV1, HostelV1.class);
+        HostelSnapshot oldHostel = SnapshotUtility.toSnapshot(hostel);
 
         HostelResetSnapshot snapshot = new HostelResetSnapshot(
                 oldHostel,
@@ -488,17 +596,44 @@ public class HostelsService {
             expenseService.deleteExpensesByHostelId(hostelId);
         }
 
-        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.DELETE, Source.HOSTEL,
                 hostelId, snapshot, null);
+    }
+
+    public ResponseEntity<?> resetHostelTenant(String hostelId, HostelIdPayload hostelIdPayload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostel_Reset.getId(), Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostelV1 = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        if (hostelV1 == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!hostelV1.getHostelId().equals(hostelIdPayload.hostelId())){
+            return new ResponseEntity<>(Utils.HOSTEL_ID_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            resetHostel(hostelV1, agent);
+        } catch (Exception e){
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    public List<HostelV1> getHostelsByParentId(String parentId) {
-        return hostelRepository.findAllByParentId(parentId);
-    }
-
-    public ResponseEntity<?> getHostelActivities(String hostelId, int page, int size, String name) {
+    public ResponseEntity<?> deleteHostel(String hostelId) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -509,102 +644,58 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostel_Activities.getId(), Utils.PERMISSION_READ)) {
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_DELETE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        HostelV1 hostel = hostelRepository.findByHostelId(hostelId);
-        if (hostel == null){
-            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
-        page = Math.max(page - 1, 0);
-        size = Math.max(size, 1);
+        HostelSnapshot oldHostel = SnapshotUtility.toSnapshot(hostel);
 
-        Pageable pageable = PageRequest.of(page, size);
+        try {
+            resetHostel(hostel, agent);
+        } catch (Exception e){
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
 
-        Page<UserActivities> pagedActivities;
-        List<UserActivities> userActivities;
-        List<Users> users;
-        Map<String, Users> usersMap;
+        List<UserHostel> userHostels = userHostelService.getUsersByHostelId(hostelId);
 
-        if (name != null && !name.isBlank()){
-            users = usersService.getUsersByName(name);
+        if (!userHostels.isEmpty()) {
 
-            Set<String> userIds = users.stream()
-                    .map(Users::getUserId)
+            Set<String> userIds = userHostels.stream()
+                    .map(UserHostel::getUserId)
                     .collect(Collectors.toSet());
 
-            if (userIds.isEmpty()) {
-                Map<String, Object> response = new HashMap<>();
-                response.put("content", List.of());
-                response.put("currentPage", page + 1);
-                response.put("pageSize", size);
-                response.put("totalItems", 0);
-                response.put("totalPages", 0);
+            List<Users> nonMasterUsers = usersService.getStaffs(hostel.getParentId(), userIds);
 
-                return new ResponseEntity<>(response, HttpStatus.OK);
+            if (!nonMasterUsers.isEmpty()) {
+
+                Set<String> nonMasterUserIds = nonMasterUsers.stream()
+                        .map(Users::getUserId)
+                        .collect(Collectors.toSet());
+
+                List<UserActivities> userActivities = userActivitiesService
+                        .getUserActivitiesByUserIds(nonMasterUserIds);
+
+                if (!userActivities.isEmpty()){
+                    userActivitiesService.deleteAll(userActivities);
+                }
+
+                usersService.deleteAll(nonMasterUsers);
             }
 
-            pagedActivities = userActivitiesService
-                    .getFilteredPaginatedActivitiesByHostelId(hostelId, userIds, pageable);
-
-            userActivities = pagedActivities.getContent();
-        } else {
-            pagedActivities = userActivitiesService
-                    .getPaginatedActivitiesByHostelId(hostelId, pageable);
-
-            userActivities = pagedActivities.getContent();
-
-            Set<String> userIds = userActivities.stream()
-                    .map(UserActivities::getUserId)
-                    .collect(Collectors.toSet());
-
-            users = usersService.getUsersByIds(userIds);
+            userHostelService.deleteAll(userHostels);
         }
 
-        usersMap = users.stream()
-                .collect(Collectors.toMap(Users::getUserId, user -> user));
+        hostelRepository.delete(hostel);
 
-        List<UserActivitiesResponse> responseList = userActivities.stream()
-                .map(activity -> {
-                    Users user = usersMap.get(activity.getUserId());
-                    String userName = null;
-                    if (user != null){
-                        userName = Utils.getFullName(user.getFirstName(), user.getLastName());
-                    }
-                    return new UserActivitiesResponse(
-                            activity.getActivityId(), activity.getDescription(), activity.getUserId(), userName,
-                            Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
-                            activity.getSource(), activity.getActivityType());
-                }).toList();
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
+                hostelId, oldHostel, null);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("content", responseList);
-        response.put("currentPage", page + 1);
-        response.put("pageSize", size);
-        response.put("totalItems", pagedActivities.getTotalElements());
-        response.put("totalPages", pagedActivities.getTotalPages());
-
-        return new ResponseEntity<>(response, HttpStatus.OK);
-    }
-
-    public ResponseEntity<?> removeExpenses(String hostelId) {
-
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        Agent agent = agentService.findUserByUserId(authentication.getName());
-        if (agent == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.EXPENSES.getId(), Utils.PERMISSION_DELETE)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        return expenseService.deleteExpenses(hostelId, agent);
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getAllHostelsNew(int page, int size, String hostelName, Date startDate, Date endDate) {
@@ -766,6 +857,94 @@ public class HostelsService {
                         subscriptionHostelMap.getOrDefault(i.getHostelId(), null)
                 ).apply(i))
                 .toList();
+    }
+
+    public void exportHostels(String hostelName, Date startDate, Date endDate, HttpServletResponse response) throws IOException {
+
+        if (!authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Utils.UN_AUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Utils.UN_AUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, Utils.ACCESS_RESTRICTED);
+        }
+
+        List<HostelList> hostels = getHostelsDataForExport(hostelName, startDate, endDate);
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Hostels");
+
+        // Header
+        Row header = sheet.createRow(0);
+        header.createCell(0).setCellValue("Hostel Name");
+        header.createCell(1).setCellValue("Country Code");
+        header.createCell(2).setCellValue("Mobile");
+        header.createCell(3).setCellValue("City");
+        header.createCell(4).setCellValue("State");
+        header.createCell(5).setCellValue("Address");
+        header.createCell(6).setCellValue("Owner Name");
+        header.createCell(7).setCellValue("Owner Country Code");
+        header.createCell(8).setCellValue("Owner Mobile");
+        header.createCell(9).setCellValue("Hostel Plan Name");
+        header.createCell(10).setCellValue("Hostel Plan Code");
+        header.createCell(11).setCellValue("Hostel Plan Amount");
+        header.createCell(12).setCellValue("Hostel Joined On");
+        header.createCell(13).setCellValue("Plan Expired On");
+        header.createCell(14).setCellValue("Plan Expiring At");
+        header.createCell(15).setCellValue("Is Trial");
+        header.createCell(16).setCellValue("Is Trial Extendable");
+        header.createCell(17).setCellValue("Is Subscription Active");
+        header.createCell(18).setCellValue("Subscription Active Days");
+        header.createCell(19).setCellValue("Last Updated Date");
+        header.createCell(20).setCellValue("Last Updated Time");
+        header.createCell(21).setCellValue("Platform");
+
+        int rowIdx = 1;
+        for (HostelList h : hostels) {
+            Row row = sheet.createRow(rowIdx++);
+            row.createCell(0).setCellValue(h.hostelName() != null ? h.hostelName() : "");
+            row.createCell(1).setCellValue(h.countryCode() != null ? h.countryCode() : "");
+            row.createCell(2).setCellValue(h.mobile() != null ? h.mobile() : "");
+            row.createCell(3).setCellValue(h.city() != null ? h.city() : "");
+            row.createCell(4).setCellValue(h.state() != null ? h.state() : "");
+            row.createCell(5).setCellValue(h.fullAddress() != null  ? h.fullAddress() : "");
+            row.createCell(6).setCellValue(h.ownerInfo() != null ? h.ownerInfo().fullName() != null ? h.ownerInfo().fullName() : "" : "");
+            row.createCell(7).setCellValue(h.ownerInfo() != null ? h.ownerInfo().countryCode() != null ? h.ownerInfo().countryCode() : "" : "");
+            row.createCell(8).setCellValue(h.ownerInfo() != null ? h.ownerInfo().mobile() != null ? h.ownerInfo().mobile() : "" : "");
+            row.createCell(9).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlan() != null ? h.hostelPlan().currentPlan() : "" : "");
+            row.createCell(10).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlanCode() != null ? h.hostelPlan().currentPlanCode() : "" : "");
+            row.createCell(11).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlanAmount() != null ? h.hostelPlan().currentPlanAmount() : 0D : 0D);
+            row.createCell(12).setCellValue(h.joinedOn() != null ? h.joinedOn() : "");
+            row.createCell(13).setCellValue(h.expiredOn() != null ? h.expiredOn() : "");
+            row.createCell(14).setCellValue(h.expiringAt() !=  null ? h.expiringAt() : "");
+            row.createCell(15).setCellValue(h.isTrial());
+            row.createCell(16).setCellValue(h.trialExtendable());
+            row.createCell(17).setCellValue(h.subscriptionIsActive());
+            row.createCell(18).setCellValue(h.noOfdaysSubscriptionActive());
+            row.createCell(19).setCellValue(h.lastUpdateDate() != null ? h.lastUpdateDate() : "");
+            row.createCell(20).setCellValue(h.lastUpdateTime() != null ? h.lastUpdateTime() : "");
+            row.createCell(21).setCellValue(h.platform() != null ? h.platform() : "");
+        }
+
+        Row headerRow = sheet.getRow(0);
+        int totalColumns = headerRow.getLastCellNum();
+
+        for (int col = 0; col < totalColumns; col++) {
+            sheet.autoSizeColumn(col);
+        }
+
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=\"hostels.xlsx\"");
+
+        ServletOutputStream out = response.getOutputStream();
+        workbook.write(out);
+        out.flush();
+        workbook.close();
     }
 
     public ResponseEntity<?> getHostelRecurring(int page, int size, String hostelName,
@@ -1282,7 +1461,7 @@ public class HostelsService {
                 return new ResponseEntity<>(Utils.HOSTEL_ID_REQUIRED, HttpStatus.BAD_REQUEST);
             }
 
-            HostelV1 hostel = hostelRepository.findByHostelId(hostelId);
+            HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
             if (hostel == null){
                 return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
             }
@@ -1348,14 +1527,6 @@ public class HostelsService {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    public List<HostelPlanProjection> getHostelPlanProjectionData(Set<String> parentIds) {
-        return hostelRepository.findHostelPlanProjectionData(parentIds);
-    }
-
-    public long getHostelCount(){
-        return hostelRepository.findHostelCount();
-    }
-
     public ResponseEntity<?> getRecurringHistory(String hostelId, int page, int size) {
 
         if (!authentication.isAuthenticated()) {
@@ -1375,7 +1546,7 @@ public class HostelsService {
         size = Math.max(size, 1);
         Pageable pageable = PageRequest.of(page, size);
 
-        HostelV1 hostel = hostelRepository.findByHostelId(hostelId);
+        HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
         if (hostel == null){
             return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
         }
@@ -1463,94 +1634,6 @@ public class HostelsService {
         ).apply(hostel);
 
         return new ResponseEntity<>(recurringTrackerRes, HttpStatus.OK);
-    }
-
-    public void exportHostels(String hostelName, Date startDate, Date endDate, HttpServletResponse response) throws IOException {
-
-        if (!authentication.isAuthenticated()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Utils.UN_AUTHORIZED);
-        }
-
-        Agent agent = agentService.findUserByUserId(authentication.getName());
-        if (agent == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Utils.UN_AUTHORIZED);
-        }
-
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, Utils.ACCESS_RESTRICTED);
-        }
-
-        List<HostelList> hostels = getHostelsDataForExport(hostelName, startDate, endDate);
-
-        Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("Hostels");
-
-        // Header
-        Row header = sheet.createRow(0);
-        header.createCell(0).setCellValue("Hostel Name");
-        header.createCell(1).setCellValue("Country Code");
-        header.createCell(2).setCellValue("Mobile");
-        header.createCell(3).setCellValue("City");
-        header.createCell(4).setCellValue("State");
-        header.createCell(5).setCellValue("Address");
-        header.createCell(6).setCellValue("Owner Name");
-        header.createCell(7).setCellValue("Owner Country Code");
-        header.createCell(8).setCellValue("Owner Mobile");
-        header.createCell(9).setCellValue("Hostel Plan Name");
-        header.createCell(10).setCellValue("Hostel Plan Code");
-        header.createCell(11).setCellValue("Hostel Plan Amount");
-        header.createCell(12).setCellValue("Hostel Joined On");
-        header.createCell(13).setCellValue("Plan Expired On");
-        header.createCell(14).setCellValue("Plan Expiring At");
-        header.createCell(15).setCellValue("Is Trial");
-        header.createCell(16).setCellValue("Is Trial Extendable");
-        header.createCell(17).setCellValue("Is Subscription Active");
-        header.createCell(18).setCellValue("Subscription Active Days");
-        header.createCell(19).setCellValue("Last Updated Date");
-        header.createCell(20).setCellValue("Last Updated Time");
-        header.createCell(21).setCellValue("Platform");
-
-        int rowIdx = 1;
-        for (HostelList h : hostels) {
-            Row row = sheet.createRow(rowIdx++);
-            row.createCell(0).setCellValue(h.hostelName() != null ? h.hostelName() : "");
-            row.createCell(1).setCellValue(h.countryCode() != null ? h.countryCode() : "");
-            row.createCell(2).setCellValue(h.mobile() != null ? h.mobile() : "");
-            row.createCell(3).setCellValue(h.city() != null ? h.city() : "");
-            row.createCell(4).setCellValue(h.state() != null ? h.state() : "");
-            row.createCell(5).setCellValue(h.fullAddress() != null  ? h.fullAddress() : "");
-            row.createCell(6).setCellValue(h.ownerInfo() != null ? h.ownerInfo().fullName() != null ? h.ownerInfo().fullName() : "" : "");
-            row.createCell(7).setCellValue(h.ownerInfo() != null ? h.ownerInfo().countryCode() != null ? h.ownerInfo().countryCode() : "" : "");
-            row.createCell(8).setCellValue(h.ownerInfo() != null ? h.ownerInfo().mobile() != null ? h.ownerInfo().mobile() : "" : "");
-            row.createCell(9).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlan() != null ? h.hostelPlan().currentPlan() : "" : "");
-            row.createCell(10).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlanCode() != null ? h.hostelPlan().currentPlanCode() : "" : "");
-            row.createCell(11).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlanAmount() != null ? h.hostelPlan().currentPlanAmount() : 0D : 0D);
-            row.createCell(12).setCellValue(h.joinedOn() != null ? h.joinedOn() : "");
-            row.createCell(13).setCellValue(h.expiredOn() != null ? h.expiredOn() : "");
-            row.createCell(14).setCellValue(h.expiringAt() !=  null ? h.expiringAt() : "");
-            row.createCell(15).setCellValue(h.isTrial());
-            row.createCell(16).setCellValue(h.trialExtendable());
-            row.createCell(17).setCellValue(h.subscriptionIsActive());
-            row.createCell(18).setCellValue(h.noOfdaysSubscriptionActive());
-            row.createCell(19).setCellValue(h.lastUpdateDate() != null ? h.lastUpdateDate() : "");
-            row.createCell(20).setCellValue(h.lastUpdateTime() != null ? h.lastUpdateTime() : "");
-            row.createCell(21).setCellValue(h.platform() != null ? h.platform() : "");
-        }
-
-        Row headerRow = sheet.getRow(0);
-        int totalColumns = headerRow.getLastCellNum();
-
-        for (int col = 0; col < totalColumns; col++) {
-            sheet.autoSizeColumn(col);
-        }
-
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=\"hostels.xlsx\"");
-
-        ServletOutputStream out = response.getOutputStream();
-        workbook.write(out);
-        out.flush();
-        workbook.close();
     }
 
     public ResponseEntity<?> getTenantRecurring(int page, int size, String name,
@@ -1648,7 +1731,7 @@ public class HostelsService {
                 .map(Customers::getHostelId)
                 .collect(Collectors.toSet());
 
-        List<HostelV1> hostels = hostelRepository.findAllByHostelIdIn(hostelIds);
+        List<HostelV1> hostels = hostelRepository.findAllByHostelIdInAndIsActiveTrueAndIsDeletedFalse(hostelIds);
 
         Map<String, HostelV1> hostelMap = hostels.stream()
                 .collect(Collectors.toMap(HostelV1::getHostelId,
@@ -2140,7 +2223,7 @@ public class HostelsService {
                 return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
             }
 
-            HostelV1 hostel = hostelRepository.findByHostelId(hostelId);
+            HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
             if (hostel == null){
                 return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
             }
@@ -2242,7 +2325,7 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        HostelV1 hostel = hostelRepository.findByHostelId(customer.getHostelId());
+        HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(customer.getHostelId());
         if (hostel == null){
             return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
         }

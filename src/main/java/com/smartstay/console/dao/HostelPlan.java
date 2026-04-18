@@ -13,6 +13,7 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class HostelPlan {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long hostelPlanId;
@@ -29,5 +30,4 @@ public class HostelPlan {
     @JoinColumn(name = "hostel_id", referencedColumnName = "hostelId")
     @JsonIgnore
     private HostelV1 hostel;
-
 }

@@ -17,25 +17,33 @@ public interface UsersRepository extends JpaRepository<Users, String> {
             FROM Users usr
             WHERE usr.roleId = 1
               AND usr.parentId IN :parentId
+              AND usr.isActive = true
+              AND usr.isDeleted = false
             """)
     List<Users> findOwners(List<String> parentId);
 
     @Query("""
-            SELECT usr FROM Users usr WHERE usr.parentId = :parentId AND usr.roleId = 1
+            SELECT usr FROM Users usr
+            WHERE usr.parentId = :parentId
+                AND usr.roleId = 1
+                AND usr.isActive = true
+                AND usr.isDeleted = false
             """)
     Users findOwner(String parentId);
 
-    List<Users> findAllByParentIdAndRoleId(String parentId, int roleId);
+    List<Users> findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(String parentId);
 
-    List<Users> findAllByParentIdAndRoleIdNotInAndUserIdIn(String parentId, Set<Integer> roleIds, List<String> userIds);
+    List<Users> findAllByParentIdAndRoleIdAndIsActiveTrueAndIsDeletedFalse(String parentId, int roleId);
 
-    Users findByUserId( String userId);
+    List<Users> findAllByParentIdAndRoleIdNotInAndUserIdInAndIsActiveTrueAndIsDeletedFalse(String parentId, Set<Integer> roleIds, Set<String> userIds);
 
-    List<Users> findAllByUserIdIn(Set<String> userIds);
+    Users findByUserIdAndIsActiveTrueAndIsDeletedFalse( String userId);
 
-    List<Users> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(String firstName, String lastName);
+    List<Users> findAllByUserIdInAndIsActiveTrueAndIsDeletedFalse(Set<String> userIds);
 
-    boolean existsByEmailIdAndUserIdNot(String email, String userId);
+    List<Users> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseAndIsActiveTrueAndIsDeletedFalse(String firstName, String lastName);
+
+    boolean existsByEmailIdAndUserIdNotAndIsActiveTrueAndIsDeletedFalse(String email, String userId);
 
     @Query("""
             SELECT
@@ -57,11 +65,13 @@ public interface UsersRepository extends JpaRepository<Users, String> {
             FROM Users u
             LEFT JOIN u.address a
             WHERE u.roleId = 1
-            AND (
-                 :name IS NULL OR :name = '' OR
-                 LOWER(u.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
-                 OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
-            )
+                AND (
+                     :name IS NULL OR :name = '' OR
+                     LOWER(u.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
+                     OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
+                )
+                AND u.isActive = true
+                AND u.isDeleted = false
             """)
     List<OwnerWithAddressProjection> findAllOwnersWithAddressProjection(String name);
 
@@ -69,6 +79,10 @@ public interface UsersRepository extends JpaRepository<Users, String> {
             select count(u)
             from Users u
             where u.roleId = 1
+                AND u.isActive = true
+                AND u.isDeleted = false
             """)
     long getCount();
+
+    boolean existsByMobileNoAndUserIdNotAndIsActiveTrueAndIsDeletedFalse(String newMobileNo, String ownerId);
 }

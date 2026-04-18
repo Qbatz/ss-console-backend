@@ -13,19 +13,27 @@ import java.util.Set;
 public interface CustomersConfigRepository extends JpaRepository<CustomersConfig, Long> {
 
     @Query("""
-            SELECT cc FROM CustomersConfig cc WHERE cc.hostelId=:hostelId AND cc.customerId IN (:customerIds)
+            SELECT cc FROM CustomersConfig cc
+            WHERE cc.hostelId = :hostelId
+                AND cc.customerId IN (:customerIds)
             """)
     List<CustomersConfig> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds);
 
     List<CustomersConfig> findByHostelIdAndCustomerId(String hostelId, String customerId);
 
     @Query(value = """
-        SELECT * FROM customers_config WHERE hostel_id=:hostelId AND is_active=true AND enabled=true
-        """, nativeQuery = true)
+            SELECT * FROM customers_config
+            WHERE hostel_id = :hostelId
+                AND is_active = true
+                AND enabled = true
+            """, nativeQuery = true)
     List<CustomersConfig> findActiveAndRecurringEnabledCustomersByHostelId(@Param("hostelId") String hostelId);
 
     @Query(value = """
-            SELECT * FROM customers_config WHERE hostel_id IN :hostelIds AND is_active=true AND enabled=true
+            SELECT * FROM customers_config
+            WHERE hostel_id IN :hostelIds
+                AND is_active = true
+                AND enabled = true
             """, nativeQuery = true)
     List<CustomersConfig> findActiveAndRecurringEnabledCustomersByHostelIds(@Param("hostelIds") Set<String> hostelIds);
 }

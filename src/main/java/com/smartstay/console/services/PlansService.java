@@ -5,6 +5,8 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.PlanFeatures;
 import com.smartstay.console.dao.Plans;
+import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
+import com.smartstay.console.dto.plans.PlanSnapshot;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.PlanType;
@@ -15,7 +17,7 @@ import com.smartstay.console.payloads.plans.PlansPayload;
 import com.smartstay.console.payloads.plans.PlansUpdatePayload;
 import com.smartstay.console.repositories.PlansRepository;
 import com.smartstay.console.responses.plans.PlansResponse;
-import com.smartstay.console.utils.CloneUtility;
+import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -111,7 +113,7 @@ public class PlansService {
             return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        Plans oldPlan = CloneUtility.clonePlans(plan);
+        PlanSnapshot oldPlan = SnapshotUtility.toSnapshot(plan);
 
         if (payload.planName() != null && !payload.planName().isBlank()){
             if (!payload.planName().equalsIgnoreCase(plan.getPlanName()) &&
@@ -298,7 +300,7 @@ public class PlansService {
             return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        Plans oldPlan = CloneUtility.clonePlans(plan);
+        PlanSnapshot oldPlan = SnapshotUtility.toSnapshot(plan);
 
         plan.setActive(false);
         plan.setUpdatedAt(new Date());
@@ -370,7 +372,7 @@ public class PlansService {
             return new ResponseEntity<>(Utils.PLAN_FEATURE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        PlanFeatures oldPlanFeature = CloneUtility.clonePlanFeatures(planFeature);
+        PlanFeatureSnapshot oldPlanFeature = SnapshotUtility.toSnapshot(planFeature);
 
         planFeature.setActive(false);
 

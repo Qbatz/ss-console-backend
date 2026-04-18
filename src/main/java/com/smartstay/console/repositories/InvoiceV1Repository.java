@@ -12,18 +12,20 @@ import java.util.List;
 public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
 
     @Query("""
-            SELECT i FROM invoicesv1 i WHERE i.hostelId=:hostelId AND i.customerId IN (:customerIds)
+            SELECT i FROM invoicesv1 i
+            WHERE i.hostelId=:hostelId
+                AND i.customerId IN (:customerIds)
             """)
     List<InvoicesV1> findByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds);
 
     List<InvoicesV1> findAllByHostelIdAndCustomerId(String hostelId, String customerId);
 
     @Query(value = """
-                    SELECT * FROM invoicesv1
-                    WHERE hostel_id=:hostelId AND invoice_number LIKE CONCAT(:prefix, '%')
-                    ORDER BY CAST(SUBSTRING(invoice_number, LENGTH(:prefix) + 2) AS UNSIGNED) DESC
-                    LIMIT 1
-                """, nativeQuery = true)
+                SELECT * FROM invoicesv1
+                WHERE hostel_id=:hostelId AND invoice_number LIKE CONCAT(:prefix, '%')
+                ORDER BY CAST(SUBSTRING(invoice_number, LENGTH(:prefix) + 2) AS UNSIGNED) DESC
+                LIMIT 1
+            """, nativeQuery = true)
     InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix,
                                          @Param("hostelId") String hostelId);
 }

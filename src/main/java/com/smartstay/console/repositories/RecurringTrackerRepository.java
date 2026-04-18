@@ -16,15 +16,15 @@ import java.util.Set;
 public interface RecurringTrackerRepository extends JpaRepository<RecurringTracker, Long> {
 
     @Query("""
-       SELECT rt
-       FROM RecurringTracker rt
-       WHERE rt.hostelId IN :hostelIds
-       AND rt.trackerId = (
-            SELECT MAX(rt2.trackerId)
-            FROM RecurringTracker rt2
-            WHERE rt2.hostelId = rt.hostelId
-       )
-       """)
+           SELECT rt
+           FROM RecurringTracker rt
+           WHERE rt.hostelId IN :hostelIds
+           AND rt.trackerId = (
+                SELECT MAX(rt2.trackerId)
+                FROM RecurringTracker rt2
+                WHERE rt2.hostelId = rt.hostelId
+           )
+           """)
     List<RecurringTracker> getLatestRecurringTrackersByHostelIds(@Param("hostelIds") Set<String> hostelIds);
 
     boolean existsByHostelIdAndCreationDayAndCreationMonthAndCreationYear(String hostelId, int day, int month, int year);
@@ -32,26 +32,26 @@ public interface RecurringTrackerRepository extends JpaRepository<RecurringTrack
     Page<RecurringTracker> findAllByHostelIdOrderByTrackerIdDesc(String hostelId, Pageable pageable);
 
     @Query("""
-       SELECT rt
-       FROM RecurringTracker rt
-       WHERE rt.hostelId = :hostelId
-       AND rt.trackerId = (
-            SELECT MAX(rt2.trackerId)
-            FROM RecurringTracker rt2
-            WHERE rt2.hostelId = rt.hostelId
-       )
-       """)
+           SELECT rt
+           FROM RecurringTracker rt
+           WHERE rt.hostelId = :hostelId
+           AND rt.trackerId = (
+                SELECT MAX(rt2.trackerId)
+                FROM RecurringTracker rt2
+                WHERE rt2.hostelId = rt.hostelId
+           )
+           """)
     RecurringTracker getLatestRecurringTrackerByHostelId(@Param("hostelId") String hostelId);
 
     @Query(value = """
-                    SELECT rt.tracker_id AS trackerId, COUNT(i.invoice_id) AS invoiceCount
-                    FROM recurring_tracker rt
-                    LEFT JOIN invoicesv1 i
-                        ON rt.hostel_id = i.hostel_id
-                        AND i.invoice_mode = 'RECURRING'
-                        AND DATE(rt.created_at) = DATE(i.created_at)
-                    WHERE rt.tracker_id IN (:trackerIds)
-                    GROUP BY rt.tracker_id
-                    """, nativeQuery = true)
+            SELECT rt.tracker_id AS trackerId, COUNT(i.invoice_id) AS invoiceCount
+            FROM recurring_tracker rt
+            LEFT JOIN invoicesv1 i
+                ON rt.hostel_id = i.hostel_id
+                AND i.invoice_mode = 'RECURRING'
+                AND DATE(rt.created_at) = DATE(i.created_at)
+            WHERE rt.tracker_id IN (:trackerIds)
+            GROUP BY rt.tracker_id
+            """, nativeQuery = true)
     List<InvoiceCountPerTracker> getGeneratedInvoiceCountPerTracker(@Param("trackerIds") Set<Long> trackerIds);
 }
