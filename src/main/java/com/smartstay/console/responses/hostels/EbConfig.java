@@ -4,5 +4,10 @@ public record EbConfig(Integer ebConfigId,
                        boolean shouldIncludeInRent,
                        String typeOfReading,
                        Double charge,
-                       Integer billDate) {
+                       Double flatCharge,
+                       Integer billDate,
+                       boolean isUpdated,
+                       String lastUpdatedAtDate,
+                       String lastUpdatedAtTime,
+                       String updatedBy) {
 }

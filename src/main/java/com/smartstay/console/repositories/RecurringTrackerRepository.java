@@ -31,6 +31,8 @@ public interface RecurringTrackerRepository extends JpaRepository<RecurringTrack
 
     Page<RecurringTracker> findAllByHostelIdOrderByTrackerIdDesc(String hostelId, Pageable pageable);
 
+    List<RecurringTracker> findAllByHostelIdOrderByTrackerIdDesc(String hostelId);
+
     @Query("""
            SELECT rt
            FROM RecurringTracker rt

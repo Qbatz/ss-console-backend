@@ -146,13 +146,11 @@ public class CustomerRecTrackerResMapper implements Function<Customers, Customer
 
         boolean recurringStatus = false;
         Date lastRecurringDate = null;
-        Date nextRecurringDate = null;
+        Date nextRecurringDate = Utils.getNextMonthDate(startDate);
 
         if (customerRecurringTracker != null){
             recurringStatus = Utils.isSameBillingCycle(startDay, customerRecurringTracker, startDate);
             lastRecurringDate = Utils.getDateFromDay(customerRecurringTracker.getCreationDay(),
-                    customerRecurringTracker.getCreationMonth(), customerRecurringTracker.getCreationYear());
-            nextRecurringDate = Utils.getNextMonthDate(customerRecurringTracker.getCreationDay(),
                     customerRecurringTracker.getCreationMonth(), customerRecurringTracker.getCreationYear());
         }
 
