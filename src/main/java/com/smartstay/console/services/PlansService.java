@@ -405,4 +405,15 @@ public class PlansService {
 
         return ref.toString();
     }
+
+    public List<Plans> getFreePlans() {
+        List<String> planTypes = new ArrayList<>();
+        planTypes.add(PlanType.TRIAL.name());
+        planTypes.add(PlanType.EXPANDABLE_TRIAL.name());
+        List<Plans> listPlans = plansRepository.findByPlanTypeInAndIsActiveTrue(planTypes);
+        if (listPlans == null) {
+            listPlans = new ArrayList<>();
+        }
+        return listPlans;
+    }
 }

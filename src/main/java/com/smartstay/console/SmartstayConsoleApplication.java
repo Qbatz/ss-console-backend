@@ -1,10 +1,11 @@
 package com.smartstay.console;
 
-import com.smartstay.console.dao.AgentModules;
-import com.smartstay.console.dao.AgentRoles;
-import com.smartstay.console.dao.RolesPermission;
+import com.smartstay.console.dao.*;
+import com.smartstay.console.ennum.PlanType;
 import com.smartstay.console.repositories.AgentModulesRepository;
 import com.smartstay.console.repositories.AgentRolesRepository;
+import com.smartstay.console.repositories.PlansRepository;
+import com.smartstay.console.utils.Utils;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.boot.CommandLineRunner;
@@ -14,6 +15,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @SpringBootApplication
@@ -159,6 +161,62 @@ public class SmartstayConsoleApplication {
                 module20.setModuleName("Payments");
                 repository.save(module20);
             }
+        };
+    }
+
+    @Bean
+    CommandLineRunner extendablePlan(PlansRepository plansRepository) {
+        return args -> {
+            String planCode1 = Utils.generatePlanCode();
+
+            Plans planTrial = new Plans();
+            planTrial.setPlanName("Expandable Trial");
+            planTrial.setDuration(30l);
+            planTrial.setPrice(0.0);
+            planTrial.setDiscounts(0.0);
+            planTrial.setPlanType(PlanType.EXPANDABLE_TRIAL.name());
+            planTrial.setPlanCode(planCode1);
+            planTrial.setShouldShow(false);
+            planTrial.setActive(true);
+            planTrial.setCanCustomize(false);
+            planTrial.setCreatedAt(new Date());
+            planTrial.setUpdatedAt(new Date());
+
+            List<PlanFeatures> listFeatures = new ArrayList<>();
+            PlanFeatures planFeatures = new PlanFeatures();
+            planFeatures.setActive(true);
+            planFeatures.setPrice(0.0);
+            planFeatures.setFeatureName("Tenant Management");
+            planFeatures.setPlan(planTrial);
+
+            PlanFeatures planFeatures2 = new PlanFeatures();
+            planFeatures2.setActive(true);
+            planFeatures2.setPrice(0.0);
+            planFeatures2.setFeatureName("PG Management");
+            planFeatures2.setPlan(planTrial);
+
+            PlanFeatures planFeatures3 = new PlanFeatures();
+            planFeatures3.setActive(true);
+            planFeatures3.setPrice(0.0);
+            planFeatures3.setFeatureName("Account Management");
+            planFeatures3.setPlan(planTrial);
+
+            PlanFeatures planFeatures4 = new PlanFeatures();
+            planFeatures4.setActive(true);
+            planFeatures4.setPrice(0.0);
+            planFeatures4.setFeatureName("Expense Management");
+            planFeatures4.setPlan(planTrial);
+
+
+
+            listFeatures.add(planFeatures);
+            listFeatures.add(planFeatures2);
+            listFeatures.add(planFeatures3);
+            listFeatures.add(planFeatures4);
+
+            planTrial.setFeaturesList(listFeatures);
+
+            plansRepository.save(planTrial);
         };
     }
 }

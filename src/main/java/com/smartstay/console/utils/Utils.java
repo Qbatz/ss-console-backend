@@ -13,6 +13,9 @@ public class Utils {
 
     public static final int OWNER_ROLE_ID = 1;
     public static final int MASTER_ROLE_ID = 2;
+    private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    private static final Random RANDOM = new Random();
 
     public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
     public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";
@@ -66,15 +69,21 @@ public class Utils {
     public static final String PLAN_CODE_ALREADY_EXISTS = "Plan code already exists";
     public static final String PLAN_NAME_ALREADY_EXISTS = "Plan name already exists";
     public static final String PLAN_TYPE_ALREADY_EXISTS = "Plan type already exists";
+    public static final String PAYLOAD_REQUIRED = "Payload is required";
     public static final String PAYMENT_PROOF_REQUIRED = "Payment proof is required for subscription";
     public static final String INVALID_DISCOUNT = "Invalid discount amount";
     public static final String DAYS_CAN_NOT_BE_HIGHER_THAN_PLAN_DURATION = "Trial days can not be higher than plan duration";
     public static final String TRIAL_EXTENSION_LIMIT_REACHED = "Trial extension limit reached";
+    public static final String NEW_SUBSCRIPTION_IS_ADDED = "New Subscription is available";
+    public static final String CANNOT_EXTEND_FREE_TRIAL_ANY_MORE = "Cannot extend free trial anymore";
+
     public static final String HOSTEL_HAS_SUBSCRIBED_BEFORE = "Hostel has been subscribed before";
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
     public static final String INVALID_DISCOUNT_PERCENTAGE = "Invalid discount percentage";
     public static final String TRIAL_PLAN_NOT_ALLOWED = "Trial plan not allowed";
+    public static final String PAID_AMOUNT_REQUIRED = "Paid amount is required";
+    public static final String PAYMENT_ATTACHMENT_REQUIRES = "Payment attachment is required";
     public static final String INVALID_RECURRING_CYCLE_FOR_TENANT = "Tenant joined after billing cycle";
     public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
     public static final String NO_CUSTOMER_FOUND = "No tenant found";
@@ -743,5 +752,27 @@ public class Utils {
         cal.set(Calendar.DAY_OF_MONTH, Math.min(currentDay, lastDayOfPrevMonth));
 
         return cal.getTime();
+    }
+
+    public static String generatePlanCode() {
+        StringBuilder ref = new StringBuilder();
+
+        // 4 letters
+        for (int i = 0; i < 2; i++) {
+            ref.append(ALPHABETS.charAt(RANDOM.nextInt(ALPHABETS.length())));
+        }
+
+        // 4 digits
+        for (int i = 0; i < 2; i++) {
+            ref.append(RANDOM.nextInt(10));
+        }
+        ref.append("-");
+
+        // 4 alphanumeric
+        for (int i = 0; i < 3; i++) {
+            ref.append(ALPHANUMERIC.charAt(RANDOM.nextInt(ALPHANUMERIC.length())));
+        }
+
+        return ref.toString();
     }
 }
