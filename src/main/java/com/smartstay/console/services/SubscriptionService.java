@@ -85,7 +85,7 @@ public class SubscriptionService {
         if (plans.getPlanType().equalsIgnoreCase(PlanType.TRIAL.name())) {
             isTrial = true;
             List<com.smartstay.console.dao.Subscription> hostelSubscriptions = subscriptionRepository.findByHostelIdAndPlanCode(hostelId, payload.planCode());
-            if (hostelSubscriptions.size() > 2) {
+            if (hostelSubscriptions.size() > 1) {
                 return new ResponseEntity<>(Utils.TRIAL_EXTENSION_LIMIT_REACHED, HttpStatus.BAD_REQUEST);
             }
             List<com.smartstay.console.dao.Subscription> newSubscriptionForHostel = subscriptionRepository.findAnyNewSubscriptionAvailable(hostelId, new Date());
