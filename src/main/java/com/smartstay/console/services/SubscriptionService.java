@@ -72,143 +72,133 @@ public class SubscriptionService {
             return new ResponseEntity<>(Utils.INVALID_SUBSCRIPTION, HttpStatus.BAD_REQUEST);
         }
 
-        Plans trialPlan = plansService.findTrialPlan();
-
-        String planCode = null;
-        String planName = null;
-        double paidAmount = 0;
-        double planAmount = 0;
-        double discountAmount = 0;
-        long duration = 30;
+        if (payload == null) {
+            return new ResponseEntity<>(Utils.PAYLOAD_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
         boolean isTrial = false;
-        String paymentProofUrl = null;
-
-        if (payload.isTrial()) {
-            Plans trialDaysPlan = plansService.findLatestTrialPlan();
-
-            List<com.smartstay.console.dao.Subscription> subscriptions = subscriptionRepository.findByHostelId(hostelId);
-
-            Set<String> trialPlanCodes = new HashSet<>();
-
-            if (trialPlan != null) {
-                trialPlanCodes.add(trialPlan.getPlanCode().toLowerCase());
-            }
-            if (trialDaysPlan != null) {
-                trialPlanCodes.add(trialDaysPlan.getPlanCode().toLowerCase());
-            }
-
-            if (subscriptions != null) {
-                long trialCount = 0;
-                long subscriptionCount = 0;
-
-                for (com.smartstay.console.dao.Subscription subscription : subscriptions) {
-                    if (trialPlanCodes.contains(subscription.getPlanCode().toLowerCase())) {
-                        trialCount++;
-                    } else {
-                        subscriptionCount++;
-                    }
-                }
-
-                if (trialCount >= 2) {
-                    return new ResponseEntity<>(Utils.TRIAL_EXTENSION_LIMIT_REACHED, HttpStatus.BAD_REQUEST);
-                }
-                if (subscriptionCount > 0) {
-                    return new ResponseEntity<>(Utils.HOSTEL_HAS_SUBSCRIBED_BEFORE, HttpStatus.BAD_REQUEST);
-                }
-            }
-
-            if (payload.trialDays() > 0){
-                if (trialDaysPlan != null) {
-                    if (payload.trialDays() > trialDaysPlan.getDuration()){
-                        return new ResponseEntity<>(Utils.DAYS_CAN_NOT_BE_HIGHER_THAN_PLAN_DURATION, HttpStatus.BAD_REQUEST);
-                    }
-                    planCode = trialDaysPlan.getPlanCode();
-                    planName = trialDaysPlan.getPlanName();
-                    planAmount = trialDaysPlan.getPrice();
-                    duration = payload.trialDays();
-                }
-            } else {
-                if (trialPlan != null) {
-                    planCode = trialPlan.getPlanCode();
-                    planName = trialPlan.getPlanName();
-                    planAmount = trialPlan.getPrice();
-                    duration = trialPlan.getDuration();
-                }
-            }
-
-            isTrial = true;
-        } else {
-            if (payload.planCode() == null) {
-                return new ResponseEntity<>(Utils.PLAN_CODE_REQUIRED, HttpStatus.BAD_REQUEST);
-            } else {
-                Plans plan = plansService.findPlanByPlanCode(payload.planCode());
-                if (plan == null) {
-                    return new ResponseEntity<>(Utils.INVALID_PLAN_CODE, HttpStatus.BAD_REQUEST);
-                }
-
-                if (plan.getPlanType() != null && PlanType.TRIAL.name().equals(plan.getPlanType())) {
-                    return new ResponseEntity<>(Utils.TRIAL_PLAN_NOT_ALLOWED, HttpStatus.BAD_REQUEST);
-                }
-
-                planCode = payload.planCode();
-                planName = plan.getPlanName();
-                paidAmount = payload.paidAmount();
-                planAmount = plan.getPrice();
-                discountAmount = payload.discountAmount();
-                duration = plan.getDuration();
-
-                if (paymentProof == null || paymentProof.isEmpty()) {
-                    return new ResponseEntity<>(Utils.PAYMENT_PROOF_REQUIRED, HttpStatus.BAD_REQUEST);
-                } else {
-                    paymentProofUrl = uploadFileToS3.uploadFileToS3(
-                            FilesConfig.convertMultipartToFileNew(paymentProof), "subscription/payment-proof");
-                }
-            }
-        }
-
-        if (discountAmount < 0 || discountAmount > planAmount) {
-            return new ResponseEntity<>(Utils.INVALID_DISCOUNT, HttpStatus.BAD_REQUEST);
-        }
-
-        double discountPercentage = 0;
-        if (planAmount > 0) {
-            discountPercentage = (discountAmount / planAmount) * 100;
-        }
-
+        double paidAmount = 0.0;
+        Plans plans = plansService.findPlanByPlanCode(payload.planCode());
         com.smartstay.console.dao.Subscription newSubscription = new com.smartstay.console.dao.Subscription();
-        newSubscription.setSubscriptionNumber(latestSubscription.getSubscriptionNumber());
-        newSubscription.setHostelId(hostelId);
-        newSubscription.setPlanCode(planCode);
-        newSubscription.setPlanName(planName);
-        newSubscription.setPlanStartsAt(new Date());
-        newSubscription.setPaidAmount(paidAmount);
-        newSubscription.setPlanAmount(planAmount);
-        newSubscription.setDiscount(discountPercentage);
-        newSubscription.setDiscountAmount(discountAmount);
-        newSubscription.setCreatedAt(new Date());
-        newSubscription.setIsActive(true);
-        newSubscription.setPaymentProof(paymentProofUrl);
-        newSubscription.setCreatedBy(agent.getAgentId());
-        newSubscription.setCreatedByUserType(UserType.AGENT.name());
-
-        if (latestSubscription.getPlanEndsAt() != null) {
-            if (Utils.compareWithTwoDates(latestSubscription.getPlanEndsAt(), new Date()) < 0) {
-                newSubscription.setPlanStartsAt(new Date());
-                Date endDate = Utils.addDaysToDate(new Date(), (int) duration);
-                newSubscription.setPlanEndsAt(endDate);
-                newSubscription.setNextBillingAt(endDate);
-                newSubscription.setActivatedAt(new Date());
-            } else {
-                Date startDate = Utils.addDaysToDate(latestSubscription.getPlanEndsAt(), 1);
-                newSubscription.setPlanStartsAt(startDate);
-                Date endDate = Utils.addDaysToDate(startDate, (int) duration);
-                newSubscription.setPlanEndsAt(endDate);
-                newSubscription.setNextBillingAt(endDate);
-                newSubscription.setActivatedAt(new Date());
-            }
+        if (plans == null) {
+            return new ResponseEntity<>(Utils.INVALID_PLAN_CODE, HttpStatus.BAD_REQUEST);
         }
+        if (plans.getPlanType().equalsIgnoreCase(PlanType.TRIAL.name())) {
+            isTrial = true;
+            List<com.smartstay.console.dao.Subscription> hostelSubscriptions = subscriptionRepository.findByHostelIdAndPlanCode(hostelId, payload.planCode());
+            if (hostelSubscriptions.size() > 1) {
+                return new ResponseEntity<>(Utils.TRIAL_EXTENSION_LIMIT_REACHED, HttpStatus.BAD_REQUEST);
+            }
+            List<com.smartstay.console.dao.Subscription> newSubscriptionForHostel = subscriptionRepository.findAnyNewSubscriptionAvailable(hostelId, new Date());
+            if (!newSubscriptionForHostel.isEmpty()) {
+                return new ResponseEntity<>(Utils.NEW_SUBSCRIPTION_IS_ADDED, HttpStatus.BAD_REQUEST);
+            }
+            paidAmount = 0.0;
+            newSubscription.setSubscriptionNumber(latestSubscription.getSubscriptionNumber());
+            newSubscription.setHostelId(hostelId);
+            newSubscription.setPlanCode(plans.getPlanCode());
+            newSubscription.setPlanName(plans.getPlanName());
+            newSubscription.setPlanStartsAt(new Date());
+            newSubscription.setPaidAmount(0.0);
+            newSubscription.setPlanAmount(plans.getPrice());
+            newSubscription.setDiscount(100.0);
+            newSubscription.setDiscountAmount(0.0);
+            newSubscription.setCreatedAt(new Date());
+            newSubscription.setIsActive(true);
+            newSubscription.setCreatedBy(agent.getAgentId());
+            newSubscription.setCreatedByUserType(UserType.AGENT.name());
+            Date endDate = Utils.addDaysToDate(new Date(), plans.getDuration().intValue());
+            newSubscription.setPlanEndsAt(endDate);
+            newSubscription.setNextBillingAt(endDate);
+            newSubscription.setActivatedAt(new Date());
 
-        newSubscription = subscriptionRepository.save(newSubscription);
+            subscriptionRepository.save(newSubscription);
+        }
+        else if (plans.getPlanType().equalsIgnoreCase(PlanType.EXPANDABLE_TRIAL.name())) {
+            isTrial = true;
+            paidAmount = 0.0;
+            int freeTrialDays = 5;
+            if (payload.trialDays() != null) {
+                try {
+                    freeTrialDays = Integer.parseInt(payload.trialDays().toString());
+                }
+                catch (Exception e) {
+                    freeTrialDays = 5;
+                }
+            }
+            List<Plans> freePlans = plansService.getFreePlans();
+            List<String> freePlanCodes = freePlans.stream()
+                    .map(Plans::getPlanCode)
+                    .toList();
+
+            List<com.smartstay.console.dao.Subscription> listPaidSubscriptions = subscriptionRepository.findAnyPaidPlanAvailable(hostelId, freePlanCodes);
+            if (listPaidSubscriptions != null && !listPaidSubscriptions.isEmpty()) {
+                return new ResponseEntity<>(Utils.CANNOT_EXTEND_FREE_TRIAL_ANY_MORE, HttpStatus.BAD_REQUEST);
+            }
+            List<com.smartstay.console.dao.Subscription> newSubscriptionForHostel = subscriptionRepository.findAnyNewSubscriptionAvailable(hostelId, new Date());
+            if (!newSubscriptionForHostel.isEmpty()) {
+                return new ResponseEntity<>(Utils.NEW_SUBSCRIPTION_IS_ADDED, HttpStatus.BAD_REQUEST);
+            }
+
+            newSubscription.setSubscriptionNumber(latestSubscription.getSubscriptionNumber());
+            newSubscription.setHostelId(hostelId);
+            newSubscription.setPlanCode(plans.getPlanCode());
+            newSubscription.setPlanName(plans.getPlanName());
+            newSubscription.setPlanStartsAt(new Date());
+            newSubscription.setPaidAmount(0.0);
+            newSubscription.setPlanAmount(plans.getPrice());
+            newSubscription.setDiscount(100.0);
+            newSubscription.setDiscountAmount(0.0);
+            newSubscription.setCreatedAt(new Date());
+            newSubscription.setIsActive(true);
+            newSubscription.setCreatedBy(agent.getAgentId());
+            newSubscription.setCreatedByUserType(UserType.AGENT.name());
+            Date endDate = Utils.addDaysToDate(new Date(), freeTrialDays);
+            newSubscription.setPlanEndsAt(endDate);
+            newSubscription.setNextBillingAt(endDate);
+            newSubscription.setActivatedAt(new Date());
+
+            subscriptionRepository.save(newSubscription);
+        }
+        else {
+            isTrial = false;
+            if (payload.paidAmount() == null) {
+                return new ResponseEntity<>(Utils.PAID_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+            if (paymentProof == null) {
+                return new ResponseEntity<>(Utils.PAYMENT_ATTACHMENT_REQUIRES, HttpStatus.BAD_REQUEST);
+            }
+            double discountAmount = 0.0;
+            if (payload.discountAmount() != null) {
+                try {
+                    discountAmount = Double.parseDouble(payload.discountAmount().toString());
+                }
+                catch (Exception e) {
+                    discountAmount = 0.0;
+                }
+            }
+
+
+            paidAmount = payload.paidAmount();
+            newSubscription.setSubscriptionNumber(latestSubscription.getSubscriptionNumber());
+            newSubscription.setHostelId(hostelId);
+            newSubscription.setPlanCode(plans.getPlanCode());
+            newSubscription.setPlanName(plans.getPlanName());
+            newSubscription.setPlanStartsAt(new Date());
+            newSubscription.setPaidAmount(paidAmount);
+            newSubscription.setPlanAmount(plans.getPrice());
+            newSubscription.setDiscount(0.0);
+            newSubscription.setDiscountAmount(discountAmount);
+            newSubscription.setCreatedAt(new Date());
+            newSubscription.setIsActive(true);
+            newSubscription.setCreatedBy(agent.getAgentId());
+            newSubscription.setCreatedByUserType(UserType.AGENT.name());
+            Date endDate = Utils.addDaysToDate(new Date(), plans.getDuration().intValue());
+            newSubscription.setPlanEndsAt(endDate);
+            newSubscription.setNextBillingAt(endDate);
+            newSubscription.setActivatedAt(new Date());
+
+            subscriptionRepository.save(newSubscription);
+        }
 
         if (latestSubscription.getPlanEndsAt() != null) {
             if (Utils.compareWithTwoDates(latestSubscription.getPlanEndsAt(), new Date()) < 0) {
@@ -217,11 +207,11 @@ public class SubscriptionService {
                     hostelPlan = new HostelPlan();
                     hostelPlan.setHostel(hostelV1);
                 }
-                hostelPlan.setCurrentPlanCode(planCode);
-                hostelPlan.setCurrentPlanName(planName);
+                hostelPlan.setCurrentPlanCode(plans.getPlanCode());
+                hostelPlan.setCurrentPlanName(plans.getPlanName());
                 hostelPlan.setCurrentPlanStartsAt(newSubscription.getPlanStartsAt());
                 hostelPlan.setCurrentPlanEndsAt(newSubscription.getPlanEndsAt());
-                hostelPlan.setCurrentPlanPrice(planAmount);
+                hostelPlan.setCurrentPlanPrice(plans.getPrice());
                 hostelPlan.setPaidAmount(paidAmount);
                 hostelPlan.setTrial(isTrial);
                 hostelPlan.setTrialEndingAt(isTrial ? newSubscription.getPlanEndsAt() : null);
@@ -229,6 +219,7 @@ public class SubscriptionService {
                 hostelService.updateHostel(hostelV1);
             }
         }
+
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.SUBSCRIPTION,
                 String.valueOf(newSubscription.getSubscriptionId()), null, newSubscription);
