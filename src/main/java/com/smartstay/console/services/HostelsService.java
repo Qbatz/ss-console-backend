@@ -319,8 +319,8 @@ public class HostelsService {
 
         List<AmenitiesV1> amenities = amenitiesService.getAmenitiesByHostelId(hostelId);
 
-        Plans trialPlan = plansService.findTrialPlan();
-        Plans trialDaysPlan = plansService.findLatestTrialPlan();
+        List<Plans> trialPlans = plansService.findTrialPlans();
+        List<Plans> expandableTrialPlans = plansService.findExpandableTrialPlans();
 
         Date today = new Date();
         Date prevMonthDate = Utils.getPreviousMonthDate(today);
@@ -441,7 +441,7 @@ public class HostelsService {
                 ownerInfo, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
                 noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
                 sharingTypeList, amenities, customerResponses, subscriptions, mastersRes, staffsRes,
-                activities, userLookup, trialPlan, trialDaysPlan, billingDatesMap, recurringHistory,
+                activities, userLookup, trialPlans, expandableTrialPlans, billingDatesMap, recurringHistory,
                 customerRecurringHistory, recurringStatus, currentBillLastRecDate, currentBillingRules
         ).apply(hostel);
 
@@ -877,8 +877,8 @@ public class HostelsService {
                 .collect(Collectors.toMap(LoginHistory::getParentId, Function.identity(),
                         (a, b) -> a));
 
-        Plans trialPlan = plansService.findTrialPlan();
-        Plans trialDaysPlan = plansService.findLatestTrialPlan();
+        List<Plans> trialPlans = plansService.findTrialPlans();
+        List<Plans> expandableTrialPlans = plansService.findExpandableTrialPlans();
 
         List<Subscription> subscriptions = subscriptionService
                 .getSubscriptionsByHostelIds(new HashSet<>(hostelIds));
@@ -891,8 +891,8 @@ public class HostelsService {
                         ownerMap.getOrDefault(i.getParentId(), null),
                         activityMap.getOrDefault(i.getHostelId(), null),
                         loginMap.getOrDefault(i.getParentId(), null),
-                        trialPlan,
-                        trialDaysPlan,
+                        trialPlans,
+                        expandableTrialPlans,
                         subscriptionHostelMap.getOrDefault(i.getHostelId(), null)
                 ).apply(i))
                 .toList();
@@ -954,8 +954,8 @@ public class HostelsService {
                 .collect(Collectors.toMap(LoginHistory::getParentId, Function.identity(),
                         (a, b) -> a));
 
-        Plans trialPlan = plansService.findTrialPlan();
-        Plans trialDaysPlan = plansService.findLatestTrialPlan();
+        List<Plans> trialPlans = plansService.findTrialPlans();
+        List<Plans> expandableTrialPlans = plansService.findExpandableTrialPlans();
 
         List<Subscription> subscriptions = subscriptionService
                 .getSubscriptionsByHostelIds(new HashSet<>(hostelIds));
@@ -968,8 +968,8 @@ public class HostelsService {
                         ownerMap.getOrDefault(i.getParentId(), null),
                         activityMap.getOrDefault(i.getHostelId(), null),
                         loginMap.getOrDefault(i.getParentId(), null),
-                        trialPlan,
-                        trialDaysPlan,
+                        trialPlans,
+                        expandableTrialPlans,
                         subscriptionHostelMap.getOrDefault(i.getHostelId(), null)
                 ).apply(i))
                 .toList();
@@ -1013,12 +1013,13 @@ public class HostelsService {
         header.createCell(13).setCellValue("Plan Expired On");
         header.createCell(14).setCellValue("Plan Expiring At");
         header.createCell(15).setCellValue("Is Trial");
-        header.createCell(16).setCellValue("Is Trial Extendable");
-        header.createCell(17).setCellValue("Is Subscription Active");
-        header.createCell(18).setCellValue("Subscription Active Days");
-        header.createCell(19).setCellValue("Last Updated Date");
-        header.createCell(20).setCellValue("Last Updated Time");
-        header.createCell(21).setCellValue("Platform");
+        header.createCell(16).setCellValue("Can Add Trial");
+        header.createCell(17).setCellValue("Can Add Expandable Trial");
+        header.createCell(18).setCellValue("Is Subscription Active");
+        header.createCell(19).setCellValue("Subscription Active Days");
+        header.createCell(20).setCellValue("Last Updated Date");
+        header.createCell(21).setCellValue("Last Updated Time");
+        header.createCell(22).setCellValue("Platform");
 
         int rowIdx = 1;
         for (HostelList h : hostels) {
@@ -1039,12 +1040,13 @@ public class HostelsService {
             row.createCell(13).setCellValue(h.expiredOn() != null ? h.expiredOn() : "");
             row.createCell(14).setCellValue(h.expiringAt() !=  null ? h.expiringAt() : "");
             row.createCell(15).setCellValue(h.isTrial());
-            row.createCell(16).setCellValue(h.trialExtendable());
-            row.createCell(17).setCellValue(h.subscriptionIsActive());
-            row.createCell(18).setCellValue(h.noOfdaysSubscriptionActive());
-            row.createCell(19).setCellValue(h.lastUpdateDate() != null ? h.lastUpdateDate() : "");
-            row.createCell(20).setCellValue(h.lastUpdateTime() != null ? h.lastUpdateTime() : "");
-            row.createCell(21).setCellValue(h.platform() != null ? h.platform() : "");
+            row.createCell(16).setCellValue(h.canAddTrial());
+            row.createCell(17).setCellValue(h.canAddExpandableTrial());
+            row.createCell(18).setCellValue(h.subscriptionIsActive());
+            row.createCell(19).setCellValue(h.noOfdaysSubscriptionActive());
+            row.createCell(20).setCellValue(h.lastUpdateDate() != null ? h.lastUpdateDate() : "");
+            row.createCell(21).setCellValue(h.lastUpdateTime() != null ? h.lastUpdateTime() : "");
+            row.createCell(22).setCellValue(h.platform() != null ? h.platform() : "");
         }
 
         Row headerRow = sheet.getRow(0);

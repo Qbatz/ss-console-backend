@@ -42,6 +42,7 @@ public class OrderHistory {
     private String channel;
     private String upiId;
     private String userType;
+    private String paymentProof;
     private boolean isActive;
     private Date createdAt;
     private String createdBy;

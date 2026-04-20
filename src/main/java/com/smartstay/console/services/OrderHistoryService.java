@@ -4,6 +4,7 @@ import com.smartstay.console.Mapper.orderHistory.OrderHistoryMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.ennum.ModuleId;
+import com.smartstay.console.ennum.OrderStatus;
 import com.smartstay.console.ennum.UserType;
 import com.smartstay.console.repositories.OrderHistoryRepository;
 import com.smartstay.console.responses.orderHistory.OrderHistoryResponse;
@@ -85,12 +86,17 @@ public class OrderHistoryService {
 
         Pageable pageable = PageRequest.of(page, size);
 
+        List<String> orderStatuses = List.of(OrderStatus.PAID.name());
+
+        double totalRevenue = orderHistoryRepository
+                .findTotalRevenueBetween(startDate, endDate, orderStatuses);
+
         if (name != null && !name.trim().isEmpty()
                 && filteredHostelIds.isEmpty() && filteredUserIds.isEmpty()) {
 
             return ResponseEntity.ok(Map.of(
                     "orderHistories", Collections.emptyList(),
-                    "totalRevenue", 0,
+                    "totalRevenue", totalRevenue,
                     "currentPage", page + 1,
                     "pageSize", size,
                     "totalItems", 0,
@@ -103,11 +109,12 @@ public class OrderHistoryService {
         if (!filteredHostelIds.isEmpty() || !filteredUserIds.isEmpty()) {
             paginatedOrderHistory = orderHistoryRepository
                     .findFilteredOrderHistory(filteredHostelIds.isEmpty() ? null : filteredHostelIds,
-                            filteredUserIds.isEmpty() ? null : filteredUserIds, startDate, endDate, pageable);
+                            filteredUserIds.isEmpty() ? null : filteredUserIds, startDate, endDate,
+                            orderStatuses, pageable);
         } else {
             paginatedOrderHistory = orderHistoryRepository
-                    .findAllByIsActiveTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtDesc(
-                            startDate, endDate, pageable);
+                    .findAllByIsActiveTrueAndOrderStatusInAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtDesc(
+                            orderStatuses, startDate, endDate, pageable);
         }
 
         List<OrderHistory> orderHistories = paginatedOrderHistory.getContent();
@@ -134,15 +141,15 @@ public class OrderHistoryService {
         Map<Integer, HotelType> hotelTypeMap = hotelTypes.stream()
                 .collect(Collectors.toMap(HotelType::getId, hotelType -> hotelType));
 
-        List<HostelV1> hostels = hostelService.getHostelsByHostelIds(hostelIds);
+        List<HostelV1> hostels = hostelIds.isEmpty() ? Collections.emptyList() : hostelService.getHostelsByHostelIds(hostelIds);
         Map<String, HostelV1> hostelMap = hostels.stream()
                 .collect(Collectors.toMap(HostelV1::getHostelId, hostel -> hostel, (a, b) -> a));
 
-        List<Plans> plans = plansService.findPlansByPlanCodes(planCodes);
+        List<Plans> plans = planCodes.isEmpty() ? Collections.emptyList() : plansService.findPlansByPlanCodes(planCodes);
         Map<String, Plans> plansMap = plans.stream()
                 .collect(Collectors.toMap(Plans::getPlanCode, plan -> plan, (a, b) -> a));
 
-        List<Users> createdByUsers = usersService.getUsersByIds(createdByUserIds);
+        List<Users> createdByUsers = createdByUserIds.isEmpty() ? Collections.emptyList() : usersService.getUsersByIds(createdByUserIds);
         Map<String, Users> createdByUsersMap = createdByUsers.stream()
                 .collect(Collectors.toMap(Users::getUserId, user -> user, (a, b) -> a));
 
@@ -159,10 +166,6 @@ public class OrderHistoryService {
                             plan, createdByUser).apply(orderHistory);
                 }).toList();
 
-        double totalRevenue = responseList.stream()
-                .mapToDouble(OrderHistoryResponse::totalAmount)
-                .sum();
-
         Map<String, Object> response = new HashMap<>();
         response.put("orderHistories", responseList);
         response.put("totalRevenue", totalRevenue);
@@ -172,5 +175,9 @@ public class OrderHistoryService {
         response.put("totalPages", paginatedOrderHistory.getTotalPages());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public void save(OrderHistory newOrder) {
+        orderHistoryRepository.save(newOrder);
     }
 }

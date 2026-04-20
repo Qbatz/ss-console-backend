@@ -4,10 +4,7 @@ import com.smartstay.console.Mapper.subscription.SubscriptionsResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.config.FilesConfig;
 import com.smartstay.console.config.UploadFileToS3;
-import com.smartstay.console.dao.Agent;
-import com.smartstay.console.dao.HostelPlan;
-import com.smartstay.console.dao.HostelV1;
-import com.smartstay.console.dao.Plans;
+import com.smartstay.console.dao.*;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.subscription.Subscription;
 import com.smartstay.console.repositories.SubscriptionRepository;
@@ -45,6 +42,8 @@ public class SubscriptionService {
     @Autowired
     private AgentActivitiesService agentActivitiesService;
     @Autowired
+    private OrderHistoryService orderHistoryService;
+    @Autowired
     private UploadFileToS3 uploadFileToS3;
 
     public ResponseEntity<?> subscribeHostel(String hostelId, Subscription payload, MultipartFile paymentProof) {
@@ -75,23 +74,36 @@ public class SubscriptionService {
         if (payload == null) {
             return new ResponseEntity<>(Utils.PAYLOAD_REQUIRED, HttpStatus.BAD_REQUEST);
         }
+
         boolean isTrial = false;
         double paidAmount = 0.0;
+
         Plans plans = plansService.findPlanByPlanCode(payload.planCode());
-        com.smartstay.console.dao.Subscription newSubscription = new com.smartstay.console.dao.Subscription();
+
         if (plans == null) {
             return new ResponseEntity<>(Utils.INVALID_PLAN_CODE, HttpStatus.BAD_REQUEST);
         }
+
+        com.smartstay.console.dao.Subscription newSubscription = new com.smartstay.console.dao.Subscription();
+
         if (plans.getPlanType().equalsIgnoreCase(PlanType.TRIAL.name())) {
+
             isTrial = true;
-            List<com.smartstay.console.dao.Subscription> hostelSubscriptions = subscriptionRepository.findByHostelIdAndPlanCode(hostelId, payload.planCode());
+
+            List<com.smartstay.console.dao.Subscription> hostelSubscriptions = subscriptionRepository
+                    .findByHostelIdAndPlanCode(hostelId, payload.planCode());
+
             if (hostelSubscriptions.size() > 1) {
                 return new ResponseEntity<>(Utils.TRIAL_EXTENSION_LIMIT_REACHED, HttpStatus.BAD_REQUEST);
             }
-            List<com.smartstay.console.dao.Subscription> newSubscriptionForHostel = subscriptionRepository.findAnyNewSubscriptionAvailable(hostelId, new Date());
+
+            List<com.smartstay.console.dao.Subscription> newSubscriptionForHostel = subscriptionRepository
+                    .findAnyNewSubscriptionAvailable(hostelId, new Date());
+
             if (!newSubscriptionForHostel.isEmpty()) {
                 return new ResponseEntity<>(Utils.NEW_SUBSCRIPTION_IS_ADDED, HttpStatus.BAD_REQUEST);
             }
+
             paidAmount = 0.0;
             newSubscription.setSubscriptionNumber(latestSubscription.getSubscriptionNumber());
             newSubscription.setHostelId(hostelId);
@@ -114,9 +126,11 @@ public class SubscriptionService {
             subscriptionRepository.save(newSubscription);
         }
         else if (plans.getPlanType().equalsIgnoreCase(PlanType.EXPANDABLE_TRIAL.name())) {
+
             isTrial = true;
             paidAmount = 0.0;
             int freeTrialDays = 5;
+
             if (payload.trialDays() != null) {
                 try {
                     freeTrialDays = Integer.parseInt(payload.trialDays().toString());
@@ -125,16 +139,22 @@ public class SubscriptionService {
                     freeTrialDays = 5;
                 }
             }
+
             List<Plans> freePlans = plansService.getFreePlans();
             List<String> freePlanCodes = freePlans.stream()
                     .map(Plans::getPlanCode)
                     .toList();
 
-            List<com.smartstay.console.dao.Subscription> listPaidSubscriptions = subscriptionRepository.findAnyPaidPlanAvailable(hostelId, freePlanCodes);
+            List<com.smartstay.console.dao.Subscription> listPaidSubscriptions = subscriptionRepository
+                    .findAnyPaidPlanAvailable(hostelId, freePlanCodes);
+
             if (listPaidSubscriptions != null && !listPaidSubscriptions.isEmpty()) {
                 return new ResponseEntity<>(Utils.CANNOT_EXTEND_FREE_TRIAL_ANY_MORE, HttpStatus.BAD_REQUEST);
             }
-            List<com.smartstay.console.dao.Subscription> newSubscriptionForHostel = subscriptionRepository.findAnyNewSubscriptionAvailable(hostelId, new Date());
+
+            List<com.smartstay.console.dao.Subscription> newSubscriptionForHostel = subscriptionRepository
+                    .findAnyNewSubscriptionAvailable(hostelId, new Date());
+
             if (!newSubscriptionForHostel.isEmpty()) {
                 return new ResponseEntity<>(Utils.NEW_SUBSCRIPTION_IS_ADDED, HttpStatus.BAD_REQUEST);
             }
@@ -160,13 +180,31 @@ public class SubscriptionService {
             subscriptionRepository.save(newSubscription);
         }
         else {
+
             isTrial = false;
+
             if (payload.paidAmount() == null) {
                 return new ResponseEntity<>(Utils.PAID_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
             }
+
             if (paymentProof == null) {
                 return new ResponseEntity<>(Utils.PAYMENT_ATTACHMENT_REQUIRES, HttpStatus.BAD_REQUEST);
             }
+
+            String paymentProofUrl = null;
+            try {
+                paymentProofUrl = uploadFileToS3.uploadFileToS3(
+                        FilesConfig.convertMultipartToFileNew(paymentProof), "subscription/payment-proof");
+            } catch (Exception e) {
+                return new ResponseEntity<>(Utils.FILE_UPLOAD_FAILED, HttpStatus.BAD_REQUEST);
+            }
+
+            try {
+                paidAmount = Double.parseDouble(payload.paidAmount().toString());
+            } catch (Exception e) {
+                paidAmount = 0.0;
+            }
+
             double discountAmount = 0.0;
             if (payload.discountAmount() != null) {
                 try {
@@ -177,8 +215,15 @@ public class SubscriptionService {
                 }
             }
 
+            if (discountAmount < 0 || discountAmount > plans.getPrice()) {
+                return new ResponseEntity<>(Utils.INVALID_DISCOUNT, HttpStatus.BAD_REQUEST);
+            }
 
-            paidAmount = payload.paidAmount();
+            double discountPercentage = 0;
+            if (plans.getPrice() > 0) {
+                discountPercentage = (discountAmount / plans.getPrice()) * 100;
+            }
+
             newSubscription.setSubscriptionNumber(latestSubscription.getSubscriptionNumber());
             newSubscription.setHostelId(hostelId);
             newSubscription.setPlanCode(plans.getPlanCode());
@@ -186,7 +231,7 @@ public class SubscriptionService {
             newSubscription.setPlanStartsAt(new Date());
             newSubscription.setPaidAmount(paidAmount);
             newSubscription.setPlanAmount(plans.getPrice());
-            newSubscription.setDiscount(0.0);
+            newSubscription.setDiscount(discountPercentage);
             newSubscription.setDiscountAmount(discountAmount);
             newSubscription.setCreatedAt(new Date());
             newSubscription.setIsActive(true);
@@ -196,8 +241,27 @@ public class SubscriptionService {
             newSubscription.setPlanEndsAt(endDate);
             newSubscription.setNextBillingAt(endDate);
             newSubscription.setActivatedAt(new Date());
+            newSubscription.setPaymentProof(paymentProofUrl);
 
             subscriptionRepository.save(newSubscription);
+
+            OrderHistory newOrder = new OrderHistory();
+            newOrder.setHostelId(hostelId);
+            newOrder.setDiscountAmount(discountAmount);
+            newOrder.setPlanAmount(plans.getPrice());
+            newOrder.setPlanCode(plans.getPlanCode());
+            newOrder.setPlanName(plans.getPlanName());
+            newOrder.setTotalAmount(paidAmount);
+            newOrder.setOrderStatus(OrderStatus.PAID.name());
+            newOrder.setPaymentType("Manual");
+            newOrder.setChannel("Console");
+            newOrder.setUserType(UserType.AGENT.name());
+            newOrder.setPaymentProof(paymentProofUrl);
+            newOrder.setActive(true);
+            newOrder.setCreatedAt(new Date());
+            newOrder.setCreatedBy(agent.getAgentId());
+
+            orderHistoryService.save(newOrder);
         }
 
         if (latestSubscription.getPlanEndsAt() != null) {
@@ -219,7 +283,6 @@ public class SubscriptionService {
                 hostelService.updateHostel(hostelV1);
             }
         }
-
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.SUBSCRIPTION,
                 String.valueOf(newSubscription.getSubscriptionId()), null, newSubscription);
