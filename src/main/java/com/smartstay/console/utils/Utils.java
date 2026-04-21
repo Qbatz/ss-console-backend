@@ -13,6 +13,7 @@ public class Utils {
 
     public static final int OWNER_ROLE_ID = 1;
     public static final int MASTER_ROLE_ID = 2;
+    public static final int DEFAULT_EXPANDABLE_TRIAL_DAYS = 5;
 
     private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -35,7 +36,14 @@ public class Utils {
 
     public static final String ACTIVE_USERS_FOUND = "Active users found with this role, cannot delete";
     public static final String ROLE_NAME_EXISTS = "Role name already exists";
-    public static final String ROLE_NAME_CANNOT_EDIT = "This role cannot be edited";
+    public static final String EMAIL_ALREADY_EXISTS = "Email already exists";
+    public static final String RECURRING_ALREADY_CREATED = "Recurring already exists this month for this hostel";
+    public static final String PLAN_CODE_ALREADY_EXISTS = "Plan code already exists";
+    public static final String PLAN_NAME_ALREADY_EXISTS = "Plan name already exists";
+    public static final String PLAN_TYPE_ALREADY_EXISTS = "Plan type already exists";
+    public static final String HOSTELS_EXISTS_FOR_THIS_OWNER = "Hostels exists for this owner";
+    public static final String MOBILE_ALREADY_EXISTS = "Mobile number already exists";
+
     public static final String NO_ROLES_FOUND = "No roles found";
     public static final String NO_HOSTEL_FOUND = "No hostel found";
     public static final String NO_TENANT_HOSTEL_FOUND = "No tenant with hostel found";
@@ -44,53 +52,51 @@ public class Utils {
     public static final String DEMO_REQUEST_NOT_FOUND = "Demo request not found";
     public static final String PLAN_NOT_FOUND = "No plan found";
     public static final String PLAN_FEATURE_NOT_FOUND = "No plan feature found";
+    public static final String NO_BILLING_RULE_FOUND = "No billing rule found for this hostel";
+    public static final String DEMO_REQUEST_STATUS_NOT_FOUND = "Demo request status not found";
+    public static final String NO_CUSTOMER_FOUND = "No tenant found";
+
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
     public static final String INVALID_SUBSCRIPTION = "Invalid subscription";
-    public static final String PLAN_CODE_REQUIRED = "Plan code required";
     public static final String INVALID_PLAN_CODE = "Invalid plan code";
+    public static final String INVALID_BILLING_CYCLE_START_DAY = "Invalid billingCycleStartDay";
+    public static final String INVALID_DISCOUNT = "Invalid discount amount";
+    public static final String INVALID_PAID_AMOUNT = "Invalid paid amount";
+    public static final String INVALID_DISCOUNT_PERCENTAGE = "Invalid discount percentage";
+    public static final String INVALID_RECURRING_CYCLE_FOR_TENANT = "Tenant joined after billing cycle";
+    public static final String INVALID_MONTH = "Month must be from 1 to 12";
+    public static final String INVALID_TRIAL_DAYS = "Invalid trial days";
+    public static final String INVALID_PLAN_DURATION = "Invalid plan duration";
+
     public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
-    public static final String EMAIL_ALREADY_EXISTS = "Email already exists";
     public static final String PLAN_FEATURE_MISMATCH = "Plan of plan feature does not match plan";
+
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";
     public static final String SUBSCRIPTION_NOT_ACTIVE = "Subscription is not active for this hostel";
-    public static final String RECURRING_ALREADY_CREATED = "Recurring already exists this month for this hostel";
+
     public static final String IS_NOT_FIXED_DATE = "Type of billing is not fixed date";
     public static final String IS_NOT_JOINING_BASED = "Type of billing is not joining date based";
-    public static final String NO_BILLING_RULE_FOUND = "No billing rule found for this hostel";
-    public static final String DEMO_REQUEST_STATUS_NOT_FOUND = "Demo request status not found";
+
     public static final String PRESENTED_BY_REQUIRED = "Presented by can't be null or empty when status is completed";
     public static final String PRESENTED_AT_REQUIRED = "Presented at can't be null when status is completed";
     public static final String HOSTEL_ID_REQUIRED = "HostelId is required";
-    public static final String INVALID_BILLING_CYCLE_START_DAY = "Invalid billingCycleStartDay";
-    public static final String CANNOT_USE_BILLING_CYCLE_FILTER_WITH_DATE_FILTER = "Cannot use billingCycleStartDay with filterBy";
     public static final String PLAN_FEATURE_NAME_REQUIRED = "Plan feature name is required";
-    public static final String PLAN_CODE_ALREADY_EXISTS = "Plan code already exists";
-    public static final String PLAN_NAME_ALREADY_EXISTS = "Plan name already exists";
-    public static final String PLAN_TYPE_ALREADY_EXISTS = "Plan type already exists";
     public static final String PAYLOAD_REQUIRED = "Payload is required";
-    public static final String PAYMENT_PROOF_REQUIRED = "Payment proof is required for subscription";
-    public static final String INVALID_DISCOUNT = "Invalid discount amount";
-    public static final String DAYS_CAN_NOT_BE_HIGHER_THAN_PLAN_DURATION = "Trial days can not be higher than plan duration";
+    public static final String PAID_AMOUNT_REQUIRED = "Paid amount is required";
+    public static final String PAYMENT_ATTACHMENT_REQUIRES = "Payment attachment is required";
+    public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
+
+    public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
+    public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
+
+    public static final String ROLE_NAME_CANNOT_EDIT = "This role cannot be edited";
+    public static final String CANNOT_USE_BILLING_CYCLE_FILTER_WITH_DATE_FILTER = "Cannot use billingCycleStartDay with filterBy";
     public static final String TRIAL_EXTENSION_LIMIT_REACHED = "Trial extension limit reached";
     public static final String NEW_SUBSCRIPTION_IS_ADDED = "New Subscription is available";
     public static final String CANNOT_EXTEND_FREE_TRIAL_ANY_MORE = "Cannot extend free trial anymore";
-
-    public static final String HOSTEL_HAS_SUBSCRIBED_BEFORE = "Hostel has been subscribed before";
-    public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
-    public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
-    public static final String INVALID_DISCOUNT_PERCENTAGE = "Invalid discount percentage";
-    public static final String TRIAL_PLAN_NOT_ALLOWED = "Trial plan not allowed";
-    public static final String PAID_AMOUNT_REQUIRED = "Paid amount is required";
-    public static final String PAYMENT_ATTACHMENT_REQUIRES = "Payment attachment is required";
-    public static final String INVALID_RECURRING_CYCLE_FOR_TENANT = "Tenant joined after billing cycle";
-    public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
-    public static final String NO_CUSTOMER_FOUND = "No tenant found";
-    public static final String INVALID_MONTH = "Month must be from 1 to 12";
-    public static final String HOSTELS_EXISTS_FOR_THIS_OWNER = "Hostels exists for this owner";
-    public static final String MOBILE_ALREADY_EXISTS = "Mobile number already exists";
     public static final String THIS_USER_IS_NOT_AN_OWNER = "This user is not an owner";
     public static final String FILE_UPLOAD_FAILED = "File upload failed";
 
