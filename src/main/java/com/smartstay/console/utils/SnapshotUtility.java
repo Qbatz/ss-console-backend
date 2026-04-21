@@ -1,6 +1,7 @@
 package com.smartstay.console.utils;
 
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.agent.AgentSnapshot;
 import com.smartstay.console.dto.hostel.*;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
@@ -203,6 +204,29 @@ public class SnapshotUtility {
                 u.getDescription(),
                 address,
                 config
+        );
+    }
+
+    public static AgentSnapshot toSnapshot(Agent a) {
+
+        if (a == null) return null;
+
+        return new AgentSnapshot(
+                a.getAgentId(),
+                a.getFirstName(),
+                a.getLastName(),
+                a.getMobile(),
+                a.getAgentEmailId(),
+                a.getRoleId(),
+                a.getAgentZohoUserId(),
+                a.getTicketLink(),
+                a.getIsActive(),
+                a.getIsProfileCompleted(),
+                a.isMockAgent(),
+                copyDate(a.getCreatedAt()),
+                a.getCreatedBy(),
+                copyDate(a.getUpdatedAt()),
+                a.getUpdatedBy()
         );
     }
 

@@ -25,6 +25,9 @@ public class Utils {
     public static final String UPDATED = "Updated Successfully";
     public static final String DELETED = "Deleted Successfully";
 
+    public static final String NO_CHANGES_DETECTED = "No changes detected";
+    public static final String CANNOT_EDIT_YOURSELF = "Cannot edit yourself";
+
     public static final String UN_AUTHORIZED = "Unauthorized Access";
     public static final String ACCESS_RESTRICTED = "Access Restricted";
 
