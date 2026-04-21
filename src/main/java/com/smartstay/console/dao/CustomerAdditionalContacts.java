@@ -11,25 +11,28 @@ import lombok.NoArgsConstructor;
 import java.util.Date;
 
 @Entity
-@AllArgsConstructor
-@NoArgsConstructor
 @Data
-public class CustomerDocuments {
+@NoArgsConstructor
+@AllArgsConstructor
+public class CustomerAdditionalContacts {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long documentId;
-    //should be from DocumentType enum
-    private String documentType;
-    private String documentUrl;
-    //from File format enum
-    private String documentFileType;
+    private Long contactId;
+    private String name;
+    private String relationship;
+    private String occupation;
+    private String mobile;
+    private String fullAddress;
     private String customerId;
     private String hostelId;
-    private Boolean isDeleted;
-    private Boolean isActive;
+    private String countryCode;
+    //From userType Enum
+    private String addedByUserType;
+    //From userType Enum
+    private String updatedByUserType;
+    private boolean isDeleted;
     private String createdBy;
     private String updatedBy;
-    private String createdByUserType;
     private Date createdAt;
     private Date updatedAt;
 }

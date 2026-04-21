@@ -70,6 +70,8 @@ public class CustomersService {
     private BankTransactionService bankTransactionService;
     @Autowired
     private BankingService bankingService;
+    @Autowired
+    private CustomerAdditionalContactsService customerAdditionalContactsService;
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
@@ -185,7 +187,6 @@ public class CustomersService {
         }
 
         Customers customer = customersRepository.findByCustomerIdAndHostelId(customerId, hostelId);
-
         if (customer == null){
             return new ResponseEntity<>(Utils.NO_TENANT_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
         }
@@ -198,6 +199,8 @@ public class CustomersService {
         List<BookingsV1> listBookings = bookingsService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomersConfig> listConfigs = customersConfigService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomerDocuments> listCustomerDocuments = customerDocumentService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<CustomerAdditionalContacts> listCustomerAdditionalContacts = customerAdditionalContactsService
+                .findByHostelIdAndCustomerId(hostelId, customerId);
         List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<ComplaintsV1> complaints = complaintService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CreditDebitNotes> listCreditDebits = creditDebitNotesService.findByHostelIdAndCustomerId(hostelId, customerId);
@@ -246,6 +249,7 @@ public class CustomersService {
                 cloneList(listCreditDebits, CreditDebitNotes.class),
                 cloneList(complaints, ComplaintsV1.class),
                 cloneList(listCustomerDocuments, CustomerDocuments.class),
+                cloneList(listCustomerAdditionalContacts, CustomerAdditionalContacts.class),
                 cloneList(listCustomerBedHistory, CustomersBedHistory.class),
                 cloneList(listCustomerEbHistory, CustomersEbHistory.class),
                 cloneList(listCustomersAmenity, CustomersAmenity.class),
@@ -267,6 +271,9 @@ public class CustomersService {
         }
         if (listCustomerDocuments != null && !listCustomerDocuments.isEmpty()) {
             customerDocumentService.deleteDocuments(listCustomerDocuments);
+        }
+        if (listCustomerAdditionalContacts != null && !listCustomerAdditionalContacts.isEmpty()) {
+            customerAdditionalContactsService.deleteAll(listCustomerAdditionalContacts);
         }
         if (listAmenityRequests != null && !listAmenityRequests.isEmpty()) {
             amenityRequestService.deleteAmenities(listAmenityRequests);
