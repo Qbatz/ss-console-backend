@@ -27,6 +27,11 @@ public class PlansController {
         return plansService.getAllPlans();
     }
 
+    @GetMapping("/dropdown")
+    private ResponseEntity<?> getPlansDropdown(){
+        return plansService.getPlansDropdown();
+    }
+
     @PutMapping("/{planId}")
     private ResponseEntity<?> updatePlanByPlanId(@PathVariable("planId") Long planId,
                                                  @RequestBody @Valid PlansUpdatePayload payload){

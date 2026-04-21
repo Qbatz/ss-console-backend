@@ -13,6 +13,7 @@ public class Utils {
 
     public static final int OWNER_ROLE_ID = 1;
     public static final int MASTER_ROLE_ID = 2;
+
     private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final Random RANDOM = new Random();
@@ -91,6 +92,7 @@ public class Utils {
     public static final String HOSTELS_EXISTS_FOR_THIS_OWNER = "Hostels exists for this owner";
     public static final String MOBILE_ALREADY_EXISTS = "Mobile number already exists";
     public static final String THIS_USER_IS_NOT_AN_OWNER = "This user is not an owner";
+    public static final String FILE_UPLOAD_FAILED = "File upload failed";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {

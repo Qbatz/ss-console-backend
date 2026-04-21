@@ -1,6 +1,7 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.plans.PlanResMapper;
+import com.smartstay.console.Mapper.plans.PlansDropdownResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.PlanFeatures;
@@ -16,6 +17,8 @@ import com.smartstay.console.payloads.plans.PlanFeaturesUpdatePayload;
 import com.smartstay.console.payloads.plans.PlansPayload;
 import com.smartstay.console.payloads.plans.PlansUpdatePayload;
 import com.smartstay.console.repositories.PlansRepository;
+import com.smartstay.console.responses.plans.PlansDropdownRes;
+import com.smartstay.console.responses.plans.PlansDropdownWrapper;
 import com.smartstay.console.responses.plans.PlansResponse;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
@@ -43,19 +46,12 @@ public class PlansService {
     @Autowired
     private PlanFeaturesService planFeaturesService;
 
-    private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    private static final Random RANDOM = new Random();
-
-    public Plans findTrialPlan() {
-        if (!authentication.isAuthenticated()) {
-            return null;
-        }
-        return plansRepository.findTopByPlanTypeAndIsActiveTrueOrderByPlanIdAsc(PlanType.TRIAL.name());
+    public List<Plans> findTrialPlans() {
+        return plansRepository.findAllByPlanTypeAndIsActiveTrue(PlanType.TRIAL.name());
     }
 
-    public Plans findLatestTrialPlan() {
-        return plansRepository.findTopByPlanTypeAndIsActiveTrueOrderByPlanIdDesc(PlanType.TRIAL.name());
+    public List<Plans> findExpandableTrialPlans() {
+        return plansRepository.findAllByPlanTypeAndIsActiveTrue(PlanType.EXPANDABLE_TRIAL.name());
     }
 
     public Plans findPlanByPlanCode(String planCode) {
@@ -241,7 +237,7 @@ public class PlansService {
             planCode = payload.planCode();
         } else {
             do {
-                planCode = generatePlanCode();
+                planCode = Utils.generatePlanCode();
             } while (plansRepository.existsByPlanCodeIgnoreCase(planCode));
         }
         plan.setPlanCode(planCode);
@@ -384,28 +380,6 @@ public class PlansService {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    public static String generatePlanCode() {
-        StringBuilder ref = new StringBuilder();
-
-        // 4 letters
-        for (int i = 0; i < 2; i++) {
-            ref.append(ALPHABETS.charAt(RANDOM.nextInt(ALPHABETS.length())));
-        }
-
-        // 4 digits
-        for (int i = 0; i < 2; i++) {
-            ref.append(RANDOM.nextInt(10));
-        }
-        ref.append("-");
-
-        // 4 alphanumeric
-        for (int i = 0; i < 3; i++) {
-            ref.append(ALPHANUMERIC.charAt(RANDOM.nextInt(ALPHANUMERIC.length())));
-        }
-
-        return ref.toString();
-    }
-
     public List<Plans> getFreePlans() {
         List<String> planTypes = new ArrayList<>();
         planTypes.add(PlanType.TRIAL.name());
@@ -415,5 +389,50 @@ public class PlansService {
             listPlans = new ArrayList<>();
         }
         return listPlans;
+    }
+
+    public ResponseEntity<?> getPlansDropdown() {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<Plans> plansList = plansRepository.findAllByIsActiveTrue();
+
+        List<PlansDropdownRes> trialPlans = new ArrayList<>();
+        List<PlansDropdownRes> expandableTrialPlans = new ArrayList<>();
+        List<PlansDropdownRes> otherPlans = new ArrayList<>();
+
+        for (Plans plan : plansList) {
+            if (PlanType.TRIAL.name().equals(plan.getPlanType())) {
+                PlansDropdownRes plansDropdownRes = new PlansDropdownResMapper()
+                        .apply(plan);
+                trialPlans.add(plansDropdownRes);
+            }
+            else if (PlanType.EXPANDABLE_TRIAL.name().equals(plan.getPlanType())) {
+                PlansDropdownRes plansDropdownRes = new PlansDropdownResMapper()
+                        .apply(plan);
+                expandableTrialPlans.add(plansDropdownRes);
+            }
+            else {
+                PlansDropdownRes plansDropdownRes = new PlansDropdownResMapper()
+                        .apply(plan);
+                otherPlans.add(plansDropdownRes);
+            }
+        }
+
+        PlansDropdownWrapper response = new PlansDropdownWrapper(trialPlans,
+                expandableTrialPlans, otherPlans);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

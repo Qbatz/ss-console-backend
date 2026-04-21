@@ -35,8 +35,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
     List<UsersResponse> staffs;
     List<UserActivities> activities;
     Map<String, Users> userLookup;
-    Plans trialPlan;
-    Plans trialDaysPlan;
+    List<Plans> trialPlans;
+    List<Plans> expandableTrialPlans;
     Map<Integer, BillingDates> billingDatesMap;
     List<RecurringHistoryRes> recurringHistory;
     List<CustomerRecHistoryRes> customerRecurringHistory;
@@ -62,8 +62,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                                List<UsersResponse> staffs,
                                List<UserActivities> activities,
                                Map<String, Users> userLookup,
-                               Plans trialPlan,
-                               Plans trialDaysPlan,
+                               List<Plans> trialPlans,
+                               List<Plans> expandableTrialPlans,
                                Map<Integer, BillingDates> billingDatesMap,
                                List<RecurringHistoryRes> recurringHistory,
                                List<CustomerRecHistoryRes> customerRecurringHistory,
@@ -88,8 +88,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
         this.staffs = staffs;
         this.activities = activities;
         this.userLookup = userLookup;
-        this.trialPlan = trialPlan;
-        this.trialDaysPlan = trialDaysPlan;
+        this.trialPlans = trialPlans;
+        this.expandableTrialPlans = expandableTrialPlans;
         this.billingDatesMap = billingDatesMap;
         this.recurringHistory = recurringHistory;
         this.customerRecurringHistory = customerRecurringHistory;
@@ -301,14 +301,21 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                         amenity.getIsProRate()))
                 .toList();
 
-        boolean trialExtendable = false;
+        boolean isTrial = false;
+        boolean canAddTrial = false;
+        boolean canAddExpandableTrial = false;
         Set<String> trialPlanCodes = new HashSet<>();
+        Set<String> expandableTrialPlanCodes = new HashSet<>();
 
-        if (trialPlan != null) {
-            trialPlanCodes.add(trialPlan.getPlanCode().toLowerCase());
+        if (trialPlans != null && !trialPlans.isEmpty()) {
+            trialPlans.forEach(trialPlan ->
+                    trialPlanCodes.add(trialPlan.getPlanCode().toLowerCase()));
+
         }
-        if (trialDaysPlan != null) {
-            trialPlanCodes.add(trialDaysPlan.getPlanCode().toLowerCase());
+        if (expandableTrialPlans != null && !expandableTrialPlans.isEmpty()) {
+            expandableTrialPlans.forEach(expandableTrialPlan ->
+                    expandableTrialPlanCodes.add(expandableTrialPlan.getPlanCode().toLowerCase()));
+
         }
 
         boolean isSubscriptionActive = false;
@@ -317,25 +324,11 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
 
         if (currentPlan != null) {
             if (trialPlanCodes.contains(currentPlan.getCurrentPlanCode().toLowerCase())) {
-                if (subscriptions != null) {
-                    long trialCount = 0;
-                    long subscriptionCount = 0;
+                isTrial = true;
+            }
 
-                    for (Subscription subscription : subscriptions) {
-                        if (trialPlanCodes.contains(subscription.getPlanCode().toLowerCase())) {
-                            trialCount++;
-                        } else {
-                            subscriptionCount++;
-                        }
-                    }
-
-                    if (trialCount < 2) {
-                        trialExtendable = true;
-                    }
-                    if (subscriptionCount > 0) {
-                        trialExtendable = false;
-                    }
-                }
+            if (expandableTrialPlanCodes.contains(currentPlan.getCurrentPlanCode().toLowerCase())) {
+                isTrial = true;
             }
 
             if (currentPlan.getCurrentPlanEndsAt() != null) {
@@ -344,13 +337,41 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
             }
         }
 
+        Date todayStart = Utils.getStartOfDay(today);
+
+        if (subscriptions != null) {
+            long trialCount = 0;
+            long subscriptionCount = 0;
+            long subPendingCount = 0;
+
+            Set<String> allTrialPlanCodes = new HashSet<>();
+            allTrialPlanCodes.addAll(trialPlanCodes);
+            allTrialPlanCodes.addAll(expandableTrialPlanCodes);
+
+            for (Subscription subscription : subscriptions) {
+                if (trialPlanCodes.contains(subscription.getPlanCode().toLowerCase())) {
+                    trialCount++;
+                }
+                if (!allTrialPlanCodes.contains(subscription.getPlanCode().toLowerCase())) {
+                    subscriptionCount++;
+                }
+                Date planStart = subscription.getPlanStartsAt();
+                if (planStart != null && !planStart.before(todayStart)) {
+                    subPendingCount++;
+                }
+            }
+
+            canAddTrial = (trialCount < 2) && (subPendingCount == 0);
+            canAddExpandableTrial = (subscriptionCount == 0) && (subPendingCount == 0);
+        }
+
         return new HostelResponse(hostelV1.getHostelId(), hostelV1.getHostelName(), Utils.getInitials(hostelV1.getHostelName()),
                 hostelV1.getMobile(), hostelV1.getHouseNo(), hostelV1.getStreet(), hostelV1.getLandmark(), hostelV1.getCity(),
-                hostelV1.getState(), hostelV1.getCountry(), hostelV1.getPincode(), fullAddress, hostelV1.getMainImage(),
-                trialExtendable, addImages, amenitiesRes, sharingTypeList, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants,
-                noOfBookedTenants, noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants, tenantList,
-                Utils.dateToString(hostelV1.getCreatedAt()), Utils.dateToTime(hostelV1.getCreatedAt()), ownerInfo, masters, staffs,
-                currentBillingRulesRes, billingRules, ebConfig, currentSubRes, otherSubsRes, subscriptionStatus,
+                hostelV1.getState(), hostelV1.getCountry(), hostelV1.getPincode(), fullAddress, hostelV1.getMainImage(), isTrial,
+                canAddTrial, canAddExpandableTrial, addImages, amenitiesRes, sharingTypeList, noOfFloors, noOfRooms, noOfBeds,
+                noOfActiveTenants, noOfBookedTenants, noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
+                tenantList, Utils.dateToString(hostelV1.getCreatedAt()), Utils.dateToTime(hostelV1.getCreatedAt()), ownerInfo, masters,
+                staffs, currentBillingRulesRes, billingRules, ebConfig, currentSubRes, otherSubsRes, subscriptionStatus,
                 subscriptionRenewalTimeLeftDays, isSubscriptionActive, recurringStatus, recurringHistory, customerRecurringHistory,
                 activitiesRes);
     }

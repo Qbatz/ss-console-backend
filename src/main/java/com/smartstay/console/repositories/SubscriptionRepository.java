@@ -48,9 +48,11 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
            )
            """)
     long getExpiredLatestSubscriptionCount();
+
     List<Subscription> findByHostelIdAndPlanCode(String hostelId, String planCode);
+
     @Query("""
-            SELECT sub FROM Subscription sub WHERE sub.hostelId=:hostelId AND 
+            SELECT sub FROM Subscription sub WHERE sub.hostelId=:hostelId AND
             DATE(sub.planStartsAt) >= DATE(:todaysDate) AND sub.isActive=true
             """)
     List<Subscription> findAnyNewSubscriptionAvailable(String hostelId, Date todaysDate);
