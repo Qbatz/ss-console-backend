@@ -246,8 +246,8 @@ public class SubscriptionService {
             newOrder.setPlanName(plans.getPlanName());
             newOrder.setTotalAmount(paidAmount);
             newOrder.setOrderStatus(OrderStatus.PAID.name());
-            newOrder.setPaymentType("Manual");
-            newOrder.setChannel("Console");
+            newOrder.setPaymentType(PaymentType.MANUAL.name());
+            newOrder.setChannel(Channel.CONSOLE.name());
             newOrder.setUserType(UserType.AGENT.name());
             newOrder.setPaymentProof(newSubscription.getPaymentProof());
             newOrder.setActive(true);

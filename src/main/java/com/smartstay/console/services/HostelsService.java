@@ -10,6 +10,7 @@ import com.smartstay.console.Mapper.users.UsersResponseMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
+import com.smartstay.console.dto.customers.CustomersCredentialsSnapshot;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.dto.hostel.HostelResetSnapshot;
 import com.smartstay.console.dto.hostel.HostelSnapshot;
@@ -569,13 +570,23 @@ public class HostelsService {
                 .map(Customers::getCustomerId)
                 .toList();
 
+        Set<String> allXuids = customersList.stream()
+                .map(Customers::getXuid)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Set<String> conflictingXuids = customersService.findConflictingXuids(new ArrayList<>(allXuids), customerIds);
+
+        allXuids.removeAll(conflictingXuids);
+
+        List<CustomerCredentials> listCustomerCredentials = customersCredentialService.findAllByXuids(allXuids);
+
         List<InvoicesV1> invoicesList = invoiceV1Service.findByListOfCustomers(hostelId, customerIds);
         List<BookingsV1> listBookings = bookingsService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomersConfig> listConfigs = customersConfigService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomerDocuments> listCustomerDocuments = customerDocumentService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomerAdditionalContacts> listCustomerAdditionalContacts = customerAdditionalContactsService
                 .findByHostelIdAndCustomerIds(hostelId, customerIds);
-        List<CustomerCredentials> listCustomerCredentials = customersCredentialService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<ComplaintsV1> complaints = complaintService.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
         List<CreditDebitNotes> listCreditDebits = creditDebitNotesService.findByHostelIdAndCustomerIds(hostelId, customerIds);
@@ -603,6 +614,8 @@ public class HostelsService {
         HashMap<String, Double> bankBalances = new HashMap<>();
 
         HostelSnapshot oldHostel = SnapshotUtility.toSnapshot(hostel);
+        List<CustomersCredentialsSnapshot> credentialsSnapshots =
+                SnapshotUtility.toSnapshotList(listCustomerCredentials, SnapshotUtility::toSnapshot);
 
         HostelResetSnapshot snapshot = new HostelResetSnapshot(
                 oldHostel,
@@ -620,7 +633,7 @@ public class HostelsService {
                 cloneList(listCustomersAmenity, CustomersAmenity.class),
                 cloneList(listAmenityRequests, AmenityRequest.class),
                 cloneList(listConfigs, CustomersConfig.class),
-                cloneList(listCustomerCredentials, CustomerCredentials.class),
+                credentialsSnapshots,
                 cloneList(listElectricityReadings, ElectricityReadings.class),
                 cloneList(listHostelReadings, HostelReadings.class),
                 cloneList(listBeds, Beds.class),
@@ -777,8 +790,6 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
-        HostelSnapshot oldHostel = SnapshotUtility.toSnapshot(hostel);
-
         try {
             resetHostel(hostel, agent);
         } catch (Exception e){
@@ -815,9 +826,6 @@ public class HostelsService {
         }
 
         hostelRepository.delete(hostel);
-
-        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
-                hostelId, oldHostel, null);
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }

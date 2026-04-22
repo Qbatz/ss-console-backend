@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class CustomersCredentialService {
@@ -13,10 +14,19 @@ public class CustomersCredentialService {
     @Autowired
     private CustomerCredentialRepository customerCredentialRepository;
 
-    public List<CustomerCredentials> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
-        return null;
+    public void deleteCredentials(List<CustomerCredentials> listCustomerCredentials) {
+        customerCredentialRepository.deleteAll(listCustomerCredentials);
     }
 
-    public void deleteCredentials(List<CustomerCredentials> listCustomerCredentials) {
+    public void deleteCredential(CustomerCredentials customerCredentials) {
+        customerCredentialRepository.delete(customerCredentials);
+    }
+
+    public CustomerCredentials findByXuid(String xuid) {
+        return customerCredentialRepository.findByXuid(xuid);
+    }
+
+    public List<CustomerCredentials> findAllByXuids(Set<String> xuids) {
+        return customerCredentialRepository.findAllByXuidIn(xuids);
     }
 }

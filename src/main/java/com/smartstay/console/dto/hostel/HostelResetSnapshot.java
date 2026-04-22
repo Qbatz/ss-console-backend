@@ -1,6 +1,7 @@
 package com.smartstay.console.dto.hostel;
 
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.customers.CustomersCredentialsSnapshot;
 
 import java.util.List;
 
@@ -19,7 +20,7 @@ public record HostelResetSnapshot(HostelSnapshot hostel,
                                   List<CustomersAmenity> amenities,
                                   List<AmenityRequest> amenityRequests,
                                   List<CustomersConfig> configs,
-                                  List<CustomerCredentials> customerCredentials,
+                                  List<CustomersCredentialsSnapshot> customerCredentials,
                                   List<ElectricityReadings> electricityReadings,
                                   List<HostelReadings> hostelReadings,
                                   List<Beds> beds,

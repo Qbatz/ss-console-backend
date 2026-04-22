@@ -4,7 +4,7 @@ import com.smartstay.console.dao.*;
 
 import java.util.List;
 
-public record CustomerResetSnapshot(Customers customer,
+public record CustomerResetSnapshot(CustomersSnapshot customer,
                                     List<InvoicesV1> invoices,
                                     List<BookingsV1> bookings,
                                     List<TransactionV1> transactions,
@@ -12,6 +12,7 @@ public record CustomerResetSnapshot(Customers customer,
                                     List<CreditDebitNotes> creditDebitNotes,
                                     List<ComplaintsV1> complaints,
                                     List<CustomerDocuments> documents,
+                                    CustomersCredentialsSnapshot customerCredentials,
                                     List<CustomerAdditionalContacts> customerAdditionalContacts,
                                     List<CustomersBedHistory> bedHistory,
                                     List<CustomersEbHistory> ebHistory,

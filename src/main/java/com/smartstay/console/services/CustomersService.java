@@ -1,14 +1,16 @@
 package com.smartstay.console.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.customers.CustomerSumMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.customers.CustomerResetSnapshot;
+import com.smartstay.console.dto.customers.CustomersCredentialsSnapshot;
+import com.smartstay.console.dto.customers.CustomersSnapshot;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.customers.CustomerResetPayload;
 import com.smartstay.console.repositories.CustomersRepository;
 import com.smartstay.console.responses.customers.CustomerSummaryResponse;
+import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -72,6 +74,8 @@ public class CustomersService {
     private BankingService bankingService;
     @Autowired
     private CustomerAdditionalContactsService customerAdditionalContactsService;
+    @Autowired
+    private CustomersCredentialService customersCredentialService;
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
@@ -198,6 +202,11 @@ public class CustomersService {
         List<InvoicesV1> invoicesList = invoiceV1Service.findAllByHostelIdAndCustomerId(hostelId, customerId);
         List<BookingsV1> listBookings = bookingsService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomersConfig> listConfigs = customersConfigService.findByHostelIdAndCustomerId(hostelId, customerId);
+        CustomerCredentials customerCredentials = null;
+        boolean isDuplicate = customersRepository.existsByXuidAndCustomerIdNot(customer.getXuid(), customerId);
+        if (!isDuplicate) {
+            customerCredentials = customersCredentialService.findByXuid(customer.getXuid());
+        }
         List<CustomerDocuments> listCustomerDocuments = customerDocumentService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomerAdditionalContacts> listCustomerAdditionalContacts = customerAdditionalContactsService
                 .findByHostelIdAndCustomerId(hostelId, customerId);
@@ -238,7 +247,8 @@ public class CustomersService {
 
         HashMap<String, Double> bankBalances = new HashMap<>();
 
-        Customers oldCustomer = new ObjectMapper().convertValue(customer, Customers.class);
+        CustomersSnapshot oldCustomer = SnapshotUtility.toSnapshot(customer);
+        CustomersCredentialsSnapshot oldCredentials = SnapshotUtility.toSnapshot(customerCredentials);
 
         CustomerResetSnapshot snapshot = new CustomerResetSnapshot(
                 oldCustomer,
@@ -249,6 +259,7 @@ public class CustomersService {
                 cloneList(listCreditDebits, CreditDebitNotes.class),
                 cloneList(complaints, ComplaintsV1.class),
                 cloneList(listCustomerDocuments, CustomerDocuments.class),
+                oldCredentials,
                 cloneList(listCustomerAdditionalContacts, CustomerAdditionalContacts.class),
                 cloneList(listCustomerBedHistory, CustomersBedHistory.class),
                 cloneList(listCustomerEbHistory, CustomersEbHistory.class),
@@ -268,6 +279,9 @@ public class CustomersService {
         }
         if (listConfigs != null && !listConfigs.isEmpty()) {
             customersConfigService.deleteAll(listConfigs);
+        }
+        if (customerCredentials != null) {
+            customersCredentialService.deleteCredential(customerCredentials);
         }
         if (listCustomerDocuments != null && !listCustomerDocuments.isEmpty()) {
             customerDocumentService.deleteDocuments(listCustomerDocuments);
@@ -376,5 +390,9 @@ public class CustomersService {
 
     public Customers getCustomerInformation(String customerId) {
         return customersRepository.findById(customerId).orElse(null);
+    }
+
+    public Set<String> findConflictingXuids(List<String> xuids, List<String> customerIds) {
+        return customersRepository.findConflictingXuids(xuids, customerIds);
     }
 }

@@ -39,4 +39,14 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
            AND FUNCTION('DAY', COALESCE(c.joiningDate, c.expJoiningDate)) IN :daySet
            """)
     List<Customers> findByDaySet(@Param("daySet") Set<Integer> daySet);
+
+    boolean existsByXuidAndCustomerIdNot(String xuid, String customerId);
+
+    @Query("""
+                SELECT DISTINCT c.xuid
+                FROM Customers c
+                WHERE c.xuid IN :xuids
+                AND c.customerId NOT IN :customerIds
+            """)
+    Set<String> findConflictingXuids(List<String> xuids, List<String> customerIds);
 }
