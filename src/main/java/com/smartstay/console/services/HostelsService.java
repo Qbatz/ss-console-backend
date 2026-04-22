@@ -140,6 +140,8 @@ public class HostelsService {
     private HostelPlanService hostelPlanService;
     @Autowired
     private CustomerRecurringTrackerService customerRecurringTrackerService;
+    @Autowired
+    private CustomerAdditionalContactsService customerAdditionalContactsService;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -571,6 +573,8 @@ public class HostelsService {
         List<BookingsV1> listBookings = bookingsService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomersConfig> listConfigs = customersConfigService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomerDocuments> listCustomerDocuments = customerDocumentService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<CustomerAdditionalContacts> listCustomerAdditionalContacts = customerAdditionalContactsService
+                .findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomerCredentials> listCustomerCredentials = customersCredentialService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<ComplaintsV1> complaints = complaintService.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
@@ -610,6 +614,7 @@ public class HostelsService {
                 cloneList(listCreditDebits, CreditDebitNotes.class),
                 cloneList(complaints, ComplaintsV1.class),
                 cloneList(listCustomerDocuments, CustomerDocuments.class),
+                cloneList(listCustomerAdditionalContacts, CustomerAdditionalContacts.class),
                 cloneList(listCustomerBedHistory, CustomersBedHistory.class),
                 cloneList(listCustomerEbHistory, CustomersEbHistory.class),
                 cloneList(listCustomersAmenity, CustomersAmenity.class),
@@ -634,6 +639,9 @@ public class HostelsService {
         }
         if (listCustomerDocuments != null && !listCustomerDocuments.isEmpty()) {
             customerDocumentService.deleteDocuments(listCustomerDocuments);
+        }
+        if (listCustomerAdditionalContacts != null && !listCustomerAdditionalContacts.isEmpty()) {
+            customerAdditionalContactsService.deleteAll(listCustomerAdditionalContacts);
         }
         if (listCustomerCredentials != null && !listCustomerCredentials.isEmpty()) {
             customersCredentialService.deleteCredentials(listCustomerCredentials);
