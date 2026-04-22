@@ -1,6 +1,7 @@
 package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.AddAdmin;
+import com.smartstay.console.payloads.roles.RoleIdPayload;
 import com.smartstay.console.services.AgentService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -59,5 +60,11 @@ public class  AgentController {
     @GetMapping("/agent-details/{agentId}")
     public ResponseEntity<?> getAgentDetailsByAgentId(@PathVariable("agentId") String agentId){
         return agentService.getAgentDetailsByAgentId(agentId);
+    }
+
+    @PutMapping("/update-role/{agentId}")
+    public ResponseEntity<?> updateAgentRole(@PathVariable("agentId") String agentId,
+                                             @RequestBody @Valid RoleIdPayload payload){
+        return agentService.updateRoleByAgentId(agentId, payload);
     }
 }

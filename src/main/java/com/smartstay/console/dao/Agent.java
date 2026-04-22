@@ -15,6 +15,7 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Agent {
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String agentId;

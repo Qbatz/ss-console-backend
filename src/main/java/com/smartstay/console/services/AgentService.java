@@ -1,6 +1,5 @@
 package com.smartstay.console.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartstay.console.Mapper.agent.AgentActivitiesResMapper;
 import com.smartstay.console.Mapper.agent.AgentDetailsResMapper;
 import com.smartstay.console.Mapper.agent.AgentResMapper;
@@ -8,6 +7,7 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.AgentActivities;
 import com.smartstay.console.dao.AgentRoles;
+import com.smartstay.console.dto.agent.AgentSnapshot;
 import com.smartstay.console.dto.agent.RoleCountProjection;
 import com.smartstay.console.dto.zoho.ZohoUserDetails;
 import com.smartstay.console.ennum.ActivityType;
@@ -15,9 +15,11 @@ import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.AddAdmin;
 import com.smartstay.console.payloads.agent.AddMockAgent;
+import com.smartstay.console.payloads.roles.RoleIdPayload;
 import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.responses.agents.*;
 import com.smartstay.console.utils.Constants;
+import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -56,16 +58,20 @@ public class AgentService {
     }
 
     public ResponseEntity<?> addAdmin(AddAdmin addAdmin) {
+
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         Agent agents = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
         if (agents == null) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         if (addAdmin == null) {
             return new ResponseEntity<>(Constants.PAYLOAD_REQUIRED, HttpStatus.BAD_REQUEST);
         }
+
         if (addAdmin.emailId() == null || addAdmin.emailId().trim().equalsIgnoreCase("")) {
             return new ResponseEntity<>(Constants.EMAIL_ID_REQUIRED, HttpStatus.BAD_REQUEST);
         }
@@ -92,11 +98,12 @@ public class AgentService {
         }
         newAgent = agentRepository.save(newAgent);
 
+        AgentSnapshot newAgentSnapshot = SnapshotUtility.toSnapshot(newAgent);
+
         agentActivitiesService.createAgentActivity(agents, ActivityType.CREATE, Source.AGENT,
-                newAgent.getAgentId(), null, newAgent);
+                newAgent.getAgentId(), null, newAgentSnapshot);
 
         return new ResponseEntity<>(HttpStatus.CREATED);
-
     }
 
     public Agent findUserByUserId(String userId) {
@@ -108,9 +115,11 @@ public class AgentService {
     }
 
     public ResponseEntity<?> getAgentDetails() {
+
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
+
         Agent agent = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -205,8 +214,10 @@ public class AgentService {
 
         newAgent = agentRepository.save(newAgent);
 
+        AgentSnapshot newAgentSnapshot = SnapshotUtility.toSnapshot(newAgent);
+
         agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.MOCK_AGENT,
-                newAgent.getAgentId(), null, newAgent);
+                newAgent.getAgentId(), null, newAgentSnapshot);
 
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
@@ -285,7 +296,7 @@ public class AgentService {
         if (deactivatingAgent == null){
             return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
         }
-        Agent oldAgent = new ObjectMapper().convertValue(deactivatingAgent, Agent.class);
+        AgentSnapshot oldAgent = SnapshotUtility.toSnapshot(deactivatingAgent);
 
         deactivatingAgent.setIsActive(false);
         deactivatingAgent.setUpdatedBy(agent.getAgentId());
@@ -358,8 +369,10 @@ public class AgentService {
         reactivatingAgent.setUpdatedAt(new Date());
         reactivatingAgent = agentRepository.save(reactivatingAgent);
 
+        AgentSnapshot reactivatingAgentSnapshot = SnapshotUtility.toSnapshot(reactivatingAgent);
+
         agentActivitiesService.createAgentActivity(agent, ActivityType.REACTIVATE, Source.AGENT,
-                agentId, null, reactivatingAgent);
+                agentId, null, reactivatingAgentSnapshot);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
@@ -416,5 +429,53 @@ public class AgentService {
         ).apply(inputAgent);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateRoleByAgentId(String agentId, RoleIdPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Agents.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (agent.getAgentId().equals(agentId)) {
+            return new ResponseEntity<>(Utils.CANNOT_EDIT_YOURSELF, HttpStatus.BAD_REQUEST);
+        }
+
+        Agent updatingAgent = agentRepository.findByAgentIdAndIsActiveTrue(agentId);
+        if (updatingAgent == null){
+            return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (updatingAgent.getRoleId().equals(payload.roleId())) {
+            return new ResponseEntity<>(Utils.NO_CHANGES_DETECTED, HttpStatus.BAD_REQUEST);
+        }
+
+        AgentSnapshot oldAgent = SnapshotUtility.toSnapshot(updatingAgent);
+
+        AgentRoles agentRole = agentRolesService.getAgentRoleById(payload.roleId());
+        if (agentRole == null) {
+            return new ResponseEntity<>(Utils.NO_ROLES_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        updatingAgent.setRoleId(payload.roleId());
+        updatingAgent.setUpdatedBy(agent.getAgentId());
+        updatingAgent.setUpdatedAt(new Date());
+        updatingAgent = agentRepository.save(updatingAgent);
+
+        AgentSnapshot newAgent = SnapshotUtility.toSnapshot(updatingAgent);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.AGENT,
+                agentId, oldAgent, newAgent);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 }
