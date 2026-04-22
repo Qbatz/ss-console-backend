@@ -121,7 +121,8 @@ public class OrderHistoryService {
 
         Set<String> hostelIds = new HashSet<>();
         Set<String> planCodes = new HashSet<>();
-        Set<String> createdByUserIds = new HashSet<>();
+        Set<String> userIds = new HashSet<>();
+        Set<String> agentIds = new HashSet<>();
 
         for (OrderHistory orderHistory : orderHistories) {
             if (orderHistory.getHostelId() != null) {
@@ -130,9 +131,17 @@ public class OrderHistoryService {
             if (orderHistory.getPlanCode() != null) {
                 planCodes.add(orderHistory.getPlanCode());
             }
+            if (orderHistory.getPaidBy() != null) {
+                userIds.add(orderHistory.getPaidBy());
+            }
+            if (orderHistory.getCollectedBy() != null) {
+                agentIds.add(orderHistory.getCollectedBy());
+            }
             if (orderHistory.getCreatedBy() != null && orderHistory.getUserType() != null) {
                 if (UserType.OWNER.name().equals(orderHistory.getUserType())){
-                    createdByUserIds.add(orderHistory.getCreatedBy());
+                    userIds.add(orderHistory.getCreatedBy());
+                } else if (UserType.AGENT.name().equals(orderHistory.getUserType())) {
+                    agentIds.add(orderHistory.getCreatedBy());
                 }
             }
         }
@@ -149,21 +158,24 @@ public class OrderHistoryService {
         Map<String, Plans> plansMap = plans.stream()
                 .collect(Collectors.toMap(Plans::getPlanCode, plan -> plan, (a, b) -> a));
 
-        List<Users> createdByUsers = createdByUserIds.isEmpty() ? Collections.emptyList() : usersService.getUsersByIds(createdByUserIds);
-        Map<String, Users> createdByUsersMap = createdByUsers.stream()
+        List<Users> usersList = userIds.isEmpty() ? Collections.emptyList() : usersService.getUsersByIds(userIds);
+        Map<String, Users> usersMap = usersList.stream()
                 .collect(Collectors.toMap(Users::getUserId, user -> user, (a, b) -> a));
+
+        List<Agent> agents = agentIds.isEmpty() ? Collections.emptyList() : agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId, a -> a, (a, b) -> a));
 
         List<OrderHistoryResponse> responseList = orderHistories.stream()
                 .map(orderHistory -> {
                     HostelV1 hostel = hostelMap.getOrDefault(orderHistory.getHostelId(), null);
                     Plans plan = plansMap.getOrDefault(orderHistory.getPlanCode(), null);
-                    Users createdByUser = createdByUsersMap.getOrDefault(orderHistory.getCreatedBy(), null);
                     HotelType hotelType = null;
                     if (hostel != null) {
                         hotelType = hotelTypeMap.getOrDefault(hostel.getHostelType(), null);
                     }
                     return new OrderHistoryMapper(hostel, hotelType,
-                            plan, createdByUser).apply(orderHistory);
+                            plan, usersMap, agentMap).apply(orderHistory);
                 }).toList();
 
         Map<String, Object> response = new HashMap<>();

@@ -45,6 +45,8 @@ public class SubscriptionService {
     private OrderHistoryService orderHistoryService;
     @Autowired
     private UploadFileToS3 uploadFileToS3;
+    @Autowired
+    private UsersService usersService;
 
     public ResponseEntity<?> subscribeHostel(String hostelId, Subscription payload, MultipartFile paymentProof) {
 
@@ -73,6 +75,16 @@ public class SubscriptionService {
 
         if (payload == null) {
             return new ResponseEntity<>(Utils.PAYLOAD_REQUIRED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (payload.paidBy() != null && !payload.paidBy().isBlank()){
+            Users users = usersService.getUserById(payload.paidBy());
+            if (users == null){
+                return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+            if (!hostelV1.getParentId().equals(users.getParentId())){
+                return new ResponseEntity<>(Utils.PAID_BY_HOSTEL_MISMATCH, HttpStatus.BAD_REQUEST);
+            }
         }
 
         boolean isTrial = false;
@@ -167,6 +179,10 @@ public class SubscriptionService {
                 return new ResponseEntity<>(Utils.PAYMENT_ATTACHMENT_REQUIRES, HttpStatus.BAD_REQUEST);
             }
 
+            if (payload.paidBy() == null || payload.paidBy().isBlank()){
+                return new ResponseEntity<>(Utils.PAID_BY_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
             if (payload.discountAmount() != null) {
                 try {
                     discountAmount = Double.parseDouble(payload.discountAmount().toString());
@@ -238,6 +254,7 @@ public class SubscriptionService {
 
         if (!plans.getPlanType().equalsIgnoreCase(PlanType.TRIAL.name()) &&
                 !plans.getPlanType().equalsIgnoreCase(PlanType.EXPANDABLE_TRIAL.name())){
+
             OrderHistory newOrder = new OrderHistory();
             newOrder.setHostelId(hostelId);
             newOrder.setDiscountAmount(newSubscription.getDiscountAmount());
@@ -250,6 +267,8 @@ public class SubscriptionService {
             newOrder.setChannel(Channel.CONSOLE.name());
             newOrder.setUserType(UserType.AGENT.name());
             newOrder.setPaymentProof(newSubscription.getPaymentProof());
+            newOrder.setPaidBy(payload.paidBy());
+            newOrder.setCollectedBy(agent.getAgentId());
             newOrder.setActive(true);
             newOrder.setCreatedAt(today);
             newOrder.setCreatedBy(agent.getAgentId());

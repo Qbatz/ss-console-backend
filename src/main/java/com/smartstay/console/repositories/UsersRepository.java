@@ -37,7 +37,7 @@ public interface UsersRepository extends JpaRepository<Users, String> {
 
     List<Users> findAllByParentIdAndRoleIdNotInAndUserIdInAndIsActiveTrueAndIsDeletedFalse(String parentId, Set<Integer> roleIds, Set<String> userIds);
 
-    Users findByUserIdAndIsActiveTrueAndIsDeletedFalse( String userId);
+    Users findByUserIdAndIsActiveTrueAndIsDeletedFalse(String userId);
 
     List<Users> findAllByUserIdInAndIsActiveTrueAndIsDeletedFalse(Set<String> userIds);
 

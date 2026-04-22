@@ -2,6 +2,9 @@ package com.smartstay.console.utils;
 
 import com.smartstay.console.dao.*;
 
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -58,6 +61,7 @@ public class Utils {
     public static final String NO_BILLING_RULE_FOUND = "No billing rule found for this hostel";
     public static final String DEMO_REQUEST_STATUS_NOT_FOUND = "Demo request status not found";
     public static final String NO_CUSTOMER_FOUND = "No tenant found";
+    public static final String USER_NOT_FOUND = "User not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -75,6 +79,7 @@ public class Utils {
     public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
     public static final String PLAN_FEATURE_MISMATCH = "Plan of plan feature does not match plan";
+    public static final String PAID_BY_HOSTEL_MISMATCH = "Paid by does not match with hostel users";
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";
@@ -91,6 +96,7 @@ public class Utils {
     public static final String PAID_AMOUNT_REQUIRED = "Paid amount is required";
     public static final String PAYMENT_ATTACHMENT_REQUIRES = "Payment attachment is required";
     public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
+    public static final String PAID_BY_REQUIRED = "Paid by required";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
@@ -785,5 +791,49 @@ public class Utils {
         }
 
         return ref.toString();
+    }
+
+    public static String getBaseNameFromUrl(String url) {
+
+        if (url == null || url.isBlank()) return null;
+
+        String fileName = null;
+
+        // URI parsing
+        try {
+            URI uri = new URI(url);
+            String path = uri.getPath();
+
+            if (path != null && path.contains("/")) {
+                fileName = path.substring(path.lastIndexOf('/') + 1);
+                if (!fileName.isEmpty()) {
+                    fileName = URLDecoder.decode(fileName, StandardCharsets.UTF_8);
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // Fallback
+        if (fileName == null || fileName.isEmpty()) {
+            try {
+                String cleanUrl = url.split("\\?")[0];
+                fileName = cleanUrl.substring(cleanUrl.lastIndexOf('/') + 1);
+            } catch (Exception ignored) {}
+        }
+
+        if (fileName == null || fileName.isEmpty()) return null;
+
+        // Remove extension
+        int lastDot = fileName.lastIndexOf('.');
+        if (lastDot > 0) {
+            fileName = fileName.substring(0, lastDot);
+        }
+
+        // Extract logical name (after last underscore)
+        int lastUnderscore = fileName.lastIndexOf('_');
+        if (lastUnderscore > 0 && lastUnderscore < fileName.length() - 1) {
+            fileName = fileName.substring(lastUnderscore + 1);
+        }
+
+        return fileName;
     }
 }

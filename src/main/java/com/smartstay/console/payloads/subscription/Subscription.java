@@ -8,5 +8,6 @@ public record Subscription(Integer trialDays,
                            @NotEmpty(message = "Plan code is required")
                            String planCode,
                            Double paidAmount,
-                           Double discountAmount) {
+                           Double discountAmount,
+                           String paidBy) {
 }
