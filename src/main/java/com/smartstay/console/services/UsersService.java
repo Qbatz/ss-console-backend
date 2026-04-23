@@ -24,7 +24,6 @@ public class UsersService {
     @Autowired
     private UserHostelService userHostelService;
 
-
     public List<Users> getOwners(List<String> parentId) {
         if (!authentication.isAuthenticated()) {
             return null;
@@ -69,6 +68,10 @@ public class UsersService {
 
     public List<Users> getUsersByIds(Set<String> userIds){
         return usersRepository.findAllByUserIdInAndIsActiveTrueAndIsDeletedFalse(userIds);
+    }
+
+    public Users getUserById(String userId){
+        return usersRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalse(userId);
     }
 
     public List<Users> getUsersByName(String name){

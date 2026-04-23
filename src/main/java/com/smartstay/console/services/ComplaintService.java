@@ -13,7 +13,6 @@ public class ComplaintService {
     @Autowired
     private ComplaintsRepository complaintsRepository;
 
-
     public List<ComplaintsV1> findByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds) {
         return complaintsRepository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
     }
