@@ -49,6 +49,9 @@ public class Utils {
     public static final String PLAN_TYPE_ALREADY_EXISTS = "Plan type already exists";
     public static final String HOSTELS_EXISTS_FOR_THIS_OWNER = "Hostels exists for this owner";
     public static final String MOBILE_ALREADY_EXISTS = "Mobile number already exists";
+    public static final String BILLING_TYPE_DOES_NOT_EXIST = "Billing type does not exist";
+    public static final String BILLING_MODEL_DOES_NOT_EXIST = "Billing model does not exist";
+    public static final String ACTIVE_TENANT_EXISTS = "Active tenants exists";
 
     public static final String NO_ROLES_FOUND = "No roles found";
     public static final String NO_HOSTEL_FOUND = "No hostel found";

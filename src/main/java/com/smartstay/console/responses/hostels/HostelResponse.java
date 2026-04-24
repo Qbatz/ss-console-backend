@@ -1,6 +1,8 @@
 package com.smartstay.console.responses.hostels;
 
+import com.smartstay.console.responses.bills.BillingModelResponse;
 import com.smartstay.console.responses.bills.BillingRulesResponse;
+import com.smartstay.console.responses.bills.BillingTypeResponse;
 import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
@@ -42,6 +44,8 @@ public record HostelResponse(String hostelId,
                              OwnerInfo ownerInfo,
                              List<UsersResponse> masters,
                              List<UsersResponse> staffs,
+                             List<BillingTypeResponse> billingTypes,
+                             List<BillingModelResponse> billingModels,
                              BillingRulesResponse currentBillingRules,
                              List<BillingRulesResponse> billingRules,
                              EbConfig ebConfig,

@@ -56,4 +56,6 @@ public interface RecurringTrackerRepository extends JpaRepository<RecurringTrack
             GROUP BY rt.tracker_id
             """, nativeQuery = true)
     List<InvoiceCountPerTracker> getGeneratedInvoiceCountPerTracker(@Param("trackerIds") Set<Long> trackerIds);
+
+    RecurringTracker findByHostelIdAndCreationDayAndCreationMonthAndCreationYear(String hostelId, int day, int month, int year);
 }
