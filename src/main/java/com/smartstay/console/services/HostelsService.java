@@ -2573,8 +2573,16 @@ public class HostelsService {
         String fixedDate = BillingType.FIXED_DATE.name();
         String joiningDateBased = BillingType.JOINING_DATE_BASED.name();
 
-        String billingType = payload.typeOfBilling();
-        String billingModel = payload.billingModel();
+        String billingType = currentBillingRules.getTypeOfBilling();
+        String billingModel = currentBillingRules.getBillingModel();
+
+        if (payload.typeOfBilling() != null && !payload.typeOfBilling().isBlank()){
+            billingType = payload.typeOfBilling();
+        }
+
+        if (payload.billingModel() != null && !payload.billingModel().isBlank()){
+            billingModel = payload.billingModel();
+        }
 
         if (!fixedDate.equals(billingType) && !joiningDateBased.equals(billingType)) {
             return new ResponseEntity<>(Utils.BILLING_TYPE_DOES_NOT_EXIST, HttpStatus.BAD_REQUEST);
@@ -2693,19 +2701,19 @@ public class HostelsService {
         }
 
         if (billingStartDate < 1 || billingStartDate > 31) {
-            return new ResponseEntity<>("Invalid billing start date", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Utils.INVALID_BILLING_CYCLE_START_DAY, HttpStatus.BAD_REQUEST);
         }
 
         if (billingDueDays < 1 || billingDueDays > 31) {
-            return new ResponseEntity<>("Invalid billing due days", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Utils.INVALID_BILLING_DUE_DAYS, HttpStatus.BAD_REQUEST);
         }
 
         if (noticePeriod < 1 || noticePeriod > 31) {
-            return new ResponseEntity<>("Invalid notice period days", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Utils.INVALID_NOTICE_PERIOD_DAYS, HttpStatus.BAD_REQUEST);
         }
 
         if (gracePeriodDays < 1 || gracePeriodDays > 31) {
-            return new ResponseEntity<>("Invalid grace period days", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Utils.INVALID_GRACE_PERIOD_DAYS, HttpStatus.BAD_REQUEST);
         }
 
         newBillingRules.setBillingStartDate(billingStartDate);
