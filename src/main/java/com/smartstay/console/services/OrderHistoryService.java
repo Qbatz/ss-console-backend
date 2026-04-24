@@ -109,12 +109,11 @@ public class OrderHistoryService {
         if (!filteredHostelIds.isEmpty() || !filteredUserIds.isEmpty()) {
             paginatedOrderHistory = orderHistoryRepository
                     .findFilteredOrderHistory(filteredHostelIds.isEmpty() ? null : filteredHostelIds,
-                            filteredUserIds.isEmpty() ? null : filteredUserIds, startDate, endDate,
-                            orderStatuses, pageable);
+                            filteredUserIds.isEmpty() ? null : filteredUserIds, startDate, endDate, pageable);
         } else {
             paginatedOrderHistory = orderHistoryRepository
-                    .findAllByIsActiveTrueAndOrderStatusInAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtDesc(
-                            orderStatuses, startDate, endDate, pageable);
+                    .findAllByIsActiveTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtDesc(
+                            startDate, endDate, pageable);
         }
 
         List<OrderHistory> orderHistories = paginatedOrderHistory.getContent();
