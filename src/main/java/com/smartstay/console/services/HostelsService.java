@@ -2651,11 +2651,7 @@ public class HostelsService {
             }
         }
         else {
-            List<BookingsV1> activeBookings = bookingsService.getActiveBookingsByHostelIds(Set.of(hostelId));
-
-            if (activeBookings != null && !activeBookings.isEmpty()) {
-                return new ResponseEntity<>(Utils.ACTIVE_TENANT_EXISTS, HttpStatus.BAD_REQUEST);
-            }
+            return new ResponseEntity<>(Utils.FIXED_DATE_PREPAID_TO_POSTPAID_ONLY_ALLOWED, HttpStatus.BAD_REQUEST);
         }
 
         int billingStartDate = 1;

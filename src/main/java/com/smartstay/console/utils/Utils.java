@@ -51,7 +51,7 @@ public class Utils {
     public static final String MOBILE_ALREADY_EXISTS = "Mobile number already exists";
     public static final String BILLING_TYPE_DOES_NOT_EXIST = "Billing type does not exist";
     public static final String BILLING_MODEL_DOES_NOT_EXIST = "Billing model does not exist";
-    public static final String ACTIVE_TENANT_EXISTS = "Active tenants exists";
+    public static final String FIXED_DATE_PREPAID_TO_POSTPAID_ONLY_ALLOWED = "Only fixed date prepaid to postpaid is allowed";
 
     public static final String NO_ROLES_FOUND = "No roles found";
     public static final String NO_HOSTEL_FOUND = "No hostel found";
