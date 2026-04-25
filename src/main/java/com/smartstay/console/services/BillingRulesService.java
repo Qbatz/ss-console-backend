@@ -2,6 +2,7 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.dao.BillingRules;
 import com.smartstay.console.dto.hostel.BillingDates;
+import com.smartstay.console.ennum.BillingModel;
 import com.smartstay.console.ennum.BillingType;
 import com.smartstay.console.repositories.BillingRuleRepository;
 import com.smartstay.console.utils.Utils;
@@ -167,5 +168,39 @@ public class BillingRulesService {
                 gracePeriodDays,
                 typeOfBilling,
                 billingModel);
+    }
+
+    public BillingDates computeBillingDatesWithBillingModel(BillingRules billingRules, Date requestedDate) {
+
+        BillingDates billingDates = null;
+
+        if (BillingModel.PREPAID.name().equals(billingRules.getBillingModel())) {
+            billingDates = computeBillingDates(billingRules, requestedDate);
+        }
+        else if (BillingModel.POSTPAID.name().equals(billingRules.getBillingModel())) {
+            Date previousMonthDate = Utils.getPreviousMonthDate(requestedDate);
+            billingDates = computeBillingDates(billingRules, previousMonthDate);
+        }
+
+        return billingDates;
+    }
+
+    public BillingDates computeJoiningBillingDatesWithBillingModel(BillingRules billingRules, Date joiningDate, Date requestedDate) {
+
+        BillingDates billingDates = null;
+
+        if (BillingModel.PREPAID.name().equals(billingRules.getBillingModel())) {
+            billingDates = computeJoiningBasedBillingDates(billingRules, joiningDate, requestedDate);
+        }
+        else if (BillingModel.POSTPAID.name().equals(billingRules.getBillingModel())) {
+            Date previousMonthDate = Utils.getPreviousMonthDate(requestedDate);
+            billingDates = computeJoiningBasedBillingDates(billingRules, joiningDate, previousMonthDate);
+        }
+
+        return billingDates;
+    }
+
+    public BillingRules save(BillingRules billingRules) {
+        return billingRuleRepository.save(billingRules);
     }
 }

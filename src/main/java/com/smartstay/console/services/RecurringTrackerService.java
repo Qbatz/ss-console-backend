@@ -119,4 +119,17 @@ public class RecurringTrackerService {
     public List<InvoiceCountPerTracker> getGeneratedInvoiceCountPerTracker(Set<Long> trackerIds) {
         return recurringTrackerRepository.getGeneratedInvoiceCountPerTracker(trackerIds);
     }
+
+    public RecurringTracker getRecurringTrackerByDayMonthYear(String hostelId, int day, Date date) {
+
+        int month = Utils.getCurrentMonth(date);
+        int year =  Utils.getCurrentYear(date);
+
+        return recurringTrackerRepository
+                .findByHostelIdAndCreationDayAndCreationMonthAndCreationYear(hostelId, day, month, year);
+    }
+
+    public void delete(RecurringTracker recurringTracker) {
+        recurringTrackerRepository.delete(recurringTracker);
+    }
 }

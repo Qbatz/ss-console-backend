@@ -3,7 +3,11 @@ package com.smartstay.console.Mapper.hostels;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dto.hostel.BillingDates;
+import com.smartstay.console.ennum.BillingModel;
+import com.smartstay.console.ennum.BillingType;
+import com.smartstay.console.responses.bills.BillingModelResponse;
 import com.smartstay.console.responses.bills.BillingRulesResponse;
+import com.smartstay.console.responses.bills.BillingTypeResponse;
 import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostels.*;
@@ -365,14 +369,22 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
             canAddExpandableTrial = (subscriptionCount == 0) && (subPendingCount == 0);
         }
 
+        List<BillingTypeResponse> billingTypeRes = Arrays.stream(BillingType.values())
+                .map(billingType -> new BillingTypeResponse(billingType.name()))
+                .toList();
+
+        List<BillingModelResponse> billingModelRes = Arrays.stream(BillingModel.values())
+                .map(billingModel -> new BillingModelResponse(billingModel.name()))
+                .toList();
+
         return new HostelResponse(hostelV1.getHostelId(), hostelV1.getHostelName(), Utils.getInitials(hostelV1.getHostelName()),
                 hostelV1.getMobile(), hostelV1.getHouseNo(), hostelV1.getStreet(), hostelV1.getLandmark(), hostelV1.getCity(),
                 hostelV1.getState(), hostelV1.getCountry(), hostelV1.getPincode(), fullAddress, hostelV1.getMainImage(), isTrial,
                 canAddTrial, canAddExpandableTrial, addImages, amenitiesRes, sharingTypeList, noOfFloors, noOfRooms, noOfBeds,
                 noOfActiveTenants, noOfBookedTenants, noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
                 tenantList, Utils.dateToString(hostelV1.getCreatedAt()), Utils.dateToTime(hostelV1.getCreatedAt()), ownerInfo, masters,
-                staffs, currentBillingRulesRes, billingRules, ebConfig, currentSubRes, otherSubsRes, subscriptionStatus,
-                subscriptionRenewalTimeLeftDays, isSubscriptionActive, recurringStatus, recurringHistory, customerRecurringHistory,
-                activitiesRes);
+                staffs, billingTypeRes, billingModelRes, currentBillingRulesRes, billingRules, ebConfig, currentSubRes, otherSubsRes,
+                subscriptionStatus, subscriptionRenewalTimeLeftDays, isSubscriptionActive, recurringStatus, recurringHistory,
+                customerRecurringHistory, activitiesRes);
     }
 }

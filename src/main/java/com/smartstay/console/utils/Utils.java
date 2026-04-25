@@ -49,6 +49,9 @@ public class Utils {
     public static final String PLAN_TYPE_ALREADY_EXISTS = "Plan type already exists";
     public static final String HOSTELS_EXISTS_FOR_THIS_OWNER = "Hostels exists for this owner";
     public static final String MOBILE_ALREADY_EXISTS = "Mobile number already exists";
+    public static final String BILLING_TYPE_DOES_NOT_EXIST = "Billing type does not exist";
+    public static final String BILLING_MODEL_DOES_NOT_EXIST = "Billing model does not exist";
+    public static final String ACTIVE_TENANT_EXISTS = "Active tenants exists";
 
     public static final String NO_ROLES_FOUND = "No roles found";
     public static final String NO_HOSTEL_FOUND = "No hostel found";
@@ -67,7 +70,7 @@ public class Utils {
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
     public static final String INVALID_SUBSCRIPTION = "Invalid subscription";
     public static final String INVALID_PLAN_CODE = "Invalid plan code";
-    public static final String INVALID_BILLING_CYCLE_START_DAY = "Invalid billingCycleStartDay";
+    public static final String INVALID_BILLING_CYCLE_START_DAY = "Invalid billing cycle start day";
     public static final String INVALID_DISCOUNT = "Invalid discount amount";
     public static final String INVALID_PAID_AMOUNT = "Invalid paid amount";
     public static final String INVALID_DISCOUNT_PERCENTAGE = "Invalid discount percentage";
@@ -75,6 +78,9 @@ public class Utils {
     public static final String INVALID_MONTH = "Month must be from 1 to 12";
     public static final String INVALID_TRIAL_DAYS = "Invalid trial days";
     public static final String INVALID_PLAN_DURATION = "Invalid plan duration";
+    public static final String INVALID_BILLING_DUE_DAYS = "Invalid billing due days";
+    public static final String INVALID_NOTICE_PERIOD_DAYS = "Invalid notice period days";
+    public static final String INVALID_GRACE_PERIOD_DAYS = "Invalid grace period days";
 
     public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";

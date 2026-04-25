@@ -11,15 +11,13 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dto.customers.CustomersCredentialsSnapshot;
-import com.smartstay.console.dto.hostel.BillingDates;
-import com.smartstay.console.dto.hostel.HostelResetSnapshot;
-import com.smartstay.console.dto.hostel.HostelSnapshot;
-import com.smartstay.console.dto.hostel.InvoiceCountPerTracker;
+import com.smartstay.console.dto.hostel.*;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.events.JoiningBasedPrepaidEvents;
 import com.smartstay.console.events.PostpaidRecurringEvents;
 import com.smartstay.console.events.RecurringEvents;
+import com.smartstay.console.payloads.billingRules.UpdateBillingRulesPayload;
 import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
@@ -2534,5 +2532,216 @@ public class HostelsService {
         ).apply(customer);
 
         return new ResponseEntity<>(recurringTrackerRes, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateBillingRuleConfiguration(String hostelId, UpdateBillingRulesPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        }
+
+        BillingRules currentBillingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
+        if (currentBillingRules == null) {
+            return new ResponseEntity<>(Utils.NO_BILLING_RULE_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<BookingsV1> activeBookings = bookingsService.getActiveBookingsByHostelIds(Set.of(hostelId));
+        if (activeBookings != null && !activeBookings.isEmpty()) {
+            return new ResponseEntity<>(Utils.ACTIVE_TENANT_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        BillingRules newBillingRules = new BillingRules();
+
+        String prepaid = BillingModel.PREPAID.name();
+        String postpaid = BillingModel.POSTPAID.name();
+        String fixedDate = BillingType.FIXED_DATE.name();
+        String joiningDateBased = BillingType.JOINING_DATE_BASED.name();
+
+        String billingType = currentBillingRules.getTypeOfBilling();
+        String billingModel = currentBillingRules.getBillingModel();
+
+        if (payload.typeOfBilling() != null && !payload.typeOfBilling().isBlank()){
+            billingType = payload.typeOfBilling();
+        }
+
+        if (payload.billingModel() != null && !payload.billingModel().isBlank()){
+            billingModel = payload.billingModel();
+        }
+
+        if (!fixedDate.equals(billingType) && !joiningDateBased.equals(billingType)) {
+            return new ResponseEntity<>(Utils.BILLING_TYPE_DOES_NOT_EXIST, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!prepaid.equals(billingModel) && !postpaid.equals(billingModel)) {
+            return new ResponseEntity<>(Utils.BILLING_MODEL_DOES_NOT_EXIST, HttpStatus.BAD_REQUEST);
+        }
+
+        boolean isPrepaid = prepaid.equals(billingModel);
+        boolean isPostpaid = postpaid.equals(billingModel);
+
+        boolean isFixedDateToJoiningBased = false;
+        boolean isJoiningBasedToFixedDatePrepaid = false;
+        boolean isJoiningBasedToFixedDatePostpaid = false;
+        boolean isFixedDatePrepaidToFixedDatePostpaid = false;
+        boolean isFixedDatePostpaidToFixedDatePrepaid = false;
+
+        if (fixedDate.equals(billingType)){
+            if (isPrepaid){
+                if (joiningDateBased.equals(currentBillingRules.getTypeOfBilling())){
+                    isJoiningBasedToFixedDatePrepaid = true;
+                }
+                if (fixedDate.equals(currentBillingRules.getTypeOfBilling()) &&
+                        postpaid.equals(currentBillingRules.getBillingModel())){
+                    isFixedDatePostpaidToFixedDatePrepaid = true;
+                }
+            }
+            else if (isPostpaid) {
+                if (joiningDateBased.equals(currentBillingRules.getTypeOfBilling())){
+                    isJoiningBasedToFixedDatePostpaid = true;
+                }
+                if (fixedDate.equals(currentBillingRules.getTypeOfBilling()) &&
+                        prepaid.equals(currentBillingRules.getBillingModel())){
+                    isFixedDatePrepaidToFixedDatePostpaid = true;
+                }
+            }
+        }
+        else if (joiningDateBased.equals(billingType)) {
+            if (isPrepaid){
+                if (fixedDate.equals(currentBillingRules.getTypeOfBilling())){
+                    isFixedDateToJoiningBased = true;
+                }
+            }
+            else if (isPostpaid) {
+                //postpaid is not implemented for joining based now.
+            }
+        }
+
+        BillingDates billingDates = null;
+        if (isFixedDatePrepaidToFixedDatePostpaid || isFixedDatePostpaidToFixedDatePrepaid || isFixedDateToJoiningBased){
+
+            billingDates = billingRulesService.computeBillingDatesWithBillingModel(currentBillingRules, today);
+
+            if (billingDates != null){
+                RecurringTracker recurringTracker = recurringTrackerService
+                        .getRecurringTrackerByDayMonthYear(hostelId, currentBillingRules.getBillingStartDate(),
+                                billingDates.currentBillStartDate());
+
+                if (recurringTracker != null){
+                    recurringTrackerService.delete(recurringTracker);
+                }
+            }
+        }
+
+        int billingStartDate = 1;
+        int billingDueDays = 10;
+        int noticePeriod = 30;
+        boolean initial = false;
+        boolean hasGracePeriod = false;
+        int gracePeriodDays = 0;
+        List<Integer> reminderDays = new ArrayList<>();
+        boolean shouldNotify = false;
+
+        if (payload.billingStartDate() != null){
+            billingStartDate = payload.billingStartDate();
+        }
+        else {
+            billingStartDate = currentBillingRules.getBillingStartDate();
+        }
+
+        if (payload.billingDueDays() != null){
+            billingDueDays = payload.billingDueDays();
+        }
+        else {
+            billingDueDays = currentBillingRules.getBillDueDays();
+        }
+
+        if (payload.noticePeriodDays() != null){
+            noticePeriod = payload.noticePeriodDays();
+        }
+        else {
+            noticePeriod = currentBillingRules.getNoticePeriod();
+        }
+
+        if (payload.gracePeriodDays() != null){
+            gracePeriodDays = payload.gracePeriodDays();
+            if (gracePeriodDays > 0){
+                hasGracePeriod = true;
+            }
+        }
+        else {
+            gracePeriodDays = currentBillingRules.getGracePeriodDays();
+            hasGracePeriod = currentBillingRules.isHasGracePeriod();
+        }
+
+        if (payload.reminderDays() != null){
+            reminderDays = payload.reminderDays();
+            if (!payload.reminderDays().isEmpty()){
+                shouldNotify = true;
+            }
+        }
+        else {
+            reminderDays = currentBillingRules.getReminderDays();
+            shouldNotify = currentBillingRules.isShouldNotify();
+        }
+
+        if (billingStartDate < 1 || billingStartDate > 31) {
+            return new ResponseEntity<>(Utils.INVALID_BILLING_CYCLE_START_DAY, HttpStatus.BAD_REQUEST);
+        }
+
+        if (billingDueDays < 1 || billingDueDays > 31) {
+            return new ResponseEntity<>(Utils.INVALID_BILLING_DUE_DAYS, HttpStatus.BAD_REQUEST);
+        }
+
+        if (noticePeriod < 1 || noticePeriod > 31) {
+            return new ResponseEntity<>(Utils.INVALID_NOTICE_PERIOD_DAYS, HttpStatus.BAD_REQUEST);
+        }
+
+        if (gracePeriodDays < 1 || gracePeriodDays > 31) {
+            return new ResponseEntity<>(Utils.INVALID_GRACE_PERIOD_DAYS, HttpStatus.BAD_REQUEST);
+        }
+
+        newBillingRules.setBillingStartDate(billingStartDate);
+        newBillingRules.setBillDueDays(billingDueDays);
+        newBillingRules.setNoticePeriod(noticePeriod);
+        newBillingRules.setInitial(initial);
+        newBillingRules.setHasGracePeriod(hasGracePeriod);
+        newBillingRules.setGracePeriodDays(gracePeriodDays);
+        newBillingRules.setTypeOfBilling(billingType);
+        newBillingRules.setBillingModel(billingModel);
+        newBillingRules.setReminderDays(reminderDays);
+        newBillingRules.setShouldNotify(shouldNotify);
+        newBillingRules.setCreatedAt(today);
+        newBillingRules.setCreatedBy(agent.getAgentId());
+
+        newBillingRules.setHostel(hostel);
+
+        newBillingRules = billingRulesService.save(newBillingRules);
+
+        if (hostel.getBillingRulesList() != null) {
+            hostel.getBillingRulesList().add(newBillingRules);
+        }
+
+        BillingRuleSnapshot newBillingRulesSnapshot = SnapshotUtility.toSnapshot(newBillingRules);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.BILLING_RULES,
+                String.valueOf(newBillingRules.getId()), null, newBillingRulesSnapshot);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 }

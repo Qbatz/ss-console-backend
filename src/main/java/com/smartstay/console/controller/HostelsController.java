@@ -1,5 +1,6 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.billingRules.UpdateBillingRulesPayload;
 import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.services.HostelsService;
@@ -126,5 +127,11 @@ public class HostelsController {
                                                                  @RequestParam(value = "page", defaultValue = "0") int page,
                                                                  @RequestParam(value = "size", defaultValue = "10") int size){
         return hostelsService.getTenantRecurringHistory(tenantId, page, size);
+    }
+
+    @PutMapping("/billing-rule/{hostelId}")
+    public ResponseEntity<?> updateBillingRuleConfiguration(@PathVariable("hostelId") String hostelId,
+                                                            @RequestBody @Valid UpdateBillingRulesPayload payload){
+        return hostelsService.updateBillingRuleConfiguration(hostelId, payload);
     }
 }
