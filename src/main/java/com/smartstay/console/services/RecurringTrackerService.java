@@ -132,4 +132,8 @@ public class RecurringTrackerService {
     public void delete(RecurringTracker recurringTracker) {
         recurringTrackerRepository.delete(recurringTracker);
     }
+
+    public void save(RecurringTracker recurringTracker) {
+        recurringTrackerRepository.save(recurringTracker);
+    }
 }

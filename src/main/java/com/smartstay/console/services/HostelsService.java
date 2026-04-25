@@ -2559,11 +2559,6 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.NO_BILLING_RULE_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        List<BookingsV1> activeBookings = bookingsService.getActiveBookingsByHostelIds(Set.of(hostelId));
-        if (activeBookings != null && !activeBookings.isEmpty()) {
-            return new ResponseEntity<>(Utils.ACTIVE_TENANT_EXISTS, HttpStatus.BAD_REQUEST);
-        }
-
         Date today = new Date();
 
         BillingRules newBillingRules = new BillingRules();
@@ -2633,7 +2628,7 @@ public class HostelsService {
         }
 
         BillingDates billingDates = null;
-        if (isFixedDatePrepaidToFixedDatePostpaid || isFixedDatePostpaidToFixedDatePrepaid || isFixedDateToJoiningBased){
+        if (isFixedDatePrepaidToFixedDatePostpaid){
 
             billingDates = billingRulesService.computeBillingDatesWithBillingModel(currentBillingRules, today);
 
@@ -2643,8 +2638,23 @@ public class HostelsService {
                                 billingDates.currentBillStartDate());
 
                 if (recurringTracker != null){
-                    recurringTrackerService.delete(recurringTracker);
+                    Date previousMonthDate = Utils.getPreviousMonthDate(billingDates.currentBillStartDate());
+
+                    int month = Utils.getCurrentMonth(previousMonthDate);
+                    int year = Utils.getCurrentYear(previousMonthDate);
+
+                    recurringTracker.setCreationMonth(month);
+                    recurringTracker.setCreationYear(year);
+
+                    recurringTrackerService.save(recurringTracker);
                 }
+            }
+        }
+        else {
+            List<BookingsV1> activeBookings = bookingsService.getActiveBookingsByHostelIds(Set.of(hostelId));
+
+            if (activeBookings != null && !activeBookings.isEmpty()) {
+                return new ResponseEntity<>(Utils.ACTIVE_TENANT_EXISTS, HttpStatus.BAD_REQUEST);
             }
         }
 
