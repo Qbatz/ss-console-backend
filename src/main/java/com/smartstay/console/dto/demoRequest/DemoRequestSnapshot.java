@@ -1,8 +1,9 @@
-package com.smartstay.console.responses.demoRequest;
+package com.smartstay.console.dto.demoRequest;
 
+import java.util.Date;
 import java.util.List;
 
-public record DemoRequestResponse(Long requestId,
+public record DemoRequestSnapshot(Long requestId,
                                   String name,
                                   String emailId,
                                   String contactNo,
@@ -20,9 +21,9 @@ public record DemoRequestResponse(Long requestId,
                                   String assignedBy,
                                   String presentedBy,
                                   String comments,
+                                  Date bookedFor,
                                   String requestedDate,
                                   String requestedTime,
-                                  String presentedAtDate,
-                                  String presentedAtTime,
-                                  List<DemoRequestCommentsResponse> demoRequestComments) {
+                                  Date presentedAt,
+                                  List<DemoRequestCommentsSnapshot> demoRequestComments) {
 }

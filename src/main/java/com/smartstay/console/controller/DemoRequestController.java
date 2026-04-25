@@ -1,6 +1,7 @@
 package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.agent.AgentIdPayload;
+import com.smartstay.console.payloads.demoRequest.DemoRequestCommentPayload;
 import com.smartstay.console.payloads.demoRequest.DemoRequestPayload;
 import com.smartstay.console.payloads.demoRequest.DemoRequestStatusPayload;
 import com.smartstay.console.services.DemoRequestService;
@@ -54,5 +55,11 @@ public class DemoRequestController {
     @GetMapping("/status")
     public ResponseEntity<?> getDemoRequestStatus() {
         return demoRequestService.getDemoRequestStatus();
+    }
+
+    @PostMapping("/comment/{demoRequestId}")
+    public ResponseEntity<?> addDemoRequestComment(@PathVariable("demoRequestId") Long demoRequestId,
+                                                   @RequestBody @Valid DemoRequestCommentPayload payload){
+        return demoRequestService.addDemoRequestComment(demoRequestId, payload);
     }
 }

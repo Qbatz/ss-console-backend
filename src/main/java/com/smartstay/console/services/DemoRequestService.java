@@ -4,15 +4,21 @@ import com.smartstay.console.Mapper.demoRequests.DemoRequestMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.DemoRequest;
+import com.smartstay.console.dao.DemoRequestComments;
+import com.smartstay.console.dto.demoRequest.DemoRequestCommentsSnapshot;
+import com.smartstay.console.dto.demoRequest.DemoRequestSnapshot;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.RequestStatus;
 import com.smartstay.console.ennum.Source;
+import com.smartstay.console.ennum.UserType;
 import com.smartstay.console.payloads.agent.AgentIdPayload;
+import com.smartstay.console.payloads.demoRequest.DemoRequestCommentPayload;
 import com.smartstay.console.payloads.demoRequest.DemoRequestPayload;
 import com.smartstay.console.payloads.demoRequest.DemoRequestStatusPayload;
 import com.smartstay.console.repositories.DemoRequestRepository;
 import com.smartstay.console.responses.demoRequest.DemoRequestResponse;
 import com.smartstay.console.responses.demoRequest.DemoRequestStatusResponse;
+import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -21,7 +27,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,6 +42,8 @@ public class DemoRequestService {
     private AgentService agentService;
     @Autowired
     private AgentActivitiesService agentActivitiesService;
+    @Autowired
+    private DemoRequestCommentsService demoRequestCommentsService;
 
     public ResponseEntity<?> getAllDemoRequests(int page, int size, String name){
 
@@ -62,17 +69,27 @@ public class DemoRequestService {
         Set<String> assignedToIds = new HashSet<>();
         Set<String> assignedByIds = new HashSet<>();
         Set<String> presentedByIds = new HashSet<>();
+        Set<String> commentCreatedByIds = new HashSet<>();
 
         for (DemoRequest demoRequest : demoRequests) {
             assignedToIds.add(demoRequest.getAssignedTo());
             assignedByIds.add(demoRequest.getAssignedBy());
             presentedByIds.add(demoRequest.getPresentedBy());
+
+            if (demoRequest.getDemoRequestComments() != null){
+                for (DemoRequestComments demoRequestComment : demoRequest.getDemoRequestComments()) {
+                    if (UserType.AGENT.name().equals(demoRequestComment.getCreatedByUserType())){
+                        commentCreatedByIds.add(demoRequestComment.getCreatedBy());
+                    }
+                }
+            }
         }
 
         Set<String> agentIds = new HashSet<>();
         agentIds.addAll(assignedToIds);
         agentIds.addAll(assignedByIds);
         agentIds.addAll(presentedByIds);
+        agentIds.addAll(commentCreatedByIds);
 
         List<Agent> agents = agentService.getAgentsByIds(agentIds);
         Map<String, Agent> agentMap = agents.stream()
@@ -108,7 +125,8 @@ public class DemoRequestService {
         if (demoRequest == null){
             return new ResponseEntity<>(Utils.DEMO_REQUEST_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
-        DemoRequest oldRequest = new ObjectMapper().convertValue(demoRequest, DemoRequest.class);
+
+        DemoRequestSnapshot oldRequest = SnapshotUtility.toSnapshot(demoRequest);
 
         Agent assignedTo = agentService.findUserByUserId(agentIdPayload.agentId());
         if (assignedTo == null) {
@@ -122,8 +140,10 @@ public class DemoRequestService {
 
         demoRequest = demoRequestRepository.save(demoRequest);
 
+        DemoRequestSnapshot newRequest = SnapshotUtility.toSnapshot(demoRequest);
+
         agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.DEMO_REQUEST,
-                String.valueOf(oldRequest.getRequestId()), oldRequest, demoRequest);
+                String.valueOf(demoRequestId), oldRequest, newRequest);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -144,10 +164,21 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.DEMO_REQUEST_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        Set<String> commentCreatedByIds = new HashSet<>();
+
+        if (demoRequest.getDemoRequestComments() != null){
+            for (DemoRequestComments demoRequestComment : demoRequest.getDemoRequestComments()) {
+                if (UserType.AGENT.name().equals(demoRequestComment.getCreatedByUserType())){
+                    commentCreatedByIds.add(demoRequestComment.getCreatedBy());
+                }
+            }
+        }
+
         Set<String> agentIds = new HashSet<>();
         agentIds.add(demoRequest.getAssignedTo());
         agentIds.add(demoRequest.getAssignedBy());
         agentIds.add(demoRequest.getPresentedBy());
+        agentIds.addAll(commentCreatedByIds);
 
         List<Agent> agents = agentService.getAgentsByIds(agentIds);
         Map<String, Agent> agentMap = agents.stream()
@@ -216,7 +247,8 @@ public class DemoRequestService {
         if (demoRequest == null){
             return new ResponseEntity<>(Utils.DEMO_REQUEST_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
-        DemoRequest oldRequest = new ObjectMapper().convertValue(demoRequest, DemoRequest.class);
+
+        DemoRequestSnapshot oldRequest = SnapshotUtility.toSnapshot(demoRequest);
 
         RequestStatus requestStatus;
 
@@ -255,8 +287,10 @@ public class DemoRequestService {
 
         demoRequest = demoRequestRepository.save(demoRequest);
 
+        DemoRequestSnapshot newRequest = SnapshotUtility.toSnapshot(demoRequest);
+
         agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.DEMO_REQUEST,
-                String.valueOf(oldRequest.getRequestId()), oldRequest, demoRequest);
+                String.valueOf(demoRequestId), oldRequest, newRequest);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -279,5 +313,44 @@ public class DemoRequestService {
                 )).toList();
 
         return new ResponseEntity<>(responseList, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> addDemoRequestComment(Long demoRequestId, DemoRequestCommentPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        DemoRequest demoRequest = demoRequestRepository.findByRequestId(demoRequestId);
+        if (demoRequest == null) {
+            return new ResponseEntity<>(Utils.DEMO_REQUEST_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        DemoRequestComments demoRequestComments = new DemoRequestComments();
+
+        demoRequestComments.setComment(payload.comment());
+        demoRequestComments.setCreatedByUserType(UserType.AGENT.name());
+        demoRequestComments.setCreatedBy(agent.getAgentId());
+        demoRequestComments.setCreatedAt(new Date());
+        demoRequestComments.setDemoRequest(demoRequest);
+
+        demoRequestComments = demoRequestCommentsService.save(demoRequestComments);
+
+        if (demoRequest.getDemoRequestComments() == null) {
+            demoRequest.setDemoRequestComments(new ArrayList<>());
+        }
+        demoRequest.getDemoRequestComments().add(demoRequestComments);
+
+        DemoRequestCommentsSnapshot demoRequestCommentsSnapshot = SnapshotUtility.toSnapshot(demoRequestComments);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.DEMO_REQUEST_COMMENTS,
+                String.valueOf(demoRequestComments.getId()), null, demoRequestCommentsSnapshot);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
     }
 }

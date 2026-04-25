@@ -3,6 +3,8 @@ package com.smartstay.console.utils;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.agent.AgentSnapshot;
 import com.smartstay.console.dto.customers.*;
+import com.smartstay.console.dto.demoRequest.DemoRequestCommentsSnapshot;
+import com.smartstay.console.dto.demoRequest.DemoRequestSnapshot;
 import com.smartstay.console.dto.hostel.*;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
@@ -371,6 +373,53 @@ public class SnapshotUtility {
                 kyc,
                 wallet,
                 reasons
+        );
+    }
+
+    public static DemoRequestCommentsSnapshot toSnapshot(DemoRequestComments c) {
+        if (c == null) return null;
+
+        return new DemoRequestCommentsSnapshot(
+                c.getId(),
+                c.getComment(),
+                c.getCreatedByUserType(),
+                c.getCreatedBy(),
+                copyDate(c.getCreatedAt()),
+                c.getDemoRequest() != null ? c.getDemoRequest().getRequestId() : null
+        );
+    }
+
+    public static DemoRequestSnapshot toSnapshot(DemoRequest d) {
+
+        if (d == null) return null;
+
+        List<DemoRequestCommentsSnapshot> comments =
+                toSnapshotList(d.getDemoRequestComments(), SnapshotUtility::toSnapshot);
+
+        return new DemoRequestSnapshot(
+                d.getRequestId(),
+                d.getName(),
+                d.getEmailId(),
+                d.getContactNo(),
+                d.getCountryCode(),
+                d.getOrganization(),
+                d.getNoOfHostels(),
+                d.getNoOfTenant(),
+                d.getCity(),
+                d.getState(),
+                d.getCountry(),
+                d.getDemoRequestStatus(),
+                d.getIsDemoCompleted(),
+                d.getIsAssigned(),
+                d.getAssignedTo(),
+                d.getAssignedBy(),
+                d.getPresentedBy(),
+                d.getComments(),
+                copyDate(d.getBookedFor()),
+                d.getRequestedDate(),
+                d.getRequestedTime(),
+                copyDate(d.getPresentedAt()),
+                comments
         );
     }
 
