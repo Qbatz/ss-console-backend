@@ -2739,9 +2739,10 @@ public class HostelsService {
 
         newBillingRules = billingRulesService.save(newBillingRules);
 
-        if (hostel.getBillingRulesList() != null) {
-            hostel.getBillingRulesList().add(newBillingRules);
+        if (hostel.getBillingRulesList() == null) {
+            hostel.setBillingRulesList(new ArrayList<>());
         }
+        hostel.getBillingRulesList().add(newBillingRules);
 
         BillingRuleSnapshot newBillingRulesSnapshot = SnapshotUtility.toSnapshot(newBillingRules);
 
