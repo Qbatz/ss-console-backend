@@ -21,4 +21,12 @@ public class InvoiceDiscountsService {
     public List<InvoiceDiscounts> getByInvoiceIds(Set<String> invoiceIds) {
         return invoiceDiscountsRepository.findAllByInvoiceIdIn(invoiceIds);
     }
+
+    public List<InvoiceDiscounts> findByHostelIdAndCustomerId(String hostelId, String customerId) {
+        return invoiceDiscountsRepository.findAllByHostelIdAndCustomerId(hostelId, customerId);
+    }
+
+    public List<InvoiceDiscounts> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
+        return invoiceDiscountsRepository.findAllByHostelIdAndCustomerIdIn(hostelId, customerIds);
+    }
 }

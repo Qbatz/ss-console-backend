@@ -11,4 +11,8 @@ import java.util.Set;
 public interface InvoiceDiscountsRepository extends JpaRepository<InvoiceDiscounts, Long> {
 
     List<InvoiceDiscounts> findAllByInvoiceIdIn(Set<String> invoiceIds);
+
+    List<InvoiceDiscounts> findAllByHostelIdAndCustomerId(String hostelId, String customerId);
+
+    List<InvoiceDiscounts> findAllByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds);
 }

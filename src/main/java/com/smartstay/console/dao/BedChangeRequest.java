@@ -14,16 +14,22 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CustomersConfig {
+public class BedChangeRequest {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
-    String customerId;
+    long id;
     String hostelId;
-    Boolean enabled;
-    Boolean isActive;
+    String customerId;
+    Integer bedId;
+    Integer floorId;
+    Integer roomId;
+    Date startsFrom;
+    String reason;
+    String preferredType;
     Date createdAt;
     Date updatedAt;
-    String createdBy;
-    String updatedBy;
+    String currentStatus;
+    boolean isActive;
+    boolean isDeleted;
 }

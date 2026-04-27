@@ -13,7 +13,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -42,7 +41,7 @@ public class RecurringEventListener {
     @Autowired
     private CustomerConfigService customersConfigService;
     @Autowired
-    private CustomerWalletService customerWalletHistoryService;
+    private CustomerWalletHistoryService customerWalletHistoryService;
     @Autowired
     private RecurringTrackerService recurringTrackerService;
 

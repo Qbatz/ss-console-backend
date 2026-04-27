@@ -10,20 +10,22 @@ import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
-@Entity
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CustomersConfig {
+@Entity
+public class Comments {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
-    String customerId;
-    String hostelId;
-    Boolean enabled;
-    Boolean isActive;
-    Date createdAt;
-    Date updatedAt;
-    String createdBy;
-    String updatedBy;
+    private long id;
+    private String source;
+    private String sourceId;
+    private String comment;
+    private String userId;
+    private String userType;
+    private Date createdAt;
+    private Boolean isActive;
+    private Boolean isDeleted;
+    private String targetUserId;
 }

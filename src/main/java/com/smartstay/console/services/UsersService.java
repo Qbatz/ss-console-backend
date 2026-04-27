@@ -33,6 +33,8 @@ public class UsersService {
     private LoginHistoryService loginHistoryService;
     @Autowired
     private TableColumnsService tableColumnsService;
+    @Autowired
+    private CommentsService commentsService;
 
     public List<Users> getOwners(List<String> parentId) {
         if (!authentication.isAuthenticated()) {
@@ -101,6 +103,8 @@ public class UsersService {
                 .getByUserIds(userIds);
         List<BankingV1> banks = bankingService
                 .getByUserIds(userIds);
+        List<Comments> comments = commentsService
+                .getByUserIds(userIds);
         List<CustomerNotifications> customerNotifications = customerNotificationsService
                 .getByUserIds(userIds);
         List<LoginHistory> loginHistories = loginHistoryService
@@ -111,6 +115,7 @@ public class UsersService {
         userActivitiesService.deleteAll(userActivities);
         notificationService.deleteAll(adminNotifications);
         bankingService.deleteAll(banks);
+        commentsService.deleteAll(comments);
         customerNotificationsService.deleteAll(customerNotifications);
         loginHistoryService.deleteAll(loginHistories);
         tableColumnsService.deleteAll(tableColumns);

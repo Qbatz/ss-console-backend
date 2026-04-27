@@ -15,7 +15,7 @@ public class CustomerBedHistoryService {
     @Autowired
     private CustomerBedHistoryRepository customerBedHistoryRepository;
 
-    public List<CustomersBedHistory> findByCustomerIds(String hostelId, List<String> customerIds) {
+    public List<CustomersBedHistory> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
         return customerBedHistoryRepository.findByHostelIdAndCustomerIds(hostelId, customerIds);
     }
 

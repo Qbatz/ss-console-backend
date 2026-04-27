@@ -1,7 +1,9 @@
 package com.smartstay.console.dao;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,20 +14,14 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class RentHistory {
+public class SettlementDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Double rent;
     private String customerId;
-    private String reason;
-    private Date startsFrom;
-    private Date endingAt;
+    private Date leavingDate;
     private Date createdAt;
+    private Date updatedAt;
     private String createdBy;
-
-    @ManyToOne
-    @JoinColumn(name = "booking_id")
-    @JsonIgnore
-    private BookingsV1 booking;
+    private String updatedBy;
 }

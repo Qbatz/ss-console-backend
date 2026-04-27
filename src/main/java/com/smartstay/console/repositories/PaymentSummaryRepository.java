@@ -11,4 +11,8 @@ import java.util.Set;
 public interface PaymentSummaryRepository extends JpaRepository<PaymentSummary, Integer> {
 
     List<PaymentSummary> findAllByCustomerIdIn(Set<String> customerIds);
+
+    List<PaymentSummary> findAllByHostelIdAndCustomerId(String hostelId, String customerId);
+
+    List<PaymentSummary> findAllByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds);
 }

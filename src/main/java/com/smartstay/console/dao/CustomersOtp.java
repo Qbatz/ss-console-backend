@@ -14,16 +14,16 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class CustomersConfig {
+public class CustomersOtp {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    Long id;
-    String customerId;
-    String hostelId;
-    Boolean enabled;
-    Boolean isActive;
-    Date createdAt;
-    Date updatedAt;
-    String createdBy;
-    String updatedBy;
+    private Long id;
+    private String xuid;
+    private int otp;
+    private Date createdAt;
+    private Date updatedAt;
+    private String createdBy;
+    private Date expiryAt;
+    private boolean isVerified;
 }
