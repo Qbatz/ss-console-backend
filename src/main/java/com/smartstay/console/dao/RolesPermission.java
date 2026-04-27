@@ -11,5 +11,4 @@ public class RolesPermission {
     private boolean canWrite;
     private boolean canDelete;
     private boolean canUpdate;
-
 }

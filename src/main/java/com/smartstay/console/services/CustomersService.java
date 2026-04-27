@@ -23,8 +23,6 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.smartstay.console.utils.AgentActivityUtil.cloneList;
-
 @Service
 public class CustomersService {
 
@@ -59,7 +57,7 @@ public class CustomersService {
     @Autowired
     private CustomerEbHistoryService customerEbHistoryService;
     @Autowired
-    private CustomerWalletService customerWalletService;
+    private CustomerWalletHistoryService customerWalletHistoryService;
     @Autowired
     private TransactionV1Service transactionV1Service;
     @Autowired
@@ -76,6 +74,22 @@ public class CustomersService {
     private CustomerAdditionalContactsService customerAdditionalContactsService;
     @Autowired
     private CustomersCredentialService customersCredentialService;
+    @Autowired
+    private CustomersOtpService customersOtpService;
+    @Autowired
+    private BedChangeRequestService bedChangeRequestService;
+    @Autowired
+    private CustomerBillingRulesService customerBillingRulesService;
+    @Autowired
+    private CustomerRecurringTrackerService customerRecurringTrackerService;
+    @Autowired
+    private InvoiceDiscountsService invoiceDiscountsService;
+    @Autowired
+    private RentHistoryService rentHistoryService;
+    @Autowired
+    private SettlementDetailsService settlementDetailsService;
+    @Autowired
+    private CustomerNotificationsService customerNotificationsService;
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
@@ -199,24 +213,37 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.TENANT_MOBILE_MISMATCH, HttpStatus.BAD_REQUEST);
         }
 
-        List<InvoicesV1> invoicesList = invoiceV1Service.findAllByHostelIdAndCustomerId(hostelId, customerId);
-        List<BookingsV1> listBookings = bookingsService.findByHostelIdAndCustomerId(hostelId, customerId);
-        List<CustomersConfig> listConfigs = customersConfigService.findByHostelIdAndCustomerId(hostelId, customerId);
         CustomerCredentials customerCredentials = null;
+        CustomersOtp customersOtp = null;
         boolean isDuplicate = customersRepository.existsByXuidAndCustomerIdNot(customer.getXuid(), customerId);
         if (!isDuplicate) {
             customerCredentials = customersCredentialService.findByXuid(customer.getXuid());
+            customersOtp = customersOtpService.findByXuid(customer.getXuid());
         }
+
+        List<InvoicesV1> invoicesList = invoiceV1Service.findAllByHostelIdAndCustomerId(hostelId, customerId);
+        List<BookingsV1> listBookings = bookingsService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<CustomersConfig> listConfigs = customersConfigService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomerDocuments> listCustomerDocuments = customerDocumentService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomerAdditionalContacts> listCustomerAdditionalContacts = customerAdditionalContactsService
                 .findByHostelIdAndCustomerId(hostelId, customerId);
         List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<BedChangeRequest> listBedChangeRequests = bedChangeRequestService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<CustomerNotifications> listCustomerNotifications = customerNotificationsService.getByUserIds(Set.of(customerId));
+        List<CustomerBillingRules> listCustomerBillingRules = customerBillingRulesService
+                .findByHostelIdAndCustomerId(hostelId, customerId);
+        List<CustomerRecurringTracker> listCustomerRecurringTrackers = customerRecurringTrackerService
+                .findByHostelIdAndCustomerId(hostelId, customerId);
+        List<InvoiceDiscounts> listInvoiceDiscounts = invoiceDiscountsService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<PaymentSummary> listPaymentSummary = paymentSummaryService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<RentHistory> listRentHistory = rentHistoryService.findByCustomerId(customerId);
+        List<SettlementDetails> listSettlementDetails = settlementDetailsService.findByCustomerId(customerId);
         List<ComplaintsV1> complaints = complaintService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CreditDebitNotes> listCreditDebits = creditDebitNotesService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomersAmenity> listCustomersAmenity = customersAmenityService.findByCustomerId(customerId);
         List<CustomersBedHistory> listCustomerBedHistory = customerBedHistoryService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomersEbHistory> listCustomerEbHistory = customerEbHistoryService.findByCustomerId(customerId);
-        List<CustomerWalletHistory> listCustomersWallet = customerWalletService.findByCustomerId(customerId);
+        List<CustomerWalletHistory> listCustomersWallet = customerWalletHistoryService.findByCustomerId(customerId);
         List<TransactionV1> listTransactions = transactionV1Service.findByHostelIdAndCustomerId(hostelId, customerId);
         Set<String> transactionIds = listTransactions.stream()
                 .map(TransactionV1::getTransactionId)
@@ -252,23 +279,7 @@ public class CustomersService {
 
         CustomerResetSnapshot snapshot = new CustomerResetSnapshot(
                 oldCustomer,
-                cloneList(invoicesList, InvoicesV1.class),
-                cloneList(listBookings, BookingsV1.class),
-                cloneList(listTransactions, TransactionV1.class),
-                cloneList(listCustomersWallet, CustomerWalletHistory.class),
-                cloneList(listCreditDebits, CreditDebitNotes.class),
-                cloneList(complaints, ComplaintsV1.class),
-                cloneList(listCustomerDocuments, CustomerDocuments.class),
-                oldCredentials,
-                cloneList(listCustomerAdditionalContacts, CustomerAdditionalContacts.class),
-                cloneList(listCustomerBedHistory, CustomersBedHistory.class),
-                cloneList(listCustomerEbHistory, CustomersEbHistory.class),
-                cloneList(listCustomersAmenity, CustomersAmenity.class),
-                cloneList(listAmenityRequests, AmenityRequest.class),
-                cloneList(listConfigs, CustomersConfig.class),
-                cloneList(listBankTransactions, BankTransactionsV1.class),
-                cloneList(bankingList, BankingV1.class),
-                cloneList(listBeds, Beds.class)
+                oldCredentials
         );
 
         if (invoicesList != null && !invoicesList.isEmpty()) {
@@ -282,6 +293,33 @@ public class CustomersService {
         }
         if (customerCredentials != null) {
             customersCredentialService.deleteCredential(customerCredentials);
+        }
+        if (customersOtp != null) {
+            customersOtpService.delete(customersOtp);
+        }
+        if (listBedChangeRequests != null && !listBedChangeRequests.isEmpty()) {
+            bedChangeRequestService.deleteAll(listBedChangeRequests);
+        }
+        if (listCustomerNotifications != null && !listCustomerNotifications.isEmpty()) {
+            customerNotificationsService.deleteAll(listCustomerNotifications);
+        }
+        if (listCustomerBillingRules != null && !listCustomerBillingRules.isEmpty()) {
+            customerBillingRulesService.deleteAll(listCustomerBillingRules);
+        }
+        if (listCustomerRecurringTrackers != null && !listCustomerRecurringTrackers.isEmpty()) {
+            customerRecurringTrackerService.deleteAll(listCustomerRecurringTrackers);
+        }
+        if (listInvoiceDiscounts != null && !listInvoiceDiscounts.isEmpty()) {
+            invoiceDiscountsService.deleteAll(listInvoiceDiscounts);
+        }
+        if (listPaymentSummary != null && !listPaymentSummary.isEmpty()) {
+            paymentSummaryService.deleteAll(listPaymentSummary);
+        }
+        if (listRentHistory != null && !listRentHistory.isEmpty()) {
+            rentHistoryService.deleteAll(listRentHistory);
+        }
+        if (listSettlementDetails != null && !listSettlementDetails.isEmpty()) {
+            settlementDetailsService.deleteAll(listSettlementDetails);
         }
         if (listCustomerDocuments != null && !listCustomerDocuments.isEmpty()) {
             customerDocumentService.deleteDocuments(listCustomerDocuments);
@@ -308,7 +346,7 @@ public class CustomersService {
             customerEbHistoryService.deleteAll(listCustomerEbHistory);
         }
         if (listCustomersWallet != null && !listCustomersWallet.isEmpty()) {
-            customerWalletService.deleteAll(listCustomersWallet);
+            customerWalletHistoryService.deleteAll(listCustomersWallet);
         }
         if (!listTransactions.isEmpty()) {
             listTransactions.forEach(item -> {
@@ -333,7 +371,7 @@ public class CustomersService {
                     }
                 }
             });
-            transactionV1Service.deleteALl(listTransactions);
+            transactionV1Service.deleteAll(listTransactions);
         }
         if (!listItemsOtherThanExpense.isEmpty()) {
             bankTransactionService.deleteItemsOtherThanExpense(listItemsOtherThanExpense);

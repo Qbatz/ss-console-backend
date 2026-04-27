@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface CreditDebitNoteRepository extends JpaRepository<CreditDebitNotes, Integer> {
@@ -18,4 +19,6 @@ public interface CreditDebitNoteRepository extends JpaRepository<CreditDebitNote
     List<CreditDebitNotes> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds);
 
     List<CreditDebitNotes> findByHostelIdAndCustomerId(String hostelId, String customerId);
+
+    List<CreditDebitNotes> findAllByInvoiceIdIn(Set<String> invoiceIds);
 }

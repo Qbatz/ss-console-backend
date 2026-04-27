@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class CreditDebitNotesService {
@@ -23,5 +24,9 @@ public class CreditDebitNotesService {
 
     public List<CreditDebitNotes> findByHostelIdAndCustomerId(String hostelId, String customerId) {
         return creditDebitNotesRepository.findByHostelIdAndCustomerId(hostelId, customerId);
+    }
+
+    public List<CreditDebitNotes> getByInvoiceIds(Set<String> invoiceIds) {
+        return creditDebitNotesRepository.findAllByInvoiceIdIn(invoiceIds);
     }
 }
