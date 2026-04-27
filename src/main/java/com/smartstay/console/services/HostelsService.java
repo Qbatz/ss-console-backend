@@ -2559,11 +2559,6 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.NO_BILLING_RULE_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        List<BookingsV1> activeBookings = bookingsService.getActiveBookingsByHostelIds(Set.of(hostelId));
-        if (activeBookings != null && !activeBookings.isEmpty()) {
-            return new ResponseEntity<>(Utils.ACTIVE_TENANT_EXISTS, HttpStatus.BAD_REQUEST);
-        }
-
         Date today = new Date();
 
         BillingRules newBillingRules = new BillingRules();
@@ -2633,7 +2628,7 @@ public class HostelsService {
         }
 
         BillingDates billingDates = null;
-        if (isFixedDatePrepaidToFixedDatePostpaid || isFixedDatePostpaidToFixedDatePrepaid || isFixedDateToJoiningBased){
+        if (isFixedDatePrepaidToFixedDatePostpaid){
 
             billingDates = billingRulesService.computeBillingDatesWithBillingModel(currentBillingRules, today);
 
@@ -2643,9 +2638,20 @@ public class HostelsService {
                                 billingDates.currentBillStartDate());
 
                 if (recurringTracker != null){
-                    recurringTrackerService.delete(recurringTracker);
+                    Date previousMonthDate = Utils.getPreviousMonthDate(billingDates.currentBillStartDate());
+
+                    int month = Utils.getCurrentMonth(previousMonthDate);
+                    int year = Utils.getCurrentYear(previousMonthDate);
+
+                    recurringTracker.setCreationMonth(month);
+                    recurringTracker.setCreationYear(year);
+
+                    recurringTrackerService.save(recurringTracker);
                 }
             }
+        }
+        else {
+            return new ResponseEntity<>(Utils.FIXED_DATE_PREPAID_TO_POSTPAID_ONLY_ALLOWED, HttpStatus.BAD_REQUEST);
         }
 
         int billingStartDate = 1;
@@ -2733,9 +2739,10 @@ public class HostelsService {
 
         newBillingRules = billingRulesService.save(newBillingRules);
 
-        if (hostel.getBillingRulesList() != null) {
-            hostel.getBillingRulesList().add(newBillingRules);
+        if (hostel.getBillingRulesList() == null) {
+            hostel.setBillingRulesList(new ArrayList<>());
         }
+        hostel.getBillingRulesList().add(newBillingRules);
 
         BillingRuleSnapshot newBillingRulesSnapshot = SnapshotUtility.toSnapshot(newBillingRules);
 
