@@ -87,6 +87,7 @@ public class AgentActivityUtil {
             case PLANS -> "Created a new plan";
             case PLAN_FEATURES -> "Created a new plan features";
             case BILLING_RULES -> "Created a new billing rules";
+            case DEMO_REQUEST_COMMENTS -> "Created a new demo request comment";
             default -> "Created successfully";
         };
     }

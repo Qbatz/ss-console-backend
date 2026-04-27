@@ -2,9 +2,12 @@ package com.smartstay.console.Mapper.demoRequests;
 
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.DemoRequest;
+import com.smartstay.console.responses.demoRequest.DemoRequestCommentsResponse;
 import com.smartstay.console.responses.demoRequest.DemoRequestResponse;
 import com.smartstay.console.utils.Utils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -45,6 +48,22 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
             requestedDate = Utils.formatDateString(demoRequest.getRequestedDate());
         }
 
+        List<DemoRequestCommentsResponse> demoRequestComments = new ArrayList<>();
+        if (demoRequest.getDemoRequestComments() != null) {
+            demoRequestComments = demoRequest.getDemoRequestComments().stream()
+                    .map(comment -> {
+                        String commentCreatedBy = null;
+                        if (agentMap != null) {
+                            if (agentMap.get(comment.getCreatedBy()) != null) {
+                                Agent commentCreatedByAgent = agentMap.get(comment.getCreatedBy());
+                                commentCreatedBy = Utils.getFullName(commentCreatedByAgent.getFirstName(), commentCreatedByAgent.getLastName());
+                            }
+                        }
+                        return new DemoRequestCommentsResponse(comment.getId(), comment.getComment(), comment.getCreatedByUserType(),
+                                commentCreatedBy, Utils.dateToString(comment.getCreatedAt()), Utils.dateToTime(comment.getCreatedAt()));
+                    }).toList();
+        }
+
         return new DemoRequestResponse(demoRequest.getRequestId(), demoRequest.getName(),
                 demoRequest.getEmailId(), demoRequest.getContactNo(), demoRequest.getCountryCode(),
                 demoRequest.getOrganization(), demoRequest.getNoOfHostels(), demoRequest.getNoOfTenant(),
@@ -52,6 +71,7 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
                 demoRequest.getIsDemoCompleted(), demoRequest.getIsAssigned(), assignedTo, assignedBy,
                 presentedBy, demoRequest.getComments(), requestedDate, demoRequest.getRequestedTime(),
                 demoRequest.getPresentedAt() != null ? Utils.dateToString(demoRequest.getPresentedAt()) :  null,
-                demoRequest.getPresentedAt() != null ? Utils.dateToTime(demoRequest.getPresentedAt()) : null);
+                demoRequest.getPresentedAt() != null ? Utils.dateToTime(demoRequest.getPresentedAt()) : null,
+                demoRequestComments);
     }
 }
