@@ -11,4 +11,6 @@ import java.util.Set;
 public interface TableColumnsRepository extends JpaRepository<TableColumns, Long> {
 
     List<TableColumns> findAllByUserIdIn(Set<String> userIds);
+
+    List<TableColumns> findAllByHostelId(String hostelId);
 }

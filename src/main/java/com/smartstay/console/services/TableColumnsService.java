@@ -21,4 +21,8 @@ public class TableColumnsService {
     public List<TableColumns> getByUserIds(Set<String> userIds) {
         return tableTableColumnsRepository.findAllByUserIdIn(userIds);
     }
+
+    public List<TableColumns> findByHostelId(String hostelId) {
+        return tableTableColumnsRepository.findAllByHostelId(hostelId);
+    }
 }

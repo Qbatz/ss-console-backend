@@ -11,4 +11,6 @@ import java.util.Set;
 public interface CustomerNotificationsRepository extends JpaRepository<CustomerNotifications, Long> {
 
     List<CustomerNotifications> findAllByUserIdIn(Set<String> userIds);
+
+    List<CustomerNotifications> findAllByHostelId(String hostelId);
 }

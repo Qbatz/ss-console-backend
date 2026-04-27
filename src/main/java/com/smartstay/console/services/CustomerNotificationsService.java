@@ -21,4 +21,8 @@ public class CustomerNotificationsService {
     public List<CustomerNotifications> getByUserIds(Set<String> userIds) {
         return customerNotificationsRepository.findAllByUserIdIn(userIds);
     }
+
+    public List<CustomerNotifications> findByHostelId(String hostelId) {
+        return customerNotificationsRepository.findAllByHostelId(hostelId);
+    }
 }

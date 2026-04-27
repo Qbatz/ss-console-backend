@@ -88,6 +88,8 @@ public class CustomersService {
     private RentHistoryService rentHistoryService;
     @Autowired
     private SettlementDetailsService settlementDetailsService;
+    @Autowired
+    private CustomerNotificationsService customerNotificationsService;
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
@@ -227,6 +229,7 @@ public class CustomersService {
                 .findByHostelIdAndCustomerId(hostelId, customerId);
         List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<BedChangeRequest> listBedChangeRequests = bedChangeRequestService.findByHostelIdAndCustomerId(hostelId, customerId);
+        List<CustomerNotifications> listCustomerNotifications = customerNotificationsService.getByUserIds(Set.of(customerId));
         List<CustomerBillingRules> listCustomerBillingRules = customerBillingRulesService
                 .findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomerRecurringTracker> listCustomerRecurringTrackers = customerRecurringTrackerService
@@ -296,6 +299,9 @@ public class CustomersService {
         }
         if (listBedChangeRequests != null && !listBedChangeRequests.isEmpty()) {
             bedChangeRequestService.deleteAll(listBedChangeRequests);
+        }
+        if (listCustomerNotifications != null && !listCustomerNotifications.isEmpty()) {
+            customerNotificationsService.deleteAll(listCustomerNotifications);
         }
         if (listCustomerBillingRules != null && !listCustomerBillingRules.isEmpty()) {
             customerBillingRulesService.deleteAll(listCustomerBillingRules);

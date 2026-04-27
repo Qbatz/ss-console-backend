@@ -153,6 +153,24 @@ public class HostelsService {
     private RentHistoryService rentHistoryService;
     @Autowired
     private SettlementDetailsService settlementDetailsService;
+    @Autowired
+    private NotificationService notificationService;
+    @Autowired
+    private AssetsService assetsService;
+    @Autowired
+    private TemplatesService templatesService;
+    @Autowired
+    private ComplaintTypeService complaintTypeService;
+    @Autowired
+    private CustomerNotificationsService customerNotificationsService;
+    @Autowired
+    private ExpenseCategoryService expenseCategoryService;
+    @Autowired
+    private RolesService rolesService;
+    @Autowired
+    private VendorService vendorService;
+    @Autowired
+    private TableColumnsService tableColumnsService;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -600,6 +618,7 @@ public class HostelsService {
                 .findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<BedChangeRequest> listBedChangeRequests = bedChangeRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<CustomerNotifications> listCustomerNotifications = customerNotificationsService.getByUserIds((Set<String>) customerIds);
         List<CustomerBillingRules> listCustomerBillingRules = customerBillingRulesService
                 .findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomerRecurringTracker> listCustomerRecurringTrackers = customerRecurringTrackerService
@@ -616,6 +635,8 @@ public class HostelsService {
         List<CustomerWalletHistory> listCustomersWallet = customerWalletHistoryService.findByCustomerIds(customerIds);
         List<TransactionV1> listTransactions = transactionV1Service.findByHostelIdAndCustomerIds(hostelId, customerIds);
 
+        List<AdminNotifications> listAdminNotifications = notificationService.findByHostelId(hostelId);
+        List<RecurringTracker> listRecurringTrackers = recurringTrackerService.getRecurringTrackersByHostelId(hostelId);
         List<ElectricityReadings> listElectricityReadings = electricityReadingsService.findByHostelId(hostelId);
         List<HostelReadings> listHostelReadings = hostelReadingService.findByHostelId(hostelId);
         List<Beds> listBeds = bedsService.findOccupiedBeds(hostelId);
@@ -666,6 +687,9 @@ public class HostelsService {
         }
         if (listBedChangeRequests != null && !listBedChangeRequests.isEmpty()) {
             bedChangeRequestService.deleteAll(listBedChangeRequests);
+        }
+        if (listCustomerNotifications != null && !listCustomerNotifications.isEmpty()) {
+            customerNotificationsService.deleteAll(listCustomerNotifications);
         }
         if (listCustomerBillingRules != null && !listCustomerBillingRules.isEmpty()) {
             customerBillingRulesService.deleteAll(listCustomerBillingRules);
@@ -759,6 +783,13 @@ public class HostelsService {
             expenseService.deleteExpensesByHostelId(hostelId);
         }
 
+        if (listAdminNotifications != null && !listAdminNotifications.isEmpty()) {
+            notificationService.deleteAll(listAdminNotifications);
+        }
+        if (listRecurringTrackers != null && !listRecurringTrackers.isEmpty()) {
+            recurringTrackerService.deleteAll(listRecurringTrackers);
+        }
+
         agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.DELETE, Source.HOSTEL,
                 hostelId, snapshot, null);
     }
@@ -822,6 +853,8 @@ public class HostelsService {
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
+        deleteHostelRelatedData(hostelId);
+
         List<UserHostel> userHostels = userHostelService.getUsersByHostelId(hostelId);
 
         if (!userHostels.isEmpty()) {
@@ -849,6 +882,67 @@ public class HostelsService {
         hostelRepository.delete(hostel);
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
+
+    private void deleteHostelRelatedData(String hostelId) {
+
+        List<AmenitiesV1> listAmenities = amenitiesService.getAmenitiesByHostelId(hostelId);
+        List<AssetsV1> listAssets = assetsService.findByHostelId(hostelId);
+        List<BillTemplates> listBillTemplates = templatesService.findByHostelId(hostelId);
+        List<ComplaintTypeV1> listComplaintTypes = complaintTypeService.findByHostelId(hostelId);
+        List<CustomerNotifications> listHostelCustomerNotifications = customerNotificationsService.findByHostelId(hostelId);
+        List<ExpenseCategory> listExpenseCategories = expenseCategoryService.findByHostelId(hostelId);
+        List<Floors> listFloors = floorsService.findByHostelId(hostelId);
+        List<RolesV1> listRoles = rolesService.findByHostelId(hostelId);
+        List<Rooms> listRooms = roomsService.getRoomsByHostelId(hostelId);
+        List<Subscription> listSubscriptions = subscriptionService.getSubscriptionsByHostelId(hostelId);
+        List<TableColumns> listTableColumns = tableColumnsService.findByHostelId(hostelId);
+        List<VendorV1> listVendors = vendorService.findByHostelId(hostelId);
+        List<Beds> listBeds = bedsService.getBedsByHostelId(hostelId);
+        List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
+
+        if (listAmenities != null && !listAmenities.isEmpty()) {
+            amenitiesService.deleteAll(listAmenities);
+        }
+        if (listAssets != null && !listAssets.isEmpty()) {
+            assetsService.deleteAll(listAssets);
+        }
+        if (listBillTemplates != null && !listBillTemplates.isEmpty()) {
+            templatesService.deleteAll(listBillTemplates);
+        }
+        if (listComplaintTypes != null && !listComplaintTypes.isEmpty()) {
+            complaintTypeService.deleteAll(listComplaintTypes);
+        }
+        if (listHostelCustomerNotifications != null && !listHostelCustomerNotifications.isEmpty()) {
+            customerNotificationsService.deleteAll(listHostelCustomerNotifications);
+        }
+        if (listExpenseCategories != null && !listExpenseCategories.isEmpty()) {
+            expenseCategoryService.deleteAll(listExpenseCategories);
+        }
+        if (listFloors != null && !listFloors.isEmpty()) {
+            floorsService.deleteAll(listFloors);
+        }
+        if (listRoles != null && !listRoles.isEmpty()) {
+            rolesService.deleteAll(listRoles);
+        }
+        if (listRooms != null && !listRooms.isEmpty()) {
+            roomsService.deleteAll(listRooms);
+        }
+        if (listSubscriptions != null && !listSubscriptions.isEmpty()) {
+            subscriptionService.deleteAll(listSubscriptions);
+        }
+        if (listTableColumns != null && !listTableColumns.isEmpty()) {
+            tableColumnsService.deleteAll(listTableColumns);
+        }
+        if (listVendors != null && !listVendors.isEmpty()) {
+            vendorService.deleteAll(listVendors);
+        }
+        if (listBeds != null && !listBeds.isEmpty()) {
+            bedsService.deleteAll(listBeds);
+        }
+        if (bankingList != null && !bankingList.isEmpty()) {
+            bankingService.deleteAll(bankingList);
+        }
     }
 
     public ResponseEntity<?> getAllHostelsNew(int page, int size, String hostelName, Date startDate, Date endDate) {

@@ -11,4 +11,6 @@ import java.util.Set;
 public interface AdminNotificationRepository extends JpaRepository<AdminNotifications, Long> {
 
     List<AdminNotifications> findAllByUserIdIn(Set<String> userIds);
+
+    List<AdminNotifications> findAllByHostelId(String hostelId);
 }

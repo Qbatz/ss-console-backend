@@ -41,4 +41,8 @@ public class NotificationService {
     public List<AdminNotifications> getByUserIds(Set<String> userIds) {
         return adminNotificationRepository.findAllByUserIdIn(userIds);
     }
+
+    public List<AdminNotifications> findByHostelId(String hostelId) {
+        return adminNotificationRepository.findAllByHostelId(hostelId);
+    }
 }

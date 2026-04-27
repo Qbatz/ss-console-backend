@@ -16,4 +16,8 @@ public class RoomsService {
     public List<Rooms> getRoomsByHostelId(String hostelId) {
         return roomsRepository.findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
     }
+
+    public void deleteAll(List<Rooms> listRooms) {
+        roomsRepository.deleteAll(listRooms);
+    }
 }
