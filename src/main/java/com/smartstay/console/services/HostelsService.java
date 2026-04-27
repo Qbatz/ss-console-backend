@@ -685,7 +685,7 @@ public class HostelsService {
             hostelReadingService.deleteAll(listHostelReadings);
         }
         if (listTransactions != null && !listTransactions.isEmpty()) {
-            transactionV1Service.deleteALl(listTransactions);
+            transactionV1Service.deleteAll(listTransactions);
         }
         if (listBeds != null && !listBeds.isEmpty()) {
             bedsService.makeAllBedAvailabe(listBeds);
@@ -2647,6 +2647,11 @@ public class HostelsService {
                     recurringTracker.setCreationYear(year);
 
                     recurringTrackerService.save(recurringTracker);
+
+                    if (payload.shouldDeleteInvoices()){
+                        invoiceV1Service.deleteInvoicesByHostelIdAndStartDate(
+                                hostelId, billingDates.currentBillStartDate());
+                    }
                 }
             }
         }

@@ -4,6 +4,11 @@ import com.smartstay.console.dao.InvoiceDiscounts;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Set;
+
 @Repository
-public interface InvoiceDiscountsRepositories extends JpaRepository<InvoiceDiscounts, Long> {
+public interface InvoiceDiscountsRepository extends JpaRepository<InvoiceDiscounts, Long> {
+
+    List<InvoiceDiscounts> findAllByInvoiceIdIn(Set<String> invoiceIds);
 }

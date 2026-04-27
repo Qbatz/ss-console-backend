@@ -333,7 +333,7 @@ public class CustomersService {
                     }
                 }
             });
-            transactionV1Service.deleteALl(listTransactions);
+            transactionV1Service.deleteAll(listTransactions);
         }
         if (!listItemsOtherThanExpense.isEmpty()) {
             bankTransactionService.deleteItemsOtherThanExpense(listItemsOtherThanExpense);

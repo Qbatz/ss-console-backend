@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -28,4 +29,6 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
             """, nativeQuery = true)
     InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix,
                                          @Param("hostelId") String hostelId);
+
+    List<InvoicesV1> findAllByHostelIdAndInvoiceStartDate(String hostelId, Date startDate);
 }

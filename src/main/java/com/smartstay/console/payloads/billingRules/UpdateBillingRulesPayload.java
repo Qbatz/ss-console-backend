@@ -10,5 +10,6 @@ public record UpdateBillingRulesPayload(Integer billingStartDate,
                                         Integer gracePeriodDays,
                                         String typeOfBilling,
                                         String billingModel,
-                                        List<@NotNull Integer> reminderDays) {
+                                        List<@NotNull Integer> reminderDays,
+                                        boolean shouldDeleteInvoices) {
 }
