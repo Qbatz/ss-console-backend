@@ -1,9 +1,7 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.config.Authentication;
-import com.smartstay.console.dao.HostelV1;
-import com.smartstay.console.dao.UserHostel;
-import com.smartstay.console.dao.Users;
+import com.smartstay.console.dao.*;
 import com.smartstay.console.repositories.UsersRepository;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +21,18 @@ public class UsersService {
     private UsersRepository usersRepository;
     @Autowired
     private UserHostelService userHostelService;
+    @Autowired
+    private UserActivitiesService userActivitiesService;
+    @Autowired
+    private NotificationService notificationService;
+    @Autowired
+    private BankingService bankingService;
+    @Autowired
+    private CustomerNotificationsService customerNotificationsService;
+    @Autowired
+    private LoginHistoryService loginHistoryService;
+    @Autowired
+    private TableColumnsService tableColumnsService;
 
     public List<Users> getOwners(List<String> parentId) {
         if (!authentication.isAuthenticated()) {
@@ -81,5 +91,28 @@ public class UsersService {
 
     public void deleteAll(List<Users> users) {
         usersRepository.deleteAll(users);
+    }
+
+    public void deleteAllUserRelatedData(Set<String> userIds) {
+
+        List<UserActivities> userActivities = userActivitiesService
+                .getUserActivitiesByUserIds(userIds);
+        List<AdminNotifications> adminNotifications = notificationService
+                .getByUserIds(userIds);
+        List<BankingV1> banks = bankingService
+                .getByUserIds(userIds);
+        List<CustomerNotifications> customerNotifications = customerNotificationsService
+                .getByUserIds(userIds);
+        List<LoginHistory> loginHistories = loginHistoryService
+                .getByUserIds(userIds);
+        List<TableColumns> tableColumns = tableColumnsService
+                .getByUserIds(userIds);
+
+        userActivitiesService.deleteAll(userActivities);
+        notificationService.deleteAll(adminNotifications);
+        bankingService.deleteAll(banks);
+        customerNotificationsService.deleteAll(customerNotifications);
+        loginHistoryService.deleteAll(loginHistories);
+        tableColumnsService.deleteAll(tableColumns);
     }
 }

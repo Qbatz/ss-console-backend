@@ -8,14 +8,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
+import java.util.Set;
 
 @Service
 public class NotificationService {
 
     @Autowired
-    AdminNotificationRepository adminNotificationRepository;
+    private AdminNotificationRepository adminNotificationRepository;
 
     public void addAdminNotificationsForRecurringInvoice(String hostelId) {
+
         AdminNotifications adminNotifications = new AdminNotifications();
         adminNotifications.setNotificationType(NotificationType.RECURRING_INVOICE.name());
         adminNotifications.setUserId(null);
@@ -29,5 +32,13 @@ public class NotificationService {
         adminNotifications.setRead(false);
 
         adminNotificationRepository.save(adminNotifications);
+    }
+
+    public void deleteAll(List<AdminNotifications> adminNotifications) {
+        adminNotificationRepository.deleteAll(adminNotifications);
+    }
+
+    public List<AdminNotifications> getByUserIds(Set<String> userIds) {
+        return adminNotificationRepository.findAllByUserIdIn(userIds);
     }
 }

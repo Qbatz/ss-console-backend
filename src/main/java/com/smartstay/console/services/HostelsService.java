@@ -810,12 +810,7 @@ public class HostelsService {
                         .map(Users::getUserId)
                         .collect(Collectors.toSet());
 
-                List<UserActivities> userActivities = userActivitiesService
-                        .getUserActivitiesByUserIds(nonMasterUserIds);
-
-                if (!userActivities.isEmpty()){
-                    userActivitiesService.deleteAll(userActivities);
-                }
+                usersService.deleteAllUserRelatedData(nonMasterUserIds);
 
                 usersService.deleteAll(nonMasterUsers);
             }
