@@ -73,6 +73,7 @@ public class AgentActivityUtil {
             case SNAPSHOT_UPDATE -> getSnapshotUpdateDescription(source);
             case DEACTIVATE -> getDeactivateDescription(source);
             case REACTIVATE -> getReactivateDescription(source);
+            case RESET -> getResetDescription(source);
         };
     }
 
@@ -140,6 +141,13 @@ public class AgentActivityUtil {
             case PLAN_FEATURES -> "Deactivated a plan feature";
             case AGENT -> "Deactivated an agent";
             default -> "Deactivated successfully";
+        };
+    }
+
+    private static String getResetDescription(Source source) {
+        return switch (source) {
+            case HOSTEL ->  "Hostel has been reset";
+            default -> "Reset successfully";
         };
     }
 

@@ -44,11 +44,11 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         String lastUpdateDateDisplay = null;
         String expiredOn = null;
         String expiringAt = null;
-        StringBuilder fullAddress = new StringBuilder();
+        String fullAddress = null;
         com.smartstay.console.responses.hostels.HostelPlan hp = null;
         boolean isSubscriptionActive = true;
         long noOfDaysSubscriptionActive = 0;
-        StringBuilder initials = new StringBuilder();
+        String initials = null;
         boolean isTrial = false;
         boolean canAddTrial = false;
         boolean canAddExpandableTrial = false;
@@ -69,47 +69,10 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
 
         }
 
-        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")) {
-            fullAddress.append(hostelV1.getHouseNo());
-        }
-        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("") &&
-                hostelV1.getStreet() != null) {
-            fullAddress.append(", ");
-            fullAddress.append(hostelV1.getStreet());
-        }
-        else {
-            fullAddress.append(hostelV1.getStreet());
-        }
-        if (hostelV1.getCity() != null) {
-            if (fullAddress.isEmpty()) {
-                fullAddress.append(hostelV1.getCity());
-            }
-            else {
-                fullAddress.append(", ");
-                fullAddress.append(hostelV1.getCity());
-            }
-        }
-        if (hostelV1.getState() != null) {
-            if (fullAddress.isEmpty()) {
-                fullAddress.append(hostelV1.getState());
-            }
-            else {
-                fullAddress.append(", ");
-                fullAddress.append(hostelV1.getState());
-            }
-        }
+        fullAddress = Utils.buildFullAddress(hostelV1);
 
         if (hostelV1.getHostelName() != null) {
-            String[] arrName = hostelV1.getHostelName().split(" ");
-            if (arrName.length > 0) {
-                initials.append(arrName[0].toUpperCase().charAt(0));
-            }
-            if (arrName.length > 1) {
-                initials.append(arrName[arrName.length - 1].toUpperCase().charAt(0));
-            }
-            else {
-                initials.append(arrName[arrName.length - 1].toUpperCase().charAt(1));
-            }
+            initials = Utils.getInitials(hostelV1.getHostelName());
         }
 
         if (owner != null) {

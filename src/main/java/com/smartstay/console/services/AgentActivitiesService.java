@@ -44,6 +44,10 @@ public class AgentActivitiesService {
             throw new IllegalArgumentException("oldObject and newObject required for UPDATE");
         }
 
+        if (activityType == ActivityType.RESET && oldObject == null) {
+            throw new IllegalArgumentException("oldObject required for RESET");
+        }
+
         if (activityType == ActivityType.DELETE && oldObject == null) {
             throw new IllegalArgumentException("oldObject required for DELETE");
         }
@@ -84,7 +88,7 @@ public class AgentActivitiesService {
                 agentActivity.setChangesJson(null);
                 break;
 
-            case DELETE, DEACTIVATE:
+            case RESET, DELETE, DEACTIVATE:
                 agentActivity.setOldObject(AgentActivityUtil.singleObjectMap(oldObject));
                 agentActivity.setNewObject(null);
                 agentActivity.setChangesJson(null);

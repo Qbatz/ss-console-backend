@@ -597,6 +597,7 @@ public class HostelsService {
                 .stream()
                 .map(Customers::getCustomerId)
                 .toList();
+        Set<String> customerIdsSet = new HashSet<>(customerIds);
 
         Set<String> allXuids = customersList.stream()
                 .map(Customers::getXuid)
@@ -618,7 +619,7 @@ public class HostelsService {
                 .findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<BedChangeRequest> listBedChangeRequests = bedChangeRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
-        List<CustomerNotifications> listCustomerNotifications = customerNotificationsService.getByUserIds((Set<String>) customerIds);
+        List<CustomerNotifications> listCustomerNotifications = customerNotificationsService.getByUserIds(customerIdsSet);
         List<CustomerBillingRules> listCustomerBillingRules = customerBillingRulesService
                 .findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomerRecurringTracker> listCustomerRecurringTrackers = customerRecurringTrackerService
@@ -790,7 +791,7 @@ public class HostelsService {
             recurringTrackerService.deleteAll(listRecurringTrackers);
         }
 
-        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.DELETE, Source.HOSTEL,
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.RESET, Source.HOSTEL,
                 hostelId, snapshot, null);
     }
 
@@ -847,6 +848,8 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
+        HostelSnapshot oldHostel = SnapshotUtility.toSnapshot(hostel);
+
         try {
             resetHostel(hostel, agent);
         } catch (Exception e){
@@ -880,6 +883,9 @@ public class HostelsService {
         }
 
         hostelRepository.delete(hostel);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
+                hostelId, oldHostel, null);
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
