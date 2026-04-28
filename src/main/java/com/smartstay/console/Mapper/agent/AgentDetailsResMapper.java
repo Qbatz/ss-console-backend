@@ -4,6 +4,7 @@ import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.AgentRoles;
 import com.smartstay.console.responses.agents.AgentActivitiesRes;
 import com.smartstay.console.responses.agents.AgentDetailsRes;
+import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
 import com.smartstay.console.utils.Utils;
 
 import java.util.List;
@@ -15,15 +16,18 @@ public class AgentDetailsResMapper implements Function<Agent, AgentDetailsRes> {
     AgentRoles agentRole;
     Agent createdBy;
     Agent updatedBy;
+    List<RelationalAgentResponse> hostelRelationsRes;
 
     public AgentDetailsResMapper(List<AgentActivitiesRes> activities,
                                  AgentRoles agentRole,
                                  Agent createdBy,
-                                 Agent updatedBy) {
+                                 Agent updatedBy,
+                                 List<RelationalAgentResponse> hostelRelationsRes) {
         this.activities = activities;
         this.agentRole = agentRole;
         this.createdBy = createdBy;
         this.updatedBy = updatedBy;
+        this.hostelRelationsRes = hostelRelationsRes;
     }
 
     @Override
@@ -57,6 +61,6 @@ public class AgentDetailsResMapper implements Function<Agent, AgentDetailsRes> {
                 agent.getMobile(), agent.getRoleId(), roleName, agent.getAgentZohoUserId(),
                 agent.getTicketLink(), agent.getIsProfileCompleted(), Utils.dateToString(agent.getCreatedAt()),
                 Utils.dateToTime(agent.getCreatedAt()), createdByName, updatedAtDate, updatedAtTime,
-                updatedByName, activities);
+                updatedByName, activities, hostelRelationsRes);
     }
 }

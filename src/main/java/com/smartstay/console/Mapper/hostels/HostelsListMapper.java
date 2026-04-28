@@ -1,15 +1,13 @@
 package com.smartstay.console.Mapper.hostels;
 
 import com.smartstay.console.dao.*;
+import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
 import com.smartstay.console.responses.hostels.HostelList;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.utils.CountryUtils;
 import com.smartstay.console.utils.Utils;
 
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 
 public class HostelsListMapper implements Function<HostelV1, HostelList> {
@@ -20,19 +18,25 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
     List<Plans> trialPlans;
     List<Plans> expandableTrialPlans;
     List<Subscription> subscriptions;
+    List<HostelRelationalAgent> relationalAgents;
+    Map<String, Agent> agentMap;
 
     public HostelsListMapper(OwnerInfo owner,
                              UserActivities latestActivity,
                              LoginHistory lastLogin,
                              List<Plans> trialPlans,
                              List<Plans> expandableTrialPlans,
-                             List<Subscription> subscriptions) {
+                             List<Subscription> subscriptions,
+                             List<HostelRelationalAgent> relationalAgents,
+                             Map<String, Agent> agentMap) {
         this.owner = owner;
         this.latestActivity = latestActivity;
         this.lastLogin = lastLogin;
         this.trialPlans = trialPlans;
         this.expandableTrialPlans = expandableTrialPlans;
         this.subscriptions = subscriptions;
+        this.relationalAgents = relationalAgents;
+        this.agentMap = agentMap;
     }
 
     @Override
@@ -204,6 +208,30 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
             canAddExpandableTrial = (subscriptionCount == 0) && (subPendingCount == 0);
         }
 
+        List<RelationalAgentResponse> relationalAgentResponses = new ArrayList<>();
+        if (relationalAgents != null) {
+            relationalAgentResponses = relationalAgents.stream()
+                    .sorted(Comparator.comparing(HostelRelationalAgent::getId).reversed())
+                    .map(hostelRelationalAgent -> {
+                        String agentName = null;
+                        String createdBy = null;
+                        if (agentMap != null) {
+                            if (agentMap.get(hostelRelationalAgent.getAgentId()) != null){
+                                Agent agent = agentMap.get(hostelRelationalAgent.getAgentId());
+                                agentName = Utils.getFullName(agent.getFirstName(), agent.getLastName());
+                            }
+                            if (agentMap.get(hostelRelationalAgent.getCreatedBy()) != null){
+                                Agent agent = agentMap.get(hostelRelationalAgent.getCreatedBy());
+                                createdBy = Utils.getFullName(agent.getFirstName(), agent.getLastName());
+                            }
+                        }
+                        return new RelationalAgentResponse(hostelRelationalAgent.getId(), hostelV1.getHostelName(),
+                                agentName, hostelRelationalAgent.getReason().name(), hostelRelationalAgent.getComments(),
+                                createdBy, Utils.dateToString(hostelRelationalAgent.getCreatedAt()),
+                                Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
+                    }).toList();
+        }
+
         return new HostelList(hostelV1.getHostelName(),
                 hostelV1.getHostelId(),
                 hostelV1.getMainImage(),
@@ -226,6 +254,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                 lastUpdateDateDisplay,
                 platform,
                 ownerInfo,
-                hp);
+                hp,
+                relationalAgentResponses);
     }
 }
