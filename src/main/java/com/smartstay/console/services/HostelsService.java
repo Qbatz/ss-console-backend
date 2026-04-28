@@ -2840,7 +2840,7 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.INVALID_NOTICE_PERIOD_DAYS, HttpStatus.BAD_REQUEST);
         }
 
-        if (gracePeriodDays <= 0 || gracePeriodDays > 31) {
+        if (gracePeriodDays < 0 || gracePeriodDays > 31) {
             return new ResponseEntity<>(Utils.INVALID_GRACE_PERIOD_DAYS, HttpStatus.BAD_REQUEST);
         }
 
