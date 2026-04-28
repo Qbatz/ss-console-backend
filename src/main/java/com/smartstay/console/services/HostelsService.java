@@ -2770,11 +2770,11 @@ public class HostelsService {
                     recurringTracker.setCreationYear(year);
 
                     recurringTrackerService.save(recurringTracker);
+                }
 
-                    if (payload.shouldDeleteInvoices()){
-                        invoiceV1Service.deleteInvoicesByHostelIdAndStartDate(
-                                hostelId, billingDates.currentBillStartDate());
-                    }
+                if (payload.shouldDeleteInvoices()){
+                    invoiceV1Service.deleteInvoicesByHostelIdAndStartDate(
+                            hostelId, billingDates.currentBillStartDate());
                 }
             }
         }
