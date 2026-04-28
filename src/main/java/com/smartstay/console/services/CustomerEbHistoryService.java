@@ -13,7 +13,7 @@ public class CustomerEbHistoryService {
     @Autowired
     private CustomerEbHistoryRepository customerEbHistoryRepository;
 
-    public List<CustomersEbHistory> findByCustomerIdAndHostelId(String hostelId, List<String> customerIds) {
+    public List<CustomersEbHistory> findByCustomerIds(List<String> customerIds) {
         return customerEbHistoryRepository.findByCustomerIdIn(customerIds);
     }
 

@@ -434,4 +434,8 @@ public class SubscriptionService {
     public long getExpiredSubscriptionsCount(){
         return subscriptionRepository.getExpiredLatestSubscriptionCount();
     }
+
+    public void deleteAll(List<com.smartstay.console.dao.Subscription> listSubscriptions) {
+        subscriptionRepository.deleteAll(listSubscriptions);
+    }
 }

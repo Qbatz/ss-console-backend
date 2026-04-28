@@ -36,6 +36,4 @@ public class CustomerWalletHistory {
     private Date billEndDate;
     private Date createdAt;
     private String createdBy;
-
-
 }

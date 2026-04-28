@@ -33,5 +33,4 @@ public class BillTemplates {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "templates", fetch = FetchType.EAGER)
     @ToString.Exclude
     List<BillTemplateType> templateTypes;
-
 }

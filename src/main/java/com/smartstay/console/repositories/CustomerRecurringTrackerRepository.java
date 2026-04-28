@@ -35,4 +35,8 @@ public interface CustomerRecurringTrackerRepository extends JpaRepository<Custom
     List<CustomerRecurringTracker> findAllByHostelIdOrderByTrackerIdDesc(String hostelId);
 
     CustomerRecurringTracker findTopByHostelIdOrderByTrackerIdDesc(String hostelId);
+
+    List<CustomerRecurringTracker> findAllByHostelIdAndCustomerId(String hostelId, String customerId);
+
+    List<CustomerRecurringTracker> findAllByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds);
 }

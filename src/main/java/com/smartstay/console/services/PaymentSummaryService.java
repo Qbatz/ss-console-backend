@@ -18,4 +18,16 @@ public class PaymentSummaryService {
     public List<PaymentSummary> getSummaryByCustomerIds(Set<String> customerIds) {
         return paymentSummaryRepository.findAllByCustomerIdIn(customerIds);
     }
+
+    public List<PaymentSummary> findByHostelIdAndCustomerId(String hostelId, String customerId) {
+        return paymentSummaryRepository.findAllByHostelIdAndCustomerId(hostelId, customerId);
+    }
+
+    public void deleteAll(List<PaymentSummary> listPaymentSummary) {
+        paymentSummaryRepository.deleteAll(listPaymentSummary);
+    }
+
+    public List<PaymentSummary> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
+        return paymentSummaryRepository.findAllByHostelIdAndCustomerIdIn(hostelId, customerIds);
+    }
 }

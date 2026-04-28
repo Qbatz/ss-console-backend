@@ -53,6 +53,8 @@ public class OwnersService {
     private HotelTypeService hotelTypeService;
     @Autowired
     private UserHostelService userHostelService;
+    @Autowired
+    private UsersService usersService;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
@@ -409,12 +411,7 @@ public class OwnersService {
                     .map(Users::getUserId)
                     .collect(Collectors.toSet());
 
-            List<UserActivities> userActivities = userActivitiesService
-                    .getUserActivitiesByUserIds(userIds);
-
-            if (!userActivities.isEmpty()){
-                userActivitiesService.deleteAll(userActivities);
-            }
+            usersService.deleteAllUserRelatedData(userIds);
 
             usersRepository.deleteAll(users);
         }

@@ -96,4 +96,16 @@ public class CustomerRecurringTrackerService {
         return customerRecurringTrackerRepository
                 .findAllByHostelIdOrderByTrackerIdDesc(hostelId);
     }
+
+    public List<CustomerRecurringTracker> findByHostelIdAndCustomerId(String hostelId, String customerId) {
+        return customerRecurringTrackerRepository.findAllByHostelIdAndCustomerId(hostelId, customerId);
+    }
+
+    public void deleteAll(List<CustomerRecurringTracker> listCustomerRecurringTrackers) {
+        customerRecurringTrackerRepository.deleteAll(listCustomerRecurringTrackers);
+    }
+
+    public List<CustomerRecurringTracker> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
+        return customerRecurringTrackerRepository.findAllByHostelIdAndCustomerIdIn(hostelId, customerIds);
+    }
 }

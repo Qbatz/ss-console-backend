@@ -50,4 +50,12 @@ public class BankingService {
             bankingRepository.saveAll(newBankInfo);
         }
     }
+
+    public void deleteAll(List<BankingV1> banks) {
+        bankingRepository.deleteAll(banks);
+    }
+
+    public List<BankingV1> getByUserIds(Set<String> userIds) {
+        return bankingRepository.findAllByUserIdIn(userIds);
+    }
 }

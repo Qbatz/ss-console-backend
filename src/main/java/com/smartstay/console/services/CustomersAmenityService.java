@@ -15,7 +15,7 @@ public class CustomersAmenityService {
     @Autowired
     private CustomersAmenityRepository customersAmenityRepository;
 
-    public List<CustomersAmenity> findByHostelIdAndCustomerIdIn(List<String> customerIds) {
+    public List<CustomersAmenity> findByCustomerIdIn(List<String> customerIds) {
         return customersAmenityRepository.findByCustomerIdIn(customerIds);
     }
 

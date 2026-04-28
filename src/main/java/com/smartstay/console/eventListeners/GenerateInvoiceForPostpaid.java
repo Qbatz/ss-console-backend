@@ -43,7 +43,7 @@ public class GenerateInvoiceForPostpaid {
     @Autowired
     private NotificationService notificationService;
     @Autowired
-    private CustomerWalletService customerWalletHistoryService;
+    private CustomerWalletHistoryService customerWalletHistoryService;
     @Autowired
     private RecurringTrackerService recurringTrackerService;
 

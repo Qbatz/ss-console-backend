@@ -13,7 +13,7 @@ public class ElectricityReadingsService {
     @Autowired
     private ElectricityReadingRepository electricityReadingRepository;
 
-    public List<ElectricityReadings> findByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds) {
+    public List<ElectricityReadings> findByHostelId(String hostelId) {
         return electricityReadingRepository.findByHostelId(hostelId);
     }
 

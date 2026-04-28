@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface LoginHistoryRepository extends JpaRepository<LoginHistory, Long> {
@@ -24,4 +25,6 @@ public interface LoginHistoryRepository extends JpaRepository<LoginHistory, Long
                     AND lh.login_at = latest.max_login_at
             """, nativeQuery = true)
     List<LoginHistory> loginHistoryByParentId(@Param("parentId") List<String> parentId);
+
+    List<LoginHistory> findAllByUserIdIn(Set<String> userIds);
 }

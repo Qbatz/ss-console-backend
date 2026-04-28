@@ -17,4 +17,8 @@ public class AmenitiesService {
         return amenitiesRepository
                 .findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
     }
+
+    public void deleteAll(List<AmenitiesV1> listAmenities) {
+        amenitiesRepository.deleteAll(listAmenities);
+    }
 }

@@ -34,4 +34,8 @@ public class BankTransactionService {
         List<BankTransactionsV1> listBankTransactions = bankTransactionRepositories.findBySourceIdIn(expensesId);
         bankTransactionRepositories.deleteAll(listBankTransactions);
     }
+
+    public void deleteAll(List<BankTransactionsV1> bankTransactions) {
+        bankTransactionRepositories.deleteAll(bankTransactions);
+    }
 }

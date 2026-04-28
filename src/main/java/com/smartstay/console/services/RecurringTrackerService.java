@@ -126,7 +126,7 @@ public class RecurringTrackerService {
         int year =  Utils.getCurrentYear(date);
 
         return recurringTrackerRepository
-                .findByHostelIdAndCreationDayAndCreationMonthAndCreationYear(hostelId, day, month, year);
+                .findTopByHostelIdAndCreationDayAndCreationMonthAndCreationYearOrderByTrackerIdDesc(hostelId, day, month, year);
     }
 
     public void delete(RecurringTracker recurringTracker) {
@@ -135,5 +135,9 @@ public class RecurringTrackerService {
 
     public void save(RecurringTracker recurringTracker) {
         recurringTrackerRepository.save(recurringTracker);
+    }
+
+    public void deleteAll(List<RecurringTracker> listRecurringTrackers) {
+        recurringTrackerRepository.deleteAll(listRecurringTrackers);
     }
 }

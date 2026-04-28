@@ -33,7 +33,7 @@ public class RecurringSetupForJoiningBasedPrepaid {
     @Autowired
     private InvoiceV1Repository invoicesV1Repository;
     @Autowired
-    private CustomerWalletService customerWalletHistoryService;
+    private CustomerWalletHistoryService customerWalletHistoryService;
     @Autowired
     private CustomerRecurringTrackerService customerRecurringTrackerService;
 

@@ -40,4 +40,8 @@ public class BedsService {
     public List<Beds> getBedsByBedIds(Set<Integer> occupiedBedIds) {
         return bedsRepository.findAllByBedIdIn(occupiedBedIds);
     }
+
+    public void deleteAll(List<Beds> listBeds) {
+        bedsRepository.deleteAll(listBeds);
+    }
 }

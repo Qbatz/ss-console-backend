@@ -28,5 +28,4 @@ public class RentHistory {
     @JoinColumn(name = "booking_id")
     @JsonIgnore
     private BookingsV1 booking;
-
 }
