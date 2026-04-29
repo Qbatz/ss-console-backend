@@ -32,8 +32,11 @@ public class UserActivitiesService {
                 .getContent();
     }
 
-    public List<UserActivities> getActivitiesByUserId(String userId){
-        return userActivitiesRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+    public List<UserActivities> getLimitedActivitiesByUserId(String userId, int size){
+        Pageable pageable = PageRequest.of(0, size);
+        return userActivitiesRepository
+                .findAllByUserIdOrderByCreatedAtDesc(userId, pageable)
+                .getContent();
     }
 
     public Page<UserActivities> getPaginatedActivitiesByHostelId(String hostelId, Pageable pageable){

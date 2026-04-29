@@ -557,7 +557,7 @@ public class HostelsService {
                     return new UserActivitiesResponse(
                             activity.getActivityId(), activity.getDescription(), activity.getUserId(), userName,
                             Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
-                            activity.getSource(), activity.getActivityType());
+                            activity.getSource(), activity.getActivityType(), activity.getPlatform());
                 }).toList();
 
         Map<String, Object> response = new HashMap<>();

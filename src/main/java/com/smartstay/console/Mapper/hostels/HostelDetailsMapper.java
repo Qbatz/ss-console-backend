@@ -295,7 +295,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                     return new UserActivitiesResponse(
                             activity.getActivityId(), activity.getDescription(), activity.getUserId(), userName,
                             Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
-                            activity.getSource(), activity.getActivityType()
+                            activity.getSource(), activity.getActivityType(), activity.getPlatform()
                     );
                 }).toList();
 
