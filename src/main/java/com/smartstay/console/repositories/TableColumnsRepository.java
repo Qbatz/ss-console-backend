@@ -25,4 +25,6 @@ public interface TableColumnsRepository extends JpaRepository<TableColumns, Long
     Page<String> findDistinctHostelIds(Set<String> hostelIds, Pageable pageable);
 
     List<TableColumns> findAllByHostelIdIn(Set<String> hostelIds);
+
+    TableColumns findByHostelIdAndUserIdAndModuleName(String hostelId, String userId, String moduleName);
 }

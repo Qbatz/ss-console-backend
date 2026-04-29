@@ -65,6 +65,8 @@ public class Utils {
     public static final String DEMO_REQUEST_STATUS_NOT_FOUND = "Demo request status not found";
     public static final String NO_CUSTOMER_FOUND = "No tenant found";
     public static final String USER_NOT_FOUND = "User not found";
+    public static final String TABLE_COLUMN_NOT_FOUND = "Table column not found";
+    public static final String FILTER_OPTION_NOT_FOUND = "Filter option not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -103,6 +105,7 @@ public class Utils {
     public static final String PAYMENT_ATTACHMENT_REQUIRES = "Payment attachment is required";
     public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
     public static final String PAID_BY_REQUIRED = "Paid by required";
+    public static final String FIELD_NAME_IS_REQUIRED = "Field name is required";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
@@ -114,6 +117,10 @@ public class Utils {
     public static final String CANNOT_EXTEND_FREE_TRIAL_ANY_MORE = "Cannot extend free trial anymore";
     public static final String THIS_USER_IS_NOT_AN_OWNER = "This user is not an owner";
     public static final String FILE_UPLOAD_FAILED = "File upload failed";
+    public static final String COLUMNS_CAN_NOT_BE_EMPTY = "Columns can not be empty";
+    public static final String COLUMN_FILTER_CAN_NOT_BE_NULL = "Column filter cannot be null";
+    public static final String ORDER_CAN_NOT_BE_NEGATIVE = "Order cannot be negative";
+    public static final String AT_LEAST_ONE_COLUMN_NEEDS_TO_BE_SELECTED = "At least one column must be selected";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {

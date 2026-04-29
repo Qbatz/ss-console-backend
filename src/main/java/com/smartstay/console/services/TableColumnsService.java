@@ -1,14 +1,18 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.config.Authentication;
-import com.smartstay.console.dao.Agent;
-import com.smartstay.console.dao.HostelV1;
-import com.smartstay.console.dao.TableColumns;
-import com.smartstay.console.dao.Users;
+import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.tableColumns.TableColumnsSnapshot;
+import com.smartstay.console.ennum.ActivityType;
+import com.smartstay.console.ennum.FilterOptionsModule;
+import com.smartstay.console.ennum.Source;
+import com.smartstay.console.payloads.tableColumns.EditTableColumnsPayload;
+import com.smartstay.console.payloads.tableColumns.ResetTableColumnsPayload;
 import com.smartstay.console.repositories.TableColumnsRepository;
 import com.smartstay.console.responses.tableColumns.TableColumnsHostelResponse;
 import com.smartstay.console.responses.tableColumns.TableColumnsResponse;
 import com.smartstay.console.responses.tableColumns.TableColumnsUserResponse;
+import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -36,6 +40,8 @@ public class TableColumnsService {
     private HostelService hostelService;
     @Autowired
     private UsersService usersService;
+    @Autowired
+    private FilterOptionsService filterOptionsService;
 
     public void deleteAll(List<TableColumns> tableColumns) {
         tableColumnsRepository.deleteAll(tableColumns);
@@ -204,5 +210,157 @@ public class TableColumnsService {
         response.put("totalPages", hostelIdsPage.getTotalPages());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateTableColumns(EditTableColumnsPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        List<ColumnFilters> columns = payload.columns();
+        if (columns == null || columns.isEmpty()) {
+            return new ResponseEntity<>(Utils.COLUMNS_CAN_NOT_BE_EMPTY, HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            validateColumns(columns);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+
+        HostelV1 hostel = hostelService.getHostelInfo(payload.hostelId());
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Users user = usersService.getUserById(payload.userId());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        String moduleName;
+        try {
+            moduleName = FilterOptionsModule.valueOf(payload.moduleName()).name();
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return new ResponseEntity<>("Invalid module name: " + payload.moduleName(), HttpStatus.BAD_REQUEST);
+        }
+
+        TableColumns tableColumn = tableColumnsRepository
+                .findByHostelIdAndUserIdAndModuleName(payload.hostelId(), payload.userId(), moduleName);
+        if (tableColumn == null) {
+            return new ResponseEntity<>(Utils.TABLE_COLUMN_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        TableColumnsSnapshot oldSnapshot = SnapshotUtility.toSnapshot(tableColumn);
+
+        tableColumn.setColumns(columns);
+        tableColumn.setUpdatedAt(new Date());
+
+        tableColumn = tableColumnsRepository.save(tableColumn);
+
+        TableColumnsSnapshot newSnapshot = SnapshotUtility.toSnapshot(tableColumn);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.TABLE_COLUMNS,
+                String.valueOf(tableColumn.getColumnId()), oldSnapshot, newSnapshot);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> resetTableColumns(ResetTableColumnsPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        HostelV1 hostel = hostelService.getHostelInfo(payload.hostelId());
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Users user = usersService.getUserById(payload.userId());
+        if (user == null) {
+            return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        String moduleName;
+        try {
+            moduleName = FilterOptionsModule.valueOf(payload.moduleName()).name();
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return new ResponseEntity<>("Invalid module name: " + payload.moduleName(), HttpStatus.BAD_REQUEST);
+        }
+
+        FilterOptions filterOptions = filterOptionsService.getByModuleName(moduleName);
+        if (filterOptions == null) {
+            return new ResponseEntity<>(Utils.FILTER_OPTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<ColumnFilters> columns = filterOptions.getFilterOptions();
+
+        TableColumns tableColumn = tableColumnsRepository
+                .findByHostelIdAndUserIdAndModuleName(payload.hostelId(), payload.userId(), moduleName);
+        if (tableColumn == null) {
+            return new ResponseEntity<>(Utils.TABLE_COLUMN_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        TableColumnsSnapshot oldSnapshot = SnapshotUtility.toSnapshot(tableColumn);
+
+        tableColumn.setColumns(columns);
+        tableColumn.setUpdatedAt(new Date());
+
+        tableColumn = tableColumnsRepository.save(tableColumn);
+
+        TableColumnsSnapshot newSnapshot = SnapshotUtility.toSnapshot(tableColumn);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.TABLE_COLUMNS,
+                String.valueOf(tableColumn.getColumnId()), oldSnapshot, newSnapshot);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    private void validateColumns(List<ColumnFilters> columns) {
+
+        Set<Integer> orders = new HashSet<>();
+
+        boolean hasSelectedColumn = false;
+
+        for (ColumnFilters column : columns) {
+
+            if (column == null) {
+                throw new IllegalArgumentException(Utils.COLUMN_FILTER_CAN_NOT_BE_NULL);
+            }
+
+            if (column.getFieldName() == null || column.getFieldName().isBlank()) {
+                throw new IllegalArgumentException(Utils.FIELD_NAME_IS_REQUIRED);
+            }
+
+            if (column.getOrder() < 0) {
+                throw new IllegalArgumentException(Utils.ORDER_CAN_NOT_BE_NEGATIVE);
+            }
+
+            if (!orders.add(column.getOrder())) {
+                throw new IllegalArgumentException(
+                        "Duplicate column order: " + column.getOrder()
+                );
+            }
+
+            if (column.isSelected()) {
+                hasSelectedColumn = true;
+            }
+        }
+
+        if (!hasSelectedColumn) {
+            throw new IllegalArgumentException(Utils.AT_LEAST_ONE_COLUMN_NEEDS_TO_BE_SELECTED);
+        }
     }
 }
