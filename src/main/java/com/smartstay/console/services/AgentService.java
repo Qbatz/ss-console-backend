@@ -4,9 +4,7 @@ import com.smartstay.console.Mapper.agent.AgentActivitiesResMapper;
 import com.smartstay.console.Mapper.agent.AgentDetailsResMapper;
 import com.smartstay.console.Mapper.agent.AgentResMapper;
 import com.smartstay.console.config.Authentication;
-import com.smartstay.console.dao.Agent;
-import com.smartstay.console.dao.AgentActivities;
-import com.smartstay.console.dao.AgentRoles;
+import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.agent.AgentSnapshot;
 import com.smartstay.console.dto.agent.RoleCountProjection;
 import com.smartstay.console.dto.zoho.ZohoUserDetails;
@@ -18,18 +16,17 @@ import com.smartstay.console.payloads.agent.AddMockAgent;
 import com.smartstay.console.payloads.roles.RoleIdPayload;
 import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.responses.agents.*;
+import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,6 +40,11 @@ public class AgentService {
     private Authentication authentication;
     @Autowired
     private AgentActivitiesService agentActivitiesService;
+    @Autowired
+    @Lazy
+    private HostelRelationalAgentService hostelRelationalAgentService;
+    @Autowired
+    private HostelService hostelService;
 
     public Agent findAgentByEmail(String agentEmail) {
         return agentRepository.findByAgentEmailId(agentEmail);
@@ -399,10 +401,23 @@ public class AgentService {
 
         List<AgentActivities> agentActivities = agentActivitiesService
                 .getLimitedActivitiesByAgentId(agentId, 50);
+        List<HostelRelationalAgent> hostelRelations = hostelRelationalAgentService
+                .getByAgentId(agentId);
 
-        Set<String> agentIds = agentActivities.stream()
-                .map(AgentActivities::getAgentId)
-                .collect(Collectors.toSet());
+        Set<String> agentIds = new HashSet<>();
+        for (AgentActivities a : agentActivities) {
+            if (a.getAgentId() != null){
+                agentIds.add(a.getAgentId());
+            }
+        }
+        for (HostelRelationalAgent hostelRelational : hostelRelations) {
+            if (hostelRelational.getAgentId() != null){
+                agentIds.add(hostelRelational.getAgentId());
+            }
+            if (hostelRelational.getCreatedBy() != null){
+                agentIds.add(hostelRelational.getCreatedBy());
+            }
+        }
 
         List<Agent> agents = agentRepository
                 .findAllByAgentIdIn(agentIds);
@@ -424,8 +439,39 @@ public class AgentService {
             updatedBy = agentRepository.findByAgentId(inputAgent.getUpdatedBy());
         }
 
+        Set<String> hostelIds = hostelRelations.stream()
+                .map(HostelRelationalAgent::getHostelId)
+                .collect(Collectors.toSet());
+
+        List<HostelV1> hostels = hostelService.getHostelsByHostelIds(hostelIds);
+        Map<String, HostelV1> hostelMap = hostels.stream()
+                .collect(Collectors.toMap(HostelV1::getHostelId,
+                        a -> a, (a, b) -> b));
+
+        List<RelationalAgentResponse> hostelRelationsRes = hostelRelations.stream()
+                .map(hostelRelationalAgent -> {
+                    String hostelName = null;
+                    HostelV1 hostel = hostelMap.getOrDefault(hostelRelationalAgent.getHostelId(), null);
+                    if (hostel != null){
+                        hostelName = hostel.getHostelName();
+                    }
+                    String relationalAgentName = null;
+                    Agent relationalAgent = agentMap.getOrDefault(hostelRelationalAgent.getAgentId(), null);
+                    if (relationalAgent != null){
+                        relationalAgentName = Utils.getFullName(relationalAgent.getFirstName(), relationalAgent.getLastName());
+                    }
+                    String createdByAgentName = null;
+                    Agent createdByAgent = agentMap.getOrDefault(hostelRelationalAgent.getCreatedBy(), null);
+                    if (createdByAgent != null){
+                        createdByAgentName = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
+                    }
+                    return new RelationalAgentResponse(hostelRelationalAgent.getId(), hostelName, relationalAgentName,
+                            hostelRelationalAgent.getReason().name(), hostelRelationalAgent.getComments(), createdByAgentName,
+                            Utils.dateToString(hostelRelationalAgent.getCreatedAt()), Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
+                }).toList();
+
         AgentDetailsRes response = new AgentDetailsResMapper(
-                agentActivitiesRes, agentRole, createdBy, updatedBy
+                agentActivitiesRes, agentRole, createdBy, updatedBy, hostelRelationsRes
         ).apply(inputAgent);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
