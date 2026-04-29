@@ -15,6 +15,7 @@ import com.smartstay.console.responses.tableColumns.TableColumnsUserResponse;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +40,7 @@ public class TableColumnsService {
     @Autowired
     private HostelService hostelService;
     @Autowired
+    @Lazy
     private UsersService usersService;
     @Autowired
     private FilterOptionsService filterOptionsService;

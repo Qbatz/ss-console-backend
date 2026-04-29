@@ -109,6 +109,7 @@ public class AgentActivityUtil {
             case DEMO_REQUEST -> "Updated a demo request";
             case PLANS ->  "Updated a plan";
             case TABLE_COLUMNS -> "Updated a table column";
+            case OWNERS -> "Updated an owner";
             default -> "Updated successfully";
         };
     }

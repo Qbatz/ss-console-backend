@@ -205,23 +205,23 @@ public class HostelsService {
         }
 
         Users owner = usersService.getOwner(hostel.getParentId());
-        OwnerInfo ownerInfo = new UserOnerInfoMapper().apply(owner);
-
         List<Users> masters = usersService.getMasters(hostel);
-        Map<Users, Address> mastersAddressMap = masters.stream()
-                .collect(Collectors.toMap(master -> master, Users::getAddress));
+        List<Users> staffs = usersService.getStaffs(hostel);
+
+        List<TableColumns> tableColumns = tableColumnsService.findByHostelId(hostelId);
+        Map<String, List<TableColumns>> tableColumnMap = tableColumns.stream()
+                .collect(Collectors.groupingBy(TableColumns::getUserId));
+
+        UsersResponse ownerRes = new UsersResponseMapper(
+                tableColumnMap.getOrDefault(owner.getUserId(), null), hostel
+        ).apply(owner);
         List<UsersResponse> mastersRes = masters.stream()
                 .map(users -> new UsersResponseMapper(
-                        mastersAddressMap.get(users)
+                        tableColumnMap.getOrDefault(users.getUserId(), null), hostel
                 ).apply(users)).toList();
-
-        List<Users> staffs = usersService.getStaffs(hostel);
-//        Map<Users, Address> staffsAddressMap = staffs.stream()
-//                .collect(Collectors.toMap(staff -> staff, Users::getAddress));
         List<UsersResponse> staffsRes = staffs.stream()
                 .map(users -> new UsersResponseMapper(
-//                        staffsAddressMap.get(users)
-                        null
+                        tableColumnMap.getOrDefault(users.getUserId(), null), hostel
                 ).apply(users)).toList();
 
         List<Rooms> rooms = roomsService.getRoomsByHostelId(hostelId);
@@ -469,7 +469,7 @@ public class HostelsService {
         }
 
         HostelResponse hostelDetails = new HostelDetailsMapper(
-                ownerInfo, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
+                ownerRes, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
                 noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
                 sharingTypeList, amenities, customerResponses, subscriptions, mastersRes, staffsRes,
                 activities, userLookup, trialPlans, expandableTrialPlans, billingDatesMap, recurringHistory,
