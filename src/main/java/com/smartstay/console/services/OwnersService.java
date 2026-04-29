@@ -311,7 +311,7 @@ public class OwnersService {
         Map<Integer, HotelType> hotelTypeMap = hotelTypes.stream()
                 .collect(Collectors.toMap(HotelType::getId, hotelType -> hotelType));
 
-        List<UserActivities> userActivities = userActivitiesService.getActivitiesByUserId(ownerId);
+        List<UserActivities> userActivities = userActivitiesService.getLimitedActivitiesByUserId(ownerId, 50);
 
         OwnerDetailsResponse response = new OwnerDetailsMapper(hostels, userActivities, hotelTypeMap)
                 .apply(owner);

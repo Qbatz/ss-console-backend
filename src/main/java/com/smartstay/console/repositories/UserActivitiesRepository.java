@@ -42,7 +42,7 @@ public interface UserActivitiesRepository extends JpaRepository<UserActivities, 
 
     Page<UserActivities> findByHostelIdOrderByCreatedAtDesc(String hostelId, Pageable pageable);
 
-    List<UserActivities> findAllByUserIdOrderByCreatedAtDesc(String userId);
+    Page<UserActivities> findAllByUserIdOrderByCreatedAtDesc(String userId, Pageable pageable);
 
     Page<UserActivities> findByHostelIdAndUserIdInOrderByCreatedAtDesc(String hostelId, Set<String> userIds, Pageable pageable);
 

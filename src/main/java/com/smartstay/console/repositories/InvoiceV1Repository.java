@@ -30,5 +30,12 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
     InvoicesV1 findLatestInvoiceByPrefix(@Param("prefix") String prefix,
                                          @Param("hostelId") String hostelId);
 
-    List<InvoicesV1> findAllByHostelIdAndInvoiceStartDate(String hostelId, Date startDate);
+    @Query("""
+            SELECT i FROM invoicesv1 i
+            WHERE i.hostelId = :hostelId
+                AND DATE(i.invoiceStartDate) >= DATE(:startDate)
+                AND i.invoiceType in ('RENT', 'REASSIGN_RENT')
+            """)
+    List<InvoicesV1> findByHostelIdAndStartDate(@Param("hostelId") String hostelId,
+                                                @Param("startDate") Date startDate);
 }

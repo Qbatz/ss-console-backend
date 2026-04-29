@@ -2,6 +2,7 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.dao.*;
 import com.smartstay.console.repositories.InvoiceV1Repository;
+import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -44,7 +45,7 @@ public class InvoiceV1Service {
     public void deleteInvoicesByHostelIdAndStartDate(String hostelId, Date startDate) {
 
         List<InvoicesV1> invoices = invoiceV1Repository
-                .findAllByHostelIdAndInvoiceStartDate(hostelId, startDate);
+                .findByHostelIdAndStartDate(hostelId, startDate);
 
         Set<String> invoiceIds = invoices.stream()
                 .map(InvoicesV1::getInvoiceId)

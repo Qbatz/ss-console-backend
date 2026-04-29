@@ -56,7 +56,7 @@ public class OwnerDetailsMapper implements Function<Users, OwnerDetailsResponse>
                 .map(activity -> new UserActivitiesResponse(
                         activity.getActivityId(), activity.getDescription(), activity.getUserId(), fullName,
                         Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
-                        activity.getSource(), activity.getActivityType()
+                        activity.getSource(), activity.getActivityType(), activity.getPlatform()
                 )).toList();
 
 

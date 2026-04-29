@@ -557,7 +557,7 @@ public class HostelsService {
                     return new UserActivitiesResponse(
                             activity.getActivityId(), activity.getDescription(), activity.getUserId(), userName,
                             Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
-                            activity.getSource(), activity.getActivityType());
+                            activity.getSource(), activity.getActivityType(), activity.getPlatform());
                 }).toList();
 
         Map<String, Object> response = new HashMap<>();
@@ -597,6 +597,7 @@ public class HostelsService {
                 .stream()
                 .map(Customers::getCustomerId)
                 .toList();
+        Set<String> customerIdsSet = new HashSet<>(customerIds);
 
         Set<String> allXuids = customersList.stream()
                 .map(Customers::getXuid)
@@ -618,7 +619,7 @@ public class HostelsService {
                 .findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<BedChangeRequest> listBedChangeRequests = bedChangeRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
-        List<CustomerNotifications> listCustomerNotifications = customerNotificationsService.getByUserIds((Set<String>) customerIds);
+        List<CustomerNotifications> listCustomerNotifications = customerNotificationsService.getByUserIds(customerIdsSet);
         List<CustomerBillingRules> listCustomerBillingRules = customerBillingRulesService
                 .findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomerRecurringTracker> listCustomerRecurringTrackers = customerRecurringTrackerService
@@ -790,7 +791,7 @@ public class HostelsService {
             recurringTrackerService.deleteAll(listRecurringTrackers);
         }
 
-        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.DELETE, Source.HOSTEL,
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.RESET, Source.HOSTEL,
                 hostelId, snapshot, null);
     }
 
@@ -847,6 +848,8 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
+        HostelSnapshot oldHostel = SnapshotUtility.toSnapshot(hostel);
+
         try {
             resetHostel(hostel, agent);
         } catch (Exception e){
@@ -880,6 +883,9 @@ public class HostelsService {
         }
 
         hostelRepository.delete(hostel);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
+                hostelId, oldHostel, null);
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
@@ -996,7 +1002,7 @@ public class HostelsService {
         List<UserActivities> listActivities = userActivitiesService
                 .findLatestActivities(hostelIds);
         List<LoginHistory> loginHistories = loginHistoryService
-                .getLoginHistoriesByHostelIds(parentIds);
+                .getLoginHistoriesByParentIds(parentIds);
 
         Map<String, OwnerInfo> ownerMap = ownerInfos.stream()
                 .collect(Collectors.toMap(OwnerInfo::parentId, Function.identity(),
@@ -1071,7 +1077,7 @@ public class HostelsService {
                 .findLatestActivities(new ArrayList<>(hostelIds));
 
         List<LoginHistory> loginHistories = loginHistoryService
-                .getLoginHistoriesByHostelIds(new ArrayList<>(parentIds));
+                .getLoginHistoriesByParentIds(new ArrayList<>(parentIds));
 
         Map<String, OwnerInfo> ownerMap = ownerInfos.stream()
                 .collect(Collectors.toMap(OwnerInfo::parentId, Function.identity(),
@@ -2764,11 +2770,11 @@ public class HostelsService {
                     recurringTracker.setCreationYear(year);
 
                     recurringTrackerService.save(recurringTracker);
+                }
 
-                    if (payload.shouldDeleteInvoices()){
-                        invoiceV1Service.deleteInvoicesByHostelIdAndStartDate(
-                                hostelId, billingDates.currentBillStartDate());
-                    }
+                if (payload.shouldDeleteInvoices()){
+                    invoiceV1Service.deleteInvoicesByHostelIdAndStartDate(
+                            hostelId, billingDates.currentBillStartDate());
                 }
             }
         }
