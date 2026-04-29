@@ -25,6 +25,7 @@ import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerRecTrackerRes;
 import com.smartstay.console.responses.customers.CustomerRecurringResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
+import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
@@ -171,6 +172,8 @@ public class HostelsService {
     private VendorService vendorService;
     @Autowired
     private TableColumnsService tableColumnsService;
+    @Autowired
+    private HostelRelationalAgentService hostelRelationalAgentService;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -400,6 +403,17 @@ public class HostelsService {
             customerIds.add(recurringTracker.getCustomerId());
         }
 
+        List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
+                .getByHostelId(hostelId);
+        for (HostelRelationalAgent relationalAgent : relationalAgents) {
+            if (relationalAgent.getAgentId() != null){
+                createdByIds.add(relationalAgent.getAgentId());
+            }
+            if (relationalAgent.getCreatedBy() != null){
+                createdByIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
         List<Agent> agents = createdByIds.isEmpty()
                 ? Collections.emptyList()
                 : agentService.getAgentsByIds(createdByIds);
@@ -468,12 +482,32 @@ public class HostelsService {
             }
         }
 
+        List<RelationalAgentResponse> relationalAgentResponses = relationalAgents.stream()
+                .sorted(Comparator.comparing(HostelRelationalAgent::getId).reversed())
+                .map(hostelRelationalAgent -> {
+                    String agentName = null;
+                    String createdBy = null;
+                    if (agentMap.get(hostelRelationalAgent.getAgentId()) != null) {
+                        Agent relationalAgent = agentMap.get(hostelRelationalAgent.getAgentId());
+                        agentName = Utils.getFullName(relationalAgent.getFirstName(), relationalAgent.getLastName());
+                    }
+                    if (agentMap.get(hostelRelationalAgent.getCreatedBy()) != null) {
+                        Agent createdByAgent = agentMap.get(hostelRelationalAgent.getCreatedBy());
+                        createdBy = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
+                    }
+                    return new RelationalAgentResponse(hostelRelationalAgent.getId(), hostel.getHostelName(),
+                            agentName, hostelRelationalAgent.getReason().name(), hostelRelationalAgent.getComments(),
+                            createdBy, Utils.dateToString(hostelRelationalAgent.getCreatedAt()),
+                            Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
+                }).toList();
+
         HostelResponse hostelDetails = new HostelDetailsMapper(
                 ownerRes, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
                 noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
                 sharingTypeList, amenities, customerResponses, subscriptions, mastersRes, staffsRes,
                 activities, userLookup, trialPlans, expandableTrialPlans, billingDatesMap, recurringHistory,
-                customerRecurringHistory, recurringStatus, currentBillLastRecDate, currentBillingRules
+                customerRecurringHistory, recurringStatus, currentBillLastRecDate, currentBillingRules,
+                relationalAgentResponses
         ).apply(hostel);
 
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);
@@ -557,7 +591,7 @@ public class HostelsService {
                     return new UserActivitiesResponse(
                             activity.getActivityId(), activity.getDescription(), activity.getUserId(), userName,
                             Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
-                            activity.getSource(), activity.getActivityType());
+                            activity.getSource(), activity.getActivityType(), activity.getPlatform());
                 }).toList();
 
         Map<String, Object> response = new HashMap<>();
@@ -597,6 +631,7 @@ public class HostelsService {
                 .stream()
                 .map(Customers::getCustomerId)
                 .toList();
+        Set<String> customerIdsSet = new HashSet<>(customerIds);
 
         Set<String> allXuids = customersList.stream()
                 .map(Customers::getXuid)
@@ -618,7 +653,7 @@ public class HostelsService {
                 .findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<BedChangeRequest> listBedChangeRequests = bedChangeRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
-        List<CustomerNotifications> listCustomerNotifications = customerNotificationsService.getByUserIds((Set<String>) customerIds);
+        List<CustomerNotifications> listCustomerNotifications = customerNotificationsService.getByUserIds(customerIdsSet);
         List<CustomerBillingRules> listCustomerBillingRules = customerBillingRulesService
                 .findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomerRecurringTracker> listCustomerRecurringTrackers = customerRecurringTrackerService
@@ -790,7 +825,7 @@ public class HostelsService {
             recurringTrackerService.deleteAll(listRecurringTrackers);
         }
 
-        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.DELETE, Source.HOSTEL,
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.RESET, Source.HOSTEL,
                 hostelId, snapshot, null);
     }
 
@@ -847,6 +882,8 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
+        HostelSnapshot oldHostel = SnapshotUtility.toSnapshot(hostel);
+
         try {
             resetHostel(hostel, agent);
         } catch (Exception e){
@@ -880,6 +917,9 @@ public class HostelsService {
         }
 
         hostelRepository.delete(hostel);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL,
+                hostelId, oldHostel, null);
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
@@ -996,7 +1036,7 @@ public class HostelsService {
         List<UserActivities> listActivities = userActivitiesService
                 .findLatestActivities(hostelIds);
         List<LoginHistory> loginHistories = loginHistoryService
-                .getLoginHistoriesByHostelIds(parentIds);
+                .getLoginHistoriesByParentIds(parentIds);
 
         Map<String, OwnerInfo> ownerMap = ownerInfos.stream()
                 .collect(Collectors.toMap(OwnerInfo::parentId, Function.identity(),
@@ -1016,6 +1056,26 @@ public class HostelsService {
         Map<String, List<Subscription>> subscriptionHostelMap = subscriptions.stream()
                 .collect(Collectors.groupingBy(Subscription::getHostelId));
 
+        List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
+                .getByHostelIds(new HashSet<>(hostelIds));
+        Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
+                .collect(Collectors.groupingBy(HostelRelationalAgent::getHostelId));
+
+        Set<String> agentIds = new HashSet<>();
+        for (HostelRelationalAgent relationalAgent : relationalAgents) {
+            if (relationalAgent.getAgentId() != null){
+                agentIds.add(relationalAgent.getAgentId());
+            }
+            if (relationalAgent.getCreatedBy() != null){
+                agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        a -> a, (a, b) -> a));
+
         List<HostelList> hostelsList = listHostels
                 .stream()
                 .map(i -> new HostelsListMapper(
@@ -1024,7 +1084,9 @@ public class HostelsService {
                         loginMap.getOrDefault(i.getParentId(), null),
                         trialPlans,
                         expandableTrialPlans,
-                        subscriptionHostelMap.getOrDefault(i.getHostelId(), null)
+                        subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
+                        relationalAgentMap.getOrDefault(i.getHostelId(), null),
+                        agentMap
                 ).apply(i))
                 .toList();
 
@@ -1071,7 +1133,7 @@ public class HostelsService {
                 .findLatestActivities(new ArrayList<>(hostelIds));
 
         List<LoginHistory> loginHistories = loginHistoryService
-                .getLoginHistoriesByHostelIds(new ArrayList<>(parentIds));
+                .getLoginHistoriesByParentIds(new ArrayList<>(parentIds));
 
         Map<String, OwnerInfo> ownerMap = ownerInfos.stream()
                 .collect(Collectors.toMap(OwnerInfo::parentId, Function.identity(),
@@ -1093,6 +1155,26 @@ public class HostelsService {
         Map<String, List<Subscription>> subscriptionHostelMap = subscriptions.stream()
                 .collect(Collectors.groupingBy(Subscription::getHostelId));
 
+        List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
+                .getByHostelIds(new HashSet<>(hostelIds));
+        Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
+                .collect(Collectors.groupingBy(HostelRelationalAgent::getHostelId));
+
+        Set<String> agentIds = new HashSet<>();
+        for (HostelRelationalAgent relationalAgent : relationalAgents) {
+            if (relationalAgent.getAgentId() != null){
+                agentIds.add(relationalAgent.getAgentId());
+            }
+            if (relationalAgent.getCreatedBy() != null){
+                agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        a -> a, (a, b) -> a));
+
         return listHostels
                 .stream()
                 .map(i -> new HostelsListMapper(
@@ -1101,7 +1183,9 @@ public class HostelsService {
                         loginMap.getOrDefault(i.getParentId(), null),
                         trialPlans,
                         expandableTrialPlans,
-                        subscriptionHostelMap.getOrDefault(i.getHostelId(), null)
+                        subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
+                        relationalAgentMap.getOrDefault(i.getHostelId(), null),
+                        agentMap
                 ).apply(i))
                 .toList();
     }
@@ -2764,11 +2848,11 @@ public class HostelsService {
                     recurringTracker.setCreationYear(year);
 
                     recurringTrackerService.save(recurringTracker);
+                }
 
-                    if (payload.shouldDeleteInvoices()){
-                        invoiceV1Service.deleteInvoicesByHostelIdAndStartDate(
-                                hostelId, billingDates.currentBillStartDate());
-                    }
+                if (payload.shouldDeleteInvoices()){
+                    invoiceV1Service.deleteInvoicesByHostelIdAndStartDate(
+                            hostelId, billingDates.currentBillStartDate());
                 }
             }
         }

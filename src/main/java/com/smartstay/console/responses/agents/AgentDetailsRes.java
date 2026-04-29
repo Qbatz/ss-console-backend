@@ -1,5 +1,7 @@
 package com.smartstay.console.responses.agents;
 
+import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
+
 import java.util.List;
 
 public record AgentDetailsRes(String agentId,
@@ -20,5 +22,6 @@ public record AgentDetailsRes(String agentId,
                               String updatedAtDate,
                               String updatedAtTime,
                               String updatedBy,
-                              List<AgentActivitiesRes> agentActivities) {
+                              List<AgentActivitiesRes> agentActivities,
+                              List<RelationalAgentResponse> hostelRelations) {
 }

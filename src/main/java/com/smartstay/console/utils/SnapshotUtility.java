@@ -1,6 +1,7 @@
 package com.smartstay.console.utils;
 
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dao.hostelRelationalAgent.HostelRelationalAgentSnapshot;
 import com.smartstay.console.dto.agent.AgentSnapshot;
 import com.smartstay.console.dto.customers.*;
 import com.smartstay.console.dto.demoRequest.DemoRequestCommentsSnapshot;
@@ -422,6 +423,21 @@ public class SnapshotUtility {
                 d.getRequestedTime(),
                 copyDate(d.getPresentedAt()),
                 comments
+        );
+    }
+
+    public static HostelRelationalAgentSnapshot toSnapshot(HostelRelationalAgent h) {
+
+        if (h == null) return null;
+
+        return new HostelRelationalAgentSnapshot(
+                h.getId(),
+                h.getHostelId(),
+                h.getAgentId(),
+                h.getReason(),
+                h.getComments(),
+                h.getCreatedBy(),
+                copyDate(h.getCreatedAt())
         );
     }
 

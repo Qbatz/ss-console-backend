@@ -7,5 +7,6 @@ public record UserActivitiesResponse(Long activityId,
                                      String activityDate,
                                      String activityTime,
                                      String source,
-                                     String activityType) {
+                                     String activityType,
+                                     String platform) {
 }

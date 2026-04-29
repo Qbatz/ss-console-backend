@@ -73,6 +73,7 @@ public class AgentActivityUtil {
             case SNAPSHOT_UPDATE -> getSnapshotUpdateDescription(source);
             case DEACTIVATE -> getDeactivateDescription(source);
             case REACTIVATE -> getReactivateDescription(source);
+            case RESET -> getResetDescription(source);
         };
     }
 
@@ -88,6 +89,7 @@ public class AgentActivityUtil {
             case PLAN_FEATURES -> "Created a new plan features";
             case BILLING_RULES -> "Created a new billing rules";
             case DEMO_REQUEST_COMMENTS -> "Created a new demo request comment";
+            case HOSTEL_RELATIONAL_AGENT -> "Assigned hostel relational agent";
             default -> "Created successfully";
         };
     }
@@ -142,6 +144,13 @@ public class AgentActivityUtil {
             case PLAN_FEATURES -> "Deactivated a plan feature";
             case AGENT -> "Deactivated an agent";
             default -> "Deactivated successfully";
+        };
+    }
+
+    private static String getResetDescription(Source source) {
+        return switch (source) {
+            case HOSTEL ->  "Hostel has been reset";
+            default -> "Reset successfully";
         };
     }
 

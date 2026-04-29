@@ -5,6 +5,7 @@ import com.smartstay.console.responses.bills.BillingRulesResponse;
 import com.smartstay.console.responses.bills.BillingTypeResponse;
 import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerResponse;
+import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
 
@@ -57,6 +58,7 @@ public record HostelResponse(String hostelId,
                              boolean recurringStatus,
                              List<RecurringHistoryRes> recurringHistory,
                              List<CustomerRecHistoryRes> customerRecurringHistory,
-                             List<UserActivitiesResponse> activities
+                             List<UserActivitiesResponse> activities,
+                             List<RelationalAgentResponse> relationalAgents
 ) {
 }

@@ -10,6 +10,7 @@ import com.smartstay.console.responses.bills.BillingRulesResponse;
 import com.smartstay.console.responses.bills.BillingTypeResponse;
 import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerResponse;
+import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
@@ -46,6 +47,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
     boolean recurringStatus;
     Date currentBillLastRecDate;
     BillingRules currentBillingRules;
+    List<RelationalAgentResponse> relationalAgentResponses;
 
     public HostelDetailsMapper(UsersResponse owner,
                                int noOfFloors,
@@ -72,7 +74,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                                List<CustomerRecHistoryRes> customerRecurringHistory,
                                boolean recurringStatus,
                                Date currentBillLastRecDate,
-                               BillingRules currentBillingRules) {
+                               BillingRules currentBillingRules,
+                               List<RelationalAgentResponse> relationalAgentResponses) {
         this.owner = owner;
         this.noOfFloors = noOfFloors;
         this.noOfRooms = noOfRooms;
@@ -99,6 +102,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
         this.recurringStatus = recurringStatus;
         this.currentBillLastRecDate = currentBillLastRecDate;
         this.currentBillingRules = currentBillingRules;
+        this.relationalAgentResponses = relationalAgentResponses;
     }
 
     @Override
@@ -294,7 +298,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                     return new UserActivitiesResponse(
                             activity.getActivityId(), activity.getDescription(), activity.getUserId(), userName,
                             Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
-                            activity.getSource(), activity.getActivityType()
+                            activity.getSource(), activity.getActivityType(), activity.getPlatform()
                     );
                 }).toList();
 
@@ -384,6 +388,6 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                 tenantList, Utils.dateToString(hostelV1.getCreatedAt()), Utils.dateToTime(hostelV1.getCreatedAt()), owner, masters,
                 staffs, billingTypeRes, billingModelRes, currentBillingRulesRes, billingRules, ebConfig, currentSubRes, otherSubsRes,
                 subscriptionStatus, subscriptionRenewalTimeLeftDays, isSubscriptionActive, recurringStatus, recurringHistory,
-                customerRecurringHistory, activitiesRes);
+                customerRecurringHistory, activitiesRes, relationalAgentResponses);
     }
 }

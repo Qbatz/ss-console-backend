@@ -1,15 +1,13 @@
 package com.smartstay.console.Mapper.hostels;
 
 import com.smartstay.console.dao.*;
+import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
 import com.smartstay.console.responses.hostels.HostelList;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.utils.CountryUtils;
 import com.smartstay.console.utils.Utils;
 
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 
 public class HostelsListMapper implements Function<HostelV1, HostelList> {
@@ -20,19 +18,25 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
     List<Plans> trialPlans;
     List<Plans> expandableTrialPlans;
     List<Subscription> subscriptions;
+    List<HostelRelationalAgent> relationalAgents;
+    Map<String, Agent> agentMap;
 
     public HostelsListMapper(OwnerInfo owner,
                              UserActivities latestActivity,
                              LoginHistory lastLogin,
                              List<Plans> trialPlans,
                              List<Plans> expandableTrialPlans,
-                             List<Subscription> subscriptions) {
+                             List<Subscription> subscriptions,
+                             List<HostelRelationalAgent> relationalAgents,
+                             Map<String, Agent> agentMap) {
         this.owner = owner;
         this.latestActivity = latestActivity;
         this.lastLogin = lastLogin;
         this.trialPlans = trialPlans;
         this.expandableTrialPlans = expandableTrialPlans;
         this.subscriptions = subscriptions;
+        this.relationalAgents = relationalAgents;
+        this.agentMap = agentMap;
     }
 
     @Override
@@ -44,11 +48,11 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         String lastUpdateDateDisplay = null;
         String expiredOn = null;
         String expiringAt = null;
-        StringBuilder fullAddress = new StringBuilder();
+        String fullAddress = null;
         com.smartstay.console.responses.hostels.HostelPlan hp = null;
         boolean isSubscriptionActive = true;
         long noOfDaysSubscriptionActive = 0;
-        StringBuilder initials = new StringBuilder();
+        String initials = null;
         boolean isTrial = false;
         boolean canAddTrial = false;
         boolean canAddExpandableTrial = false;
@@ -69,47 +73,10 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
 
         }
 
-        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("")) {
-            fullAddress.append(hostelV1.getHouseNo());
-        }
-        if (hostelV1.getHouseNo() != null && !hostelV1.getHouseNo().trim().equalsIgnoreCase("") &&
-                hostelV1.getStreet() != null) {
-            fullAddress.append(", ");
-            fullAddress.append(hostelV1.getStreet());
-        }
-        else {
-            fullAddress.append(hostelV1.getStreet());
-        }
-        if (hostelV1.getCity() != null) {
-            if (fullAddress.isEmpty()) {
-                fullAddress.append(hostelV1.getCity());
-            }
-            else {
-                fullAddress.append(", ");
-                fullAddress.append(hostelV1.getCity());
-            }
-        }
-        if (hostelV1.getState() != null) {
-            if (fullAddress.isEmpty()) {
-                fullAddress.append(hostelV1.getState());
-            }
-            else {
-                fullAddress.append(", ");
-                fullAddress.append(hostelV1.getState());
-            }
-        }
+        fullAddress = Utils.buildFullAddress(hostelV1);
 
         if (hostelV1.getHostelName() != null) {
-            String[] arrName = hostelV1.getHostelName().split(" ");
-            if (arrName.length > 0) {
-                initials.append(arrName[0].toUpperCase().charAt(0));
-            }
-            if (arrName.length > 1) {
-                initials.append(arrName[arrName.length - 1].toUpperCase().charAt(0));
-            }
-            else {
-                initials.append(arrName[arrName.length - 1].toUpperCase().charAt(1));
-            }
+            initials = Utils.getInitials(hostelV1.getHostelName());
         }
 
         if (owner != null) {
@@ -204,6 +171,30 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
             canAddExpandableTrial = (subscriptionCount == 0) && (subPendingCount == 0);
         }
 
+        List<RelationalAgentResponse> relationalAgentResponses = new ArrayList<>();
+        if (relationalAgents != null) {
+            relationalAgentResponses = relationalAgents.stream()
+                    .sorted(Comparator.comparing(HostelRelationalAgent::getId).reversed())
+                    .map(hostelRelationalAgent -> {
+                        String agentName = null;
+                        String createdBy = null;
+                        if (agentMap != null) {
+                            if (agentMap.get(hostelRelationalAgent.getAgentId()) != null){
+                                Agent agent = agentMap.get(hostelRelationalAgent.getAgentId());
+                                agentName = Utils.getFullName(agent.getFirstName(), agent.getLastName());
+                            }
+                            if (agentMap.get(hostelRelationalAgent.getCreatedBy()) != null){
+                                Agent agent = agentMap.get(hostelRelationalAgent.getCreatedBy());
+                                createdBy = Utils.getFullName(agent.getFirstName(), agent.getLastName());
+                            }
+                        }
+                        return new RelationalAgentResponse(hostelRelationalAgent.getId(), hostelV1.getHostelName(),
+                                agentName, hostelRelationalAgent.getReason().name(), hostelRelationalAgent.getComments(),
+                                createdBy, Utils.dateToString(hostelRelationalAgent.getCreatedAt()),
+                                Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
+                    }).toList();
+        }
+
         return new HostelList(hostelV1.getHostelName(),
                 hostelV1.getHostelId(),
                 hostelV1.getMainImage(),
@@ -226,6 +217,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                 lastUpdateDateDisplay,
                 platform,
                 ownerInfo,
-                hp);
+                hp,
+                relationalAgentResponses);
     }
 }
