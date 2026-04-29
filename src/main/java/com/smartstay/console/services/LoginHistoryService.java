@@ -14,8 +14,8 @@ public class LoginHistoryService {
     @Autowired
     private LoginHistoryRepository loginHistoryRepository;
 
-    public List<LoginHistory> getLoginHistoriesByHostelIds(List<String> hostelIds) {
-        return loginHistoryRepository.loginHistoryByParentId(hostelIds);
+    public List<LoginHistory> getLoginHistoriesByParentIds(List<String> parentIds) {
+        return loginHistoryRepository.loginHistoryByParentId(parentIds);
     }
 
     public void deleteAll(List<LoginHistory> loginHistories) {

@@ -1002,7 +1002,7 @@ public class HostelsService {
         List<UserActivities> listActivities = userActivitiesService
                 .findLatestActivities(hostelIds);
         List<LoginHistory> loginHistories = loginHistoryService
-                .getLoginHistoriesByHostelIds(parentIds);
+                .getLoginHistoriesByParentIds(parentIds);
 
         Map<String, OwnerInfo> ownerMap = ownerInfos.stream()
                 .collect(Collectors.toMap(OwnerInfo::parentId, Function.identity(),
@@ -1077,7 +1077,7 @@ public class HostelsService {
                 .findLatestActivities(new ArrayList<>(hostelIds));
 
         List<LoginHistory> loginHistories = loginHistoryService
-                .getLoginHistoriesByHostelIds(new ArrayList<>(parentIds));
+                .getLoginHistoriesByParentIds(new ArrayList<>(parentIds));
 
         Map<String, OwnerInfo> ownerMap = ownerInfos.stream()
                 .collect(Collectors.toMap(OwnerInfo::parentId, Function.identity(),
