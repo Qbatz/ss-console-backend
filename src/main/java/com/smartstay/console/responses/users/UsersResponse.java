@@ -1,5 +1,9 @@
 package com.smartstay.console.responses.users;
 
+import com.smartstay.console.responses.tableColumns.TableColumnsResponse;
+
+import java.util.List;
+
 public record UsersResponse(String userId,
                             String parentId,
                             String firstName,
@@ -8,5 +12,6 @@ public record UsersResponse(String userId,
                             String initials,
                             String mobileNo,
                             String emailId,
-                            AddressResponse address) {
+                            AddressResponse address,
+                            List<TableColumnsResponse> tableColumns) {
 }

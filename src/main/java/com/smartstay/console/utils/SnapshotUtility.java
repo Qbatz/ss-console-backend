@@ -9,6 +9,8 @@ import com.smartstay.console.dto.demoRequest.DemoRequestSnapshot;
 import com.smartstay.console.dto.hostel.*;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
+import com.smartstay.console.dto.tableColumns.ColumnFiltersSnapshot;
+import com.smartstay.console.dto.tableColumns.TableColumnsSnapshot;
 import com.smartstay.console.dto.users.AddressSnapshot;
 import com.smartstay.console.dto.users.UserSnapshot;
 import com.smartstay.console.dto.users.UsersConfigSnapshot;
@@ -436,6 +438,32 @@ public class SnapshotUtility {
                 h.getComments(),
                 h.getCreatedBy(),
                 copyDate(h.getCreatedAt())
+        );
+    }
+
+    public static ColumnFiltersSnapshot toSnapshot(ColumnFilters c) {
+        if (c == null) return null;
+
+        return new ColumnFiltersSnapshot(
+                c.getOrder(),
+                c.getFieldName(),
+                c.isSelected()
+        );
+    }
+
+    public static TableColumnsSnapshot toSnapshot(TableColumns t) {
+
+        if (t == null) return null;
+
+        return new TableColumnsSnapshot(
+                t.getColumnId(),
+                t.getHostelId(),
+                t.getUserId(),
+                t.getModuleName(),
+                toSnapshotList(t.getColumns(), SnapshotUtility::toSnapshot),
+                t.isActive(),
+                copyDate(t.getCreatedAt()),
+                copyDate(t.getUpdatedAt())
         );
     }
 

@@ -18,11 +18,10 @@ import com.smartstay.console.utils.Utils;
 
 import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
 
-    OwnerInfo ownerInfo;
+    UsersResponse owner;
     int noOfFloors;
     int noOfRooms;
     int noOfBeds;
@@ -50,7 +49,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
     BillingRules currentBillingRules;
     List<RelationalAgentResponse> relationalAgentResponses;
 
-    public HostelDetailsMapper(OwnerInfo ownerInfo,
+    public HostelDetailsMapper(UsersResponse owner,
                                int noOfFloors,
                                int noOfRooms,
                                int noOfBeds,
@@ -77,7 +76,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                                Date currentBillLastRecDate,
                                BillingRules currentBillingRules,
                                List<RelationalAgentResponse> relationalAgentResponses) {
-        this.ownerInfo = ownerInfo;
+        this.owner = owner;
         this.noOfFloors = noOfFloors;
         this.noOfRooms = noOfRooms;
         this.noOfBeds = noOfBeds;
@@ -386,7 +385,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                 hostelV1.getState(), hostelV1.getCountry(), hostelV1.getPincode(), fullAddress, hostelV1.getMainImage(), isTrial,
                 canAddTrial, canAddExpandableTrial, addImages, amenitiesRes, sharingTypeList, noOfFloors, noOfRooms, noOfBeds,
                 noOfActiveTenants, noOfBookedTenants, noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
-                tenantList, Utils.dateToString(hostelV1.getCreatedAt()), Utils.dateToTime(hostelV1.getCreatedAt()), ownerInfo, masters,
+                tenantList, Utils.dateToString(hostelV1.getCreatedAt()), Utils.dateToTime(hostelV1.getCreatedAt()), owner, masters,
                 staffs, billingTypeRes, billingModelRes, currentBillingRulesRes, billingRules, ebConfig, currentSubRes, otherSubsRes,
                 subscriptionStatus, subscriptionRenewalTimeLeftDays, isSubscriptionActive, recurringStatus, recurringHistory,
                 customerRecurringHistory, activitiesRes, relationalAgentResponses);
