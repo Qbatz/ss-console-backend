@@ -1,4 +1,4 @@
-package com.smartstay.console.dao.hostelRelationalAgent;
+package com.smartstay.console.dto.hostelRelationalAgent;
 
 import com.smartstay.console.ennum.RelationalAgentReason;
 

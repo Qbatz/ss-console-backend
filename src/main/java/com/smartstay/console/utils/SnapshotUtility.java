@@ -1,7 +1,7 @@
 package com.smartstay.console.utils;
 
 import com.smartstay.console.dao.*;
-import com.smartstay.console.dao.hostelRelationalAgent.HostelRelationalAgentSnapshot;
+import com.smartstay.console.dto.hostelRelationalAgent.HostelRelationalAgentSnapshot;
 import com.smartstay.console.dto.agent.AgentSnapshot;
 import com.smartstay.console.dto.customers.*;
 import com.smartstay.console.dto.demoRequest.DemoRequestCommentsSnapshot;

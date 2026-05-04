@@ -4,7 +4,7 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.HostelRelationalAgent;
 import com.smartstay.console.dao.HostelV1;
-import com.smartstay.console.dao.hostelRelationalAgent.HostelRelationalAgentSnapshot;
+import com.smartstay.console.dto.hostelRelationalAgent.HostelRelationalAgentSnapshot;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.RelationalAgentReason;
