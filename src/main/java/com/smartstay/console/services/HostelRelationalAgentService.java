@@ -129,6 +129,6 @@ public class HostelRelationalAgentService {
     }
 
     public List<HostelRelationalAgent> getByAgentId(String agentId) {
-        return hostelRelationalAgentRepository.findAllByAgentIdOrderByIdDesc(agentId);
+        return hostelRelationalAgentRepository.findLatestByAgentIdPerHostel(agentId);
     }
 }
