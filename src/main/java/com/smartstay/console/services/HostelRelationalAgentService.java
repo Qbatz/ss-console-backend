@@ -131,4 +131,8 @@ public class HostelRelationalAgentService {
     public List<HostelRelationalAgent> getByAgentId(String agentId) {
         return hostelRelationalAgentRepository.findLatestByAgentIdPerHostel(agentId);
     }
+
+    public void deleteAll(List<HostelRelationalAgent> hostelRelationalAgentList) {
+        hostelRelationalAgentRepository.deleteAll(hostelRelationalAgentList);
+    }
 }
