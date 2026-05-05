@@ -2,14 +2,10 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.dao.*;
 import com.smartstay.console.repositories.InvoiceV1Repository;
-import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -118,5 +114,9 @@ public class InvoiceV1Service {
         transactionV1Service.deleteAll(transactions);
         bankTransactionService.deleteAll(bankTransactions);
         invoiceV1Repository.deleteAll(invoices);
+    }
+
+    public List<InvoicesV1> getInvoicesByIds(Set<String> invoiceIds) {
+        return invoiceV1Repository.findAllByInvoiceIdIn(invoiceIds);
     }
 }

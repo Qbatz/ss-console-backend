@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
@@ -38,4 +39,6 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
             """)
     List<InvoicesV1> findByHostelIdAndStartDate(@Param("hostelId") String hostelId,
                                                 @Param("startDate") Date startDate);
+
+    List<InvoicesV1> findAllByInvoiceIdIn(Set<String> invoiceIds);
 }
