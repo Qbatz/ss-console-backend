@@ -940,6 +940,7 @@ public class HostelsService {
         List<VendorV1> listVendors = vendorService.findByHostelId(hostelId);
         List<Beds> listBeds = bedsService.getBedsByHostelId(hostelId);
         List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
+        List<HostelRelationalAgent> hostelRelationalAgentList = hostelRelationalAgentService.getByHostelId(hostelId);
 
         if (listAmenities != null && !listAmenities.isEmpty()) {
             amenitiesService.deleteAll(listAmenities);
@@ -982,6 +983,9 @@ public class HostelsService {
         }
         if (bankingList != null && !bankingList.isEmpty()) {
             bankingService.deleteAll(bankingList);
+        }
+        if (hostelRelationalAgentList != null && !hostelRelationalAgentList.isEmpty()) {
+            hostelRelationalAgentService.deleteAll(hostelRelationalAgentList);
         }
     }
 

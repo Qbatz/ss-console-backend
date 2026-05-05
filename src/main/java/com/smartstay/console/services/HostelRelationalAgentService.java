@@ -4,7 +4,7 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.HostelRelationalAgent;
 import com.smartstay.console.dao.HostelV1;
-import com.smartstay.console.dao.hostelRelationalAgent.HostelRelationalAgentSnapshot;
+import com.smartstay.console.dto.hostelRelationalAgent.HostelRelationalAgentSnapshot;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.RelationalAgentReason;
@@ -106,10 +106,10 @@ public class HostelRelationalAgentService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_UPDATE)) {
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Agents.getId(), Utils.PERMISSION_UPDATE)) {
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Agents.getId(), Utils.PERMISSION_READ)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
@@ -129,6 +129,10 @@ public class HostelRelationalAgentService {
     }
 
     public List<HostelRelationalAgent> getByAgentId(String agentId) {
-        return hostelRelationalAgentRepository.findAllByAgentIdOrderByIdDesc(agentId);
+        return hostelRelationalAgentRepository.findLatestByAgentIdPerHostel(agentId);
+    }
+
+    public void deleteAll(List<HostelRelationalAgent> hostelRelationalAgentList) {
+        hostelRelationalAgentRepository.deleteAll(hostelRelationalAgentList);
     }
 }

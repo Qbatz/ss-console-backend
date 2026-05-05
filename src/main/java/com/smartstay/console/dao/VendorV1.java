@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
-@Entity
+@Entity(name = "vendorv1")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

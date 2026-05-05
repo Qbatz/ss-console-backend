@@ -5,6 +5,7 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.tableColumns.TableColumnsSnapshot;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.FilterOptionsModule;
+import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.tableColumns.EditTableColumnsPayload;
 import com.smartstay.console.payloads.tableColumns.ResetTableColumnsPayload;
@@ -36,6 +37,8 @@ public class TableColumnsService {
     @Autowired
     private AgentService agentService;
     @Autowired
+    private AgentRolesService agentRolesService;
+    @Autowired
     private AgentActivitiesService agentActivitiesService;
     @Autowired
     private HostelService hostelService;
@@ -66,6 +69,10 @@ public class TableColumnsService {
         Agent agent = agentService.findUserByUserId(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
         page = Math.max(page - 1, 0);
@@ -225,6 +232,10 @@ public class TableColumnsService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
         List<ColumnFilters> columns = payload.columns();
         if (columns == null || columns.isEmpty()) {
             return new ResponseEntity<>(Utils.COLUMNS_CAN_NOT_BE_EMPTY, HttpStatus.BAD_REQUEST);
@@ -283,6 +294,10 @@ public class TableColumnsService {
         Agent agent = agentService.findUserByUserId(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
         HostelV1 hostel = hostelService.getHostelInfo(payload.hostelId());
