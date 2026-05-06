@@ -5,7 +5,7 @@ import com.smartstay.console.Mapper.customers.CustomerRecTrackerResMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecurringMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
 import com.smartstay.console.Mapper.hostels.*;
-import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
+import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.Mapper.users.UsersResponseMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
@@ -1035,7 +1035,7 @@ public class HostelsService {
         List<Users> createdUsers = usersService.getOwners(parentIds);
         List<OwnerInfo> ownerInfos = createdUsers
                 .stream()
-                .map(i -> new UserOnerInfoMapper().apply(i))
+                .map(i -> new UserOwnerInfoMapper().apply(i))
                 .toList();
         List<UserActivities> listActivities = userActivitiesService
                 .findLatestActivities(hostelIds);
@@ -1130,7 +1130,7 @@ public class HostelsService {
 
         List<OwnerInfo> ownerInfos = createdUsers
                 .stream()
-                .map(i -> new UserOnerInfoMapper().apply(i))
+                .map(i -> new UserOwnerInfoMapper().apply(i))
                 .toList();
 
         List<UserActivities> listActivities = userActivitiesService

@@ -1,6 +1,6 @@
 package com.smartstay.console.Mapper.orderHistory;
 
-import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
+import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.ennum.UserType;
 import com.smartstay.console.responses.hostels.OwnerInfo;
@@ -131,7 +131,7 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
 
         OwnerInfo ownerInfo = null;
         if (owner != null){
-            ownerInfo = new UserOnerInfoMapper().apply(owner);
+            ownerInfo = new UserOwnerInfoMapper().apply(owner);
         }
 
         return new OrderHistoryResponse(orderHistory.getHistoryId(), orderHistory.getHostelId(), hostelName,
