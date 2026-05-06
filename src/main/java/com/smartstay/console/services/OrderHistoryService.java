@@ -165,16 +165,25 @@ public class OrderHistoryService {
         Map<String, Agent> agentMap = agents.stream()
                 .collect(Collectors.toMap(Agent::getAgentId, a -> a, (a, b) -> a));
 
+        Set<String> parentIds = hostels.stream()
+                .map(HostelV1::getParentId)
+                .collect(Collectors.toSet());
+        List<Users> owners = parentIds.isEmpty() ? Collections.emptyList() : usersService.getOwners(new ArrayList<>(parentIds));
+        Map<String, Users> ownerMap = owners.stream()
+                .collect(Collectors.toMap(Users::getParentId, user -> user, (a, b) -> a));
+
         List<OrderHistoryResponse> responseList = orderHistories.stream()
                 .map(orderHistory -> {
                     HostelV1 hostel = hostelMap.getOrDefault(orderHistory.getHostelId(), null);
                     Plans plan = plansMap.getOrDefault(orderHistory.getPlanCode(), null);
                     HotelType hotelType = null;
+                    Users owner = null;
                     if (hostel != null) {
                         hotelType = hotelTypeMap.getOrDefault(hostel.getHostelType(), null);
+                        owner = ownerMap.getOrDefault(hostel.getParentId(), null);
                     }
                     return new OrderHistoryMapper(hostel, hotelType,
-                            plan, usersMap, agentMap).apply(orderHistory);
+                            plan, usersMap, agentMap, owner).apply(orderHistory);
                 }).toList();
 
         Map<String, Object> response = new HashMap<>();

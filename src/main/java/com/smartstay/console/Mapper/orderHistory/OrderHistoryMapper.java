@@ -1,7 +1,9 @@
 package com.smartstay.console.Mapper.orderHistory;
 
+import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.ennum.UserType;
+import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.responses.orderHistory.OrderHistoryResponse;
 import com.smartstay.console.utils.Utils;
 
@@ -15,17 +17,20 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
     Plans plan;
     Map<String, Users> usersMap;
     Map<String, Agent> agentMap;
+    Users owner;
 
     public OrderHistoryMapper(HostelV1 hostel,
                               HotelType hotelType,
                               Plans plan,
                               Map<String, Users> usersMap,
-                              Map<String, Agent> agentMap) {
+                              Map<String, Agent> agentMap,
+                              Users owner) {
         this.hostel = hostel;
         this.hotelType = hotelType;
         this.plan = plan;
         this.usersMap = usersMap;
         this.agentMap = agentMap;
+        this.owner = owner;
     }
 
     @Override
@@ -124,9 +129,14 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
             paymentProofFileName = Utils.getBaseNameFromUrl(orderHistory.getPaymentProof());
         }
 
+        OwnerInfo ownerInfo = null;
+        if (owner != null){
+            ownerInfo = new UserOnerInfoMapper().apply(owner);
+        }
+
         return new OrderHistoryResponse(orderHistory.getHistoryId(), orderHistory.getHostelId(), hostelName,
                 hostelInitials, hostelType, mobile, houseNo, street, landmark, city, state, country, pincode,
-                fullAddress, mainImage, orderHistory.getDiscountAmount(), orderHistory.getPlanAmount(),
+                fullAddress, mainImage, ownerInfo, orderHistory.getDiscountAmount(), orderHistory.getPlanAmount(),
                 orderHistory.getPlanCode(), planName, planType, orderHistory.getTotalAmount(), orderHistory.getOrderStatus(),
                 orderHistory.getPaymentType(), orderHistory.getChannel(), orderHistory.getPaymentProof(), paymentProofFileName,
                 upiId, orderHistory.getCardHolderName(), orderHistory.getCardType(), orderHistory.getCardBrand(),
