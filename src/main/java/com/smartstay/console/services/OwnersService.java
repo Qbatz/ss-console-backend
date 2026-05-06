@@ -38,8 +38,6 @@ public class OwnersService {
     @Autowired
     private Authentication authentication;
     @Autowired
-    private AgentRepository agentRepository;
-    @Autowired
     private AgentActivitiesService agentActivitiesService;
     @Autowired
     private AgentService agentService;
@@ -64,7 +62,7 @@ public class OwnersService {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        Agent agent = agentRepository.findByAgentIdAndIsActiveTrue(authentication.getName());
+        Agent agent = agentService.findUserByUserId(authentication.getName());
         if (agent == null) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -100,6 +98,7 @@ public class OwnersService {
         String encodedPassword = encoder.encode(resetPassword.password());
 
         users.setPassword(encodedPassword);
+        users.setLastUpdate(new Date());
 
         users = usersRepository.save(users);
 
