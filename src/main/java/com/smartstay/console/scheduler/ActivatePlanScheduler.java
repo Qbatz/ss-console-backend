@@ -53,10 +53,13 @@ public class ActivatePlanScheduler {
                         i.setCurrentPlanName(hostelPlan.planName());
                         i.setCurrentPlanStartsAt(hostelPlan.startDate());
                         i.setCurrentPlanEndsAt(hostelPlan.endDate());
+                        i.setCurrentPlanPrice(hostelPlan.planPrice());
+                        i.setPaidAmount(hostelPlan.paidAmount());
+                        i.setTrial(hostelPlan.isTrial());
+                        i.setTrialEndingAt(hostelPlan.trialEndingAt());
                     }
                     return  i;
-                })
-                .toList();
+                }).toList();
 
         return newPlan;
     }

@@ -33,6 +33,8 @@ public class PlanResMapper implements Function<Plans, PlansResponse> {
 
         return new PlansResponse(plans.getPlanId(), plans.getPlanName(), plans.getPlanCode(),
                 plans.getPlanType(), plans.getDuration(), plans.getPrice(), plans.getDiscounts(),
+                plans.getGst(), plans.getCgst(), plans.getSgst(), plans.getGstAmount(),
+                plans.getCgstAmount(), plans.getSgstAmount(), plans.getFinalPrice(),
                 plans.isShouldShow(), plans.isCanCustomize(), createdAtDate, createdAtTime,
                 updatedAtDate, updatedAtTime, planFeatures);
     }

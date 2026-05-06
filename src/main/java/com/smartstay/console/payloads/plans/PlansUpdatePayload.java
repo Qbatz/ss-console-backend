@@ -8,6 +8,7 @@ public record PlansUpdatePayload(String planName,
                                  Long duration,
                                  Double price,
                                  Double discountPercentage,
+                                 Double gstPercentage,
                                  Boolean shouldShow,
                                  Boolean canCustomize,
                                  List<PlanFeaturesUpdatePayload> planFeatures) {

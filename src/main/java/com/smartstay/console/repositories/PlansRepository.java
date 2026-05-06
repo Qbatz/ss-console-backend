@@ -11,10 +11,6 @@ import java.util.Set;
 @Repository
 public interface PlansRepository extends JpaRepository<Plans, Long> {
 
-    Plans findTopByPlanTypeAndIsActiveTrueOrderByPlanIdAsc(String planType);
-
-    Plans findTopByPlanTypeAndIsActiveTrueOrderByPlanIdDesc(String planType);
-
     Plans findByPlanCodeAndIsActiveTrue(String planCode);
 
     List<Plans> findByPlanCodeInAndIsActiveTrue(Set<String> planCodes);
@@ -23,6 +19,7 @@ public interface PlansRepository extends JpaRepository<Plans, Long> {
                 SELECT p FROM Plans p
                 WHERE p.isActive = true
                   AND p.planType <> 'TRIAL'
+                  AND p.planType <> 'EXPANDABLE_TRIAL'
                 ORDER BY p.planId ASC
             """)
     List<Plans> findActivePlansExcludingTrial();
