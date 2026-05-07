@@ -192,12 +192,13 @@ public class SubscriptionService {
                 }
             }
 
-            if (discountAmount < 0 || discountAmount > plans.getPrice()) {
+            if (discountAmount < 0 || discountAmount > plans.getFinalPrice()) {
                 return new ResponseEntity<>(Utils.INVALID_DISCOUNT, HttpStatus.BAD_REQUEST);
             }
 
-            if (plans.getPrice() > 0) {
-                discountPercentage = (discountAmount / plans.getPrice()) * 100;
+            if (plans.getFinalPrice() > 0) {
+                discountPercentage = (discountAmount / plans.getFinalPrice()) * 100;
+                discountPercentage = Utils.roundOfDoubleTo2Digits(discountPercentage);
             }
 
             try {
@@ -206,7 +207,7 @@ public class SubscriptionService {
                 paidAmount = 0.0;
             }
 
-            double expectedAmount = plans.getPrice() - discountAmount;
+            double expectedAmount = plans.getFinalPrice() - discountAmount;
 
             if (paidAmount < 0 || paidAmount != expectedAmount) {
                 return new ResponseEntity<>(Utils.INVALID_PAID_AMOUNT, HttpStatus.BAD_REQUEST);
@@ -243,7 +244,7 @@ public class SubscriptionService {
         newSubscription.setHostelId(hostelId);
         newSubscription.setPlanCode(plans.getPlanCode());
         newSubscription.setPlanName(plans.getPlanName());
-        newSubscription.setPlanAmount(plans.getPrice());
+        newSubscription.setPlanAmount(plans.getFinalPrice());
         newSubscription.setCreatedAt(today);
         newSubscription.setIsActive(true);
         newSubscription.setCreatedBy(agent.getAgentId());
@@ -258,7 +259,7 @@ public class SubscriptionService {
             OrderHistory newOrder = new OrderHistory();
             newOrder.setHostelId(hostelId);
             newOrder.setDiscountAmount(newSubscription.getDiscountAmount());
-            newOrder.setPlanAmount(plans.getPrice());
+            newOrder.setPlanAmount(plans.getFinalPrice());
             newOrder.setPlanCode(plans.getPlanCode());
             newOrder.setPlanName(plans.getPlanName());
             newOrder.setTotalAmount(paidAmount);
@@ -287,7 +288,7 @@ public class SubscriptionService {
                 hostelPlan.setCurrentPlanName(plans.getPlanName());
                 hostelPlan.setCurrentPlanStartsAt(newSubscription.getPlanStartsAt());
                 hostelPlan.setCurrentPlanEndsAt(newSubscription.getPlanEndsAt());
-                hostelPlan.setCurrentPlanPrice(plans.getPrice());
+                hostelPlan.setCurrentPlanPrice(plans.getFinalPrice());
                 hostelPlan.setPaidAmount(paidAmount);
                 hostelPlan.setTrial(isTrial);
                 hostelPlan.setTrialEndingAt(isTrial ? newSubscription.getPlanEndsAt() : null);
@@ -309,18 +310,30 @@ public class SubscriptionService {
         Calendar cal = Calendar.getInstance();
 //        cal.add(Calendar.DAY_OF_MONTH, 1);
 
+        List<Plans> freePlans = plansService.getFreePlans();
+        Set<String> freePlanCodes = freePlans.stream()
+                .map(Plans::getPlanCode)
+                .collect(Collectors.toSet());
+
         List<com.smartstay.console.dao.Subscription> listSubscriptions = subscriptionRepository
                 .findSubscriptionStartingToday(cal.getTime());
         if (listSubscriptions != null && !listSubscriptions.isEmpty()) {
             listHostelPlans = new ArrayList<>(listSubscriptions
                     .stream()
-                    .map(i -> new com.smartstay.console.dto.hostelPlans.HostelPlan(
-                            i.getHostelId(),
-                            i.getPlanStartsAt(),
-                            i.getPlanEndsAt(),
-                            i.getPlanCode(),
-                            i.getPlanName()))
-                    .toList());
+                    .map(i -> {
+                        boolean isTrial = freePlanCodes.contains(i.getPlanCode());
+                        return new com.smartstay.console.dto.hostelPlans.HostelPlan(
+                                i.getHostelId(),
+                                i.getPlanStartsAt(),
+                                i.getPlanEndsAt(),
+                                i.getPlanCode(),
+                                i.getPlanName(),
+                                i.getPlanAmount(),
+                                i.getPaidAmount(),
+                                isTrial,
+                                isTrial ? i.getPlanEndsAt() : null
+                        );
+                    }).toList());
         }
         return listHostelPlans;
     }
