@@ -146,4 +146,8 @@ public class InvoiceRedemptionService {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    public List<InvoiceRedemption> getInvoiceRedemptionsByHostelId(String hostelId){
+        return invoiceRedemptionRepository.findAllByHostelIdOrderByIdDesc(hostelId);
+    }
 }
