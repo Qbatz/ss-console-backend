@@ -506,7 +506,7 @@ public class HostelsService {
                 }).toList();
 
         List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
-                .getInvoiceRedemptionsByHostelId(hostelId);
+                .getLimitedInvoiceRedemptionsByHostelId(hostelId, 50);
 
         Set<String> invoiceIds = new HashSet<>();
 
