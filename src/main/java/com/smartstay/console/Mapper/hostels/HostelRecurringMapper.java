@@ -1,6 +1,6 @@
 package com.smartstay.console.Mapper.hostels;
 
-import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
+import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.ennum.BillingModel;
@@ -46,7 +46,7 @@ public class HostelRecurringMapper implements Function<BillingRules, HostelRecur
 
         OwnerInfo ownerInfo = null;
         if (owner != null){
-            ownerInfo = new UserOnerInfoMapper().apply(owner);
+            ownerInfo = new UserOwnerInfoMapper().apply(owner);
         }
 
         HostelPlan hostelPlan = hostel.getHostelPlan();

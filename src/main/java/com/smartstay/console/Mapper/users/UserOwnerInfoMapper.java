@@ -6,7 +6,7 @@ import com.smartstay.console.utils.CountryUtils;
 
 import java.util.function.Function;
 
-public class UserOnerInfoMapper implements Function<Users, OwnerInfo> {
+public class UserOwnerInfoMapper implements Function<Users, OwnerInfo> {
 
     @Override
     public OwnerInfo apply(Users users) {

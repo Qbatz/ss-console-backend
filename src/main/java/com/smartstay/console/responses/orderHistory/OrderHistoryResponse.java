@@ -1,5 +1,7 @@
 package com.smartstay.console.responses.orderHistory;
 
+import com.smartstay.console.responses.hostels.OwnerInfo;
+
 public record OrderHistoryResponse(Long historyId,
                                    String hostelId,
                                    String hostelName,
@@ -15,6 +17,7 @@ public record OrderHistoryResponse(Long historyId,
                                    int pincode,
                                    String fullAddress,
                                    String mainImage,
+                                   OwnerInfo ownerInfo,
                                    Double discountAmount,
                                    Double planAmount,
                                    String planCode,

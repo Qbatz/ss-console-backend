@@ -1,6 +1,6 @@
 package com.smartstay.console.Mapper.hostels;
 
-import com.smartstay.console.Mapper.users.UserOnerInfoMapper;
+import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.responses.customers.CustomerRecurringResponse;
 import com.smartstay.console.responses.hostels.HostelTenRecResponse;
@@ -40,7 +40,7 @@ public class HostelTenRecResMapper implements Function<HostelV1, HostelTenRecRes
 
         OwnerInfo ownerInfo = null;
         if (owner != null){
-            ownerInfo = new UserOnerInfoMapper().apply(owner);
+            ownerInfo = new UserOwnerInfoMapper().apply(owner);
         }
 
         HostelPlan hostelPlan = hostel.getHostelPlan();
