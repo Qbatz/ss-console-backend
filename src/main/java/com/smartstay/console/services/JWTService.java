@@ -4,12 +4,12 @@ import com.smartstay.console.exceptions.SmartStayException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SignatureException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
 import java.util.function.Function;
@@ -30,7 +30,8 @@ public class JWTService {
                 .setClaims(claims)
                 .setSubject(username)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(date)
+                //.setExpiration(date)
+                .setExpiration(Date.from(Instant.now().plusSeconds(14400)))
                 .signWith(getKey(), SignatureAlgorithm.HS256).compact();
 
     }

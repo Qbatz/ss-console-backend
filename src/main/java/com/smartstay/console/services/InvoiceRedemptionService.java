@@ -3,9 +3,15 @@ package com.smartstay.console.services;
 import com.smartstay.console.Mapper.invoiceRedemption.InvoiceRedemptionResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
+import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
+import com.smartstay.console.ennum.PaymentStatus;
+import com.smartstay.console.ennum.Source;
+import com.smartstay.console.payloads.invoiceRedemption.UpdateInvoiceRedemptionPayload;
 import com.smartstay.console.repositories.InvoiceRedemptionRepository;
 import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
+import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -29,6 +35,8 @@ public class InvoiceRedemptionService {
     private AgentService agentService;
     @Autowired
     private AgentRolesService agentRolesService;
+    @Autowired
+    private AgentActivitiesService agentActivitiesService;
     @Autowired
     private HostelService hostelService;
     @Autowired
@@ -145,5 +153,277 @@ public class InvoiceRedemptionService {
         response.put("totalPages", pagedInvoiceRedemptions.getTotalPages());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public List<InvoiceRedemption> getLimitedInvoiceRedemptionsByHostelId(String hostelId, int size){
+        Pageable pageable = PageRequest.of(0, size);
+        return invoiceRedemptionRepository
+                .findAllByHostelIdOrderByIdDesc(hostelId, pageable)
+                .getContent();
+    }
+
+    public ResponseEntity<?> getInvoiceRedemptionsByHostelId(String hostelId, int page, int size) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Invoices.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelService.getHostelInfo(hostelId);
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<InvoiceRedemption> pagedInvoiceRedemptions = invoiceRedemptionRepository
+                .findAllByHostelIdOrderByIdDesc(hostelId, pageable);
+
+        List<InvoiceRedemption> invoiceRedemptions = pagedInvoiceRedemptions.getContent();
+
+        Set<String> invoiceIds = new HashSet<>();
+        Set<String> userIds = new HashSet<>();
+
+        for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
+            if (invoiceRedemption.getTargetInvoiceId() != null){
+                invoiceIds.add(invoiceRedemption.getTargetInvoiceId());
+            }
+            if (invoiceRedemption.getSourceInvoiceId() != null){
+                invoiceIds.add(invoiceRedemption.getSourceInvoiceId());
+            }
+            if (invoiceRedemption.getCreatedBy() != null){
+                userIds.add(invoiceRedemption.getCreatedBy());
+            }
+        }
+
+        Map<String, Users> userMap = usersService
+                .getUsersByIds(userIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        Users::getUserId,
+                        user -> user
+                ));
+
+        Map<String, InvoicesV1> invoiceMap = invoiceService
+                .getInvoicesByIds(invoiceIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        InvoicesV1::getInvoiceId,
+                        invoice -> invoice
+                ));
+
+        List<InvoiceRedemptionRes> invoiceRedemptionResList = invoiceRedemptions.stream()
+                .map(invoiceRedemption -> {
+
+                    InvoicesV1 targetInvoice = invoiceMap.getOrDefault(invoiceRedemption.getTargetInvoiceId(), null);
+                    InvoicesV1 sourceInvoice = invoiceMap.getOrDefault(invoiceRedemption.getSourceInvoiceId(), null);
+                    Users createdByUser = userMap.getOrDefault(invoiceRedemption.getCreatedBy(), null);
+
+                    return new InvoiceRedemptionResMapper(
+                            hostel, targetInvoice, sourceInvoice, createdByUser
+                    ).apply(invoiceRedemption);
+                }).toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("invoiceRedemptionList", invoiceRedemptionResList);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedInvoiceRedemptions.getTotalElements());
+        response.put("totalPages", pagedInvoiceRedemptions.getTotalPages());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateInvoiceRedemption(Long invoiceRedemptionId,
+                                                     UpdateInvoiceRedemptionPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Invoices.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        InvoiceRedemption invoiceRedemption = invoiceRedemptionRepository
+                .findById(invoiceRedemptionId).orElse(null);
+        if (invoiceRedemption == null) {
+            return new ResponseEntity<>(Utils.INVOICE_REDEMPTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoiceRedemptionSnapshot oldInvoiceRedemption = SnapshotUtility.toSnapshot(invoiceRedemption);
+
+        if (invoiceRedemption.getTargetInvoiceId() == null || invoiceRedemption.getSourceInvoiceId() == null) {
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 sourceInvoice = invoiceService.getInvoiceById(invoiceRedemption.getSourceInvoiceId());
+        if (sourceInvoice == null){
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 targetInvoice = invoiceService.getInvoiceById(invoiceRedemption.getTargetInvoiceId());
+        if (targetInvoice == null){
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (invoiceRedemption.getRedemptionAmount() == null || sourceInvoice.getBalanceAmount() == null ||
+                targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null){
+            return new ResponseEntity<>(Utils.INVALID_AMOUNT, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        double redemptionAmount = invoiceRedemption.getRedemptionAmount();
+        double newAmount = payload.amount();
+
+        if (redemptionAmount <= 0) {
+            return new ResponseEntity<>(Utils.INVALID_REDEMPTION_AMOUNT, HttpStatus.BAD_REQUEST);
+        }
+
+        double differenceAmount = redemptionAmount - newAmount;
+
+        double sourceInvoiceNewBalanceAmount = sourceInvoice.getBalanceAmount() + differenceAmount;
+
+        if (sourceInvoiceNewBalanceAmount < 0) {
+            return new ResponseEntity<>(Utils.BALANCE_AMOUNT_NOT_ENOUGH, HttpStatus.BAD_REQUEST);
+        }
+
+        sourceInvoice.setBalanceAmount(sourceInvoiceNewBalanceAmount);
+        sourceInvoice.setUpdatedAt(today);
+
+        double targetInvoiceNewPaidAmount = targetInvoice.getPaidAmount() - differenceAmount;
+
+        if (targetInvoiceNewPaidAmount < 0) {
+            return new ResponseEntity<>(Utils.PAID_AMOUNT_GOES_NEGATIVE, HttpStatus.BAD_REQUEST);
+        }
+
+        if (targetInvoiceNewPaidAmount > targetInvoice.getTotalAmount()) {
+            return new ResponseEntity<>(Utils.PAID_AMOUNT_EXCEEDS_TOTAL_AMOUNT, HttpStatus.BAD_REQUEST);
+        }
+
+        targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
+        targetInvoice.setUpdatedAt(today);
+
+        if (Objects.equals(targetInvoiceNewPaidAmount, targetInvoice.getTotalAmount())){
+            targetInvoice.setPaymentStatus(PaymentStatus.PAID.name());
+        } else if (targetInvoiceNewPaidAmount <= 0) {
+            targetInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
+        } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetInvoice.getTotalAmount()) {
+            targetInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+        }
+
+        invoiceRedemption.setRedemptionAmount(newAmount);
+
+        invoiceService.save(sourceInvoice);
+        invoiceService.save(targetInvoice);
+        
+        invoiceRedemption = invoiceRedemptionRepository.save(invoiceRedemption);
+
+        InvoiceRedemptionSnapshot newInvoiceRedemption = SnapshotUtility.toSnapshot(invoiceRedemption);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.INVOICE_REDEMPTION,
+                String.valueOf(invoiceRedemptionId), oldInvoiceRedemption, newInvoiceRedemption);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> deleteInvoiceRedemption(Long invoiceRedemptionId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Invoices.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        InvoiceRedemption invoiceRedemption = invoiceRedemptionRepository
+                .findById(invoiceRedemptionId).orElse(null);
+        if (invoiceRedemption == null) {
+            return new ResponseEntity<>(Utils.INVOICE_REDEMPTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoiceRedemptionSnapshot oldInvoiceRedemption = SnapshotUtility.toSnapshot(invoiceRedemption);
+
+        if (invoiceRedemption.getTargetInvoiceId() == null || invoiceRedemption.getSourceInvoiceId() == null) {
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 sourceInvoice = invoiceService.getInvoiceById(invoiceRedemption.getSourceInvoiceId());
+        if (sourceInvoice == null){
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 targetInvoice = invoiceService.getInvoiceById(invoiceRedemption.getTargetInvoiceId());
+        if (targetInvoice == null){
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        if (invoiceRedemption.getRedemptionAmount() == null || sourceInvoice.getBalanceAmount() == null ||
+                targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null){
+            return new ResponseEntity<>(Utils.INVALID_AMOUNT, HttpStatus.BAD_REQUEST);
+        }
+
+        double redemptionAmount = invoiceRedemption.getRedemptionAmount();
+
+        if (redemptionAmount <= 0) {
+            return new ResponseEntity<>(Utils.INVALID_REDEMPTION_AMOUNT, HttpStatus.BAD_REQUEST);
+        }
+
+        double sourceInvoiceNewBalanceAmount = sourceInvoice.getBalanceAmount() + redemptionAmount;
+
+        sourceInvoice.setBalanceAmount(sourceInvoiceNewBalanceAmount);
+        sourceInvoice.setUpdatedAt(today);
+
+        double targetInvoiceNewPaidAmount = targetInvoice.getPaidAmount() - redemptionAmount;
+
+        if (targetInvoiceNewPaidAmount < 0) {
+            return new ResponseEntity<>(Utils.PAID_AMOUNT_GOES_NEGATIVE, HttpStatus.BAD_REQUEST);
+        }
+
+        targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
+        targetInvoice.setUpdatedAt(today);
+
+        if (Objects.equals(targetInvoiceNewPaidAmount, targetInvoice.getTotalAmount())){
+            targetInvoice.setPaymentStatus(PaymentStatus.PAID.name());
+        } else if (targetInvoiceNewPaidAmount <= 0) {
+            targetInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
+        } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetInvoice.getTotalAmount()) {
+            targetInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+        }
+
+        invoiceService.save(sourceInvoice);
+        invoiceService.save(targetInvoice);
+
+        invoiceRedemptionRepository.delete(invoiceRedemption);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.INVOICE_REDEMPTION,
+                String.valueOf(invoiceRedemptionId), oldInvoiceRedemption, null);
+
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
 }

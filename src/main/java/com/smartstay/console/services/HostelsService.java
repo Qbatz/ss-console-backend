@@ -6,6 +6,7 @@ import com.smartstay.console.Mapper.customers.CustomerRecurringMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
 import com.smartstay.console.Mapper.hostels.*;
 import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
+import com.smartstay.console.Mapper.invoiceRedemption.InvoiceRedemptionResMapper;
 import com.smartstay.console.Mapper.users.UsersResponseMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
@@ -27,6 +28,7 @@ import com.smartstay.console.responses.customers.CustomerRecurringResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
 import com.smartstay.console.responses.hostels.*;
+import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
 import com.smartstay.console.utils.SnapshotUtility;
@@ -174,6 +176,8 @@ public class HostelsService {
     private TableColumnsService tableColumnsService;
     @Autowired
     private HostelRelationalAgentService hostelRelationalAgentService;
+    @Autowired
+    private InvoiceRedemptionService invoiceRedemptionService;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -501,13 +505,47 @@ public class HostelsService {
                             Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
                 }).toList();
 
+        List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
+                .getLimitedInvoiceRedemptionsByHostelId(hostelId, 50);
+
+        Set<String> invoiceIds = new HashSet<>();
+
+        for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
+            if (invoiceRedemption.getTargetInvoiceId() != null){
+                invoiceIds.add(invoiceRedemption.getTargetInvoiceId());
+            }
+            if (invoiceRedemption.getSourceInvoiceId() != null){
+                invoiceIds.add(invoiceRedemption.getSourceInvoiceId());
+            }
+        }
+
+        Map<String, InvoicesV1> invoiceMap = invoiceV1Service
+                .getInvoicesByIds(invoiceIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        InvoicesV1::getInvoiceId,
+                        invoice -> invoice
+                ));
+
+        List<InvoiceRedemptionRes> invoiceRedemptionResList = invoiceRedemptions.stream()
+                .map(invoiceRedemption -> {
+
+                    InvoicesV1 targetInvoice = invoiceMap.getOrDefault(invoiceRedemption.getTargetInvoiceId(), null);
+                    InvoicesV1 sourceInvoice = invoiceMap.getOrDefault(invoiceRedemption.getSourceInvoiceId(), null);
+                    Users createdByUser = userLookup.getOrDefault(invoiceRedemption.getCreatedBy(), null);
+
+                    return new InvoiceRedemptionResMapper(
+                            hostel, targetInvoice, sourceInvoice, createdByUser
+                    ).apply(invoiceRedemption);
+                }).toList();
+
         HostelResponse hostelDetails = new HostelDetailsMapper(
                 ownerRes, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
                 noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
                 sharingTypeList, amenities, customerResponses, subscriptions, mastersRes, staffsRes,
                 activities, userLookup, trialPlans, expandableTrialPlans, billingDatesMap, recurringHistory,
                 customerRecurringHistory, recurringStatus, currentBillLastRecDate, currentBillingRules,
-                relationalAgentResponses
+                relationalAgentResponses, invoiceRedemptionResList
         ).apply(hostel);
 
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);

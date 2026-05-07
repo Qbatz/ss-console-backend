@@ -136,10 +136,10 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
 
         return new OrderHistoryResponse(orderHistory.getHistoryId(), orderHistory.getHostelId(), hostelName,
                 hostelInitials, hostelType, mobile, houseNo, street, landmark, city, state, country, pincode,
-                fullAddress, mainImage, ownerInfo, orderHistory.getDiscountAmount(), orderHistory.getPlanAmount(),
-                orderHistory.getPlanCode(), planName, planType, orderHistory.getTotalAmount(), orderHistory.getOrderStatus(),
-                orderHistory.getPaymentType(), orderHistory.getChannel(), orderHistory.getPaymentProof(), paymentProofFileName,
-                upiId, orderHistory.getCardHolderName(), orderHistory.getCardType(), orderHistory.getCardBrand(),
+                fullAddress, mainImage, ownerInfo, orderHistory.getDiscountAmount(), Utils.roundOfDoubleTo2Digits(orderHistory.getPlanAmount()),
+                orderHistory.getPlanCode(), planName, planType, Utils.roundOfDoubleTo2Digits(orderHistory.getTotalAmount()),
+                orderHistory.getOrderStatus(), orderHistory.getPaymentType(), orderHistory.getChannel(), orderHistory.getPaymentProof(),
+                paymentProofFileName, upiId, orderHistory.getCardHolderName(), orderHistory.getCardType(), orderHistory.getCardBrand(),
                 orderHistory.getIssuer(), cardNo, orderHistory.getUserType(), paidBy, collectedBy, createdBy,
                 Utils.dateToString(orderHistory.getCreatedAt()), Utils.dateToTime(orderHistory.getCreatedAt()));
     }

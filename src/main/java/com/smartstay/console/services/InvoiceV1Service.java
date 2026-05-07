@@ -119,4 +119,12 @@ public class InvoiceV1Service {
     public List<InvoicesV1> getInvoicesByIds(Set<String> invoiceIds) {
         return invoiceV1Repository.findAllByInvoiceIdIn(invoiceIds);
     }
+
+    public InvoicesV1 getInvoiceById(String invoiceId) {
+        return invoiceV1Repository.findByInvoiceId(invoiceId);
+    }
+
+    public void save(InvoicesV1 invoice) {
+        invoiceV1Repository.save(invoice);
+    }
 }

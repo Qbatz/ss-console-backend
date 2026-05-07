@@ -70,6 +70,8 @@ public class Utils {
     public static final String USER_NOT_FOUND = "User not found";
     public static final String TABLE_COLUMN_NOT_FOUND = "Table column not found";
     public static final String FILTER_OPTION_NOT_FOUND = "Filter option not found";
+    public static final String INVOICE_REDEMPTION_NOT_FOUND = "Invoice redemption not found";
+    public static final String INVOICE_NOT_FOUND = "Invoice not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -87,6 +89,8 @@ public class Utils {
     public static final String INVALID_NOTICE_PERIOD_DAYS = "Invalid notice period days";
     public static final String INVALID_GRACE_PERIOD_DAYS = "Invalid grace period days";
     public static final String INVALID_GST_PERCENTAGE = "Invalid gst percentage";
+    public static final String INVALID_AMOUNT = "Invalid amount";
+    public static final String INVALID_REDEMPTION_AMOUNT = "Invalid redemption amount";
 
     public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
@@ -113,6 +117,9 @@ public class Utils {
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
+    public static final String BALANCE_AMOUNT_NOT_ENOUGH = "Balance not enough in source invoice";
+    public static final String PAID_AMOUNT_EXCEEDS_TOTAL_AMOUNT = "Target invoice paid amount exceeds total amount";
+    public static final String PAID_AMOUNT_GOES_NEGATIVE = "Target paid amount goes negative";
 
     public static final String ROLE_NAME_CANNOT_EDIT = "This role cannot be edited";
     public static final String CANNOT_USE_BILLING_CYCLE_FILTER_WITH_DATE_FILTER = "Cannot use billingCycleStartDay with filterBy";

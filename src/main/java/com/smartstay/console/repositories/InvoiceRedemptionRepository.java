@@ -20,4 +20,6 @@ public interface InvoiceRedemptionRepository extends JpaRepository<InvoiceRedemp
             """)
     Page<InvoiceRedemption> findFilteredInvoiceRedemptions(Set<String> hostelIds,
                                                            Pageable pageable);
+
+    Page<InvoiceRedemption> findAllByHostelIdOrderByIdDesc(String hostelId, Pageable pageable);
 }
