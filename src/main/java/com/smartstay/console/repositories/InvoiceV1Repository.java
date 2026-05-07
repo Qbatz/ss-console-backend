@@ -41,4 +41,6 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
                                                 @Param("startDate") Date startDate);
 
     List<InvoicesV1> findAllByInvoiceIdIn(Set<String> invoiceIds);
+
+    InvoicesV1 findByInvoiceId(String invoiceId);
 }

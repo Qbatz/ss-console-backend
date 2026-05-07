@@ -34,14 +34,14 @@ public class InvoiceRedemptionController {
         return invoiceRedemptionService.getInvoiceRedemptionsByHostelId(hostelId, page, size);
     }
 
-//    @PutMapping("/{invoiceRedemptionId}")
-//    public ResponseEntity<?> updateInvoiceRedemption(@PathVariable("invoiceRedemptionId") Long invoiceRedemptionId,
-//                                                     @RequestBody @Valid UpdateInvoiceRedemptionPayload updateInvoiceRedemptionPayload) {
-//        return invoiceRedemptionService.updateInvoiceRedemption(invoiceRedemptionId, updateInvoiceRedemptionPayload);
-//    }
-//
-//    @DeleteMapping("/{invoiceRedemptionId}")
-//    public ResponseEntity<?> deleteInvoiceRedemption(@PathVariable("invoiceRedemptionId") Long invoiceRedemptionId) {
-//        return invoiceRedemptionService.deleteInvoiceRedemption(invoiceRedemptionId);
-//    }
+    @PutMapping("/{invoiceRedemptionId}")
+    public ResponseEntity<?> updateInvoiceRedemption(@PathVariable("invoiceRedemptionId") Long invoiceRedemptionId,
+                                                     @RequestBody @Valid UpdateInvoiceRedemptionPayload payload) {
+        return invoiceRedemptionService.updateInvoiceRedemption(invoiceRedemptionId, payload);
+    }
+
+    @DeleteMapping("/{invoiceRedemptionId}")
+    public ResponseEntity<?> deleteInvoiceRedemption(@PathVariable("invoiceRedemptionId") Long invoiceRedemptionId) {
+        return invoiceRedemptionService.deleteInvoiceRedemption(invoiceRedemptionId);
+    }
 }

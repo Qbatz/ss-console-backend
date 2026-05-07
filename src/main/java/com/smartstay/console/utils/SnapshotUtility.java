@@ -7,6 +7,7 @@ import com.smartstay.console.dto.customers.*;
 import com.smartstay.console.dto.demoRequest.DemoRequestCommentsSnapshot;
 import com.smartstay.console.dto.demoRequest.DemoRequestSnapshot;
 import com.smartstay.console.dto.hostel.*;
+import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
 import com.smartstay.console.dto.tableColumns.ColumnFiltersSnapshot;
@@ -464,6 +465,25 @@ public class SnapshotUtility {
                 t.isActive(),
                 copyDate(t.getCreatedAt()),
                 copyDate(t.getUpdatedAt())
+        );
+    }
+
+    public static InvoiceRedemptionSnapshot toSnapshot(InvoiceRedemption i) {
+
+        if (i == null) return null;
+
+        return new InvoiceRedemptionSnapshot(
+                i.getId(),
+                i.getSourceInvoiceId(),
+                i.getTargetInvoiceId(),
+                i.getHostelId(),
+                i.getRedemptionAmount(),
+                i.getReferenceNumber(),
+                i.getTransactionId(),
+                i.getReason(),
+                copyDate(i.getRedeemedAt()),
+                copyDate(i.getCreatedAt()),
+                i.getCreatedBy()
         );
     }
 

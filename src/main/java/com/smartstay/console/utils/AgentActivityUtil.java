@@ -112,6 +112,7 @@ public class AgentActivityUtil {
             case PLANS ->  "Updated a plan";
             case TABLE_COLUMNS -> "Updated a table column";
             case OWNERS -> "Updated an owner";
+            case INVOICE_REDEMPTION -> "Updated an invoice redemption";
             default -> "Updated successfully";
         };
     }
@@ -134,6 +135,7 @@ public class AgentActivityUtil {
             case PLANS -> "Deleted a plan";
             case PLAN_FEATURES -> "Deleted a plan feature";
             case OWNERS -> "Deleted an owner";
+            case INVOICE_REDEMPTION -> "Deleted an invoice redemption";
             default -> "Deleted successfully";
         };
     }
