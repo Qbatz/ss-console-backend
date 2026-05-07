@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public interface AgentRolesRepository extends JpaRepository<AgentRoles, Long> {
@@ -31,4 +32,6 @@ public interface AgentRolesRepository extends JpaRepository<AgentRoles, Long> {
     List<AgentRoles> findAllByRoleIdIn(Set<Long> roleIds);
 
     AgentRoles findByRoleIdAndIsActiveTrueAndIsDeletedFalse(Long roleId);
+
+    Optional<AgentRoles> findByRoleName(String roleName);
 }

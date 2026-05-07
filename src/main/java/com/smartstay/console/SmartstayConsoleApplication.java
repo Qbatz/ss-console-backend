@@ -165,6 +165,31 @@ public class SmartstayConsoleApplication {
     }
 
 //    @Bean
+//    CommandLineRunner enablePaymentsModuleForReadOnlyRole(AgentRolesRepository rolesRepository) {
+//        return args -> {
+//
+//            final int PAYMENTS_MODULE_ID = 20;
+//            String roleName = "CONSOLE-ADMIN-READ-ONLY";
+//
+//            rolesRepository.findByRoleName(roleName).ifPresent(role -> {
+//
+//                role.getPermissions()
+//                        .stream()
+//                        .filter(permission -> permission.getModuleId() == PAYMENTS_MODULE_ID)
+//                        .findFirst()
+//                        .ifPresent(permission -> {
+//                            permission.setCanRead(true);
+//                            permission.setCanWrite(true);
+//                            permission.setCanUpdate(true);
+//                            permission.setCanDelete(true);
+//
+//                            rolesRepository.save(role);
+//                        });
+//            });
+//        };
+//    }
+
+//    @Bean
 //    CommandLineRunner extendablePlan(PlansRepository plansRepository) {
 //        return args -> {
 //            String planCode1 = Utils.generatePlanCode();
