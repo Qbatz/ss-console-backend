@@ -20,6 +20,7 @@ public record PlansPayload(@NotBlank(message = "Plan name is required")
                            @PositiveOrZero(message = "Discount should be 0 or higher")
                            @Max(value = 100, message = "Discount cannot be more than 100")
                            Double discountPercentage,
+                           Double gstPercentage,
                            @NotNull(message = "Should show is required")
                            Boolean shouldShow,
                            @NotNull(message = "Can customize is required")

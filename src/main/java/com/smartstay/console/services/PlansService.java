@@ -109,6 +109,8 @@ public class PlansService {
             return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        double planPrice = plan.getPrice();
+
         PlanSnapshot oldPlan = SnapshotUtility.toSnapshot(plan);
 
         if (payload.planName() != null && !payload.planName().isBlank()){
@@ -143,12 +145,47 @@ public class PlansService {
                 return new ResponseEntity<>(Utils.PRICE_SHOULD_BE_HIGHER_THAN_ZERO, HttpStatus.BAD_REQUEST);
             }
             plan.setPrice(payload.price());
+            planPrice = payload.price();
         }
         if (payload.discountPercentage() != null){
             if (payload.discountPercentage() < 0 || payload.discountPercentage() > 100){
                 return new ResponseEntity<>(Utils.INVALID_DISCOUNT_PERCENTAGE, HttpStatus.BAD_REQUEST);
             }
             plan.setDiscounts(payload.discountPercentage());
+        }
+        if (payload.gstPercentage() != null){
+            if (payload.gstPercentage() < 0 || payload.gstPercentage() > 100){
+                return new ResponseEntity<>(Utils.INVALID_GST_PERCENTAGE, HttpStatus.BAD_REQUEST);
+            }
+            if (!Objects.equals(plan.getGst(), payload.gstPercentage())){
+
+                double gstPercentage = payload.gstPercentage();
+                double halfGstPercentage = 0;
+                double gstAmount = 0;
+                double halfGstAmount = 0;
+
+                if (gstPercentage != 0){
+                    halfGstPercentage = Utils.roundOfDoubleTo2Digits(gstPercentage / 2);
+
+                    gstAmount = Utils.roundOfDoubleTo2Digits((planPrice * gstPercentage) / 100);
+                    halfGstAmount = Utils.roundOfDoubleTo2Digits(gstAmount / 2);
+                }
+
+                double cgstPercentage = halfGstPercentage;
+                double sgstPercentage = halfGstPercentage;
+                double cgstAmount = halfGstAmount;
+                double sgstAmount = halfGstAmount;
+
+                double finalPrice = Utils.roundOfDoubleTo2Digits(planPrice + gstAmount);
+
+                plan.setGst(gstPercentage);
+                plan.setGstAmount(gstAmount);
+                plan.setCgst(cgstPercentage);
+                plan.setSgst(sgstPercentage);
+                plan.setCgstAmount(cgstAmount);
+                plan.setSgstAmount(sgstAmount);
+                plan.setFinalPrice(finalPrice);
+            }
         }
         if (payload.shouldShow() != null) {
             plan.setShouldShow(payload.shouldShow());
@@ -248,11 +285,45 @@ public class PlansService {
         plan.setCreatedAt(new Date());
         plan.setUpdatedAt(null);
 
+        double gstPercentage = Utils.DEFAULT_GST_PERCENTAGE;
+        if (payload.gstPercentage() != null){
+            if (payload.gstPercentage() < 0 || payload.gstPercentage() > 100){
+                return new ResponseEntity<>(Utils.INVALID_GST_PERCENTAGE, HttpStatus.BAD_REQUEST);
+            }
+            gstPercentage = payload.gstPercentage();
+        }
+
+        double halfGstPercentage = 0;
+        double gstAmount = 0;
+        double halfGstAmount = 0;
+
+        if (gstPercentage != 0){
+            halfGstPercentage = Utils.roundOfDoubleTo2Digits(gstPercentage / 2);
+
+            gstAmount = Utils.roundOfDoubleTo2Digits((payload.price() * gstPercentage) / 100);
+            halfGstAmount = Utils.roundOfDoubleTo2Digits(gstAmount / 2);
+        }
+
+        double cgstPercentage = halfGstPercentage;
+        double sgstPercentage = halfGstPercentage;
+        double cgstAmount = halfGstAmount;
+        double sgstAmount = halfGstAmount;
+
+        double finalPrice = Utils.roundOfDoubleTo2Digits(payload.price() + gstAmount);
+
+        plan.setGst(gstPercentage);
+        plan.setGstAmount(gstAmount);
+        plan.setCgst(cgstPercentage);
+        plan.setSgst(sgstPercentage);
+        plan.setCgstAmount(cgstAmount);
+        plan.setSgstAmount(sgstAmount);
+        plan.setFinalPrice(finalPrice);
+
         List<PlanFeatures> planFeatures = new ArrayList<>();
         if (payload.planFeatures() != null && !payload.planFeatures().isEmpty()) {
             for (PlanFeaturesPayload pfPayload : payload.planFeatures()) {
 
-                if (pfPayload.featureName() != null && pfPayload.featureName().isBlank()) {
+                if (pfPayload.featureName() == null || pfPayload.featureName().isBlank()) {
                     return new ResponseEntity<>(Utils.PLAN_FEATURE_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
                 }
                 PlanFeatures planFeature = new PlanFeatures();

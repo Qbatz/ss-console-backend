@@ -6,5 +6,9 @@ public record HostelPlan(String hostelId,
                          Date startDate,
                          Date endDate,
                          String planCode,
-                         String planName) {
+                         String planName,
+                         Double planPrice,
+                         Double paidAmount,
+                         boolean isTrial,
+                         Date trialEndingAt) {
 }

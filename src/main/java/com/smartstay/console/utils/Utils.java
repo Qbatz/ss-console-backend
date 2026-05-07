@@ -2,6 +2,8 @@ package com.smartstay.console.utils;
 
 import com.smartstay.console.dao.*;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -17,6 +19,7 @@ public class Utils {
     public static final int OWNER_ROLE_ID = 1;
     public static final int MASTER_ROLE_ID = 2;
     public static final int DEFAULT_EXPANDABLE_TRIAL_DAYS = 5;
+    public static final double DEFAULT_GST_PERCENTAGE = 18;
 
     private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -85,6 +88,7 @@ public class Utils {
     public static final String INVALID_BILLING_DUE_DAYS = "Invalid billing due days";
     public static final String INVALID_NOTICE_PERIOD_DAYS = "Invalid notice period days";
     public static final String INVALID_GRACE_PERIOD_DAYS = "Invalid grace period days";
+    public static final String INVALID_GST_PERCENTAGE = "Invalid gst percentage";
     public static final String INVALID_AMOUNT = "Invalid amount";
     public static final String INVALID_REDEMPTION_AMOUNT = "Invalid redemption amount";
 
@@ -500,6 +504,12 @@ public class Utils {
 
     public static Double roundOfDouble(double number) {
         return (double) Math.round(number);
+    }
+
+    public static double roundOfDoubleTo2Digits(double number) {
+        return BigDecimal.valueOf(number)
+                .setScale(2, RoundingMode.HALF_UP)
+                .doubleValue();
     }
 
     public static Integer getCurrentMonth(Date date) {

@@ -10,6 +10,7 @@ public class PlansDropdownResMapper implements Function<Plans, PlansDropdownRes>
     @Override
     public PlansDropdownRes apply(Plans plans) {
         return new PlansDropdownRes(plans.getPlanId(), plans.getPlanName(), plans.getPlanCode(), plans.getPlanType(),
-                plans.getDuration(), plans.getPrice(), plans.getDiscounts());
+                plans.getDuration(), plans.getPrice(), plans.getDiscounts(), plans.getGst(), plans.getCgst(),
+                plans.getSgst(), plans.getGstAmount(), plans.getCgstAmount(), plans.getSgstAmount(), plans.getFinalPrice());
     }
 }

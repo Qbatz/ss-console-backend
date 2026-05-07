@@ -112,6 +112,7 @@ public class AgentActivityUtil {
             case PLANS ->  "Updated a plan";
             case TABLE_COLUMNS -> "Updated a table column";
             case OWNERS -> "Updated an owner";
+            case RESET_USER_PIN -> "User pin has been reset";
             case INVOICE_REDEMPTION -> "Updated an invoice redemption";
             default -> "Updated successfully";
         };
