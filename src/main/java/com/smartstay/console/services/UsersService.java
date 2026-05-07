@@ -2,12 +2,21 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.users.UserSnapshot;
+import com.smartstay.console.ennum.ActivityType;
+import com.smartstay.console.ennum.ModuleId;
+import com.smartstay.console.ennum.Source;
 import com.smartstay.console.repositories.UsersRepository;
+import com.smartstay.console.utils.Constants;
+import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -16,9 +25,15 @@ import java.util.stream.Collectors;
 public class UsersService {
 
     @Autowired
+    private UsersRepository usersRepository;
+    @Autowired
     private Authentication authentication;
     @Autowired
-    private UsersRepository usersRepository;
+    private AgentService agentService;
+    @Autowired
+    private AgentRolesService agentRolesService;
+    @Autowired
+    private AgentActivitiesService agentActivitiesService;
     @Autowired
     private UserHostelService userHostelService;
     @Autowired
@@ -35,6 +50,8 @@ public class UsersService {
     private TableColumnsService tableColumnsService;
     @Autowired
     private CommentsService commentsService;
+    @Autowired
+    private UsersConfigService usersConfigService;
 
     public List<Users> getOwners(List<String> parentId) {
         if (!authentication.isAuthenticated()) {
@@ -119,5 +136,46 @@ public class UsersService {
         customerNotificationsService.deleteAll(customerNotifications);
         loginHistoryService.deleteAll(loginHistories);
         tableColumnsService.deleteAll(tableColumns);
+    }
+
+    public ResponseEntity<?> resetPinById(String userId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Users users = usersRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalse(userId);
+        if (users == null) {
+            return new ResponseEntity<>(Constants.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        UsersConfig usersConfig = users.getConfig();
+        if (usersConfig == null) {
+            return new ResponseEntity<>(Constants.USER_CONFIG_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        UserSnapshot oldUser = SnapshotUtility.toSnapshot(users);
+
+        usersConfig.setPin(null);
+        usersConfigService.save(usersConfig);
+
+        users.setLastUpdate(new Date());
+        usersRepository.save(users);
+
+        UserSnapshot newUser = SnapshotUtility.toSnapshot(users);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.RESET_USER_PIN,
+                users.getUserId(), oldUser, newUser);
+
+        return new ResponseEntity<>(Constants.UPDATED_SUCCESSFULLY, HttpStatus.OK);
     }
 }

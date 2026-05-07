@@ -16,6 +16,7 @@ public interface InvoiceRedemptionRepository extends JpaRepository<InvoiceRedemp
             select ir
             from InvoiceRedemption ir
             where (:hostelIds is null or ir.hostelId in :hostelIds)
+            order by ir.id desc
             """)
     Page<InvoiceRedemption> findFilteredInvoiceRedemptions(Set<String> hostelIds,
                                                            Pageable pageable);

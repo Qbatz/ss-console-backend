@@ -8,6 +8,7 @@ public class Constants {
     public static final String PASSWORD_REQUIRED = "Password is required";
     public static final String CONFIRM_PASSWORD_REQUIRED = "Confirm password is required";
     public static final String PASSWORD_MISMATCH = "Password and confirm password do not match";
-    public static final String USER_NOT_FOUND = "User Not found";
-    public static final String UPDATED_SUCCESSFULLY = "Updated Successfully";
+    public static final String USER_NOT_FOUND = "User not found";
+    public static final String UPDATED_SUCCESSFULLY = "Updated successfully";
+    public static final String USER_CONFIG_NOT_FOUND = "User config not found";
 }
