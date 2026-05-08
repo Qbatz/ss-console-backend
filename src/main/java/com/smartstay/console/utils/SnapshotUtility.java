@@ -489,8 +489,12 @@ public class SnapshotUtility {
                 i.getTransactionId(),
                 i.getReason(),
                 copyDate(i.getRedeemedAt()),
+                i.getUserType(),
+                i.getIsActive(),
+                i.getCreatedBy(),
+                i.getUpdatedBy(),
                 copyDate(i.getCreatedAt()),
-                i.getCreatedBy()
+                copyDate(i.getUpdatedAt())
         );
     }
 

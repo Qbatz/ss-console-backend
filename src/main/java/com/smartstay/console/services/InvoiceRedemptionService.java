@@ -4,10 +4,7 @@ import com.smartstay.console.Mapper.invoiceRedemption.InvoiceRedemptionResMapper
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
-import com.smartstay.console.ennum.ActivityType;
-import com.smartstay.console.ennum.ModuleId;
-import com.smartstay.console.ennum.PaymentStatus;
-import com.smartstay.console.ennum.Source;
+import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.invoiceRedemption.UpdateInvoiceRedemptionPayload;
 import com.smartstay.console.repositories.InvoiceRedemptionRepository;
 import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
@@ -92,6 +89,7 @@ public class InvoiceRedemptionService {
         Set<String> hostelIds = new HashSet<>();
         Set<String> invoiceIds = new HashSet<>();
         Set<String> userIds = new HashSet<>();
+        Set<String> agentIds = new HashSet<>();
 
         for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
             if (invoiceRedemption.getHostelId() != null){
@@ -105,6 +103,16 @@ public class InvoiceRedemptionService {
             }
             if (invoiceRedemption.getCreatedBy() != null){
                 userIds.add(invoiceRedemption.getCreatedBy());
+            }
+            if (UserType.OWNER.name().equals(invoiceRedemption.getUserType())){
+                if (invoiceRedemption.getUpdatedBy() != null){
+                    userIds.add(invoiceRedemption.getUpdatedBy());
+                }
+            }
+            if (UserType.AGENT.name().equals(invoiceRedemption.getUserType())){
+                if (invoiceRedemption.getUpdatedBy() != null){
+                    agentIds.add(invoiceRedemption.getUpdatedBy());
+                }
             }
         }
 
@@ -132,6 +140,14 @@ public class InvoiceRedemptionService {
                         invoice -> invoice
                 ));
 
+        Map<String, Agent> agentMap = agentService
+                .getAgentsByIds(agentIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        Agent::getAgentId,
+                        ag -> ag
+                ));
+
         List<InvoiceRedemptionRes> invoiceRedemptionResList = invoiceRedemptions.stream()
                 .map(invoiceRedemption -> {
 
@@ -139,9 +155,21 @@ public class InvoiceRedemptionService {
                     InvoicesV1 targetInvoice = invoiceMap.getOrDefault(invoiceRedemption.getTargetInvoiceId(), null);
                     InvoicesV1 sourceInvoice = invoiceMap.getOrDefault(invoiceRedemption.getSourceInvoiceId(), null);
                     Users createdByUser = userMap.getOrDefault(invoiceRedemption.getCreatedBy(), null);
+                    String updatedBy = null;
+                    if (UserType.OWNER.name().equals(invoiceRedemption.getUserType())) {
+                        Users updatedByUser = userMap.getOrDefault(invoiceRedemption.getUpdatedBy(), null);
+                        if (updatedByUser != null){
+                            updatedBy = Utils.getFullName(updatedByUser.getFirstName(), updatedByUser.getLastName());
+                        }
+                    } else if (UserType.AGENT.name().equals(invoiceRedemption.getUserType())) {
+                        Agent updatedByAgent = agentMap.getOrDefault(invoiceRedemption.getUpdatedBy(), null);
+                        if (updatedByAgent != null){
+                            updatedBy = Utils.getFullName(updatedByAgent.getFirstName(), updatedByAgent.getLastName());
+                        }
+                    }
 
                     return new InvoiceRedemptionResMapper(
-                            hostel, targetInvoice, sourceInvoice, createdByUser
+                            hostel, targetInvoice, sourceInvoice, createdByUser, updatedBy
                     ).apply(invoiceRedemption);
                 }).toList();
 
@@ -158,7 +186,7 @@ public class InvoiceRedemptionService {
     public List<InvoiceRedemption> getLimitedInvoiceRedemptionsByHostelId(String hostelId, int size){
         Pageable pageable = PageRequest.of(0, size);
         return invoiceRedemptionRepository
-                .findAllByHostelIdOrderByIdDesc(hostelId, pageable)
+                .findAllByHostelIdAndIsActiveTrueOrderByIdDesc(hostelId, pageable)
                 .getContent();
     }
 
@@ -188,12 +216,13 @@ public class InvoiceRedemptionService {
         Pageable pageable = PageRequest.of(page, size);
 
         Page<InvoiceRedemption> pagedInvoiceRedemptions = invoiceRedemptionRepository
-                .findAllByHostelIdOrderByIdDesc(hostelId, pageable);
+                .findAllByHostelIdAndIsActiveTrueOrderByIdDesc(hostelId, pageable);
 
         List<InvoiceRedemption> invoiceRedemptions = pagedInvoiceRedemptions.getContent();
 
         Set<String> invoiceIds = new HashSet<>();
         Set<String> userIds = new HashSet<>();
+        Set<String> agentIds = new HashSet<>();
 
         for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
             if (invoiceRedemption.getTargetInvoiceId() != null){
@@ -204,6 +233,16 @@ public class InvoiceRedemptionService {
             }
             if (invoiceRedemption.getCreatedBy() != null){
                 userIds.add(invoiceRedemption.getCreatedBy());
+            }
+            if (UserType.OWNER.name().equals(invoiceRedemption.getUserType())){
+                if (invoiceRedemption.getUpdatedBy() != null){
+                    userIds.add(invoiceRedemption.getUpdatedBy());
+                }
+            }
+            if (UserType.AGENT.name().equals(invoiceRedemption.getUserType())){
+                if (invoiceRedemption.getUpdatedBy() != null){
+                    agentIds.add(invoiceRedemption.getUpdatedBy());
+                }
             }
         }
 
@@ -223,15 +262,34 @@ public class InvoiceRedemptionService {
                         invoice -> invoice
                 ));
 
+        Map<String, Agent> agentMap = agentService
+                .getAgentsByIds(agentIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        Agent::getAgentId,
+                        ag -> ag
+                ));
+
         List<InvoiceRedemptionRes> invoiceRedemptionResList = invoiceRedemptions.stream()
                 .map(invoiceRedemption -> {
 
                     InvoicesV1 targetInvoice = invoiceMap.getOrDefault(invoiceRedemption.getTargetInvoiceId(), null);
                     InvoicesV1 sourceInvoice = invoiceMap.getOrDefault(invoiceRedemption.getSourceInvoiceId(), null);
                     Users createdByUser = userMap.getOrDefault(invoiceRedemption.getCreatedBy(), null);
-
+                    String updatedBy = null;
+                    if (UserType.OWNER.name().equals(invoiceRedemption.getUserType())) {
+                        Users updatedByUser = userMap.getOrDefault(invoiceRedemption.getUpdatedBy(), null);
+                        if (updatedByUser != null){
+                            updatedBy = Utils.getFullName(updatedByUser.getFirstName(), updatedByUser.getLastName());
+                        }
+                    } else if (UserType.AGENT.name().equals(invoiceRedemption.getUserType())) {
+                        Agent updatedByAgent = agentMap.getOrDefault(invoiceRedemption.getUpdatedBy(), null);
+                        if (updatedByAgent != null){
+                            updatedBy = Utils.getFullName(updatedByAgent.getFirstName(), updatedByAgent.getLastName());
+                        }
+                    }
                     return new InvoiceRedemptionResMapper(
-                            hostel, targetInvoice, sourceInvoice, createdByUser
+                            hostel, targetInvoice, sourceInvoice, createdByUser, updatedBy
                     ).apply(invoiceRedemption);
                 }).toList();
 
@@ -330,6 +388,9 @@ public class InvoiceRedemptionService {
         }
 
         invoiceRedemption.setRedemptionAmount(newAmount);
+        invoiceRedemption.setUserType(UserType.AGENT.name());
+        invoiceRedemption.setUpdatedBy(authentication.getName());
+        invoiceRedemption.setUpdatedAt(today);
 
         invoiceService.save(sourceInvoice);
         invoiceService.save(targetInvoice);
@@ -416,10 +477,15 @@ public class InvoiceRedemptionService {
             targetInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
         }
 
+        invoiceRedemption.setIsActive(false);
+        invoiceRedemption.setUserType(UserType.AGENT.name());
+        invoiceRedemption.setUpdatedBy(authentication.getName());
+        invoiceRedemption.setUpdatedAt(today);
+
         invoiceService.save(sourceInvoice);
         invoiceService.save(targetInvoice);
 
-        invoiceRedemptionRepository.delete(invoiceRedemption);
+        invoiceRedemptionRepository.save(invoiceRedemption);
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.INVOICE_REDEMPTION,
                 String.valueOf(invoiceRedemptionId), oldInvoiceRedemption, null);

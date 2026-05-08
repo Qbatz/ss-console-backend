@@ -9,10 +9,15 @@ public record InvoiceRedemptionRes(Long id,
                                    String hostelName,
                                    Double redemptionAmount,
                                    String referenceNumber,
+                                   String transactionId,
                                    String reason,
                                    String redeemedAtDate,
                                    String redeemedAtTime,
+                                   String userType,
                                    String createdAtDate,
                                    String createdAtTime,
-                                   String createdBy) {
+                                   String updatedAtDate,
+                                   String updatedAtTime,
+                                   String createdBy,
+                                   String updatedBy) {
 }

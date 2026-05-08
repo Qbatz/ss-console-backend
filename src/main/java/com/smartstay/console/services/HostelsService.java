@@ -420,6 +420,25 @@ public class HostelsService {
             }
         }
 
+        List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
+                .getLimitedInvoiceRedemptionsByHostelId(hostelId, 50);
+
+        Set<String> invoiceIds = new HashSet<>();
+
+        for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
+            if (invoiceRedemption.getTargetInvoiceId() != null){
+                invoiceIds.add(invoiceRedemption.getTargetInvoiceId());
+            }
+            if (invoiceRedemption.getSourceInvoiceId() != null){
+                invoiceIds.add(invoiceRedemption.getSourceInvoiceId());
+            }
+            if (UserType.AGENT.name().equals(invoiceRedemption.getUserType())){
+                if (invoiceRedemption.getUpdatedBy() != null){
+                    createdByIds.add(invoiceRedemption.getUpdatedBy());
+                }
+            }
+        }
+
         List<Agent> agents = createdByIds.isEmpty()
                 ? Collections.emptyList()
                 : agentService.getAgentsByIds(createdByIds);
@@ -507,20 +526,6 @@ public class HostelsService {
                             Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
                 }).toList();
 
-        List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
-                .getLimitedInvoiceRedemptionsByHostelId(hostelId, 50);
-
-        Set<String> invoiceIds = new HashSet<>();
-
-        for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
-            if (invoiceRedemption.getTargetInvoiceId() != null){
-                invoiceIds.add(invoiceRedemption.getTargetInvoiceId());
-            }
-            if (invoiceRedemption.getSourceInvoiceId() != null){
-                invoiceIds.add(invoiceRedemption.getSourceInvoiceId());
-            }
-        }
-
         Map<String, InvoicesV1> invoiceMap = invoiceV1Service
                 .getInvoicesByIds(invoiceIds)
                 .stream()
@@ -535,9 +540,21 @@ public class HostelsService {
                     InvoicesV1 targetInvoice = invoiceMap.getOrDefault(invoiceRedemption.getTargetInvoiceId(), null);
                     InvoicesV1 sourceInvoice = invoiceMap.getOrDefault(invoiceRedemption.getSourceInvoiceId(), null);
                     Users createdByUser = userLookup.getOrDefault(invoiceRedemption.getCreatedBy(), null);
+                    String updatedBy = null;
+                    if (UserType.OWNER.name().equals(invoiceRedemption.getUserType())) {
+                        Users updatedByUser = userLookup.getOrDefault(invoiceRedemption.getUpdatedBy(), null);
+                        if (updatedByUser != null){
+                            updatedBy = Utils.getFullName(updatedByUser.getFirstName(), updatedByUser.getLastName());
+                        }
+                    } else if (UserType.AGENT.name().equals(invoiceRedemption.getUserType())) {
+                        Agent updatedByAgent = agentMap.getOrDefault(invoiceRedemption.getUpdatedBy(), null);
+                        if (updatedByAgent != null){
+                            updatedBy = Utils.getFullName(updatedByAgent.getFirstName(), updatedByAgent.getLastName());
+                        }
+                    }
 
                     return new InvoiceRedemptionResMapper(
-                            hostel, targetInvoice, sourceInvoice, createdByUser
+                            hostel, targetInvoice, sourceInvoice, createdByUser, updatedBy
                     ).apply(invoiceRedemption);
                 }).toList();
 

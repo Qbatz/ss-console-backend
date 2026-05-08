@@ -16,10 +16,11 @@ public interface InvoiceRedemptionRepository extends JpaRepository<InvoiceRedemp
             select ir
             from InvoiceRedemption ir
             where (:hostelIds is null or ir.hostelId in :hostelIds)
+                and ir.isActive = true
             order by ir.id desc
             """)
     Page<InvoiceRedemption> findFilteredInvoiceRedemptions(Set<String> hostelIds,
                                                            Pageable pageable);
 
-    Page<InvoiceRedemption> findAllByHostelIdOrderByIdDesc(String hostelId, Pageable pageable);
+    Page<InvoiceRedemption> findAllByHostelIdAndIsActiveTrueOrderByIdDesc(String hostelId, Pageable pageable);
 }
