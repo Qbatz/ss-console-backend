@@ -44,6 +44,13 @@ public class SnapshotUtility {
                 p.isShouldShow(),
                 p.isCanCustomize(),
                 p.isActive(),
+                p.getGst(),
+                p.getGstAmount(),
+                p.getCgst(),
+                p.getSgst(),
+                p.getCgstAmount(),
+                p.getSgstAmount(),
+                p.getFinalPrice(),
                 copyDate(p.getCreatedAt()),
                 copyDate(p.getUpdatedAt()),
                 features
