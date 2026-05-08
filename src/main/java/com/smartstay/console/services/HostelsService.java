@@ -5,6 +5,7 @@ import com.smartstay.console.Mapper.customers.CustomerRecTrackerResMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecurringMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
 import com.smartstay.console.Mapper.hostels.*;
+import com.smartstay.console.Mapper.invoice.InvoiceResponseMapper;
 import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.Mapper.invoiceRedemption.InvoiceRedemptionResMapper;
 import com.smartstay.console.Mapper.users.UsersResponseMapper;
@@ -28,6 +29,7 @@ import com.smartstay.console.responses.customers.CustomerRecurringResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
 import com.smartstay.console.responses.hostels.*;
+import com.smartstay.console.responses.invoice.InvoiceResponse;
 import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
@@ -539,13 +541,32 @@ public class HostelsService {
                     ).apply(invoiceRedemption);
                 }).toList();
 
+        List<InvoicesV1> invoices = invoiceV1Service.getLimitedInvoicesByHostelId(hostelId, 50);
+
+        Set<String> invoiceCustomerIds = invoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        List<Customers> invoiceCustomers = customersService.getCustomersByIds(invoiceCustomerIds);
+
+        Map<String, Customers> invoiceCustomerMap = invoiceCustomers.stream()
+                .collect(Collectors.toMap(Customers::getCustomerId, customer -> customer));
+
+        List<InvoiceResponse> invoiceResponses = invoices.stream()
+                .map(invoice -> {
+                    Customers tenant = invoiceCustomerMap.getOrDefault(invoice.getCustomerId(), null);
+                    Users createdByUser = userLookup.getOrDefault(invoice.getCreatedBy(), null);
+                    Users updatedByUser = userLookup.getOrDefault(invoice.getCreatedBy(), null);
+                    return new InvoiceResponseMapper(tenant, createdByUser, updatedByUser).apply(invoice);
+                }).toList();
+
         HostelResponse hostelDetails = new HostelDetailsMapper(
                 ownerRes, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
                 noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
                 sharingTypeList, amenities, customerResponses, subscriptions, mastersRes, staffsRes,
                 activities, userLookup, trialPlans, expandableTrialPlans, billingDatesMap, recurringHistory,
                 customerRecurringHistory, recurringStatus, currentBillLastRecDate, currentBillingRules,
-                relationalAgentResponses, invoiceRedemptionResList
+                relationalAgentResponses, invoiceRedemptionResList, invoiceResponses
         ).apply(hostel);
 
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);

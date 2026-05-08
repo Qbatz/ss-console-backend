@@ -6,6 +6,7 @@ import com.smartstay.console.responses.bills.BillingTypeResponse;
 import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
+import com.smartstay.console.responses.invoice.InvoiceResponse;
 import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
@@ -61,6 +62,7 @@ public record HostelResponse(String hostelId,
                              List<CustomerRecHistoryRes> customerRecurringHistory,
                              List<UserActivitiesResponse> activities,
                              List<RelationalAgentResponse> relationalAgents,
-                             List<InvoiceRedemptionRes> invoiceRedemptions
+                             List<InvoiceRedemptionRes> invoiceRedemptions,
+                             List<InvoiceResponse> invoices
 ) {
 }

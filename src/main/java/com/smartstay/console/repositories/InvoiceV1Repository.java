@@ -1,6 +1,8 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.InvoicesV1;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -43,4 +45,6 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
     List<InvoicesV1> findAllByInvoiceIdIn(Set<String> invoiceIds);
 
     InvoicesV1 findByInvoiceId(String invoiceId);
+
+    Page<InvoicesV1> findAllByHostelIdOrderByCreatedAtDesc(String hostelId, Pageable pageable);
 }
