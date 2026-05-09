@@ -44,6 +44,13 @@ public class SnapshotUtility {
                 p.isShouldShow(),
                 p.isCanCustomize(),
                 p.isActive(),
+                p.getGst(),
+                p.getGstAmount(),
+                p.getCgst(),
+                p.getSgst(),
+                p.getCgstAmount(),
+                p.getSgstAmount(),
+                p.getFinalPrice(),
                 copyDate(p.getCreatedAt()),
                 copyDate(p.getUpdatedAt()),
                 features
@@ -482,8 +489,12 @@ public class SnapshotUtility {
                 i.getTransactionId(),
                 i.getReason(),
                 copyDate(i.getRedeemedAt()),
+                i.getUserType(),
+                i.getIsActive(),
+                i.getCreatedBy(),
+                i.getUpdatedBy(),
                 copyDate(i.getCreatedAt()),
-                i.getCreatedBy()
+                copyDate(i.getUpdatedAt())
         );
     }
 

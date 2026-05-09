@@ -5,6 +5,7 @@ import com.smartstay.console.Mapper.customers.CustomerRecTrackerResMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecurringMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
 import com.smartstay.console.Mapper.hostels.*;
+import com.smartstay.console.Mapper.invoice.InvoiceResponseMapper;
 import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.Mapper.invoiceRedemption.InvoiceRedemptionResMapper;
 import com.smartstay.console.Mapper.users.UsersResponseMapper;
@@ -28,6 +29,7 @@ import com.smartstay.console.responses.customers.CustomerRecurringResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
 import com.smartstay.console.responses.hostels.*;
+import com.smartstay.console.responses.invoice.InvoiceResponse;
 import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
@@ -418,6 +420,25 @@ public class HostelsService {
             }
         }
 
+        List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
+                .getLimitedInvoiceRedemptionsByHostelId(hostelId, 50);
+
+        Set<String> invoiceIds = new HashSet<>();
+
+        for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
+            if (invoiceRedemption.getTargetInvoiceId() != null){
+                invoiceIds.add(invoiceRedemption.getTargetInvoiceId());
+            }
+            if (invoiceRedemption.getSourceInvoiceId() != null){
+                invoiceIds.add(invoiceRedemption.getSourceInvoiceId());
+            }
+            if (UserType.AGENT.name().equals(invoiceRedemption.getUserType())){
+                if (invoiceRedemption.getUpdatedBy() != null){
+                    createdByIds.add(invoiceRedemption.getUpdatedBy());
+                }
+            }
+        }
+
         List<Agent> agents = createdByIds.isEmpty()
                 ? Collections.emptyList()
                 : agentService.getAgentsByIds(createdByIds);
@@ -505,20 +526,6 @@ public class HostelsService {
                             Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
                 }).toList();
 
-        List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
-                .getLimitedInvoiceRedemptionsByHostelId(hostelId, 50);
-
-        Set<String> invoiceIds = new HashSet<>();
-
-        for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
-            if (invoiceRedemption.getTargetInvoiceId() != null){
-                invoiceIds.add(invoiceRedemption.getTargetInvoiceId());
-            }
-            if (invoiceRedemption.getSourceInvoiceId() != null){
-                invoiceIds.add(invoiceRedemption.getSourceInvoiceId());
-            }
-        }
-
         Map<String, InvoicesV1> invoiceMap = invoiceV1Service
                 .getInvoicesByIds(invoiceIds)
                 .stream()
@@ -533,10 +540,41 @@ public class HostelsService {
                     InvoicesV1 targetInvoice = invoiceMap.getOrDefault(invoiceRedemption.getTargetInvoiceId(), null);
                     InvoicesV1 sourceInvoice = invoiceMap.getOrDefault(invoiceRedemption.getSourceInvoiceId(), null);
                     Users createdByUser = userLookup.getOrDefault(invoiceRedemption.getCreatedBy(), null);
+                    String updatedBy = null;
+                    if (UserType.OWNER.name().equals(invoiceRedemption.getUserType())) {
+                        Users updatedByUser = userLookup.getOrDefault(invoiceRedemption.getUpdatedBy(), null);
+                        if (updatedByUser != null){
+                            updatedBy = Utils.getFullName(updatedByUser.getFirstName(), updatedByUser.getLastName());
+                        }
+                    } else if (UserType.AGENT.name().equals(invoiceRedemption.getUserType())) {
+                        Agent updatedByAgent = agentMap.getOrDefault(invoiceRedemption.getUpdatedBy(), null);
+                        if (updatedByAgent != null){
+                            updatedBy = Utils.getFullName(updatedByAgent.getFirstName(), updatedByAgent.getLastName());
+                        }
+                    }
 
                     return new InvoiceRedemptionResMapper(
-                            hostel, targetInvoice, sourceInvoice, createdByUser
+                            hostel, targetInvoice, sourceInvoice, createdByUser, updatedBy
                     ).apply(invoiceRedemption);
+                }).toList();
+
+        List<InvoicesV1> invoices = invoiceV1Service.getLimitedInvoicesByHostelId(hostelId, 50);
+
+        Set<String> invoiceCustomerIds = invoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        List<Customers> invoiceCustomers = customersService.getCustomersByIds(invoiceCustomerIds);
+
+        Map<String, Customers> invoiceCustomerMap = invoiceCustomers.stream()
+                .collect(Collectors.toMap(Customers::getCustomerId, customer -> customer));
+
+        List<InvoiceResponse> invoiceResponses = invoices.stream()
+                .map(invoice -> {
+                    Customers tenant = invoiceCustomerMap.getOrDefault(invoice.getCustomerId(), null);
+                    Users createdByUser = userLookup.getOrDefault(invoice.getCreatedBy(), null);
+                    Users updatedByUser = userLookup.getOrDefault(invoice.getCreatedBy(), null);
+                    return new InvoiceResponseMapper(tenant, createdByUser, updatedByUser).apply(invoice);
                 }).toList();
 
         HostelResponse hostelDetails = new HostelDetailsMapper(
@@ -545,7 +583,7 @@ public class HostelsService {
                 sharingTypeList, amenities, customerResponses, subscriptions, mastersRes, staffsRes,
                 activities, userLookup, trialPlans, expandableTrialPlans, billingDatesMap, recurringHistory,
                 customerRecurringHistory, recurringStatus, currentBillLastRecDate, currentBillingRules,
-                relationalAgentResponses, invoiceRedemptionResList
+                relationalAgentResponses, invoiceRedemptionResList, invoiceResponses
         ).apply(hostel);
 
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);

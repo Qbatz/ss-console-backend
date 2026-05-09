@@ -15,15 +15,18 @@ public class InvoiceRedemptionResMapper implements Function<InvoiceRedemption, I
     InvoicesV1 targetInvoice;
     InvoicesV1 sourceInvoice;
     Users createdByUser;
+    String updatedBy;
 
     public InvoiceRedemptionResMapper(HostelV1 hostel,
                                       InvoicesV1 targetInvoice,
                                       InvoicesV1 sourceInvoice,
-                                      Users createdByUser) {
+                                      Users createdByUser,
+                                      String updatedBy) {
         this.hostel = hostel;
         this.targetInvoice = targetInvoice;
         this.sourceInvoice = sourceInvoice;
         this.createdByUser = createdByUser;
+        this.updatedBy = updatedBy;
     }
 
     @Override
@@ -49,9 +52,11 @@ public class InvoiceRedemptionResMapper implements Function<InvoiceRedemption, I
 
         return new InvoiceRedemptionRes(invoiceRedemption.getId(), invoiceRedemption.getSourceInvoiceId(), sourceInvoiceNumber,
                 invoiceRedemption.getTargetInvoiceId(), targetInvoiceNumber, invoiceRedemption.getHostelId(), hostelName,
-                invoiceRedemption.getRedemptionAmount(), invoiceRedemption.getReferenceNumber(), invoiceRedemption.getReason(),
-                Utils.dateToString(invoiceRedemption.getRedeemedAt()), Utils.dateToTime(invoiceRedemption.getRedeemedAt()),
+                invoiceRedemption.getRedemptionAmount(), invoiceRedemption.getReferenceNumber(), invoiceRedemption.getTransactionId(),
+                invoiceRedemption.getReason(), Utils.dateToString(invoiceRedemption.getRedeemedAt()),
+                Utils.dateToTime(invoiceRedemption.getRedeemedAt()), invoiceRedemption.getUserType(),
                 Utils.dateToString(invoiceRedemption.getCreatedAt()), Utils.dateToTime(invoiceRedemption.getCreatedAt()),
-                createdBy);
+                Utils.dateToString(invoiceRedemption.getUpdatedAt()), Utils.dateToTime(invoiceRedemption.getUpdatedAt()),
+                createdBy, updatedBy);
     }
 }

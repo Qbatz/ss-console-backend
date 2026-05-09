@@ -1,8 +1,19 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.Mapper.invoice.InvoiceResponseMapper;
+import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.repositories.InvoiceV1Repository;
+import com.smartstay.console.responses.invoice.InvoiceResponse;
+import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -13,6 +24,14 @@ public class InvoiceV1Service {
 
     @Autowired
     private InvoiceV1Repository invoiceV1Repository;
+    @Autowired
+    private Authentication authentication;
+    @Autowired
+    private AgentService agentService;
+    @Autowired
+    private AgentRolesService agentRolesService;
+    @Autowired
+    private HostelService hostelService;
     @Autowired
     private CustomerWalletHistoryService customerWalletHistoryService;
     @Autowired
@@ -25,6 +44,11 @@ public class InvoiceV1Service {
     private BankTransactionService bankTransactionService;
     @Autowired
     private BankingService bankingService;
+    @Autowired
+    @Lazy
+    private CustomersService customersService;
+    @Autowired
+    private UsersService usersService;
 
     public List<InvoicesV1> findByListOfCustomers(String hostelId, List<String> customerIds) {
         return invoiceV1Repository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
@@ -126,5 +150,82 @@ public class InvoiceV1Service {
 
     public void save(InvoicesV1 invoice) {
         invoiceV1Repository.save(invoice);
+    }
+
+    public List<InvoicesV1> getLimitedInvoicesByHostelId(String hostelId, int size) {
+        Pageable pageable = PageRequest.of(0, size);
+        return invoiceV1Repository.findAllByHostelIdOrderByCreatedAtDesc(hostelId, pageable)
+                .getContent();
+    }
+
+    public ResponseEntity<?> getInvoicesByHostelId(String hostelId, int page, int size) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Invoices.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelService.getHostelInfo(hostelId);
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<InvoicesV1> pagedInvoices = invoiceV1Repository
+                .findAllByHostelIdOrderByCreatedAtDesc(hostelId, pageable);
+
+        List<InvoicesV1> invoices = pagedInvoices.getContent();
+
+        Set<String> invoiceCustomerIds = new HashSet<>();
+        Set<String> userIds = new HashSet<>();
+
+        for (InvoicesV1 invoice : invoices) {
+            if (invoice.getCustomerId() != null) {
+                invoiceCustomerIds.add(invoice.getCustomerId());
+            }
+            if (invoice.getCreatedBy() != null){
+                userIds.add(invoice.getCreatedBy());
+            }
+            if (invoice.getUpdatedBy() != null){
+                userIds.add(invoice.getUpdatedBy());
+            }
+        }
+
+        List<Customers> invoiceCustomers = customersService.getCustomersByIds(invoiceCustomerIds);
+
+        Map<String, Customers> invoiceCustomerMap = invoiceCustomers.stream()
+                .collect(Collectors.toMap(Customers::getCustomerId, customer -> customer));
+
+        Map<String, Users> userMap = usersService.getUsersByIds(userIds).stream()
+                .collect(Collectors.toMap(Users::getUserId, user -> user));
+
+        List<InvoiceResponse> invoiceResponses = invoices.stream()
+                .map(invoice -> {
+                    Customers tenant = invoiceCustomerMap.getOrDefault(invoice.getCustomerId(), null);
+                    Users createdByUser = userMap.getOrDefault(invoice.getCreatedBy(), null);
+                    Users updatedByUser = userMap.getOrDefault(invoice.getCreatedBy(), null);
+                    return new InvoiceResponseMapper(tenant, createdByUser, updatedByUser).apply(invoice);
+                }).toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("invoiceList", invoiceResponses);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedInvoices.getTotalElements());
+        response.put("totalPages", pagedInvoices.getTotalPages());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

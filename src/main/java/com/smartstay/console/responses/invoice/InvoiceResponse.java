@@ -1,0 +1,33 @@
+package com.smartstay.console.responses.invoice;
+
+import java.util.List;
+
+public record InvoiceResponse(String invoiceId,
+                              String customerId,
+                              String tenantName,
+                              String invoiceNumber,
+                              String customerMobile,
+                              String customerMailId,
+                              String invoiceType,
+                              String paymentStatus,
+                              String othersDescription,
+                              String invoiceMode,
+                              String invoiceUrl,
+                              boolean isCancelled,
+                              boolean isDiscounted,
+                              String invoiceGeneratedDate,
+                              String invoiceGeneratedTime,
+                              String invoiceDueDate,
+                              String invoiceDueTime,
+                              String invoiceStartDate,
+                              String invoiceStartTime,
+                              String invoiceEndDate,
+                              String invoiceEndTime,
+                              String createdBy,
+                              String updatedBy,
+                              String createdAtDate,
+                              String createdAtTime,
+                              String updatedAtDate,
+                              String updatedAtTime,
+                              List<InvoiceItemsResponse> invoiceItems) {
+}

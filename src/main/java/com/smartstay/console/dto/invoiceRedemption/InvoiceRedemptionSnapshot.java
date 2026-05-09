@@ -11,6 +11,10 @@ public record InvoiceRedemptionSnapshot(Long id,
                                         String transactionId,
                                         String reason,
                                         Date redeemedAt,
+                                        String userType,
+                                        Boolean isActive,
+                                        String createdBy,
+                                        String updatedBy,
                                         Date createdAt,
-                                        String createdBy) {
+                                        Date updatedAt) {
 }
