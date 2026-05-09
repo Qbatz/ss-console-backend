@@ -20,6 +20,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -88,9 +90,9 @@ public class SubscriptionService {
         }
 
         boolean isTrial = false;
-        double paidAmount = 0.0;
-        double discountAmount = 0.0;
-        double discountPercentage = 100.0;
+        BigDecimal paidAmount = BigDecimal.ZERO;
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        BigDecimal discountPercentage = BigDecimal.valueOf(100);
         String paymentProofUrl = null;
         int duration = 1;
         Date today = new Date();
@@ -114,7 +116,7 @@ public class SubscriptionService {
             List<com.smartstay.console.dao.Subscription> hostelSubscriptions = subscriptionRepository
                     .findByHostelIdAndPlanCode(hostelId, payload.planCode());
 
-            if (hostelSubscriptions.size() > 1) {
+            if (!hostelSubscriptions.isEmpty()) {
                 return new ResponseEntity<>(Utils.TRIAL_EXTENSION_LIMIT_REACHED, HttpStatus.BAD_REQUEST);
             }
 
@@ -184,32 +186,26 @@ public class SubscriptionService {
             }
 
             if (payload.discountAmount() != null) {
-                try {
-                    discountAmount = Double.parseDouble(payload.discountAmount().toString());
-                }
-                catch (Exception e) {
-                    discountAmount = 0.0;
-                }
+                discountAmount = BigDecimal.valueOf(payload.discountAmount());
             }
 
-            if (discountAmount < 0 || discountAmount > plans.getFinalPrice()) {
+            BigDecimal planPrice = BigDecimal.valueOf(plans.getFinalPrice());
+
+            if (discountAmount.compareTo(BigDecimal.ZERO) < 0 || discountAmount.compareTo(planPrice) > 0) {
                 return new ResponseEntity<>(Utils.INVALID_DISCOUNT, HttpStatus.BAD_REQUEST);
             }
 
-            if (plans.getFinalPrice() > 0) {
-                discountPercentage = (discountAmount / plans.getFinalPrice()) * 100;
-                discountPercentage = Utils.roundOfDoubleTo2Digits(discountPercentage);
+            if (planPrice.compareTo(BigDecimal.ZERO) > 0) {
+                discountPercentage = discountAmount
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(planPrice, 2, RoundingMode.HALF_UP);
             }
 
-            try {
-                paidAmount = Double.parseDouble(payload.paidAmount().toString());
-            } catch (Exception e) {
-                paidAmount = 0.0;
-            }
+            paidAmount = BigDecimal.valueOf(payload.paidAmount());
 
-            double expectedAmount = plans.getFinalPrice() - discountAmount;
+            BigDecimal expectedAmount = planPrice.subtract(discountAmount);
 
-            if (paidAmount < 0 || paidAmount != expectedAmount) {
+            if (paidAmount.compareTo(BigDecimal.ZERO) < 0 || paidAmount.compareTo(expectedAmount) != 0) {
                 return new ResponseEntity<>(Utils.INVALID_PAID_AMOUNT, HttpStatus.BAD_REQUEST);
             }
 
@@ -235,9 +231,9 @@ public class SubscriptionService {
         newSubscription.setPlanEndsAt(endDate);
         newSubscription.setNextBillingAt(endDate);
 
-        newSubscription.setPaidAmount(paidAmount);
-        newSubscription.setDiscountAmount(discountAmount);
-        newSubscription.setDiscount(discountPercentage);
+        newSubscription.setPaidAmount(paidAmount.doubleValue());
+        newSubscription.setDiscountAmount(discountAmount.doubleValue());
+        newSubscription.setDiscount(discountPercentage.doubleValue());
         newSubscription.setPaymentProof(paymentProofUrl);
 
         newSubscription.setSubscriptionNumber(latestSubscription.getSubscriptionNumber());
@@ -262,7 +258,7 @@ public class SubscriptionService {
             newOrder.setPlanAmount(plans.getFinalPrice());
             newOrder.setPlanCode(plans.getPlanCode());
             newOrder.setPlanName(plans.getPlanName());
-            newOrder.setTotalAmount(paidAmount);
+            newOrder.setTotalAmount(paidAmount.doubleValue());
             newOrder.setOrderStatus(OrderStatus.PAID.name());
             newOrder.setPaymentType(PaymentType.MANUAL.name());
             newOrder.setChannel(Channel.CONSOLE.name());
@@ -289,7 +285,7 @@ public class SubscriptionService {
                 hostelPlan.setCurrentPlanStartsAt(newSubscription.getPlanStartsAt());
                 hostelPlan.setCurrentPlanEndsAt(newSubscription.getPlanEndsAt());
                 hostelPlan.setCurrentPlanPrice(plans.getFinalPrice());
-                hostelPlan.setPaidAmount(paidAmount);
+                hostelPlan.setPaidAmount(paidAmount.doubleValue());
                 hostelPlan.setTrial(isTrial);
                 hostelPlan.setTrialEndingAt(isTrial ? newSubscription.getPlanEndsAt() : null);
 
