@@ -113,6 +113,8 @@ public class OwnersService {
     public ResponseEntity<?> getAllOwnersList(String name,
                                               Boolean isPropertiesExpired,
                                               Boolean isAboutToExpire,
+                                              Boolean isActive,
+                                              Boolean hasNoProperties,
                                               int page,
                                               int size,
                                               String sortBy,
@@ -141,6 +143,8 @@ public class OwnersService {
 
         boolean expired = Boolean.TRUE.equals(isPropertiesExpired);
         boolean aboutToExpire = Boolean.TRUE.equals(isAboutToExpire);
+        boolean active = Boolean.TRUE.equals(isActive);
+        boolean noProperties = Boolean.TRUE.equals(hasNoProperties);
 
         List<OwnerWithAddressProjection> owners = usersRepository.findAllOwnersWithAddressProjection(name);
 
@@ -151,17 +155,23 @@ public class OwnersService {
                 )).toList();
 
         if (owners.isEmpty()) {
-            return ResponseEntity.ok(Map.of(
-                    "content", Collections.emptyList(),
-                    "currentPage", page,
-                    "pageSize", size,
-                    "totalItems", 0,
-                    "totalPages", 0,
-                    "sortBy", sortField.name(),
-                    "direction", finalDirection,
-                    "availableSortBy", sortOptions,
-                    "availableDirection", List.of("asc", "desc")
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("content", Collections.emptyList());
+            response.put("currentPage", page + 1);
+            response.put("pageSize", size);
+            response.put("totalItems", 0);
+            response.put("totalPages", 0);
+            response.put("ownersCount", 0);
+            response.put("expiredCount", 0);
+            response.put("aboutToExpireCount", 0);
+            response.put("activeCount", 0);
+            response.put("noPropertiesCount", 0);
+            response.put("sortBy", sortField.name());
+            response.put("direction", finalDirection);
+            response.put("availableSortBy", sortOptions);
+            response.put("availableDirection", List.of("asc", "desc"));
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
         }
 
         Set<String> parentIds = owners.stream()
@@ -172,8 +182,9 @@ public class OwnersService {
 
         Map<String, Integer> hostelCountMap = new HashMap<>();
 
-        Map<String, Boolean> expiredOwnerMap = new HashMap<>();
-        Map<String, Boolean> aboutToExpireOwnerMap = new HashMap<>();
+        Set<String> expiredOwnerIds = new HashSet<>();
+        Set<String> aboutToExpireOwnerIds = new HashSet<>();
+        Set<String> activeOwnerIds = new HashSet<>();
 
         Date today = new Date();
         Date plus10 = Utils.addDaysToDate(today, 10);
@@ -186,7 +197,7 @@ public class OwnersService {
             hostelCountMap.merge(parentId, 1, Integer::sum);
 
             if (end == null) {
-                expiredOwnerMap.put(parentId, true);
+                expiredOwnerIds.add(parentId);
                 continue;
             }
 
@@ -194,30 +205,48 @@ public class OwnersService {
             int cmpPlus10 = Utils.compareWithTwoDates(end, plus10);
 
             if (cmpToday < 0) {
-                expiredOwnerMap.put(parentId, true);
+                expiredOwnerIds.add(parentId);
             }
-
-            if (cmpToday >= 0 && cmpPlus10 < 0) {
-                aboutToExpireOwnerMap.put(parentId, true);
+            else if (cmpPlus10 < 0) {
+                aboutToExpireOwnerIds.add(parentId);
+                activeOwnerIds.add(parentId);
+            }
+            else {
+                activeOwnerIds.add(parentId);
             }
         }
+
+        Set<String> parentIdsWithHostels = hostelCountMap.keySet();
+
+        long noPropertiesCount = owners.stream()
+                .filter(owner -> !parentIdsWithHostels.contains(owner.getParentId()))
+                .count();
 
         List<OwnerWithAddressProjection> filteredOwners = owners.stream()
                 .filter(owner -> {
 
                     String parentId = owner.getParentId();
 
-                    if (expired && expiredOwnerMap.getOrDefault(parentId, false)) {
+                    boolean hasNoHostels = !parentIdsWithHostels.contains(parentId);
+
+                    if (expired && expiredOwnerIds.contains(parentId)) {
                         return true;
                     }
 
-                    if (aboutToExpire && aboutToExpireOwnerMap.getOrDefault(parentId, false)) {
+                    if (aboutToExpire && aboutToExpireOwnerIds.contains(parentId)) {
                         return true;
                     }
 
-                    return !expired && !aboutToExpire;
-                })
-                .toList();
+                    if (active && activeOwnerIds.contains(parentId)) {
+                        return true;
+                    }
+
+                    if (noProperties && hasNoHostels) {
+                        return true;
+                    }
+
+                    return !expired && !aboutToExpire && !active && !noProperties;
+                }).toList();
 
         List<UserActivities> userActivitiesList =
                 userActivitiesService.findLatestActivitiesByParentIds(parentIds);
@@ -276,8 +305,13 @@ public class OwnersService {
         response.put("pageSize", size);
         response.put("totalItems", totalItems);
         response.put("totalPages", totalPages);
+        response.put("ownersCount", owners.size());
+        response.put("expiredCount", expiredOwnerIds.size());
+        response.put("aboutToExpireCount", aboutToExpireOwnerIds.size());
+        response.put("activeCount", activeOwnerIds.size());
+        response.put("noPropertiesCount", noPropertiesCount);
         response.put("sortBy", sortField.name());
-        response.put("direction", direction);
+        response.put("direction", finalDirection);
         response.put("availableSortBy", sortOptions);
         response.put("availableDirection", List.of("asc", "desc"));
 
