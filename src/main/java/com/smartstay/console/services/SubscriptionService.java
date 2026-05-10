@@ -114,7 +114,7 @@ public class SubscriptionService {
             List<com.smartstay.console.dao.Subscription> hostelSubscriptions = subscriptionRepository
                     .findByHostelIdAndPlanCode(hostelId, payload.planCode());
 
-            if (hostelSubscriptions.size() > 1) {
+            if (!hostelSubscriptions.isEmpty()) {
                 return new ResponseEntity<>(Utils.TRIAL_EXTENSION_LIMIT_REACHED, HttpStatus.BAD_REQUEST);
             }
 
@@ -190,6 +190,7 @@ public class SubscriptionService {
                 catch (Exception e) {
                     discountAmount = 0.0;
                 }
+                discountAmount = Utils.roundOfDoubleTo2Digits(discountAmount);
             }
 
             if (discountAmount < 0 || discountAmount > plans.getFinalPrice()) {
@@ -206,8 +207,10 @@ public class SubscriptionService {
             } catch (Exception e) {
                 paidAmount = 0.0;
             }
+            paidAmount = Utils.roundOfDoubleTo2Digits(paidAmount);
 
             double expectedAmount = plans.getFinalPrice() - discountAmount;
+            expectedAmount = Utils.roundOfDoubleTo2Digits(expectedAmount);
 
             if (paidAmount < 0 || paidAmount != expectedAmount) {
                 return new ResponseEntity<>(Utils.INVALID_PAID_AMOUNT, HttpStatus.BAD_REQUEST);
