@@ -5,8 +5,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Set;
 
 @Repository
@@ -23,4 +25,16 @@ public interface InvoiceRedemptionRepository extends JpaRepository<InvoiceRedemp
                                                            Pageable pageable);
 
     Page<InvoiceRedemption> findAllByHostelIdAndIsActiveTrueOrderByIdDesc(String hostelId, Pageable pageable);
+
+    @Query("""
+                SELECT ir
+                FROM InvoiceRedemption ir
+                WHERE (
+                    ir.sourceInvoiceId IN :invoiceIds
+                    OR ir.targetInvoiceId IN :invoiceIds
+                )
+                AND ir.isActive = true
+                ORDER BY ir.id DESC
+            """)
+    List<InvoiceRedemption> findByInvoiceIds(@Param("invoiceIds") Set<String> invoiceIds);
 }

@@ -6,6 +6,7 @@ public enum ActivityType {
     DELETE,
     LOGIN,
     SNAPSHOT_UPDATE,
+    SNAPSHOT_DELETE,
     DEACTIVATE,
     REACTIVATE,
     RESET

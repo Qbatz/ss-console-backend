@@ -5,12 +5,14 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
 import com.smartstay.console.ennum.*;
+import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.payloads.invoiceRedemption.UpdateInvoiceRedemptionPayload;
 import com.smartstay.console.repositories.InvoiceRedemptionRepository;
 import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +41,7 @@ public class InvoiceRedemptionService {
     @Autowired
     private UsersService usersService;
     @Autowired
+    @Lazy
     private InvoiceV1Service invoiceService;
 
     public ResponseEntity<?> getInvoiceRedemption(int page, int size, String name) {
@@ -491,5 +494,104 @@ public class InvoiceRedemptionService {
                 String.valueOf(invoiceRedemptionId), oldInvoiceRedemption, null);
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
+
+    public List<InvoiceRedemption> getInvoiceRedemptionByInvoiceIds(Set<String> invoiceIds) {
+        return invoiceRedemptionRepository.findByInvoiceIds(invoiceIds);
+    }
+
+    public void deleteInvoiceRedemptions(List<InvoiceRedemption> invoiceRedemptions) {
+
+        Set<String> invoiceIds = new HashSet<>();
+
+        for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
+            if (invoiceRedemption.getSourceInvoiceId() != null){
+                invoiceIds.add(invoiceRedemption.getSourceInvoiceId());
+            }
+            if (invoiceRedemption.getTargetInvoiceId() != null){
+                invoiceIds.add(invoiceRedemption.getTargetInvoiceId());
+            }
+        }
+
+        List<InvoicesV1> invoices = invoiceService.getInvoicesByIds(invoiceIds);
+
+        Map<String, InvoicesV1> invoiceMap = invoices.stream()
+                .collect(Collectors.toMap(InvoicesV1::getInvoiceId, invoice -> invoice));
+
+        Date today = new Date();
+
+        List<InvoicesV1> invoiceList = new ArrayList<>();
+        List<InvoiceRedemption> invoiceRedemptionList = new ArrayList<>();
+
+        for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
+
+            if (invoiceRedemption == null) {
+                throw new BadRequestException(Utils.INVOICE_REDEMPTION_NOT_FOUND);
+            }
+
+            if (invoiceRedemption.getTargetInvoiceId() == null || invoiceRedemption.getSourceInvoiceId() == null) {
+                throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
+            }
+
+            InvoicesV1 sourceInvoice = invoiceMap.getOrDefault(invoiceRedemption.getSourceInvoiceId(), null);
+            if (sourceInvoice == null){
+                throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
+            }
+
+            InvoicesV1 targetInvoice = invoiceMap.getOrDefault(invoiceRedemption.getTargetInvoiceId(),  null);
+            if (targetInvoice == null){
+                throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
+            }
+
+            if (invoiceRedemption.getRedemptionAmount() == null || sourceInvoice.getBalanceAmount() == null ||
+                    targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null){
+                throw new BadRequestException(Utils.INVALID_AMOUNT);
+            }
+
+            double redemptionAmount = invoiceRedemption.getRedemptionAmount();
+
+            if (redemptionAmount <= 0) {
+                throw new BadRequestException(Utils.INVALID_REDEMPTION_AMOUNT);
+            }
+
+            double sourceInvoiceNewBalanceAmount = sourceInvoice.getBalanceAmount() + redemptionAmount;
+
+            sourceInvoice.setBalanceAmount(sourceInvoiceNewBalanceAmount);
+            sourceInvoice.setUpdatedAt(today);
+
+            double targetInvoiceNewPaidAmount = targetInvoice.getPaidAmount() - redemptionAmount;
+
+            if (targetInvoiceNewPaidAmount < 0) {
+                throw new BadRequestException(Utils.PAID_AMOUNT_GOES_NEGATIVE);
+            }
+
+            targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
+            targetInvoice.setUpdatedAt(today);
+
+            if (Objects.equals(targetInvoiceNewPaidAmount, targetInvoice.getTotalAmount())){
+                targetInvoice.setPaymentStatus(PaymentStatus.PAID.name());
+            } else if (targetInvoiceNewPaidAmount <= 0) {
+                targetInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
+            } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetInvoice.getTotalAmount()) {
+                targetInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+            }
+
+            invoiceRedemption.setIsActive(false);
+            invoiceRedemption.setUserType(UserType.AGENT.name());
+            invoiceRedemption.setUpdatedBy(authentication.getName());
+            invoiceRedemption.setUpdatedAt(today);
+
+            invoiceList.add(sourceInvoice);
+            invoiceList.add(targetInvoice);
+
+            invoiceRedemptionList.add(invoiceRedemption);
+        }
+
+        invoiceService.saveAll(invoiceList);
+        invoiceRedemptionRepository.saveAll(invoiceRedemptionList);
+    }
+
+    public void deleteAll(List<InvoiceRedemption> invoiceRedemptions) {
+        invoiceRedemptionRepository.deleteAll(invoiceRedemptions);
     }
 }

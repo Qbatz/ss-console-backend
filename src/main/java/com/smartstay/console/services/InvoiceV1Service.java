@@ -3,9 +3,16 @@ package com.smartstay.console.services;
 import com.smartstay.console.Mapper.invoice.InvoiceResponseMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.invoice.InvoiceSnapshot;
+import com.smartstay.console.dto.invoice.InvoiceSnapshotWrapper;
+import com.smartstay.console.ennum.ActivityType;
+import com.smartstay.console.ennum.InvoiceType;
 import com.smartstay.console.ennum.ModuleId;
+import com.smartstay.console.ennum.Source;
+import com.smartstay.console.payloads.invoice.InvoiceIdAmountPayload;
 import com.smartstay.console.repositories.InvoiceV1Repository;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
+import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -31,6 +38,8 @@ public class InvoiceV1Service {
     @Autowired
     private AgentRolesService agentRolesService;
     @Autowired
+    private AgentActivitiesService agentActivitiesService;
+    @Autowired
     private HostelService hostelService;
     @Autowired
     private CustomerWalletHistoryService customerWalletHistoryService;
@@ -49,6 +58,8 @@ public class InvoiceV1Service {
     private CustomersService customersService;
     @Autowired
     private UsersService usersService;
+    @Autowired
+    private InvoiceRedemptionService invoiceRedemptionService;
 
     public List<InvoicesV1> findByListOfCustomers(String hostelId, List<String> customerIds) {
         return invoiceV1Repository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
@@ -71,6 +82,13 @@ public class InvoiceV1Service {
                 .map(InvoicesV1::getInvoiceId)
                 .collect(Collectors.toSet());
 
+        deleteInvoiceRelatedData(invoiceIds);
+
+        invoiceV1Repository.deleteAll(invoices);
+    }
+
+    private void deleteInvoiceRelatedData(Set<String> invoiceIds) {
+
         List<CustomerWalletHistory> cwhList = customerWalletHistoryService
                 .getByInvoiceIds(invoiceIds);
         List<CreditDebitNotes> creditDebitNotes = creditDebitNotesService
@@ -79,6 +97,12 @@ public class InvoiceV1Service {
                 .getByInvoiceIds(invoiceIds);
         List<TransactionV1> transactions = transactionV1Service
                 .getByInvoiceIds(invoiceIds);
+        List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
+                .getInvoiceRedemptionByInvoiceIds(invoiceIds);
+
+        if (!invoiceRedemptions.isEmpty()){
+            invoiceRedemptionService.deleteInvoiceRedemptions(invoiceRedemptions);
+        }
 
         Set<String> transactionIds = transactions.stream()
                 .map(TransactionV1::getTransactionId)
@@ -132,12 +156,12 @@ public class InvoiceV1Service {
             bankingService.updateBankAccount(newBalanceAmounts);
         }
 
+        invoiceRedemptionService.deleteAll(invoiceRedemptions);
         customerWalletHistoryService.deleteAll(cwhList);
         creditDebitNotesService.deleteAll(creditDebitNotes);
         invoiceDiscountsService.deleteAll(invoiceDiscounts);
         transactionV1Service.deleteAll(transactions);
         bankTransactionService.deleteAll(bankTransactions);
-        invoiceV1Repository.deleteAll(invoices);
     }
 
     public List<InvoicesV1> getInvoicesByIds(Set<String> invoiceIds) {
@@ -227,5 +251,101 @@ public class InvoiceV1Service {
         response.put("totalPages", pagedInvoices.getTotalPages());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> deleteInvoicesByIds(List<InvoiceIdAmountPayload> payloads) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Invoices.getId(), Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Set<String> invoiceIds = payloads.stream()
+                .map(InvoiceIdAmountPayload::invoiceId)
+                .collect(Collectors.toSet());
+
+        List<InvoicesV1> invoices = invoiceV1Repository.findAllByInvoiceIdIn(invoiceIds);
+
+        Map<String, InvoicesV1> invoiceMap = invoices.stream()
+                .collect(Collectors.toMap(InvoicesV1::getInvoiceId, invoice -> invoice));
+
+        Set<String> cancelledInvoiceIds = invoices.stream()
+                .filter(invoice -> InvoiceType.SETTLEMENT.name().equals(invoice.getInvoiceType()))
+                .flatMap(invoice -> invoice.getCancelledInvoices().stream())
+                .collect(Collectors.toSet());
+
+        List<InvoicesV1> cancelledInvoices = invoiceV1Repository.findAllByInvoiceIdIn(cancelledInvoiceIds);
+
+        Map<String, InvoicesV1> cancelledInvoiceMap = cancelledInvoices.stream()
+                .collect(Collectors.toMap(InvoicesV1::getInvoiceId, invoice -> invoice));
+
+        List<InvoicesV1> cancelledInvoicesList = new ArrayList<>();
+
+        for (InvoiceIdAmountPayload payload : payloads) {
+
+            String invoiceId = payload.invoiceId();
+            double amount = payload.amount();
+
+            if (invoiceId == null || invoiceId.isBlank()){
+                return new ResponseEntity<>(Utils.INVOICE_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+            if (amount < 0){
+                return new ResponseEntity<>(Utils.AMOUNT_CAN_NOT_BE_LESS_THAN_ZERO, HttpStatus.BAD_REQUEST);
+            }
+
+            InvoicesV1 invoice = invoiceMap.getOrDefault(invoiceId, null);
+            if (invoice == null){
+                return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            double tolerance = Utils.AMOUNT_TOLERANCE;
+
+            if (Math.abs(invoice.getTotalAmount() - amount) > tolerance) {
+                return new ResponseEntity<>(Utils.INVALID_AMOUNT, HttpStatus.BAD_REQUEST);
+            }
+
+            if (InvoiceType.SETTLEMENT.name().equals(invoice.getInvoiceType())) {
+                List<String> cIds = invoice.getCancelledInvoices();
+                if (cIds != null && !cIds.isEmpty()) {
+                    for (String cancelledInvoiceId : cIds) {
+                        InvoicesV1 cancelledInvoice = cancelledInvoiceMap.getOrDefault(cancelledInvoiceId, null);
+                        if (cancelledInvoice == null){
+                            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                        }
+
+                        cancelledInvoice.setCancelled(false);
+
+                        cancelledInvoicesList.add(cancelledInvoice);
+                    }
+                }
+            }
+        }
+
+        invoiceV1Repository.saveAll(cancelledInvoicesList);
+
+        deleteInvoiceRelatedData(invoiceIds);
+
+        invoiceV1Repository.deleteAll(invoices);
+
+        List<InvoiceSnapshot> invoiceSnapshotList = SnapshotUtility.toSnapshotList(invoices, SnapshotUtility::toSnapshot);
+
+        InvoiceSnapshotWrapper invoiceSnapshotWrapper = new InvoiceSnapshotWrapper(invoiceSnapshotList);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.SNAPSHOT_DELETE, Source.INVOICE,
+                null, invoiceSnapshotWrapper, null);
+
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
+
+    public void saveAll(List<InvoicesV1> invoiceList) {
+        invoiceV1Repository.saveAll(invoiceList);
     }
 }
