@@ -32,6 +32,7 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
        FROM Agent a
        WHERE a.roleId IN :roleIds
          AND a.isActive = true
+         AND a.isMockAgent = false
        GROUP BY a.roleId
        """)
     List<RoleCountProjection> countActiveAgentsByRoleIds(@Param("roleIds") List<Long> roleIds);
