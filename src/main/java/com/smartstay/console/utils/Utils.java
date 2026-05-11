@@ -91,6 +91,7 @@ public class Utils {
     public static final String INVALID_GST_PERCENTAGE = "Invalid gst percentage";
     public static final String INVALID_AMOUNT = "Invalid amount";
     public static final String INVALID_REDEMPTION_AMOUNT = "Invalid redemption amount";
+    public static final String INVALID_PLAN_FEATURE_PRICE = "Invalid plan feature price";
 
     public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";

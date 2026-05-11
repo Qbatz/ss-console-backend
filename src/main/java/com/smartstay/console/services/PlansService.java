@@ -110,6 +110,8 @@ public class PlansService {
         }
 
         double planPrice = plan.getPrice();
+        double gstPercentage = plan.getGst();
+        boolean isPriceOrGstUpdated = false;
 
         PlanSnapshot oldPlan = SnapshotUtility.toSnapshot(plan);
 
@@ -146,6 +148,7 @@ public class PlansService {
             }
             plan.setPrice(payload.price());
             planPrice = payload.price();
+            isPriceOrGstUpdated = true;
         }
         if (payload.discountPercentage() != null){
             if (payload.discountPercentage() < 0 || payload.discountPercentage() > 100){
@@ -157,35 +160,9 @@ public class PlansService {
             if (payload.gstPercentage() < 0 || payload.gstPercentage() > 100){
                 return new ResponseEntity<>(Utils.INVALID_GST_PERCENTAGE, HttpStatus.BAD_REQUEST);
             }
-            if (!Objects.equals(plan.getGst(), payload.gstPercentage())){
-
-                double gstPercentage = payload.gstPercentage();
-                double halfGstPercentage = 0;
-                double gstAmount = 0;
-                double halfGstAmount = 0;
-
-                if (gstPercentage != 0){
-                    halfGstPercentage = Utils.roundOfDoubleTo2Digits(gstPercentage / 2);
-
-                    gstAmount = Utils.roundOfDoubleTo2Digits((planPrice * gstPercentage) / 100);
-                    halfGstAmount = Utils.roundOfDoubleTo2Digits(gstAmount / 2);
-                }
-
-                double cgstPercentage = halfGstPercentage;
-                double sgstPercentage = halfGstPercentage;
-                double cgstAmount = halfGstAmount;
-                double sgstAmount = halfGstAmount;
-
-                double finalPrice = Utils.roundOfDoubleTo2Digits(planPrice + gstAmount);
-
-                plan.setGst(gstPercentage);
-                plan.setGstAmount(gstAmount);
-                plan.setCgst(cgstPercentage);
-                plan.setSgst(sgstPercentage);
-                plan.setCgstAmount(cgstAmount);
-                plan.setSgstAmount(sgstAmount);
-                plan.setFinalPrice(finalPrice);
-            }
+            plan.setGst(payload.gstPercentage());
+            gstPercentage = payload.gstPercentage();
+            isPriceOrGstUpdated = true;
         }
         if (payload.shouldShow() != null) {
             plan.setShouldShow(payload.shouldShow());
@@ -194,6 +171,34 @@ public class PlansService {
             plan.setCanCustomize(payload.canCustomize());
         }
         plan.setUpdatedAt(new Date());
+
+        if (isPriceOrGstUpdated){
+
+            double halfGstPercentage = 0;
+            double gstAmount = 0;
+            double halfGstAmount = 0;
+
+            if (gstPercentage != 0){
+                halfGstPercentage = Utils.roundOfDoubleTo2Digits(gstPercentage / 2);
+
+                gstAmount = Utils.roundOfDoubleTo2Digits((planPrice * gstPercentage) / 100);
+                halfGstAmount = Utils.roundOfDoubleTo2Digits(gstAmount / 2);
+            }
+
+            double cgstPercentage = halfGstPercentage;
+            double sgstPercentage = halfGstPercentage;
+            double cgstAmount = halfGstAmount;
+            double sgstAmount = halfGstAmount;
+
+            double finalPrice = Utils.roundOfDoubleTo2Digits(planPrice + gstAmount);
+
+            plan.setGstAmount(gstAmount);
+            plan.setCgst(cgstPercentage);
+            plan.setSgst(sgstPercentage);
+            plan.setCgstAmount(cgstAmount);
+            plan.setSgstAmount(sgstAmount);
+            plan.setFinalPrice(finalPrice);
+        }
 
         if (payload.planFeatures() != null && !payload.planFeatures().isEmpty()) {
 
@@ -220,6 +225,9 @@ public class PlansService {
                         planFeature.setFeatureName(pfPayload.featureName());
                     }
                     if (pfPayload.price() != null){
+                        if (pfPayload.price() < 0){
+                            return new ResponseEntity<>(Utils.INVALID_PLAN_FEATURE_PRICE, HttpStatus.BAD_REQUEST);
+                        }
                         planFeature.setPrice(pfPayload.price());
                     }
                     updatedPlanFeatures.add(planFeature);
