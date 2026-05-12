@@ -1,6 +1,6 @@
 package com.smartstay.console.controller;
 
-import com.smartstay.console.payloads.invoice.InvoiceIdAmountPayload;
+import com.smartstay.console.payloads.invoice.InvoiceIdMobilePayload;
 import com.smartstay.console.services.InvoiceV1Service;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -29,7 +29,7 @@ public class InvoiceController {
     }
 
     @DeleteMapping
-    public ResponseEntity<?> deleteInvoicesByIds(@RequestBody List<InvoiceIdAmountPayload> payloads) {
+    public ResponseEntity<?> deleteInvoicesByIds(@RequestBody List<InvoiceIdMobilePayload> payloads) {
         return invoiceService.deleteInvoicesByIds(payloads);
     }
 }

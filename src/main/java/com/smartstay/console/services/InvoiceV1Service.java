@@ -9,7 +9,7 @@ import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.InvoiceType;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.Source;
-import com.smartstay.console.payloads.invoice.InvoiceIdAmountPayload;
+import com.smartstay.console.payloads.invoice.InvoiceIdMobilePayload;
 import com.smartstay.console.repositories.InvoiceV1Repository;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
 import com.smartstay.console.utils.SnapshotUtility;
@@ -253,7 +253,7 @@ public class InvoiceV1Service {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> deleteInvoicesByIds(List<InvoiceIdAmountPayload> payloads) {
+    public ResponseEntity<?> deleteInvoicesByIds(List<InvoiceIdMobilePayload> payloads) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -269,7 +269,7 @@ public class InvoiceV1Service {
         }
 
         Set<String> invoiceIds = payloads.stream()
-                .map(InvoiceIdAmountPayload::invoiceId)
+                .map(InvoiceIdMobilePayload::invoiceId)
                 .collect(Collectors.toSet());
 
         List<InvoicesV1> invoices = invoiceV1Repository.findAllByInvoiceIdIn(invoiceIds);
@@ -287,18 +287,27 @@ public class InvoiceV1Service {
         Map<String, InvoicesV1> cancelledInvoiceMap = cancelledInvoices.stream()
                 .collect(Collectors.toMap(InvoicesV1::getInvoiceId, invoice -> invoice));
 
+        Set<String> customerIds = invoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        List<Customers> customers = customersService.getCustomersByIds(customerIds);
+
+        Map<String, Customers> customersMap = customers.stream()
+                .collect(Collectors.toMap(Customers::getCustomerId, customer -> customer));
+
         List<InvoicesV1> cancelledInvoicesList = new ArrayList<>();
 
-        for (InvoiceIdAmountPayload payload : payloads) {
+        for (InvoiceIdMobilePayload payload : payloads) {
 
             String invoiceId = payload.invoiceId();
-            double amount = payload.amount();
+            String tenantMobile = payload.tenantMobile();
 
             if (invoiceId == null || invoiceId.isBlank()){
                 return new ResponseEntity<>(Utils.INVOICE_ID_REQUIRED, HttpStatus.BAD_REQUEST);
             }
-            if (amount < 0){
-                return new ResponseEntity<>(Utils.AMOUNT_CAN_NOT_BE_LESS_THAN_ZERO, HttpStatus.BAD_REQUEST);
+            if (tenantMobile == null || tenantMobile.isBlank()){
+                return new ResponseEntity<>(Utils.TENANT_MOBILE_REQUIRED, HttpStatus.BAD_REQUEST);
             }
 
             InvoicesV1 invoice = invoiceMap.getOrDefault(invoiceId, null);
@@ -306,10 +315,13 @@ public class InvoiceV1Service {
                 return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
 
-            double tolerance = Utils.AMOUNT_TOLERANCE;
+            Customers customer = customersMap.getOrDefault(invoice.getCustomerId(), null);
+            if (customer == null){
+                return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+            }
 
-            if (Math.abs(invoice.getTotalAmount() - amount) > tolerance) {
-                return new ResponseEntity<>(Utils.INVALID_AMOUNT, HttpStatus.BAD_REQUEST);
+            if (!customer.getMobile().equals(tenantMobile)){
+                return new ResponseEntity<>(Utils.TENANT_MOBILE_MISMATCH, HttpStatus.BAD_REQUEST);
             }
 
             if (InvoiceType.SETTLEMENT.name().equals(invoice.getInvoiceType())) {

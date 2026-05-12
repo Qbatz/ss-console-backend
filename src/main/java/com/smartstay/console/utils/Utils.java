@@ -21,7 +21,6 @@ public class Utils {
     public static final int DEFAULT_EXPANDABLE_TRIAL_DAYS = 5;
 
     public static final double DEFAULT_GST_PERCENTAGE = 18;
-    public static final double AMOUNT_TOLERANCE = 2.0;
 
     private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -117,6 +116,7 @@ public class Utils {
     public static final String PAID_BY_REQUIRED = "Paid by required";
     public static final String FIELD_NAME_IS_REQUIRED = "Field name is required";
     public static final String INVOICE_ID_REQUIRED = "InvoiceId is required";
+    public static final String TENANT_MOBILE_REQUIRED = "Tenant mobile is required";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
@@ -135,7 +135,6 @@ public class Utils {
     public static final String COLUMN_FILTER_CAN_NOT_BE_NULL = "Column filter cannot be null";
     public static final String ORDER_CAN_NOT_BE_NEGATIVE = "Order cannot be negative";
     public static final String AT_LEAST_ONE_COLUMN_NEEDS_TO_BE_SELECTED = "At least one column must be selected";
-    public static final String AMOUNT_CAN_NOT_BE_LESS_THAN_ZERO = "Amount can not be less than 0";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
