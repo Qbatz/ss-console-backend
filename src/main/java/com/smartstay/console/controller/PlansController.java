@@ -48,6 +48,11 @@ public class PlansController {
         return plansService.deactivatePlan(planId);
     }
 
+    @PutMapping("/reactivate-plan/{planId}")
+    private ResponseEntity<?> reactivatePlan(@PathVariable("planId") Long planId){
+        return plansService.reactivatePlan(planId);
+    }
+
     @PostMapping("/plan-feature/{planId}")
     private ResponseEntity<?> addPlanFeature(@PathVariable("planId") Long planId,
                                              @RequestBody @Valid PlanFeaturesPayload payload){

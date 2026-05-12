@@ -17,14 +17,15 @@ public interface PlansRepository extends JpaRepository<Plans, Long> {
 
     @Query("""
                 SELECT p FROM Plans p
-                WHERE p.isActive = true
-                  AND p.planType <> 'TRIAL'
+                WHERE p.planType <> 'TRIAL'
                   AND p.planType <> 'EXPANDABLE_TRIAL'
                 ORDER BY p.planId ASC
             """)
-    List<Plans> findActivePlansExcludingTrial();
+    List<Plans> findPlansExcludingTrial();
 
     Plans findByPlanIdAndIsActiveTrue(Long planId);
+
+    Plans findByPlanIdAndIsActiveFalse(Long planId);
 
     List<Plans> findByPlanTypeInAndIsActiveTrue(List<String> planTypes);
 
