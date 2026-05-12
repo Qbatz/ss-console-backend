@@ -43,6 +43,8 @@ public class InvoiceRedemptionService {
     @Autowired
     @Lazy
     private InvoiceV1Service invoiceService;
+    @Autowired
+    private PaymentSummaryService paymentSummaryService;
 
     public ResponseEntity<?> getInvoiceRedemption(int page, int size, String name) {
 
@@ -344,8 +346,14 @@ public class InvoiceRedemptionService {
             return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(targetInvoice.getCustomerId());
+        if (paymentSummary == null){
+            return new ResponseEntity<>(Utils.PAYMENT_SUMMARY_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
         if (invoiceRedemption.getRedemptionAmount() == null || sourceInvoice.getBalanceAmount() == null ||
-                targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null){
+                targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null||
+                paymentSummary.getCreditAmount() == null || paymentSummary.getBalance() == null){
             return new ResponseEntity<>(Utils.INVALID_AMOUNT, HttpStatus.BAD_REQUEST);
         }
 
@@ -359,6 +367,9 @@ public class InvoiceRedemptionService {
         }
 
         double differenceAmount = redemptionAmount - newAmount;
+
+        paymentSummary.setCreditAmount(paymentSummary.getCreditAmount() - differenceAmount);
+        paymentSummary.setBalance(paymentSummary.getBalance() + differenceAmount);
 
         double sourceInvoiceNewBalanceAmount = sourceInvoice.getBalanceAmount() + differenceAmount;
 
@@ -397,6 +408,8 @@ public class InvoiceRedemptionService {
 
         invoiceService.save(sourceInvoice);
         invoiceService.save(targetInvoice);
+
+        paymentSummaryService.save(paymentSummary);
         
         invoiceRedemption = invoiceRedemptionRepository.save(invoiceRedemption);
 
@@ -445,10 +458,16 @@ public class InvoiceRedemptionService {
             return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(targetInvoice.getCustomerId());
+        if (paymentSummary == null){
+            return new ResponseEntity<>(Utils.PAYMENT_SUMMARY_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
         Date today = new Date();
 
         if (invoiceRedemption.getRedemptionAmount() == null || sourceInvoice.getBalanceAmount() == null ||
-                targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null){
+                targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null ||
+                paymentSummary.getCreditAmount() == null || paymentSummary.getBalance() == null){
             return new ResponseEntity<>(Utils.INVALID_AMOUNT, HttpStatus.BAD_REQUEST);
         }
 
@@ -457,6 +476,9 @@ public class InvoiceRedemptionService {
         if (redemptionAmount <= 0) {
             return new ResponseEntity<>(Utils.INVALID_REDEMPTION_AMOUNT, HttpStatus.BAD_REQUEST);
         }
+
+        paymentSummary.setCreditAmount(paymentSummary.getCreditAmount() - redemptionAmount);
+        paymentSummary.setBalance(paymentSummary.getBalance() + redemptionAmount);
 
         double sourceInvoiceNewBalanceAmount = sourceInvoice.getBalanceAmount() + redemptionAmount;
 
@@ -488,6 +510,8 @@ public class InvoiceRedemptionService {
         invoiceService.save(sourceInvoice);
         invoiceService.save(targetInvoice);
 
+        paymentSummaryService.save(paymentSummary);
+
         invoiceRedemptionRepository.save(invoiceRedemption);
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.INVOICE_REDEMPTION,
@@ -518,9 +542,20 @@ public class InvoiceRedemptionService {
         Map<String, InvoicesV1> invoiceMap = invoices.stream()
                 .collect(Collectors.toMap(InvoicesV1::getInvoiceId, invoice -> invoice));
 
+        Set<String> customerIds = invoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        List<PaymentSummary> paymentSummaries = paymentSummaryService.getSummaryByCustomerIds(customerIds);
+
+        Map<String, PaymentSummary> paymentSummaryMap = paymentSummaries.stream()
+                .collect(Collectors.toMap(PaymentSummary::getCustomerId, payment -> payment,
+                        (a, b) -> a));
+
         Date today = new Date();
 
         List<InvoicesV1> invoiceList = new ArrayList<>();
+        List<PaymentSummary> paymentSummaryList = new ArrayList<>();
         List<InvoiceRedemption> invoiceRedemptionList = new ArrayList<>();
 
         for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
@@ -543,8 +578,14 @@ public class InvoiceRedemptionService {
                 throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
             }
 
+            PaymentSummary paymentSummary = paymentSummaryMap.getOrDefault(targetInvoice.getCustomerId(), null);
+            if (paymentSummary == null){
+                throw new BadRequestException(Utils.PAYMENT_SUMMARY_NOT_FOUND);
+            }
+
             if (invoiceRedemption.getRedemptionAmount() == null || sourceInvoice.getBalanceAmount() == null ||
-                    targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null){
+                    targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null||
+                    paymentSummary.getCreditAmount() == null || paymentSummary.getBalance() == null){
                 throw new BadRequestException(Utils.INVALID_AMOUNT);
             }
 
@@ -553,6 +594,9 @@ public class InvoiceRedemptionService {
             if (redemptionAmount <= 0) {
                 throw new BadRequestException(Utils.INVALID_REDEMPTION_AMOUNT);
             }
+
+            paymentSummary.setCreditAmount(paymentSummary.getCreditAmount() - redemptionAmount);
+            paymentSummary.setBalance(paymentSummary.getBalance() + redemptionAmount);
 
             double sourceInvoiceNewBalanceAmount = sourceInvoice.getBalanceAmount() + redemptionAmount;
 
@@ -584,10 +628,13 @@ public class InvoiceRedemptionService {
             invoiceList.add(sourceInvoice);
             invoiceList.add(targetInvoice);
 
+            paymentSummaryList.add(paymentSummary);
+
             invoiceRedemptionList.add(invoiceRedemption);
         }
 
         invoiceService.saveAll(invoiceList);
+        paymentSummaryService.saveAll(paymentSummaryList);
         invoiceRedemptionRepository.saveAll(invoiceRedemptionList);
     }
 

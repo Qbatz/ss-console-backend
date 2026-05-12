@@ -15,4 +15,6 @@ public interface PaymentSummaryRepository extends JpaRepository<PaymentSummary, 
     List<PaymentSummary> findAllByHostelIdAndCustomerId(String hostelId, String customerId);
 
     List<PaymentSummary> findAllByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds);
+
+    PaymentSummary findByCustomerId(String customerId);
 }

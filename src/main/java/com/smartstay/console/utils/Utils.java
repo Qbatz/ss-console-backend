@@ -73,6 +73,7 @@ public class Utils {
     public static final String FILTER_OPTION_NOT_FOUND = "Filter option not found";
     public static final String INVOICE_REDEMPTION_NOT_FOUND = "Invoice redemption not found";
     public static final String INVOICE_NOT_FOUND = "Invoice not found";
+    public static final String PAYMENT_SUMMARY_NOT_FOUND = "Payment summary not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";

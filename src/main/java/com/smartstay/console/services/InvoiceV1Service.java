@@ -60,6 +60,8 @@ public class InvoiceV1Service {
     private UsersService usersService;
     @Autowired
     private InvoiceRedemptionService invoiceRedemptionService;
+    @Autowired
+    private PaymentSummaryService paymentSummaryService;
 
     public List<InvoicesV1> findByListOfCustomers(String hostelId, List<String> customerIds) {
         return invoiceV1Repository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
@@ -83,6 +85,8 @@ public class InvoiceV1Service {
                 .collect(Collectors.toSet());
 
         deleteInvoiceRelatedData(invoiceIds);
+
+        paymentSummaryService.updatePaymentSummaryByInvoices(invoices);
 
         invoiceV1Repository.deleteAll(invoices);
     }
@@ -344,6 +348,8 @@ public class InvoiceV1Service {
         invoiceV1Repository.saveAll(cancelledInvoicesList);
 
         deleteInvoiceRelatedData(invoiceIds);
+
+        paymentSummaryService.updatePaymentSummaryByInvoices(invoices);
 
         invoiceV1Repository.deleteAll(invoices);
 
