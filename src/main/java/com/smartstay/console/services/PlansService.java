@@ -417,7 +417,7 @@ public class PlansService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_DELETE)) {
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
