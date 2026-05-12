@@ -31,10 +31,12 @@ public class PlanResMapper implements Function<Plans, PlansResponse> {
                 .map(planFeature -> new PlanFeaturesResMapper().apply(planFeature))
                 .toList();
 
+        Double yearlyPrice = Utils.roundOfDoubleTo2Digits(plans.getFinalPrice() * 12);
+
         return new PlansResponse(plans.getPlanId(), plans.getPlanName(), plans.getPlanCode(),
                 plans.getPlanType(), plans.getDuration(), plans.getPrice(), plans.getDiscounts(),
                 plans.getGst(), plans.getCgst(), plans.getSgst(), plans.getGstAmount(),
-                plans.getCgstAmount(), plans.getSgstAmount(), plans.getFinalPrice(),
+                plans.getCgstAmount(), plans.getSgstAmount(), plans.getFinalPrice(), yearlyPrice,
                 plans.isShouldShow(), plans.isCanCustomize(), createdAtDate, createdAtTime,
                 updatedAtDate, updatedAtTime, planFeatures);
     }
