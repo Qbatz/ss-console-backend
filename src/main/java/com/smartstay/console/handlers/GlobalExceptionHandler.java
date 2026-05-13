@@ -1,6 +1,7 @@
 package com.smartstay.console.handlers;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.exceptions.SmartStayException;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
@@ -68,5 +69,10 @@ public class GlobalExceptionHandler {
         }
 
         return new ResponseEntity<>("Invalid request body", HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<?> handleBadRequestException(BadRequestException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 }

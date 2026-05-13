@@ -71,6 +71,7 @@ public class AgentActivityUtil {
             case DELETE -> getDeleteDescription(source);
             case LOGIN -> getLoginDescription(source);
             case SNAPSHOT_UPDATE -> getSnapshotUpdateDescription(source);
+            case SNAPSHOT_DELETE -> getSnapshotDeleteDescription(source);
             case DEACTIVATE -> getDeactivateDescription(source);
             case REACTIVATE -> getReactivateDescription(source);
             case RESET -> getResetDescription(source);
@@ -122,6 +123,13 @@ public class AgentActivityUtil {
     private static String getSnapshotUpdateDescription(Source source) {
         return switch (source){
             default -> "Updated successfully";
+        };
+    }
+
+    private static String getSnapshotDeleteDescription(Source source) {
+        return switch (source){
+            case INVOICE -> "Deleted invoices";
+            default -> "Deleted successfully";
         };
     }
 

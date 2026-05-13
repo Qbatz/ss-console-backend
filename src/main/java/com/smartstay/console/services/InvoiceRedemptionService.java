@@ -5,12 +5,14 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
 import com.smartstay.console.ennum.*;
+import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.payloads.invoiceRedemption.UpdateInvoiceRedemptionPayload;
 import com.smartstay.console.repositories.InvoiceRedemptionRepository;
 import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,7 +41,10 @@ public class InvoiceRedemptionService {
     @Autowired
     private UsersService usersService;
     @Autowired
+    @Lazy
     private InvoiceV1Service invoiceService;
+    @Autowired
+    private PaymentSummaryService paymentSummaryService;
 
     public ResponseEntity<?> getInvoiceRedemption(int page, int size, String name) {
 
@@ -341,14 +346,20 @@ public class InvoiceRedemptionService {
             return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        if (invoiceRedemption.getRedemptionAmount() == null || sourceInvoice.getBalanceAmount() == null ||
-                targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null){
-            return new ResponseEntity<>(Utils.INVALID_AMOUNT, HttpStatus.BAD_REQUEST);
+        PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(targetInvoice.getCustomerId());
+        if (paymentSummary == null){
+            return new ResponseEntity<>(Utils.PAYMENT_SUMMARY_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
+
+        double redemptionAmount = invoiceRedemption.getRedemptionAmount() != null ? invoiceRedemption.getRedemptionAmount() : 0;
+        double targetTotal = targetInvoice.getTotalAmount() != null ? targetInvoice.getTotalAmount() : 0;
+        double targetPaid = targetInvoice.getPaidAmount() != null ? targetInvoice.getPaidAmount() : 0;
+        double sourceBalance = sourceInvoice.getBalanceAmount() != null ? sourceInvoice.getBalanceAmount() : 0;
+        double creditAmount = paymentSummary.getCreditAmount() != null ? paymentSummary.getCreditAmount() : 0;
+        double balance = paymentSummary.getBalance() != null ? paymentSummary.getBalance() : 0;
 
         Date today = new Date();
 
-        double redemptionAmount = invoiceRedemption.getRedemptionAmount();
         double newAmount = payload.amount();
 
         if (redemptionAmount <= 0) {
@@ -357,7 +368,10 @@ public class InvoiceRedemptionService {
 
         double differenceAmount = redemptionAmount - newAmount;
 
-        double sourceInvoiceNewBalanceAmount = sourceInvoice.getBalanceAmount() + differenceAmount;
+        paymentSummary.setCreditAmount(creditAmount - differenceAmount);
+        paymentSummary.setBalance(balance + differenceAmount);
+
+        double sourceInvoiceNewBalanceAmount = sourceBalance + differenceAmount;
 
         if (sourceInvoiceNewBalanceAmount < 0) {
             return new ResponseEntity<>(Utils.BALANCE_AMOUNT_NOT_ENOUGH, HttpStatus.BAD_REQUEST);
@@ -366,24 +380,24 @@ public class InvoiceRedemptionService {
         sourceInvoice.setBalanceAmount(sourceInvoiceNewBalanceAmount);
         sourceInvoice.setUpdatedAt(today);
 
-        double targetInvoiceNewPaidAmount = targetInvoice.getPaidAmount() - differenceAmount;
+        double targetInvoiceNewPaidAmount = targetPaid - differenceAmount;
 
         if (targetInvoiceNewPaidAmount < 0) {
             return new ResponseEntity<>(Utils.PAID_AMOUNT_GOES_NEGATIVE, HttpStatus.BAD_REQUEST);
         }
 
-        if (targetInvoiceNewPaidAmount > targetInvoice.getTotalAmount()) {
+        if (targetInvoiceNewPaidAmount > targetTotal) {
             return new ResponseEntity<>(Utils.PAID_AMOUNT_EXCEEDS_TOTAL_AMOUNT, HttpStatus.BAD_REQUEST);
         }
 
         targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
         targetInvoice.setUpdatedAt(today);
 
-        if (Objects.equals(targetInvoiceNewPaidAmount, targetInvoice.getTotalAmount())){
+        if (Objects.equals(targetInvoiceNewPaidAmount, targetTotal)){
             targetInvoice.setPaymentStatus(PaymentStatus.PAID.name());
         } else if (targetInvoiceNewPaidAmount <= 0) {
             targetInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
-        } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetInvoice.getTotalAmount()) {
+        } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetTotal) {
             targetInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
         }
 
@@ -394,6 +408,8 @@ public class InvoiceRedemptionService {
 
         invoiceService.save(sourceInvoice);
         invoiceService.save(targetInvoice);
+
+        paymentSummaryService.save(paymentSummary);
         
         invoiceRedemption = invoiceRedemptionRepository.save(invoiceRedemption);
 
@@ -442,25 +458,33 @@ public class InvoiceRedemptionService {
             return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        Date today = new Date();
-
-        if (invoiceRedemption.getRedemptionAmount() == null || sourceInvoice.getBalanceAmount() == null ||
-                targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null){
-            return new ResponseEntity<>(Utils.INVALID_AMOUNT, HttpStatus.BAD_REQUEST);
+        PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(targetInvoice.getCustomerId());
+        if (paymentSummary == null){
+            return new ResponseEntity<>(Utils.PAYMENT_SUMMARY_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        double redemptionAmount = invoiceRedemption.getRedemptionAmount();
+        Date today = new Date();
+
+        double redemptionAmount = invoiceRedemption.getRedemptionAmount() != null ? invoiceRedemption.getRedemptionAmount() : 0;
+        double targetTotal = targetInvoice.getTotalAmount() != null ? targetInvoice.getTotalAmount() : 0;
+        double targetPaid = targetInvoice.getPaidAmount() != null ? targetInvoice.getPaidAmount() : 0;
+        double sourceBalance = sourceInvoice.getBalanceAmount() != null ? sourceInvoice.getBalanceAmount() : 0;
+        double creditAmount = paymentSummary.getCreditAmount() != null ? paymentSummary.getCreditAmount() : 0;
+        double balance = paymentSummary.getBalance() != null ? paymentSummary.getBalance() : 0;
 
         if (redemptionAmount <= 0) {
             return new ResponseEntity<>(Utils.INVALID_REDEMPTION_AMOUNT, HttpStatus.BAD_REQUEST);
         }
 
-        double sourceInvoiceNewBalanceAmount = sourceInvoice.getBalanceAmount() + redemptionAmount;
+        paymentSummary.setCreditAmount(creditAmount - redemptionAmount);
+        paymentSummary.setBalance(balance + redemptionAmount);
+
+        double sourceInvoiceNewBalanceAmount = sourceBalance + redemptionAmount;
 
         sourceInvoice.setBalanceAmount(sourceInvoiceNewBalanceAmount);
         sourceInvoice.setUpdatedAt(today);
 
-        double targetInvoiceNewPaidAmount = targetInvoice.getPaidAmount() - redemptionAmount;
+        double targetInvoiceNewPaidAmount = targetPaid - redemptionAmount;
 
         if (targetInvoiceNewPaidAmount < 0) {
             return new ResponseEntity<>(Utils.PAID_AMOUNT_GOES_NEGATIVE, HttpStatus.BAD_REQUEST);
@@ -469,11 +493,11 @@ public class InvoiceRedemptionService {
         targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
         targetInvoice.setUpdatedAt(today);
 
-        if (Objects.equals(targetInvoiceNewPaidAmount, targetInvoice.getTotalAmount())){
+        if (Objects.equals(targetInvoiceNewPaidAmount, targetTotal)){
             targetInvoice.setPaymentStatus(PaymentStatus.PAID.name());
         } else if (targetInvoiceNewPaidAmount <= 0) {
             targetInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
-        } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetInvoice.getTotalAmount()) {
+        } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetTotal) {
             targetInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
         }
 
@@ -485,11 +509,134 @@ public class InvoiceRedemptionService {
         invoiceService.save(sourceInvoice);
         invoiceService.save(targetInvoice);
 
+        paymentSummaryService.save(paymentSummary);
+
         invoiceRedemptionRepository.save(invoiceRedemption);
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.INVOICE_REDEMPTION,
                 String.valueOf(invoiceRedemptionId), oldInvoiceRedemption, null);
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
+
+    public List<InvoiceRedemption> getInvoiceRedemptionByInvoiceIds(Set<String> invoiceIds) {
+        return invoiceRedemptionRepository.findByInvoiceIds(invoiceIds);
+    }
+
+    public void deleteInvoiceRedemptions(List<InvoiceRedemption> invoiceRedemptions) {
+
+        Set<String> invoiceIds = new HashSet<>();
+
+        for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
+            if (invoiceRedemption.getSourceInvoiceId() != null){
+                invoiceIds.add(invoiceRedemption.getSourceInvoiceId());
+            }
+            if (invoiceRedemption.getTargetInvoiceId() != null){
+                invoiceIds.add(invoiceRedemption.getTargetInvoiceId());
+            }
+        }
+
+        List<InvoicesV1> invoices = invoiceService.getInvoicesByIds(invoiceIds);
+
+        Map<String, InvoicesV1> invoiceMap = invoices.stream()
+                .collect(Collectors.toMap(InvoicesV1::getInvoiceId, invoice -> invoice));
+
+        Set<String> customerIds = invoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        List<PaymentSummary> paymentSummaries = paymentSummaryService.getSummaryByCustomerIds(customerIds);
+
+        Map<String, PaymentSummary> paymentSummaryMap = paymentSummaries.stream()
+                .collect(Collectors.toMap(PaymentSummary::getCustomerId, payment -> payment,
+                        (a, b) -> a));
+
+        Date today = new Date();
+
+        List<InvoicesV1> invoiceList = new ArrayList<>();
+        List<PaymentSummary> paymentSummaryList = new ArrayList<>();
+        List<InvoiceRedemption> invoiceRedemptionList = new ArrayList<>();
+
+        for (InvoiceRedemption invoiceRedemption : invoiceRedemptions) {
+
+            if (invoiceRedemption == null) {
+                throw new BadRequestException(Utils.INVOICE_REDEMPTION_NOT_FOUND);
+            }
+
+            if (invoiceRedemption.getTargetInvoiceId() == null || invoiceRedemption.getSourceInvoiceId() == null) {
+                throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
+            }
+
+            InvoicesV1 sourceInvoice = invoiceMap.getOrDefault(invoiceRedemption.getSourceInvoiceId(), null);
+            if (sourceInvoice == null){
+                throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
+            }
+
+            InvoicesV1 targetInvoice = invoiceMap.getOrDefault(invoiceRedemption.getTargetInvoiceId(),  null);
+            if (targetInvoice == null){
+                throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
+            }
+
+            PaymentSummary paymentSummary = paymentSummaryMap.getOrDefault(targetInvoice.getCustomerId(), null);
+            if (paymentSummary == null){
+                throw new BadRequestException(Utils.PAYMENT_SUMMARY_NOT_FOUND);
+            }
+
+            double redemptionAmount = invoiceRedemption.getRedemptionAmount() != null ? invoiceRedemption.getRedemptionAmount() : 0;
+            double targetTotal = targetInvoice.getTotalAmount() != null ? targetInvoice.getTotalAmount() : 0;
+            double targetPaid = targetInvoice.getPaidAmount() != null ? targetInvoice.getPaidAmount() : 0;
+            double sourceBalance = sourceInvoice.getBalanceAmount() != null ? sourceInvoice.getBalanceAmount() : 0;
+            double creditAmount = paymentSummary.getCreditAmount() != null ? paymentSummary.getCreditAmount() : 0;
+            double balance = paymentSummary.getBalance() != null ? paymentSummary.getBalance() : 0;
+
+            if (redemptionAmount <= 0) {
+                throw new BadRequestException(Utils.INVALID_REDEMPTION_AMOUNT);
+            }
+
+            paymentSummary.setCreditAmount(creditAmount - redemptionAmount);
+            paymentSummary.setBalance(balance + redemptionAmount);
+
+            double sourceInvoiceNewBalanceAmount = sourceBalance + redemptionAmount;
+
+            sourceInvoice.setBalanceAmount(sourceInvoiceNewBalanceAmount);
+            sourceInvoice.setUpdatedAt(today);
+
+            double targetInvoiceNewPaidAmount = targetPaid - redemptionAmount;
+
+            if (targetInvoiceNewPaidAmount < 0) {
+                throw new BadRequestException(Utils.PAID_AMOUNT_GOES_NEGATIVE);
+            }
+
+            targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
+            targetInvoice.setUpdatedAt(today);
+
+            if (Objects.equals(targetInvoiceNewPaidAmount, targetTotal)){
+                targetInvoice.setPaymentStatus(PaymentStatus.PAID.name());
+            } else if (targetInvoiceNewPaidAmount <= 0) {
+                targetInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
+            } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetTotal) {
+                targetInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+            }
+
+            invoiceRedemption.setIsActive(false);
+            invoiceRedemption.setUserType(UserType.AGENT.name());
+            invoiceRedemption.setUpdatedBy(authentication.getName());
+            invoiceRedemption.setUpdatedAt(today);
+
+            invoiceList.add(sourceInvoice);
+            invoiceList.add(targetInvoice);
+
+            paymentSummaryList.add(paymentSummary);
+
+            invoiceRedemptionList.add(invoiceRedemption);
+        }
+
+        invoiceService.saveAll(invoiceList);
+        paymentSummaryService.saveAll(paymentSummaryList);
+        invoiceRedemptionRepository.saveAll(invoiceRedemptionList);
+    }
+
+    public void deleteAll(List<InvoiceRedemption> invoiceRedemptions) {
+        invoiceRedemptionRepository.deleteAll(invoiceRedemptions);
     }
 }

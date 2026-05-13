@@ -1,19 +1,25 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.dao.InvoicesV1;
 import com.smartstay.console.dao.PaymentSummary;
+import com.smartstay.console.ennum.PaymentStatus;
+import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.repositories.PaymentSummaryRepository;
+import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class PaymentSummaryService {
 
     @Autowired
     private PaymentSummaryRepository paymentSummaryRepository;
-
 
     public List<PaymentSummary> getSummaryByCustomerIds(Set<String> customerIds) {
         return paymentSummaryRepository.findAllByCustomerIdIn(customerIds);
@@ -29,5 +35,70 @@ public class PaymentSummaryService {
 
     public List<PaymentSummary> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
         return paymentSummaryRepository.findAllByHostelIdAndCustomerIdIn(hostelId, customerIds);
+    }
+
+    public void saveAll(List<PaymentSummary> paymentSummaryList) {
+        paymentSummaryRepository.saveAll(paymentSummaryList);
+    }
+
+    public PaymentSummary getSummaryByCustomerId(String customerId) {
+        return paymentSummaryRepository.findByCustomerId(customerId);
+    }
+
+    public void save(PaymentSummary paymentSummary) {
+        paymentSummaryRepository.save(paymentSummary);
+    }
+
+    public void updatePaymentSummaryByInvoices(List<InvoicesV1> invoices) {
+
+        Set<String> customerIds = invoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        List<PaymentSummary> paymentSummaries =
+                paymentSummaryRepository.findAllByCustomerIdIn(customerIds);
+
+        Map<String, PaymentSummary> paymentSummaryMap = paymentSummaries.stream()
+                .collect(Collectors.toMap(
+                        PaymentSummary::getCustomerId,
+                        payment -> payment,
+                        (a, b) -> a
+                ));
+
+        List<PaymentSummary> paymentSummaryList = new ArrayList<>();
+
+        for (InvoicesV1 invoice : invoices) {
+
+            PaymentSummary paymentSummary = paymentSummaryMap.get(invoice.getCustomerId());
+
+            if (paymentSummary == null) {
+                throw new BadRequestException(Utils.PAYMENT_SUMMARY_NOT_FOUND);
+            }
+
+            String status = invoice.getPaymentStatus();
+
+            // Ignore statuses
+            if (PaymentStatus.CANCELLED.name().equals(status) ||
+                    PaymentStatus.ADVANCE_IN_HAND.name().equals(status)
+            ) {
+                continue;
+            }
+
+            double total = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : 0;
+            double paid = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
+            double debitAmount = paymentSummary.getDebitAmount() != null ? paymentSummary.getDebitAmount() : 0;
+            double creditAmount = paymentSummary.getCreditAmount() != null ? paymentSummary.getCreditAmount() : 0;
+            double balance = paymentSummary.getBalance() != null ? paymentSummary.getBalance() : 0;
+
+            double due = total - paid;
+
+            paymentSummary.setDebitAmount(debitAmount - total);
+            paymentSummary.setCreditAmount(creditAmount - paid);
+            paymentSummary.setBalance(balance + due);
+
+            paymentSummaryList.add(paymentSummary);
+        }
+
+        paymentSummaryRepository.saveAll(paymentSummaryList);
     }
 }

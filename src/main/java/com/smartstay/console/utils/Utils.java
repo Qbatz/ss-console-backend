@@ -19,6 +19,7 @@ public class Utils {
     public static final int OWNER_ROLE_ID = 1;
     public static final int MASTER_ROLE_ID = 2;
     public static final int DEFAULT_EXPANDABLE_TRIAL_DAYS = 5;
+
     public static final double DEFAULT_GST_PERCENTAGE = 18;
 
     private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -72,6 +73,7 @@ public class Utils {
     public static final String FILTER_OPTION_NOT_FOUND = "Filter option not found";
     public static final String INVOICE_REDEMPTION_NOT_FOUND = "Invoice redemption not found";
     public static final String INVOICE_NOT_FOUND = "Invoice not found";
+    public static final String PAYMENT_SUMMARY_NOT_FOUND = "Payment summary not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -89,7 +91,6 @@ public class Utils {
     public static final String INVALID_NOTICE_PERIOD_DAYS = "Invalid notice period days";
     public static final String INVALID_GRACE_PERIOD_DAYS = "Invalid grace period days";
     public static final String INVALID_GST_PERCENTAGE = "Invalid gst percentage";
-    public static final String INVALID_AMOUNT = "Invalid amount";
     public static final String INVALID_REDEMPTION_AMOUNT = "Invalid redemption amount";
     public static final String INVALID_PLAN_FEATURE_PRICE = "Invalid plan feature price";
     public static final String INVALID_STATUS_TRANSITION = "Invalid status transition";
@@ -116,6 +117,8 @@ public class Utils {
     public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
     public static final String PAID_BY_REQUIRED = "Paid by required";
     public static final String FIELD_NAME_IS_REQUIRED = "Field name is required";
+    public static final String INVOICE_ID_REQUIRED = "InvoiceId is required";
+    public static final String TENANT_MOBILE_REQUIRED = "Tenant mobile is required";
     public static final String AGENT_ID_REQUIRED = "AgentId is required";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";

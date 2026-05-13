@@ -9,6 +9,8 @@ import com.smartstay.console.dto.customers.*;
 import com.smartstay.console.dto.demoRequest.DemoRequestCommentsSnapshot;
 import com.smartstay.console.dto.demoRequest.DemoRequestSnapshot;
 import com.smartstay.console.dto.hostel.*;
+import com.smartstay.console.dto.invoice.InvoiceItemSnapshot;
+import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
@@ -497,6 +499,62 @@ public class SnapshotUtility {
                 i.getUpdatedBy(),
                 copyDate(i.getCreatedAt()),
                 copyDate(i.getUpdatedAt())
+        );
+    }
+
+    public static InvoiceItemSnapshot toSnapshot(InvoiceItems i) {
+
+        if (i == null) return null;
+
+        return new InvoiceItemSnapshot(
+                i.getInvoiceItemId(),
+                i.getInvoiceItem(),
+                i.getOtherItem(),
+                i.getAmount(),
+                copyDate(i.getFromDate()),
+                copyDate(i.getToDate()),
+                i.getInvoice() != null ? i.getInvoice().getInvoiceId() : null
+        );
+    }
+
+    public static InvoiceSnapshot toSnapshot(InvoicesV1 i) {
+
+        if (i == null) return null;
+
+        return new InvoiceSnapshot(
+                i.getInvoiceId(),
+                i.getCustomerId(),
+                i.getHostelId(),
+                i.getInvoiceNumber(),
+                i.getCustomerMobile(),
+                i.getCustomerMailId(),
+                i.getInvoiceType(),
+                i.getBasePrice(),
+                i.getTotalAmount(),
+                i.getPaidAmount(),
+                i.getBalanceAmount(),
+                i.getGst(),
+                i.getCgst(),
+                i.getSgst(),
+                i.getGstPercentile(),
+                i.getPaymentStatus(),
+                i.getOthersDescription(),
+                i.getInvoiceMode(),
+                i.isCancelled(),
+                i.isDiscounted(),
+                i.getCancelledInvoices() != null
+                        ? List.copyOf(i.getCancelledInvoices())
+                        : List.of(),
+                i.getInvoiceUrl(),
+                i.getCreatedBy(),
+                i.getUpdatedBy(),
+                copyDate(i.getInvoiceGeneratedDate()),
+                copyDate(i.getInvoiceDueDate()),
+                copyDate(i.getInvoiceStartDate()),
+                copyDate(i.getInvoiceEndDate()),
+                copyDate(i.getCreatedAt()),
+                copyDate(i.getUpdatedAt()),
+                toSnapshotList(i.getInvoiceItems(), SnapshotUtility::toSnapshot)
         );
     }
 
