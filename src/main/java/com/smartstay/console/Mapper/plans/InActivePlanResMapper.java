@@ -1,14 +1,22 @@
 package com.smartstay.console.Mapper.plans;
 
+import com.smartstay.console.dao.PlanFeatures;
 import com.smartstay.console.dao.Plans;
 import com.smartstay.console.responses.plans.PlanFeaturesResponse;
 import com.smartstay.console.responses.plans.PlansResponse;
 import com.smartstay.console.utils.Utils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
-public class PlanResMapper implements Function<Plans, PlansResponse> {
+public class InActivePlanResMapper implements Function<Plans, PlansResponse> {
+
+    List<PlanFeatures> planFeatures;
+
+    public InActivePlanResMapper(List<PlanFeatures> planFeatures) {
+        this.planFeatures = planFeatures;
+    }
 
     @Override
     public PlansResponse apply(Plans plans) {
@@ -27,9 +35,12 @@ public class PlanResMapper implements Function<Plans, PlansResponse> {
             updatedAtTime = Utils.dateToTime(plans.getUpdatedAt());
         }
 
-        List<PlanFeaturesResponse> planFeatures = plans.getFeaturesList().stream()
-                .map(planFeature -> new PlanFeaturesResMapper().apply(planFeature))
-                .toList();
+        List<PlanFeaturesResponse> planFeaturesResponses = new ArrayList<>();
+        if (planFeatures != null) {
+            planFeaturesResponses = planFeatures.stream()
+                    .map(planFeature -> new PlanFeaturesResMapper().apply(planFeature))
+                    .toList();
+        }
 
         Double yearlyPrice = Utils.roundOfDoubleTo2Digits(plans.getFinalPrice() * 12);
 
@@ -38,6 +49,6 @@ public class PlanResMapper implements Function<Plans, PlansResponse> {
                 plans.getGst(), plans.getCgst(), plans.getSgst(), plans.getGstAmount(),
                 plans.getCgstAmount(), plans.getSgstAmount(), plans.getFinalPrice(), yearlyPrice,
                 plans.isShouldShow(), plans.isCanCustomize(), createdAtDate, createdAtTime,
-                updatedAtDate, updatedAtTime, planFeatures);
+                updatedAtDate, updatedAtTime, planFeaturesResponses);
     }
 }

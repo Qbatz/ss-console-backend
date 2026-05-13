@@ -1,5 +1,6 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.Mapper.plans.InActivePlanResMapper;
 import com.smartstay.console.Mapper.plans.PlanResMapper;
 import com.smartstay.console.Mapper.plans.PlansDropdownResMapper;
 import com.smartstay.console.config.Authentication;
@@ -20,6 +21,7 @@ import com.smartstay.console.repositories.PlansRepository;
 import com.smartstay.console.responses.plans.PlansDropdownRes;
 import com.smartstay.console.responses.plans.PlansDropdownWrapper;
 import com.smartstay.console.responses.plans.PlansResponse;
+import com.smartstay.console.responses.plans.PlansResponseWrapper;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,13 +82,33 @@ public class PlansService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<Plans> plans = plansRepository.findActivePlansExcludingTrial();
+        List<Plans> plans = plansRepository.findPlansExcludingTrial();
 
-        List<PlansResponse> responses = plans.stream()
+        Set<Long> inActivePlanIds = plans.stream()
+                .filter(p -> !p.isActive())
+                .map(Plans::getPlanId)
+                .collect(Collectors.toSet());
+
+        List<PlanFeatures> planFeatures = planFeaturesService.findAllByPlanIds(inActivePlanIds);
+
+        Map<Long, List<PlanFeatures>> planFeaturesMap = planFeatures.stream()
+                .collect(Collectors.groupingBy(PlanFeatures::getPlanId));
+
+        List<PlansResponse> activePlans = plans.stream()
+                .filter(Plans::isActive)
                 .map(plan -> new PlanResMapper().apply(plan))
                 .toList();
 
-        return new ResponseEntity<>(responses, HttpStatus.OK);
+        List<PlansResponse> inActivePlans = plans.stream()
+                .filter(p -> !p.isActive())
+                .map(plan -> {
+                    List<PlanFeatures> features = planFeaturesMap.getOrDefault(plan.getPlanId(), null);
+                    return new InActivePlanResMapper(features).apply(plan);
+                }).toList();
+
+        PlansResponseWrapper response = new PlansResponseWrapper(activePlans, inActivePlans);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public ResponseEntity<?> updatePlanByPlanId(Long planId, PlansUpdatePayload payload) {
@@ -388,6 +410,46 @@ public class PlansService {
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.DEACTIVATE, Source.PLANS,
                 String.valueOf(planId), oldPlan, null);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> reactivatePlan(Long planId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Plans plan = plansRepository.findByPlanIdAndIsActiveFalse(planId);
+        if (plan == null) {
+            return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        plan.setActive(true);
+        plan.setUpdatedAt(new Date());
+
+        List<PlanFeatures> planFeatures = planFeaturesService.findAllByPlanId(planId);
+
+        for (PlanFeatures feature : planFeatures) {
+            feature.setActive(true);
+        }
+
+        planFeaturesService.saveAll(planFeatures);
+        plan = plansRepository.save(plan);
+
+        PlanSnapshot newPlan = SnapshotUtility.toSnapshot(plan);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.REACTIVATE, Source.PLANS,
+                String.valueOf(planId), null, newPlan);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

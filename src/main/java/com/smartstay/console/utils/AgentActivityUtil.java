@@ -97,6 +97,7 @@ public class AgentActivityUtil {
     private static String getReactivateDescription(Source source) {
         return switch (source) {
             case AGENT -> "Reactivated an agent";
+            case PLANS -> "Reactivated a plan";
             default -> "Reactivated successfully";
         };
     }
