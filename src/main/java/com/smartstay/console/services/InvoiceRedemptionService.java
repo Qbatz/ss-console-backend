@@ -351,15 +351,15 @@ public class InvoiceRedemptionService {
             return new ResponseEntity<>(Utils.PAYMENT_SUMMARY_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        if (invoiceRedemption.getRedemptionAmount() == null || sourceInvoice.getBalanceAmount() == null ||
-                targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null||
-                paymentSummary.getCreditAmount() == null || paymentSummary.getBalance() == null){
-            return new ResponseEntity<>(Utils.INVALID_AMOUNT, HttpStatus.BAD_REQUEST);
-        }
+        double redemptionAmount = invoiceRedemption.getRedemptionAmount() != null ? invoiceRedemption.getRedemptionAmount() : 0;
+        double targetTotal = targetInvoice.getTotalAmount() != null ? targetInvoice.getTotalAmount() : 0;
+        double targetPaid = targetInvoice.getPaidAmount() != null ? targetInvoice.getPaidAmount() : 0;
+        double sourceBalance = sourceInvoice.getBalanceAmount() != null ? sourceInvoice.getBalanceAmount() : 0;
+        double creditAmount = paymentSummary.getCreditAmount() != null ? paymentSummary.getCreditAmount() : 0;
+        double balance = paymentSummary.getBalance() != null ? paymentSummary.getBalance() : 0;
 
         Date today = new Date();
 
-        double redemptionAmount = invoiceRedemption.getRedemptionAmount();
         double newAmount = payload.amount();
 
         if (redemptionAmount <= 0) {
@@ -368,10 +368,10 @@ public class InvoiceRedemptionService {
 
         double differenceAmount = redemptionAmount - newAmount;
 
-        paymentSummary.setCreditAmount(paymentSummary.getCreditAmount() - differenceAmount);
-        paymentSummary.setBalance(paymentSummary.getBalance() + differenceAmount);
+        paymentSummary.setCreditAmount(creditAmount - differenceAmount);
+        paymentSummary.setBalance(balance + differenceAmount);
 
-        double sourceInvoiceNewBalanceAmount = sourceInvoice.getBalanceAmount() + differenceAmount;
+        double sourceInvoiceNewBalanceAmount = sourceBalance + differenceAmount;
 
         if (sourceInvoiceNewBalanceAmount < 0) {
             return new ResponseEntity<>(Utils.BALANCE_AMOUNT_NOT_ENOUGH, HttpStatus.BAD_REQUEST);
@@ -380,24 +380,24 @@ public class InvoiceRedemptionService {
         sourceInvoice.setBalanceAmount(sourceInvoiceNewBalanceAmount);
         sourceInvoice.setUpdatedAt(today);
 
-        double targetInvoiceNewPaidAmount = targetInvoice.getPaidAmount() - differenceAmount;
+        double targetInvoiceNewPaidAmount = targetPaid - differenceAmount;
 
         if (targetInvoiceNewPaidAmount < 0) {
             return new ResponseEntity<>(Utils.PAID_AMOUNT_GOES_NEGATIVE, HttpStatus.BAD_REQUEST);
         }
 
-        if (targetInvoiceNewPaidAmount > targetInvoice.getTotalAmount()) {
+        if (targetInvoiceNewPaidAmount > targetTotal) {
             return new ResponseEntity<>(Utils.PAID_AMOUNT_EXCEEDS_TOTAL_AMOUNT, HttpStatus.BAD_REQUEST);
         }
 
         targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
         targetInvoice.setUpdatedAt(today);
 
-        if (Objects.equals(targetInvoiceNewPaidAmount, targetInvoice.getTotalAmount())){
+        if (Objects.equals(targetInvoiceNewPaidAmount, targetTotal)){
             targetInvoice.setPaymentStatus(PaymentStatus.PAID.name());
         } else if (targetInvoiceNewPaidAmount <= 0) {
             targetInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
-        } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetInvoice.getTotalAmount()) {
+        } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetTotal) {
             targetInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
         }
 
@@ -465,27 +465,26 @@ public class InvoiceRedemptionService {
 
         Date today = new Date();
 
-        if (invoiceRedemption.getRedemptionAmount() == null || sourceInvoice.getBalanceAmount() == null ||
-                targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null ||
-                paymentSummary.getCreditAmount() == null || paymentSummary.getBalance() == null){
-            return new ResponseEntity<>(Utils.INVALID_AMOUNT, HttpStatus.BAD_REQUEST);
-        }
-
-        double redemptionAmount = invoiceRedemption.getRedemptionAmount();
+        double redemptionAmount = invoiceRedemption.getRedemptionAmount() != null ? invoiceRedemption.getRedemptionAmount() : 0;
+        double targetTotal = targetInvoice.getTotalAmount() != null ? targetInvoice.getTotalAmount() : 0;
+        double targetPaid = targetInvoice.getPaidAmount() != null ? targetInvoice.getPaidAmount() : 0;
+        double sourceBalance = sourceInvoice.getBalanceAmount() != null ? sourceInvoice.getBalanceAmount() : 0;
+        double creditAmount = paymentSummary.getCreditAmount() != null ? paymentSummary.getCreditAmount() : 0;
+        double balance = paymentSummary.getBalance() != null ? paymentSummary.getBalance() : 0;
 
         if (redemptionAmount <= 0) {
             return new ResponseEntity<>(Utils.INVALID_REDEMPTION_AMOUNT, HttpStatus.BAD_REQUEST);
         }
 
-        paymentSummary.setCreditAmount(paymentSummary.getCreditAmount() - redemptionAmount);
-        paymentSummary.setBalance(paymentSummary.getBalance() + redemptionAmount);
+        paymentSummary.setCreditAmount(creditAmount - redemptionAmount);
+        paymentSummary.setBalance(balance + redemptionAmount);
 
-        double sourceInvoiceNewBalanceAmount = sourceInvoice.getBalanceAmount() + redemptionAmount;
+        double sourceInvoiceNewBalanceAmount = sourceBalance + redemptionAmount;
 
         sourceInvoice.setBalanceAmount(sourceInvoiceNewBalanceAmount);
         sourceInvoice.setUpdatedAt(today);
 
-        double targetInvoiceNewPaidAmount = targetInvoice.getPaidAmount() - redemptionAmount;
+        double targetInvoiceNewPaidAmount = targetPaid - redemptionAmount;
 
         if (targetInvoiceNewPaidAmount < 0) {
             return new ResponseEntity<>(Utils.PAID_AMOUNT_GOES_NEGATIVE, HttpStatus.BAD_REQUEST);
@@ -494,11 +493,11 @@ public class InvoiceRedemptionService {
         targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
         targetInvoice.setUpdatedAt(today);
 
-        if (Objects.equals(targetInvoiceNewPaidAmount, targetInvoice.getTotalAmount())){
+        if (Objects.equals(targetInvoiceNewPaidAmount, targetTotal)){
             targetInvoice.setPaymentStatus(PaymentStatus.PAID.name());
         } else if (targetInvoiceNewPaidAmount <= 0) {
             targetInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
-        } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetInvoice.getTotalAmount()) {
+        } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetTotal) {
             targetInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
         }
 
@@ -583,27 +582,26 @@ public class InvoiceRedemptionService {
                 throw new BadRequestException(Utils.PAYMENT_SUMMARY_NOT_FOUND);
             }
 
-            if (invoiceRedemption.getRedemptionAmount() == null || sourceInvoice.getBalanceAmount() == null ||
-                    targetInvoice.getPaidAmount() == null || targetInvoice.getTotalAmount() == null||
-                    paymentSummary.getCreditAmount() == null || paymentSummary.getBalance() == null){
-                throw new BadRequestException(Utils.INVALID_AMOUNT);
-            }
-
-            double redemptionAmount = invoiceRedemption.getRedemptionAmount();
+            double redemptionAmount = invoiceRedemption.getRedemptionAmount() != null ? invoiceRedemption.getRedemptionAmount() : 0;
+            double targetTotal = targetInvoice.getTotalAmount() != null ? targetInvoice.getTotalAmount() : 0;
+            double targetPaid = targetInvoice.getPaidAmount() != null ? targetInvoice.getPaidAmount() : 0;
+            double sourceBalance = sourceInvoice.getBalanceAmount() != null ? sourceInvoice.getBalanceAmount() : 0;
+            double creditAmount = paymentSummary.getCreditAmount() != null ? paymentSummary.getCreditAmount() : 0;
+            double balance = paymentSummary.getBalance() != null ? paymentSummary.getBalance() : 0;
 
             if (redemptionAmount <= 0) {
                 throw new BadRequestException(Utils.INVALID_REDEMPTION_AMOUNT);
             }
 
-            paymentSummary.setCreditAmount(paymentSummary.getCreditAmount() - redemptionAmount);
-            paymentSummary.setBalance(paymentSummary.getBalance() + redemptionAmount);
+            paymentSummary.setCreditAmount(creditAmount - redemptionAmount);
+            paymentSummary.setBalance(balance + redemptionAmount);
 
-            double sourceInvoiceNewBalanceAmount = sourceInvoice.getBalanceAmount() + redemptionAmount;
+            double sourceInvoiceNewBalanceAmount = sourceBalance + redemptionAmount;
 
             sourceInvoice.setBalanceAmount(sourceInvoiceNewBalanceAmount);
             sourceInvoice.setUpdatedAt(today);
 
-            double targetInvoiceNewPaidAmount = targetInvoice.getPaidAmount() - redemptionAmount;
+            double targetInvoiceNewPaidAmount = targetPaid - redemptionAmount;
 
             if (targetInvoiceNewPaidAmount < 0) {
                 throw new BadRequestException(Utils.PAID_AMOUNT_GOES_NEGATIVE);
@@ -612,11 +610,11 @@ public class InvoiceRedemptionService {
             targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
             targetInvoice.setUpdatedAt(today);
 
-            if (Objects.equals(targetInvoiceNewPaidAmount, targetInvoice.getTotalAmount())){
+            if (Objects.equals(targetInvoiceNewPaidAmount, targetTotal)){
                 targetInvoice.setPaymentStatus(PaymentStatus.PAID.name());
             } else if (targetInvoiceNewPaidAmount <= 0) {
                 targetInvoice.setPaymentStatus(PaymentStatus.PENDING.name());
-            } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetInvoice.getTotalAmount()) {
+            } else if (targetInvoiceNewPaidAmount > 0 && targetInvoiceNewPaidAmount < targetTotal) {
                 targetInvoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
             }
 

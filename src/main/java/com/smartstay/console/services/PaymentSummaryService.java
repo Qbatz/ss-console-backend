@@ -84,19 +84,17 @@ public class PaymentSummaryService {
                 continue;
             }
 
-            if (invoice.getPaidAmount() == null || invoice.getTotalAmount() == null ||
-                    paymentSummary.getDebitAmount() == null || paymentSummary.getCreditAmount() == null ||
-                    paymentSummary.getBalance() == null){
-                throw new BadRequestException(Utils.INVALID_AMOUNT);
-            }
+            double total = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : 0;
+            double paid = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
+            double debitAmount = paymentSummary.getDebitAmount() != null ? paymentSummary.getDebitAmount() : 0;
+            double creditAmount = paymentSummary.getCreditAmount() != null ? paymentSummary.getCreditAmount() : 0;
+            double balance = paymentSummary.getBalance() != null ? paymentSummary.getBalance() : 0;
 
-            double total = invoice.getTotalAmount();
-            double paid = invoice.getPaidAmount();
             double due = total - paid;
 
-            paymentSummary.setDebitAmount(paymentSummary.getDebitAmount() - total);
-            paymentSummary.setCreditAmount(paymentSummary.getCreditAmount() - paid);
-            paymentSummary.setBalance(paymentSummary.getBalance() + due);
+            paymentSummary.setDebitAmount(debitAmount - total);
+            paymentSummary.setCreditAmount(creditAmount - paid);
+            paymentSummary.setBalance(balance + due);
 
             paymentSummaryList.add(paymentSummary);
         }

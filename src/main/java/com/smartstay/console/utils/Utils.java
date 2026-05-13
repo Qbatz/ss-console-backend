@@ -91,7 +91,6 @@ public class Utils {
     public static final String INVALID_NOTICE_PERIOD_DAYS = "Invalid notice period days";
     public static final String INVALID_GRACE_PERIOD_DAYS = "Invalid grace period days";
     public static final String INVALID_GST_PERCENTAGE = "Invalid gst percentage";
-    public static final String INVALID_AMOUNT = "Invalid amount";
     public static final String INVALID_REDEMPTION_AMOUNT = "Invalid redemption amount";
 
     public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
