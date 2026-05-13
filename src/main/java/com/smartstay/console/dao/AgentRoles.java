@@ -1,6 +1,5 @@
 package com.smartstay.console.dao;
 
-
 import com.smartstay.console.handlers.RolesPermissionConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -15,7 +14,6 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AgentRoles {
-
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -45,4 +45,9 @@ public class RolesController {
     public ResponseEntity<?> getRoleById(@PathVariable("roleId") Long roleId) {
         return agentRolesService.getRoleById(roleId);
     }
+
+    @GetMapping("/dropdown")
+    public ResponseEntity<?> getRolesDropdown(){
+        return agentRolesService.getRolesDropdown();
+    }
 }

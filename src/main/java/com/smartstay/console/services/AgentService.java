@@ -22,6 +22,9 @@ import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -82,8 +85,14 @@ public class AgentService {
             return new ResponseEntity<>(Utils.EMAIL_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
+        String email = addAdmin.emailId().trim();
+
+        int atIndex = email.indexOf("@");
+        String firstName = atIndex > 0 ? email.substring(0, atIndex) : email;
+
         Agent newAgent = new Agent();
-        newAgent.setAgentEmailId(addAdmin.emailId());
+        newAgent.setFirstName(firstName);
+        newAgent.setAgentEmailId(email);
         newAgent.setIsProfileCompleted(false);
         newAgent.setIsActive(true);
         newAgent.setCreatedAt(new Date());
@@ -224,7 +233,8 @@ public class AgentService {
         return new ResponseEntity<>(HttpStatus.CREATED);
     }
 
-    public ResponseEntity<?> getAllAgents() {
+    public ResponseEntity<?> getAllAgents(String name, boolean isActive,
+                                          Long roleId, int page, int size) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -239,8 +249,16 @@ public class AgentService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<Agent> agents = agentRepository
-                .findAllByIsMockAgentFalseAndAgentIdNotOrderByCreatedAtDesc(agent.getAgentId());
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+        name = name == null || name.isBlank() ? null : name.trim();
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Agent> pagedAgents = agentRepository
+                .findPaginatedAgents(name, isActive, roleId, agent.getAgentId(), pageable);
+
+        List<Agent> agents = pagedAgents.getContent();
 
         Set<Long> roleIds = agents.stream()
                 .map(Agent::getRoleId)
@@ -258,23 +276,21 @@ public class AgentService {
                 .collect(Collectors.toMap(AgentActivities::getAgentId,
                         agentAct -> agentAct));
 
-        List<AgentResponse> activeAgents = agents.stream()
-                .filter(a -> a.getIsActive() == true)
+        List<AgentResponse> agentList = agents.stream()
                 .map(a -> new AgentResMapper(
                         rolesMap.get(a.getRoleId()),
                         agentActivitiesMap.get(a.getAgentId())
                 ).apply(a))
                 .toList();
 
-        List<AgentResponse> inActiveAgents = agents.stream()
-                .filter(a -> a.getIsActive() == false)
-                .map(a -> new AgentResMapper(
-                        rolesMap.get(a.getRoleId()),
-                        agentActivitiesMap.get(a.getAgentId())
-                ).apply(a))
-                .toList();
-
-        AgentListRes response = new AgentListRes(activeAgents, inActiveAgents);
+        Map<String, Object> response = new HashMap<>();
+        response.put("agentList", agentList);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedAgents.getTotalElements());
+        response.put("totalPages", pagedAgents.getTotalPages());
+        response.put("isActive", isActive);
+        response.put("roleId", roleId);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

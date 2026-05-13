@@ -16,7 +16,7 @@ public class AllRolesMapper implements Function<AgentRoles, AllRoles> {
     @Override
     public AllRoles apply(AgentRoles rolesV1) {
         return new AllRoles(rolesV1.getRoleId(), rolesV1.getRoleName(),
-                rolesV1.getIsEditable()!=null && rolesV1.getIsEditable(),
+                rolesV1.getIsEditable() != null && rolesV1.getIsEditable(),
                 userCount
         );
     }

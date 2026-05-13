@@ -2,6 +2,8 @@ package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dto.agent.RoleCountProjection;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -37,8 +39,6 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
        """)
     List<RoleCountProjection> countActiveAgentsByRoleIds(@Param("roleIds") List<Long> roleIds);
 
-    List<Agent> findAllByIsMockAgentFalseAndAgentIdNotOrderByCreatedAtDesc(String agentId);
-
     List<Agent> findAllByAgentIdInAndIsActiveTrue(Set<String> agentIds);
 
     List<Agent> findAllByAgentIdIn(Set<String> agentIds);
@@ -56,4 +56,27 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
     long getCount();
 
     List<Agent> findAllByIsMockAgentFalseAndIsActiveTrueOrderByCreatedAtDesc();
+
+    @Query("""
+            select a
+            from Agent a
+            where a.isActive = :isActive
+                and a.isMockAgent = false
+                and a.agentId != :agentId
+                and (
+                     :roleId is null or a.roleId = :roleId
+                )
+                and (
+                    :name is null or :name = '' or
+                    lower(a.firstName) like lower(concat('%', :name, '%')) or
+                    lower(a.lastName) like lower(concat('%', :name, '%')) or
+                    lower(a.agentEmailId) like lower(concat('%', :name, '%'))
+                )
+            order by a.createdAt desc
+            """)
+    Page<Agent> findPaginatedAgents(@Param("name") String name,
+                                    @Param("isActive") boolean isActive,
+                                    @Param("roleId") Long roleId,
+                                    @Param("agentId") String agentId,
+                                    Pageable pageable);
 }
