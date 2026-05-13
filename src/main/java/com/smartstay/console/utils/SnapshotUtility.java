@@ -1,6 +1,8 @@
 package com.smartstay.console.utils;
 
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.agentRoles.AgentRoleSnapshot;
+import com.smartstay.console.dto.agentRoles.RolesPermissionSnapshot;
 import com.smartstay.console.dto.hostelRelationalAgent.HostelRelationalAgentSnapshot;
 import com.smartstay.console.dto.agent.AgentSnapshot;
 import com.smartstay.console.dto.customers.*;
@@ -553,6 +555,35 @@ public class SnapshotUtility {
                 copyDate(i.getCreatedAt()),
                 copyDate(i.getUpdatedAt()),
                 toSnapshotList(i.getInvoiceItems(), SnapshotUtility::toSnapshot)
+        );
+    }
+
+    public static RolesPermissionSnapshot toSnapshot(RolesPermission p) {
+
+        if (p == null) return null;
+
+        return new RolesPermissionSnapshot(
+                p.getModuleId(),
+                p.isCanRead(),
+                p.isCanWrite(),
+                p.isCanDelete(),
+                p.isCanUpdate()
+        );
+    }
+
+    public static AgentRoleSnapshot toSnapshot(AgentRoles r) {
+
+        if (r == null) return null;
+
+        return new AgentRoleSnapshot(
+                r.getRoleId(),
+                r.getRoleName(),
+                r.getIsActive(),
+                r.getIsDeleted(),
+                r.getIsEditable(),
+                copyDate(r.getCreatedAt()),
+                copyDate(r.getUpdatedAt()),
+                toSnapshotList(r.getPermissions(), SnapshotUtility::toSnapshot)
         );
     }
 

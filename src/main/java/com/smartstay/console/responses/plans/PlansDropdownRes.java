@@ -13,5 +13,6 @@ public record PlansDropdownRes(Long planId,
                                Double gstAmount,
                                Double cgstAmount,
                                Double sgstAmount,
-                               Double finalPrice) {
+                               Double finalPrice,
+                               Double yearlyPrice) {
 }

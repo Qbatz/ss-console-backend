@@ -29,4 +29,12 @@ public class PlanFeaturesService {
     public PlanFeatures findById(Long id){
         return planFeaturesRepository.findByIdAndIsActiveTrue(id);
     }
+
+    public List<PlanFeatures> findAllByPlanIds(Set<Long> planIds){
+        return planFeaturesRepository.findAllByPlan_PlanIdIn(planIds);
+    }
+
+    public List<PlanFeatures> findAllByPlanId(Long planId) {
+        return planFeaturesRepository.findAllByPlan_PlanId(planId);
+    }
 }

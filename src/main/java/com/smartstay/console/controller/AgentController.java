@@ -38,8 +38,12 @@ public class  AgentController {
 //    }
 
     @GetMapping("/get-all-agents")
-    public ResponseEntity<?> getAllAgents(){
-        return agentService.getAllAgents();
+    public ResponseEntity<?> getAllAgents(@RequestParam(required = false) String name,
+                                          @RequestParam(defaultValue = "true") boolean isActive,
+                                          @RequestParam(required = false) Long roleId,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "10") int size){
+        return agentService.getAllAgents(name, isActive, roleId, page, size);
     }
 
     @PutMapping("/deactivate-agent/{agentId}")

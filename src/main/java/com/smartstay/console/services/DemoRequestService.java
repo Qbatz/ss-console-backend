@@ -17,6 +17,7 @@ import com.smartstay.console.payloads.demoRequest.DemoRequestPayload;
 import com.smartstay.console.payloads.demoRequest.DemoRequestStatusPayload;
 import com.smartstay.console.repositories.DemoRequestRepository;
 import com.smartstay.console.responses.demoRequest.DemoRequestResponse;
+import com.smartstay.console.responses.demoRequest.DemoRequestStatusFlowResponse;
 import com.smartstay.console.responses.demoRequest.DemoRequestStatusResponse;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
@@ -251,7 +252,6 @@ public class DemoRequestService {
         DemoRequestSnapshot oldRequest = SnapshotUtility.toSnapshot(demoRequest);
 
         RequestStatus requestStatus;
-
         try {
             requestStatus = RequestStatus.valueOf(
                     demoRequestStatusPayload.demoRequestStatus().toUpperCase()
@@ -260,10 +260,40 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.DEMO_REQUEST_STATUS_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        RequestStatus currentStatus;
+        try {
+            currentStatus = RequestStatus.valueOf(
+                    demoRequest.getDemoRequestStatus()
+            );
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return new ResponseEntity<>(Utils.DEMO_REQUEST_STATUS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!currentStatus.canMoveTo(requestStatus)) {
+            return new ResponseEntity<>(Utils.INVALID_STATUS_TRANSITION, HttpStatus.BAD_REQUEST);
+        }
+
         demoRequest.setDemoRequestStatus(requestStatus.name());
 
         if (demoRequestStatusPayload.comments() != null && !demoRequestStatusPayload.comments().isBlank()){
             demoRequest.setComments(demoRequestStatusPayload.comments());
+        }
+
+        if (requestStatus.name().equals(RequestStatus.ASSIGNED.name())){
+
+            if (demoRequestStatusPayload.agentId() == null || demoRequestStatusPayload.agentId().isBlank()){
+                return new ResponseEntity<>(Utils.AGENT_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            Agent assignedTo = agentService.findUserByUserId(demoRequestStatusPayload.agentId());
+            if (assignedTo == null) {
+                return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            demoRequest.setDemoRequestStatus(RequestStatus.ASSIGNED.name());
+            demoRequest.setIsAssigned(true);
+            demoRequest.setAssignedTo(assignedTo.getAgentId());
+            demoRequest.setAssignedBy(agent.getAgentId());
         }
 
         if (requestStatus.name().equals(RequestStatus.COMPLETED.name())) {
@@ -306,13 +336,17 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        List<DemoRequestStatusResponse> responseList = Arrays.stream(RequestStatus.values())
-                .map(requestStatus -> new DemoRequestStatusResponse(
+        List<DemoRequestStatusFlowResponse> response = Arrays.stream(RequestStatus.values())
+                .map(requestStatus -> new DemoRequestStatusFlowResponse(
                         requestStatus.name(),
-                        requestStatus.getValue()
-                )).toList();
+                        requestStatus.getAllowedStatuses().stream()
+                                .map(allowedStatus -> new DemoRequestStatusResponse(
+                                        allowedStatus.name(),
+                                        allowedStatus.getValue()
+                                )).toList())
+                ).toList();
 
-        return new ResponseEntity<>(responseList, HttpStatus.OK);
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public ResponseEntity<?> addDemoRequestComment(Long demoRequestId, DemoRequestCommentPayload payload) {

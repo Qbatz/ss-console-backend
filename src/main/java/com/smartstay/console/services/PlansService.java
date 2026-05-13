@@ -1,5 +1,6 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.Mapper.plans.InActivePlanResMapper;
 import com.smartstay.console.Mapper.plans.PlanResMapper;
 import com.smartstay.console.Mapper.plans.PlansDropdownResMapper;
 import com.smartstay.console.config.Authentication;
@@ -20,6 +21,7 @@ import com.smartstay.console.repositories.PlansRepository;
 import com.smartstay.console.responses.plans.PlansDropdownRes;
 import com.smartstay.console.responses.plans.PlansDropdownWrapper;
 import com.smartstay.console.responses.plans.PlansResponse;
+import com.smartstay.console.responses.plans.PlansResponseWrapper;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,13 +82,33 @@ public class PlansService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        List<Plans> plans = plansRepository.findActivePlansExcludingTrial();
+        List<Plans> plans = plansRepository.findPlansExcludingTrial();
 
-        List<PlansResponse> responses = plans.stream()
+        Set<Long> inActivePlanIds = plans.stream()
+                .filter(p -> !p.isActive())
+                .map(Plans::getPlanId)
+                .collect(Collectors.toSet());
+
+        List<PlanFeatures> planFeatures = planFeaturesService.findAllByPlanIds(inActivePlanIds);
+
+        Map<Long, List<PlanFeatures>> planFeaturesMap = planFeatures.stream()
+                .collect(Collectors.groupingBy(PlanFeatures::getPlanId));
+
+        List<PlansResponse> activePlans = plans.stream()
+                .filter(Plans::isActive)
                 .map(plan -> new PlanResMapper().apply(plan))
                 .toList();
 
-        return new ResponseEntity<>(responses, HttpStatus.OK);
+        List<PlansResponse> inActivePlans = plans.stream()
+                .filter(p -> !p.isActive())
+                .map(plan -> {
+                    List<PlanFeatures> features = planFeaturesMap.getOrDefault(plan.getPlanId(), null);
+                    return new InActivePlanResMapper(features).apply(plan);
+                }).toList();
+
+        PlansResponseWrapper response = new PlansResponseWrapper(activePlans, inActivePlans);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public ResponseEntity<?> updatePlanByPlanId(Long planId, PlansUpdatePayload payload) {
@@ -110,6 +132,8 @@ public class PlansService {
         }
 
         double planPrice = plan.getPrice();
+        double gstPercentage = plan.getGst();
+        boolean isPriceOrGstUpdated = false;
 
         PlanSnapshot oldPlan = SnapshotUtility.toSnapshot(plan);
 
@@ -146,6 +170,7 @@ public class PlansService {
             }
             plan.setPrice(payload.price());
             planPrice = payload.price();
+            isPriceOrGstUpdated = true;
         }
         if (payload.discountPercentage() != null){
             if (payload.discountPercentage() < 0 || payload.discountPercentage() > 100){
@@ -157,35 +182,9 @@ public class PlansService {
             if (payload.gstPercentage() < 0 || payload.gstPercentage() > 100){
                 return new ResponseEntity<>(Utils.INVALID_GST_PERCENTAGE, HttpStatus.BAD_REQUEST);
             }
-            if (!Objects.equals(plan.getGst(), payload.gstPercentage())){
-
-                double gstPercentage = payload.gstPercentage();
-                double halfGstPercentage = 0;
-                double gstAmount = 0;
-                double halfGstAmount = 0;
-
-                if (gstPercentage != 0){
-                    halfGstPercentage = Utils.roundOfDoubleTo2Digits(gstPercentage / 2);
-
-                    gstAmount = Utils.roundOfDoubleTo2Digits((planPrice * gstPercentage) / 100);
-                    halfGstAmount = Utils.roundOfDoubleTo2Digits(gstAmount / 2);
-                }
-
-                double cgstPercentage = halfGstPercentage;
-                double sgstPercentage = halfGstPercentage;
-                double cgstAmount = halfGstAmount;
-                double sgstAmount = halfGstAmount;
-
-                double finalPrice = Utils.roundOfDoubleTo2Digits(planPrice + gstAmount);
-
-                plan.setGst(gstPercentage);
-                plan.setGstAmount(gstAmount);
-                plan.setCgst(cgstPercentage);
-                plan.setSgst(sgstPercentage);
-                plan.setCgstAmount(cgstAmount);
-                plan.setSgstAmount(sgstAmount);
-                plan.setFinalPrice(finalPrice);
-            }
+            plan.setGst(payload.gstPercentage());
+            gstPercentage = payload.gstPercentage();
+            isPriceOrGstUpdated = true;
         }
         if (payload.shouldShow() != null) {
             plan.setShouldShow(payload.shouldShow());
@@ -194,6 +193,34 @@ public class PlansService {
             plan.setCanCustomize(payload.canCustomize());
         }
         plan.setUpdatedAt(new Date());
+
+        if (isPriceOrGstUpdated){
+
+            double halfGstPercentage = 0;
+            double gstAmount = 0;
+            double halfGstAmount = 0;
+
+            if (gstPercentage != 0){
+                halfGstPercentage = Utils.roundOfDoubleTo2Digits(gstPercentage / 2);
+
+                gstAmount = Utils.roundOfDoubleTo2Digits((planPrice * gstPercentage) / 100);
+                halfGstAmount = Utils.roundOfDoubleTo2Digits(gstAmount / 2);
+            }
+
+            double cgstPercentage = halfGstPercentage;
+            double sgstPercentage = halfGstPercentage;
+            double cgstAmount = halfGstAmount;
+            double sgstAmount = halfGstAmount;
+
+            double finalPrice = Utils.roundOfDoubleTo2Digits(planPrice + gstAmount);
+
+            plan.setGstAmount(gstAmount);
+            plan.setCgst(cgstPercentage);
+            plan.setSgst(sgstPercentage);
+            plan.setCgstAmount(cgstAmount);
+            plan.setSgstAmount(sgstAmount);
+            plan.setFinalPrice(finalPrice);
+        }
 
         if (payload.planFeatures() != null && !payload.planFeatures().isEmpty()) {
 
@@ -220,6 +247,9 @@ public class PlansService {
                         planFeature.setFeatureName(pfPayload.featureName());
                     }
                     if (pfPayload.price() != null){
+                        if (pfPayload.price() < 0){
+                            return new ResponseEntity<>(Utils.INVALID_PLAN_FEATURE_PRICE, HttpStatus.BAD_REQUEST);
+                        }
                         planFeature.setPrice(pfPayload.price());
                     }
                     updatedPlanFeatures.add(planFeature);
@@ -380,6 +410,46 @@ public class PlansService {
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.DEACTIVATE, Source.PLANS,
                 String.valueOf(planId), oldPlan, null);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> reactivatePlan(Long planId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Plans plan = plansRepository.findByPlanIdAndIsActiveFalse(planId);
+        if (plan == null) {
+            return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        plan.setActive(true);
+        plan.setUpdatedAt(new Date());
+
+        List<PlanFeatures> planFeatures = planFeaturesService.findAllByPlanId(planId);
+
+        for (PlanFeatures feature : planFeatures) {
+            feature.setActive(true);
+        }
+
+        planFeaturesService.saveAll(planFeatures);
+        plan = plansRepository.save(plan);
+
+        PlanSnapshot newPlan = SnapshotUtility.toSnapshot(plan);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.REACTIVATE, Source.PLANS,
+                String.valueOf(planId), null, newPlan);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

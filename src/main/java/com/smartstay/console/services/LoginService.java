@@ -39,6 +39,7 @@ public class LoginService {
     }
 
     public ResponseEntity<?> verifyAuthToken(String code, String location, String authorizeUrl) {
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
@@ -51,7 +52,6 @@ public class LoginService {
                         .queryParam("redirect_uri", domain + "/verify")
                         .queryParam("code", code);
 
-
         HttpEntity<Void> request =
                 new HttpEntity<>(headers);
 
@@ -61,7 +61,6 @@ public class LoginService {
                 request,
                 ZohoLoginResponse.class
         );
-
 
         if (response.getStatusCode() == HttpStatus.OK) {
             if (response.getBody().getId_token() != null) {
@@ -99,20 +98,21 @@ public class LoginService {
                     return new ResponseEntity<>("Not having access to portal", HttpStatus.FORBIDDEN);
                 }
             }
-
             else {
                 return new ResponseEntity<>("Not having access to portal", HttpStatus.FORBIDDEN);
             }
         }
 
-
         return new ResponseEntity<>("Not having access to portal", HttpStatus.FORBIDDEN);
     }
 
     public ResponseEntity<?> verifyMockAuthToken(String email) {
+
         Agent agent = agentService.findAgentByEmail(email);
+
         if (agent != null) {
             if (agent.isMockAgent()){
+
                 Date expireAt = Date.from(Instant.now().plusSeconds(86400));
                 HashMap<String, Object> claims = new HashMap<>();
                 claims.put("role", agent.getRoleId());
