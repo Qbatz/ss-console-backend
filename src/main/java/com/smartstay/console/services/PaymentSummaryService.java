@@ -96,7 +96,7 @@ public class PaymentSummaryService {
 
             paymentSummary.setDebitAmount(paymentSummary.getDebitAmount() - total);
             paymentSummary.setCreditAmount(paymentSummary.getCreditAmount() - paid);
-            paymentSummary.setBalance(paymentSummary.getBalance() - due);
+            paymentSummary.setBalance(paymentSummary.getBalance() + due);
 
             paymentSummaryList.add(paymentSummary);
         }
