@@ -17,7 +17,6 @@ public enum RequestStatus {
     CLOSED("Closed"),
     IN_PROGRESS("In-Progress");
 
-
     private final String value;
 
     RequestStatus(String value) {
@@ -26,14 +25,14 @@ public enum RequestStatus {
 
     public Set<RequestStatus> getAllowedStatuses() {
         return switch (this) {
-            case REQUESTED -> Set.of(IN_PROGRESS, COMPLETED, ONHOLD, REJECTED, ASSIGNED);
-            case PENDING -> Set.of(OPEN, ASSIGNED, REJECTED);
-            case OPEN -> Set.of(ASSIGNED, ONHOLD, CLOSED);
-            case ASSIGNED -> Set.of(IN_PROGRESS, ONHOLD, CLOSED);
-            case IN_PROGRESS -> Set.of(COMPLETED, ONHOLD, CLOSED);
+            case REQUESTED -> Set.of(ASSIGNED, REJECTED);
+            case PENDING -> Set.of(ASSIGNED, REJECTED);
+            case OPEN -> Set.of(ASSIGNED, REJECTED);
+            case ASSIGNED -> Set.of(ASSIGNED, IN_PROGRESS, COMPLETED, ONHOLD, REJECTED);
+            case IN_PROGRESS -> Set.of(COMPLETED, ONHOLD, REJECTED);
             case COMPLETED -> Set.of(ONBOARDED);
             case ONBOARDED -> Set.of(CLOSED);
-            case ONHOLD -> Set.of(IN_PROGRESS, CLOSED, REJECTED);
+            case ONHOLD -> Set.of(IN_PROGRESS, REJECTED);
             case REJECTED, CLOSED -> Set.of();
         };
     }
