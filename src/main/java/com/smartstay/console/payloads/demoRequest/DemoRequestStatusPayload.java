@@ -7,11 +7,9 @@ import java.time.LocalDateTime;
 
 public record DemoRequestStatusPayload(@NotBlank(message = "Status can't be null or empty")
                                        String demoRequestStatus,
-
                                        String comments,
-
                                        String presentedBy,
-
                                        @JsonFormat(pattern = "dd-MM-yyyy HH:mm")
-                                       LocalDateTime presentedAt) {
+                                       LocalDateTime presentedAt,
+                                       String agentId) {
 }

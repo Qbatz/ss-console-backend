@@ -91,6 +91,8 @@ public class Utils {
     public static final String INVALID_GST_PERCENTAGE = "Invalid gst percentage";
     public static final String INVALID_AMOUNT = "Invalid amount";
     public static final String INVALID_REDEMPTION_AMOUNT = "Invalid redemption amount";
+    public static final String INVALID_PLAN_FEATURE_PRICE = "Invalid plan feature price";
+    public static final String INVALID_STATUS_TRANSITION = "Invalid status transition";
 
     public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
@@ -114,6 +116,7 @@ public class Utils {
     public static final String CUSTOMER_ID_REQUIRED = "TenantId is required";
     public static final String PAID_BY_REQUIRED = "Paid by required";
     public static final String FIELD_NAME_IS_REQUIRED = "Field name is required";
+    public static final String AGENT_ID_REQUIRED = "AgentId is required";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
