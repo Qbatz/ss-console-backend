@@ -2,20 +2,25 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.orderHistory.OrderHistoryMapper;
 import com.smartstay.console.config.Authentication;
+import com.smartstay.console.config.RestTemplateLoggingInterceptor;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.OrderStatus;
 import com.smartstay.console.ennum.UserType;
 import com.smartstay.console.repositories.OrderHistoryRepository;
 import com.smartstay.console.responses.orderHistory.OrderHistoryResponse;
+import com.smartstay.console.responses.orderHistory.VerifyResponse;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -40,6 +45,16 @@ public class OrderHistoryService {
     private PlansService plansService;
     @Autowired
     private UsersService usersService;
+
+    @Value("${PAYMENTS_URL}")
+    private String paymentsUrl;
+
+    private final RestTemplate restTemplate;
+
+    public OrderHistoryService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+        restTemplate.setInterceptors(Collections.singletonList(new RestTemplateLoggingInterceptor()));
+    }
 
     public ResponseEntity<?> getOrderHistory(int page, int size, String name, Date startDate, Date endDate) {
 
@@ -199,5 +214,62 @@ public class OrderHistoryService {
 
     public void save(OrderHistory newOrder) {
         orderHistoryRepository.save(newOrder);
+    }
+
+    public ResponseEntity<?> verifyOrderHistory(Long orderHistoryId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Payments.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        OrderHistory orderHistory = orderHistoryRepository.findByHistoryIdAndIsActiveTrue(orderHistoryId);
+        if (orderHistory == null){
+            return new ResponseEntity<>(Utils.ORDER_HISTORY_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        String paymentId = null;
+        if (orderHistory.getPaymentLinkId() != null) {
+            paymentId = orderHistory.getPaymentLinkId();
+        } else {
+            paymentId = orderHistory.getPaymentSessionId();
+        }
+
+        if (paymentId == null) {
+            return new ResponseEntity<>(Utils.PAYMENT_ID_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        VerifyResponse verifyResponse = null;
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            HttpEntity<Void> request = new HttpEntity<>(headers);
+
+            String verifyPaymentUrl = paymentsUrl + paymentId ;
+
+            restTemplate.exchange(
+                    verifyPaymentUrl,
+                    HttpMethod.GET,
+                    request,
+                    String.class
+            );
+
+            verifyResponse = new VerifyResponse(true, "SUCCESS");
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            verifyResponse = new VerifyResponse(false, "FAILED");
+        } catch (Exception e){
+            return new ResponseEntity<>(Utils.UNABLE_TO_VERIFY_PAYMENT, HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(verifyResponse, HttpStatus.OK);
     }
 }

@@ -29,4 +29,9 @@ public class OrderHistoryController {
                                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate) {
         return orderHistoryService.getOrderHistory(page, size, name, startDate, endDate);
     }
+
+    @GetMapping("/verify/{orderHistoryId}")
+    public ResponseEntity<?> verifyOrderHistory(@PathVariable(value = "orderHistoryId") Long orderHistoryId) {
+        return orderHistoryService.verifyOrderHistory(orderHistoryId);
+    }
 }
