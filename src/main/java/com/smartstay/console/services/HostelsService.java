@@ -1886,9 +1886,9 @@ public class HostelsService {
                         hostelPlan.getCurrentPlanEndsAt(), new Date()) >= 0;
             }
 
-            if (!isSubscriptionActive){
-                return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_ACTIVE, HttpStatus.BAD_REQUEST);
-            }
+//            if (!isSubscriptionActive){
+//                return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_ACTIVE, HttpStatus.BAD_REQUEST);
+//            }
 
             BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
             if (billingRules == null){
@@ -2648,9 +2648,9 @@ public class HostelsService {
                         hostelPlan.getCurrentPlanEndsAt(), new Date()) >= 0;
             }
 
-            if (!isSubscriptionActive){
-                return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_ACTIVE, HttpStatus.BAD_REQUEST);
-            }
+//            if (!isSubscriptionActive){
+//                return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_ACTIVE, HttpStatus.BAD_REQUEST);
+//            }
 
             BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
             if (billingRules == null){
