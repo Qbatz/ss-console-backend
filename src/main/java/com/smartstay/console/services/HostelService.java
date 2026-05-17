@@ -94,40 +94,7 @@ public class HostelService {
         return billingRulesService.getBillingRuleByDateAndHostelId(hostelId, date);
     }
 
-    public BillingDates getJoiningBasedCurrentMonthBillingDate(Date joiningDate, String hostelId, Date requestedDate) {
-        BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(hostelId);
-        int billStartDate = 1;
-        boolean hasGracePeriod = false;
-        int billingRuleDueDate = 5;
-        int gracePeriodDays = 0;
-        if (billingRules != null) {
-            billStartDate = billingRules.getBillingStartDate();
-            billingRuleDueDate = billingRules.getBillDueDays();
-            hasGracePeriod = billingRules.isHasGracePeriod();
-            gracePeriodDays = billingRules.getGracePeriodDays();
-        }
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(requestedDate);
-        int day = Math.min(
-                Utils.getDayOfMonth(joiningDate),
-                calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-        );
-        calendar.set(Calendar.DAY_OF_MONTH, day);
-        if (Utils.compareWithTwoDates(requestedDate, calendar.getTime()) < 0) {
-            calendar.add(Calendar.MONTH, -1);
-        }
-
-        Date dueDate = Utils.addDaysToDate(calendar.getTime(), billingRuleDueDate - 1);
-        Date endDate = Utils.findLastDate(Utils.getDayOfMonth(calendar.getTime()), calendar.getTime());
-
-        return new BillingDates(calendar.getTime(),
-                endDate,
-                dueDate,
-                billingRuleDueDate,
-                hasGracePeriod,
-                gracePeriodDays,
-                billingRules.getTypeOfBilling(),
-                billingRules.getBillingModel());
+    public Set<String> getActiveHostelIds(){
+        return hostelRepository.findActiveHostelIds();
     }
 }

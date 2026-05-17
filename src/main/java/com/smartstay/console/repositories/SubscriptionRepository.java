@@ -40,7 +40,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     @Query("""
            select count(s)
            from Subscription s
-           where s.planEndsAt < CURRENT_TIMESTAMP
+           where s.planEndsAt < CURRENT_DATE
            and s.planStartsAt = (
                select max(s2.planStartsAt)
                from Subscription s2
@@ -58,8 +58,19 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     List<Subscription> findAnyNewSubscriptionAvailable(String hostelId, Date todaysDate);
 
     @Query("""
-            SELECT sub FROM Subscription sub WHERE sub.hostelId=:hostelId AND 
+            SELECT sub FROM Subscription sub WHERE sub.hostelId=:hostelId AND
             sub.planCode NOT IN (:planCodes)
             """)
     List<Subscription> findAnyPaidPlanAvailable(String hostelId, List<String> planCodes);
+
+    @Query("""
+           select s
+           from Subscription s
+           where s.planStartsAt = (
+               select max(s2.planStartsAt)
+               from Subscription s2
+               where s2.hostelId = s.hostelId
+           )
+           """)
+    List<Subscription> findLatestSubscriptionsPerHostel();
 }

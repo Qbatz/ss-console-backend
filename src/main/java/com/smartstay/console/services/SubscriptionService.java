@@ -364,6 +364,50 @@ public class SubscriptionService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
+        List<Plans> freePlans = plansService.getFreePlans();
+        Set<String> freePlanCodes = freePlans.stream()
+                .map(Plans::getPlanCode)
+                .collect(Collectors.toSet());
+
+        Set<String> activeHostelIds = hostelService.getActiveHostelIds();
+
+        List<com.smartstay.console.dao.Subscription> latestSubscriptions =
+                subscriptionRepository.findLatestSubscriptionsPerHostel();
+
+        long activePropertiesCount = 0;
+        long expiredPropertiesCount = 0;
+        long trialPlansCount = 0;
+        long otherPlansCount = 0;
+
+        Date today = new Date();
+
+        for (com.smartstay.console.dao.Subscription subscription : latestSubscriptions) {
+
+            if (subscription.getHostelId() != null){
+                if (!activeHostelIds.contains(subscription.getHostelId())){
+                    continue;
+                }
+            }
+
+            if (subscription.getPlanEndsAt() != null) {
+                boolean expired = Utils.compareWithTwoDates(subscription.getPlanEndsAt(), today) < 0;
+
+                if (expired) {
+                    expiredPropertiesCount++;
+                } else {
+                    activePropertiesCount++;
+
+                    if (subscription.getPlanCode() != null) {
+                        if (freePlanCodes.contains(subscription.getPlanCode())) {
+                            trialPlansCount++;
+                        } else {
+                            otherPlansCount++;
+                        }
+                    }
+                }
+            }
+        }
+
         page = Math.max(page - 1, 0);
         size = Math.max(size, 1);
 
@@ -389,6 +433,10 @@ public class SubscriptionService {
                 emptyResponse.put("pageSize", size);
                 emptyResponse.put("totalItems", 0);
                 emptyResponse.put("totalPages", 0);
+                emptyResponse.put("activePropertiesCount", activePropertiesCount);
+                emptyResponse.put("expiredPropertiesCount", expiredPropertiesCount);
+                emptyResponse.put("otherPlansCount", otherPlansCount);
+                emptyResponse.put("trialPlansCount", trialPlansCount);
 
                 return new ResponseEntity<>(emptyResponse, HttpStatus.OK);
             } else {
@@ -443,6 +491,10 @@ public class SubscriptionService {
         response.put("pageSize", size);
         response.put("totalItems", pagedSubscriptions.getTotalElements());
         response.put("totalPages", pagedSubscriptions.getTotalPages());
+        response.put("activePropertiesCount", activePropertiesCount);
+        response.put("expiredPropertiesCount", expiredPropertiesCount);
+        response.put("otherPlansCount", otherPlansCount);
+        response.put("trialPlansCount", trialPlansCount);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

@@ -20,9 +20,18 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             SELECT COUNT(h.hostelId)
             FROM hostelv1 h
             WHERE h.isActive = true
-            AND h.isDeleted = false
+                AND h.isDeleted = false
             """)
     Long findHostelCount();
+
+    @Query("""
+            SELECT DISTINCT h.hostelId
+            FROM hostelv1 h
+            INNER JOIN h.hostelPlan hp
+            WHERE h.isActive = true
+                AND h.isDeleted = false
+            """)
+    Set<String> findActiveHostelIds();
 
     @Query(value = """
             SELECT h.*
