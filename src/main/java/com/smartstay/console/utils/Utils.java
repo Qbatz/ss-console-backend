@@ -35,6 +35,7 @@ public class Utils {
 
     public static final String NO_CHANGES_DETECTED = "No changes detected";
     public static final String CANNOT_EDIT_YOURSELF = "Cannot edit yourself";
+    public static final String UNABLE_TO_VERIFY_PAYMENT = "Unable to verify payment";
 
     public static final String UN_AUTHORIZED = "Unauthorized Access";
     public static final String ACCESS_RESTRICTED = "Access Restricted";
@@ -74,6 +75,8 @@ public class Utils {
     public static final String INVOICE_REDEMPTION_NOT_FOUND = "Invoice redemption not found";
     public static final String INVOICE_NOT_FOUND = "Invoice not found";
     public static final String PAYMENT_SUMMARY_NOT_FOUND = "Payment summary not found";
+    public static final String ORDER_HISTORY_NOT_FOUND = "Order history not found";
+    public static final String PAYMENT_ID_NOT_FOUND = "Payment id not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";

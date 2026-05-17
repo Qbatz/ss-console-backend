@@ -2,6 +2,7 @@ package com.smartstay.console.Mapper.demoRequests;
 
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.DemoRequest;
+import com.smartstay.console.ennum.RequestStatus;
 import com.smartstay.console.responses.demoRequest.DemoRequestCommentsResponse;
 import com.smartstay.console.responses.demoRequest.DemoRequestResponse;
 import com.smartstay.console.utils.Utils;
@@ -64,11 +65,25 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
                     }).toList();
         }
 
+        RequestStatus currentStatus;
+        try {
+            currentStatus = RequestStatus.valueOf(demoRequest.getDemoRequestStatus());
+        } catch (Exception e){
+            currentStatus = null;
+        }
+
+        boolean canAssignStaff = false;
+        if (currentStatus != null) {
+            if (currentStatus.canMoveTo(RequestStatus.ASSIGNED)){
+                canAssignStaff = true;
+            }
+        }
+
         return new DemoRequestResponse(demoRequest.getRequestId(), demoRequest.getName(),
                 demoRequest.getEmailId(), demoRequest.getContactNo(), demoRequest.getCountryCode(),
                 demoRequest.getOrganization(), demoRequest.getNoOfHostels(), demoRequest.getNoOfTenant(),
                 demoRequest.getCity(), demoRequest.getState(), demoRequest.getCountry(), demoRequest.getDemoRequestStatus(),
-                demoRequest.getIsDemoCompleted(), demoRequest.getIsAssigned(), assignedTo, assignedBy,
+                canAssignStaff, demoRequest.getIsDemoCompleted(), demoRequest.getIsAssigned(), assignedTo, assignedBy,
                 presentedBy, demoRequest.getComments(), requestedDate, demoRequest.getRequestedTime(),
                 demoRequest.getPresentedAt() != null ? Utils.dateToString(demoRequest.getPresentedAt()) :  null,
                 demoRequest.getPresentedAt() != null ? Utils.dateToTime(demoRequest.getPresentedAt()) : null,

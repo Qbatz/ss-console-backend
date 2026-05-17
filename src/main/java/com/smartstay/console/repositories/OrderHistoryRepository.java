@@ -46,4 +46,6 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
     double findTotalRevenueBetween(@Param("startDate") Date startDate,
                                    @Param("endDate") Date endDate,
                                    @Param("orderStatuses") List<String> orderStatuses);
+
+    OrderHistory findByHistoryIdAndIsActiveTrue(Long orderHistoryId);
 }

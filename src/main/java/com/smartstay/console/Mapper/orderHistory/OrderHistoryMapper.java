@@ -2,6 +2,7 @@ package com.smartstay.console.Mapper.orderHistory;
 
 import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.ennum.OrderStatus;
 import com.smartstay.console.ennum.UserType;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.responses.orderHistory.OrderHistoryResponse;
@@ -134,13 +135,20 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
             ownerInfo = new UserOwnerInfoMapper().apply(owner);
         }
 
+        boolean canVerifyPayment = false;
+        if (orderHistory.getOrderStatus() != null){
+            if (OrderStatus.CREATED.name().equals(orderHistory.getOrderStatus())){
+                canVerifyPayment = true;
+            }
+        }
+
         return new OrderHistoryResponse(orderHistory.getHistoryId(), orderHistory.getHostelId(), hostelName,
                 hostelInitials, hostelType, mobile, houseNo, street, landmark, city, state, country, pincode,
                 fullAddress, mainImage, ownerInfo, orderHistory.getDiscountAmount(), Utils.roundOfDoubleTo2Digits(orderHistory.getPlanAmount()),
                 orderHistory.getPlanCode(), planName, planType, Utils.roundOfDoubleTo2Digits(orderHistory.getTotalAmount()),
-                orderHistory.getOrderStatus(), orderHistory.getPaymentType(), orderHistory.getChannel(), orderHistory.getPaymentProof(),
-                paymentProofFileName, upiId, orderHistory.getCardHolderName(), orderHistory.getCardType(), orderHistory.getCardBrand(),
-                orderHistory.getIssuer(), cardNo, orderHistory.getUserType(), paidBy, collectedBy, createdBy,
+                orderHistory.getOrderStatus(), canVerifyPayment, orderHistory.getPaymentType(), orderHistory.getChannel(),
+                orderHistory.getPaymentProof(), paymentProofFileName, upiId, orderHistory.getCardHolderName(), orderHistory.getCardType(),
+                orderHistory.getCardBrand(), orderHistory.getIssuer(), cardNo, orderHistory.getUserType(), paidBy, collectedBy, createdBy,
                 Utils.dateToString(orderHistory.getCreatedAt()), Utils.dateToTime(orderHistory.getCreatedAt()));
     }
 }
