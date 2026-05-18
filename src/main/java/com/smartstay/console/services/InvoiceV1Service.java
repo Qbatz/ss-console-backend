@@ -5,10 +5,8 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoice.InvoiceSnapshotWrapper;
-import com.smartstay.console.ennum.ActivityType;
-import com.smartstay.console.ennum.InvoiceType;
-import com.smartstay.console.ennum.ModuleId;
-import com.smartstay.console.ennum.Source;
+import com.smartstay.console.ennum.*;
+import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.payloads.invoice.InvoiceIdMobilePayload;
 import com.smartstay.console.repositories.InvoiceV1Repository;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
@@ -62,6 +60,12 @@ public class InvoiceV1Service {
     private InvoiceRedemptionService invoiceRedemptionService;
     @Autowired
     private PaymentSummaryService paymentSummaryService;
+    @Autowired
+    private BookingsService bookingsService;
+    @Autowired
+    private BedsService bedsService;
+    @Autowired
+    private SettlementDetailsService settlementDetailsService;
 
     public List<InvoicesV1> findByListOfCustomers(String hostelId, List<String> customerIds) {
         return invoiceV1Repository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
@@ -83,6 +87,126 @@ public class InvoiceV1Service {
         Set<String> invoiceIds = invoices.stream()
                 .map(InvoicesV1::getInvoiceId)
                 .collect(Collectors.toSet());
+
+        deleteInvoices(invoiceIds, invoices);
+    }
+
+    private void deleteInvoices(Set<String> invoiceIds, List<InvoicesV1> invoices) {
+
+        Set<String> cancelledInvoiceIds = invoices.stream()
+                .filter(invoice -> InvoiceType.SETTLEMENT.name().equals(invoice.getInvoiceType()))
+                .flatMap(invoice -> invoice.getCancelledInvoices().stream())
+                .collect(Collectors.toSet());
+
+        List<InvoicesV1> cancelledInvoices = invoiceV1Repository.findAllByInvoiceIdIn(cancelledInvoiceIds);
+
+        Map<String, InvoicesV1> cancelledInvoiceMap = cancelledInvoices.stream()
+                .collect(Collectors.toMap(InvoicesV1::getInvoiceId, invoice -> invoice));
+
+        Set<String> customerIds = invoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        List<Customers> customers = customersService.getCustomersByIds(customerIds);
+
+        Map<String, Customers> customersMap = customers.stream()
+                .collect(Collectors.toMap(Customers::getCustomerId, customer -> customer));
+
+        List<BookingsV1> bookings = bookingsService.getBookingsByCustomerIds(customerIds);
+
+        Map<String, BookingsV1> bookingsMap = bookings.stream()
+                .collect(Collectors.toMap(BookingsV1::getCustomerId, booking -> booking));
+
+        Set<Integer> bedIds = bookings.stream()
+                .map(BookingsV1::getBedId)
+                .collect(Collectors.toSet());
+
+        List<Beds> beds = bedsService.getBedsByBedIds(bedIds);
+
+        Map<Integer, Beds> bedsMap = beds.stream()
+                .collect(Collectors.toMap(Beds::getBedId, bed -> bed));
+
+        List<SettlementDetails> settlementDetails = settlementDetailsService
+                .findByCustomerIds(new ArrayList<>(customerIds));
+
+        Map<String, SettlementDetails> settlementDetailsMap = settlementDetails.stream()
+                .collect(Collectors.toMap(SettlementDetails::getCustomerId, sd -> sd));
+
+        List<InvoicesV1> cancelledInvoicesList = new ArrayList<>();
+        List<Customers> customersList = new ArrayList<>();
+        List<BookingsV1> bookingsList = new ArrayList<>();
+        List<Beds> bedsList = new ArrayList<>();
+        List<SettlementDetails> settlementDetailsList = new ArrayList<>();
+
+        Date today = new Date();
+
+        for (InvoicesV1 invoice : invoices) {
+
+            if (invoice == null){
+                throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
+            }
+
+            Customers customer = customersMap.getOrDefault(invoice.getCustomerId(), null);
+            if (customer == null){
+                throw new BadRequestException(Utils.NO_CUSTOMER_FOUND);
+            }
+
+            if (InvoiceType.SETTLEMENT.name().equals(invoice.getInvoiceType())) {
+                List<String> cIds = invoice.getCancelledInvoices();
+                if (cIds != null && !cIds.isEmpty()) {
+                    for (String cancelledInvoiceId : cIds) {
+                        InvoicesV1 cancelledInvoice = cancelledInvoiceMap.getOrDefault(cancelledInvoiceId, null);
+                        if (cancelledInvoice == null){
+                            throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
+                        }
+
+                        cancelledInvoice.setCancelled(false);
+                        cancelledInvoice.setUpdatedAt(today);
+
+                        cancelledInvoicesList.add(cancelledInvoice);
+                    }
+                }
+
+                customer.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
+                customer.setCurrentStatus(CustomerStatus.NOTICE.name());
+                customer.setLastUpdatedAt(today);
+
+                BookingsV1 booking = bookingsMap.getOrDefault(invoice.getCustomerId(), null);
+                if (booking == null){
+                    throw new BadRequestException(Utils.BOOKING_NOT_FOUND);
+                }
+
+                int bedId = booking.getBedId();
+
+                booking.setCurrentStatus(BookingsStatus.NOTICE.name());
+                booking.setUpdatedAt(today);
+
+                Beds bed = bedsMap.getOrDefault(bedId, null);
+                if (bed == null){
+                    throw new BadRequestException(Utils.BED_NOT_FOUND);
+                }
+
+                bed.setStatus(BedStatus.OCCUPIED.name());
+                bed.setCurrentStatus(BedStatus.NOTICE.name());
+                bed.setUpdatedAt(today);
+
+                SettlementDetails settlementDetail = settlementDetailsMap
+                        .getOrDefault(invoice.getCustomerId(), null);
+
+                settlementDetailsList.add(settlementDetail);
+
+                bookingsList.add(booking);
+                bedsList.add(bed);
+                customersList.add(customer);
+            }
+        }
+
+        bookingsService.saveAll(bookingsList);
+        bedsService.saveAll(bedsList);
+        customersService.saveAll(customersList);
+        invoiceV1Repository.saveAll(cancelledInvoicesList);
+
+        settlementDetailsService.deleteAll(settlementDetailsList);
 
         deleteInvoiceRelatedData(invoiceIds);
 
@@ -300,7 +424,33 @@ public class InvoiceV1Service {
         Map<String, Customers> customersMap = customers.stream()
                 .collect(Collectors.toMap(Customers::getCustomerId, customer -> customer));
 
+        List<BookingsV1> bookings = bookingsService.getBookingsByCustomerIds(customerIds);
+
+        Map<String, BookingsV1> bookingsMap = bookings.stream()
+                .collect(Collectors.toMap(BookingsV1::getCustomerId, booking -> booking));
+
+        Set<Integer> bedIds = bookings.stream()
+                .map(BookingsV1::getBedId)
+                .collect(Collectors.toSet());
+
+        List<Beds> beds = bedsService.getBedsByBedIds(bedIds);
+
+        Map<Integer, Beds> bedsMap = beds.stream()
+                .collect(Collectors.toMap(Beds::getBedId, bed -> bed));
+
+        List<SettlementDetails> settlementDetails = settlementDetailsService
+                .findByCustomerIds(new ArrayList<>(customerIds));
+
+        Map<String, SettlementDetails> settlementDetailsMap = settlementDetails.stream()
+                .collect(Collectors.toMap(SettlementDetails::getCustomerId, sd -> sd));
+
         List<InvoicesV1> cancelledInvoicesList = new ArrayList<>();
+        List<Customers> customersList = new ArrayList<>();
+        List<BookingsV1> bookingsList = new ArrayList<>();
+        List<Beds> bedsList = new ArrayList<>();
+        List<SettlementDetails> settlementDetailsList = new ArrayList<>();
+
+        Date today = new Date();
 
         for (InvoiceIdMobilePayload payload : payloads) {
 
@@ -338,14 +488,52 @@ public class InvoiceV1Service {
                         }
 
                         cancelledInvoice.setCancelled(false);
+                        cancelledInvoice.setUpdatedAt(today);
 
                         cancelledInvoicesList.add(cancelledInvoice);
                     }
                 }
+
+                customer.setCustomerBedStatus(CustomerBedStatus.BED_ASSIGNED.name());
+                customer.setCurrentStatus(CustomerStatus.NOTICE.name());
+                customer.setLastUpdatedAt(today);
+
+                BookingsV1 booking = bookingsMap.getOrDefault(invoice.getCustomerId(), null);
+                if (booking == null){
+                    return new ResponseEntity<>(Utils.BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                }
+
+                int bedId = booking.getBedId();
+
+                booking.setCurrentStatus(BookingsStatus.NOTICE.name());
+                booking.setUpdatedAt(today);
+
+                Beds bed = bedsMap.getOrDefault(bedId, null);
+                if (bed == null){
+                    return new ResponseEntity<>(Utils.BED_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                }
+
+                bed.setStatus(BedStatus.OCCUPIED.name());
+                bed.setCurrentStatus(BedStatus.NOTICE.name());
+                bed.setUpdatedAt(today);
+
+                SettlementDetails settlementDetail = settlementDetailsMap
+                        .getOrDefault(invoice.getCustomerId(), null);
+
+                settlementDetailsList.add(settlementDetail);
+
+                bookingsList.add(booking);
+                bedsList.add(bed);
+                customersList.add(customer);
             }
         }
 
+        bookingsService.saveAll(bookingsList);
+        bedsService.saveAll(bedsList);
+        customersService.saveAll(customersList);
         invoiceV1Repository.saveAll(cancelledInvoicesList);
+
+        settlementDetailsService.deleteAll(settlementDetailsList);
 
         deleteInvoiceRelatedData(invoiceIds);
 
