@@ -46,4 +46,12 @@ public class BookingsService {
     public BookingsV1 getBookingInfoByCustomerId(String customerId) {
         return bookingsRepository.findByCustomerId(customerId);
     }
+
+    public List<BookingsV1> getBookingsByCustomerIds(Set<String> customerIds) {
+        return bookingsRepository.findAllByCustomerIdIn(customerIds);
+    }
+
+    public void saveAll(List<BookingsV1> bookingsList) {
+        bookingsRepository.saveAll(bookingsList);
+    }
 }

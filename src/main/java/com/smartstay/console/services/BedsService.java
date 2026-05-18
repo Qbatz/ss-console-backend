@@ -44,4 +44,8 @@ public class BedsService {
     public void deleteAll(List<Beds> listBeds) {
         bedsRepository.deleteAll(listBeds);
     }
+
+    public void saveAll(List<Beds> bedsList) {
+        bedsRepository.saveAll(bedsList);
+    }
 }

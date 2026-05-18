@@ -433,4 +433,8 @@ public class CustomersService {
     public Set<String> findConflictingXuids(List<String> xuids, List<String> customerIds) {
         return customersRepository.findConflictingXuids(xuids, customerIds);
     }
+
+    public void saveAll(List<Customers> customersList) {
+        customersRepository.saveAll(customersList);
+    }
 }
