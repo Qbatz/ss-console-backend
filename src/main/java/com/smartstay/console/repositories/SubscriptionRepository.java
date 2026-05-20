@@ -38,16 +38,18 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     Page<Subscription> findByHostelIdInOrderByCreatedAtDesc(Set<String> hostelIds, Pageable pageable);
 
     @Query("""
-           select count(s)
+           select s
            from Subscription s
            where s.planEndsAt < CURRENT_DATE
-           and s.planStartsAt = (
-               select max(s2.planStartsAt)
-               from Subscription s2
-               where s2.hostelId = s.hostelId
+           and s.subscriptionId = (
+               SELECT s2.subscriptionId
+               FROM Subscription s2
+               WHERE s2.hostelId = s.hostelId
+               ORDER BY s2.planStartsAt DESC, s2.subscriptionId DESC
+               LIMIT 1
            )
            """)
-    long getExpiredLatestSubscriptionCount();
+    List<Subscription> getExpiredLatestSubscription();
 
     List<Subscription> findByHostelIdAndPlanCode(String hostelId, String planCode);
 
@@ -64,12 +66,14 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     List<Subscription> findAnyPaidPlanAvailable(String hostelId, List<String> planCodes);
 
     @Query("""
-           select s
-           from Subscription s
-           where s.planStartsAt = (
-               select max(s2.planStartsAt)
-               from Subscription s2
-               where s2.hostelId = s.hostelId
+           SELECT s
+           FROM Subscription s
+           WHERE s.subscriptionId = (
+               SELECT s2.subscriptionId
+               FROM Subscription s2
+               WHERE s2.hostelId = s.hostelId
+               ORDER BY s2.planStartsAt DESC, s2.subscriptionId DESC
+               LIMIT 1
            )
            """)
     List<Subscription> findLatestSubscriptionsPerHostel();

@@ -499,8 +499,8 @@ public class SubscriptionService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    public long getExpiredSubscriptionsCount(){
-        return subscriptionRepository.getExpiredLatestSubscriptionCount();
+    public List<com.smartstay.console.dao.Subscription> getExpiredSubscriptions(){
+        return subscriptionRepository.getExpiredLatestSubscription();
     }
 
     public void deleteAll(List<com.smartstay.console.dao.Subscription> listSubscriptions) {
