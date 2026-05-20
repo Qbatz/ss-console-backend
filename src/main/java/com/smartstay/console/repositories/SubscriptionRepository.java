@@ -33,9 +33,11 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             """)
     List<Subscription> findSubscriptionStartingToday(@Param("date") Date date);
 
-    Page<Subscription> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    Page<Subscription> findAllByPlanCodeInOrderByCreatedAtDesc(Set<String> planCodes, Pageable pageable);
 
-    Page<Subscription> findByHostelIdInOrderByCreatedAtDesc(Set<String> hostelIds, Pageable pageable);
+    Page<Subscription> findByHostelIdInAndPlanCodeInOrderByCreatedAtDesc(Set<String> hostelIds,
+                                                                         Set<String> planCodes,
+                                                                         Pageable pageable);
 
     @Query("""
            select s

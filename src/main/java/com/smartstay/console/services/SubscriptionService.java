@@ -349,7 +349,7 @@ public class SubscriptionService {
         return subscriptionRepository.findAllByHostelIdIn(hostelIds);
     }
 
-    public ResponseEntity<?> getSubscriptions(int page, int size, String hostelName) {
+    public ResponseEntity<?> getSubscriptions(int page, int size, String hostelName, String filterBy) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -413,6 +413,41 @@ public class SubscriptionService {
 
         Pageable pageable = PageRequest.of(page, size);
 
+        String filterOption = "ALL";
+
+        if (filterBy != null && !filterBy.isBlank()) {
+            if (filterBy.equals("ALL")) {
+                filterOption = "ALL";
+            } else if (filterBy.equals("OTHERS")) {
+                filterOption = "OTHERS";
+            } else {
+                try {
+                    PlanType planTypeFilter = PlanType.valueOf(filterBy);
+                    filterOption = planTypeFilter.name();
+                } catch (Exception e){
+                    filterOption = "ALL";
+                }
+            }
+        }
+
+        List<String> filterOptions = new ArrayList<>();
+        filterOptions.add("ALL");
+        filterOptions.addAll(Arrays.stream(PlanType.values())
+                .map(PlanType::name).toList());
+        filterOptions.add("OTHERS");
+
+        Set<String> planCodes;
+
+        if ("ALL".equals(filterOption)) {
+            planCodes = plansService.getAllPlanCodes();
+        } else if ("OTHERS".equals(filterOption)) {
+            Set<String> planTypes = Arrays.stream(PlanType.values())
+                    .map(PlanType::name).collect(Collectors.toSet());
+            planCodes = plansService.getAllPlanCodesAndPlanTypesNotIn(planTypes);
+        } else {
+            planCodes = plansService.getAllPlanCodesByPlanType(filterOption);
+        }
+
         Page<com.smartstay.console.dao.Subscription> pagedSubscriptions;
         Map<String, HostelV1> hostelMap;
         List<com.smartstay.console.dao.Subscription> subscriptions;
@@ -437,11 +472,12 @@ public class SubscriptionService {
                 emptyResponse.put("expiredPropertiesCount", expiredPropertiesCount);
                 emptyResponse.put("otherPlansCount", otherPlansCount);
                 emptyResponse.put("trialPlansCount", trialPlansCount);
+                emptyResponse.put("filterOptions",  filterOptions);
 
                 return new ResponseEntity<>(emptyResponse, HttpStatus.OK);
             } else {
                 pagedSubscriptions = subscriptionRepository
-                        .findByHostelIdInOrderByCreatedAtDesc(filteredHostelIds, pageable);
+                        .findByHostelIdInAndPlanCodeInOrderByCreatedAtDesc(filteredHostelIds, planCodes, pageable);
             }
 
             subscriptions = pagedSubscriptions.getContent();
@@ -452,7 +488,7 @@ public class SubscriptionService {
 
         } else {
             pagedSubscriptions = subscriptionRepository
-                    .findAllByOrderByCreatedAtDesc(pageable);
+                    .findAllByPlanCodeInOrderByCreatedAtDesc(planCodes, pageable);
 
             subscriptions = pagedSubscriptions.getContent();
 
@@ -495,6 +531,7 @@ public class SubscriptionService {
         response.put("expiredPropertiesCount", expiredPropertiesCount);
         response.put("otherPlansCount", otherPlansCount);
         response.put("trialPlansCount", trialPlansCount);
+        response.put("filterOptions",  filterOptions);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
