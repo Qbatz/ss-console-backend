@@ -782,6 +782,22 @@ public class Utils {
         return "****-****-****-" + last4;
     }
 
+    public static String maskMobileNo(String mobileNo) {
+
+        if (mobileNo == null || mobileNo.isBlank()) {
+            return null;
+        }
+
+        String clean = mobileNo.replaceAll("\\D", "");
+
+        if (clean.length() <= 5) {
+            return clean;
+        }
+
+        return clean.substring(0, 5)
+                + "*".repeat(clean.length() - 5);
+    }
+
     public static Date getStartDateOfMonth(LocalDate date){
         return Date.from(date.withDayOfMonth(1)
                 .atStartOfDay(ZoneId.systemDefault())

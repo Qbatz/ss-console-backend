@@ -42,7 +42,7 @@ public class CustomerSumMapper implements Function<Customers, CustomerSummaryRes
 
         return new CustomerSummaryResponse(customers.getCustomerId(), firstName, lastName,
                 Utils.getFullName(firstName, lastName), Utils.getInitials(firstName, lastName),
-                customers.getMobile(), customers.getEmailId(), customers.getProfilePic(),
+                Utils.maskMobileNo(customers.getMobile()), customers.getEmailId(), customers.getProfilePic(),
                 customers.getHostelId(), hostelName, customers.getCurrentStatus(),
                 payableAmount, paidAmount, dueAmount);
     }
