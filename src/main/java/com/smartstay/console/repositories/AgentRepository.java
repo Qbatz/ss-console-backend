@@ -62,7 +62,6 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
             from Agent a
             where a.isActive = :isActive
                 and a.isMockAgent = false
-                and a.agentId != :agentId
                 and (
                      :roleId is null or a.roleId = :roleId
                 )
@@ -77,6 +76,5 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
     Page<Agent> findPaginatedAgents(@Param("name") String name,
                                     @Param("isActive") boolean isActive,
                                     @Param("roleId") Long roleId,
-                                    @Param("agentId") String agentId,
                                     Pageable pageable);
 }

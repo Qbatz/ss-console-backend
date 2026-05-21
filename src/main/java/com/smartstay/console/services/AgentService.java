@@ -257,7 +257,7 @@ public class AgentService {
         Pageable pageable = PageRequest.of(page, size);
 
         Page<Agent> pagedAgents = agentRepository
-                .findPaginatedAgents(name, isActive, roleId, agent.getAgentId(), pageable);
+                .findPaginatedAgents(name, isActive, roleId, pageable);
 
         List<Agent> agents = pagedAgents.getContent();
 
@@ -280,7 +280,8 @@ public class AgentService {
         List<AgentResponse> agentList = agents.stream()
                 .map(a -> new AgentResMapper(
                         rolesMap.get(a.getRoleId()),
-                        agentActivitiesMap.get(a.getAgentId())
+                        agentActivitiesMap.get(a.getAgentId()),
+                        agent
                 ).apply(a))
                 .toList();
 
@@ -315,6 +316,11 @@ public class AgentService {
         if (deactivatingAgent == null){
             return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
         }
+
+        if (agent.getAgentId().equals(agentId)) {
+            return new ResponseEntity<>(Utils.CANNOT_EDIT_YOURSELF, HttpStatus.BAD_REQUEST);
+        }
+
         AgentSnapshot oldAgent = SnapshotUtility.toSnapshot(deactivatingAgent);
 
         deactivatingAgent.setIsActive(false);
@@ -381,6 +387,10 @@ public class AgentService {
         Agent reactivatingAgent = agentRepository.findByAgentIdAndIsActiveFalse(agentId);
         if (reactivatingAgent == null){
             return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (agent.getAgentId().equals(agentId)) {
+            return new ResponseEntity<>(Utils.CANNOT_EDIT_YOURSELF, HttpStatus.BAD_REQUEST);
         }
 
         reactivatingAgent.setIsActive(true);

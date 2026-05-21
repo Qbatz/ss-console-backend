@@ -12,11 +12,14 @@ public class AgentResMapper implements Function<Agent, AgentResponse> {
 
     AgentRoles role;
     AgentActivities agentActivities;
+    Agent loggedInAgent;
 
     public AgentResMapper(AgentRoles role,
-                          AgentActivities agentActivities) {
+                          AgentActivities agentActivities,
+                          Agent loggedInAgent) {
         this.role = role;
         this.agentActivities = agentActivities;
+        this.loggedInAgent = loggedInAgent;
     }
 
     @Override
@@ -61,8 +64,15 @@ public class AgentResMapper implements Function<Agent, AgentResponse> {
             lastActiveTime = Utils.dateToTime(agentActivities.getCreatedAt());
         }
 
+        boolean isLoggedInAgent = false;
+        if (loggedInAgent != null){
+            if (loggedInAgent.getAgentId().equals(agent.getAgentId())) {
+                isLoggedInAgent = true;
+            }
+        }
+
         return new AgentResponse(agent.getAgentId(), agent.getFirstName(), agent.getLastName(),
                 fullName.toString(), initials.toString(), agent.getAgentEmailId(), agent.getMobile(),
-                agent.getRoleId(), roleName, lastActiveDate, lastActiveTime);
+                agent.getRoleId(), roleName, lastActiveDate, lastActiveTime, isLoggedInAgent);
     }
 }
