@@ -3,6 +3,7 @@ package com.smartstay.console.services;
 import com.smartstay.console.Mapper.agent.AgentActivitiesResMapper;
 import com.smartstay.console.Mapper.agent.AgentDetailsResMapper;
 import com.smartstay.console.Mapper.agent.AgentResMapper;
+import com.smartstay.console.Mapper.hostelRelationalAgent.RelationalAgentResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.agent.AgentSnapshot;
@@ -426,6 +427,7 @@ public class AgentService {
                 agentIds.add(a.getAgentId());
             }
         }
+
         for (HostelRelationalAgent hostelRelational : hostelRelations) {
             if (hostelRelational.getAgentId() != null){
                 agentIds.add(hostelRelational.getAgentId());
@@ -466,24 +468,13 @@ public class AgentService {
 
         List<RelationalAgentResponse> hostelRelationsRes = hostelRelations.stream()
                 .map(hostelRelationalAgent -> {
-                    String hostelName = null;
                     HostelV1 hostel = hostelMap.getOrDefault(hostelRelationalAgent.getHostelId(), null);
-                    if (hostel != null){
-                        hostelName = hostel.getHostelName();
-                    }
-                    String relationalAgentName = null;
                     Agent relationalAgent = agentMap.getOrDefault(hostelRelationalAgent.getAgentId(), null);
-                    if (relationalAgent != null){
-                        relationalAgentName = Utils.getFullName(relationalAgent.getFirstName(), relationalAgent.getLastName());
-                    }
-                    String createdByAgentName = null;
                     Agent createdByAgent = agentMap.getOrDefault(hostelRelationalAgent.getCreatedBy(), null);
-                    if (createdByAgent != null){
-                        createdByAgentName = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
-                    }
-                    return new RelationalAgentResponse(hostelRelationalAgent.getId(), hostelName, relationalAgentName,
-                            hostelRelationalAgent.getReason().name(), hostelRelationalAgent.getComments(), createdByAgentName,
-                            Utils.dateToString(hostelRelationalAgent.getCreatedAt()), Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
+
+                    return new RelationalAgentResMapper(
+                            hostel, relationalAgent, createdByAgent
+                    ).apply(hostelRelationalAgent);
                 }).toList();
 
         AgentDetailsRes response = new AgentDetailsResMapper(
