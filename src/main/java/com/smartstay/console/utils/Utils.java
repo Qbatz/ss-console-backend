@@ -511,11 +511,17 @@ public class Utils {
 
     }
 
-    public static Double roundOfDouble(double number) {
+    public static Double roundOfDouble(Double number) {
+        if (number == null){
+            return 0d;
+        }
         return (double) Math.round(number);
     }
 
-    public static double roundOfDoubleTo2Digits(double number) {
+    public static double roundOfDoubleTo2Digits(Double number) {
+        if (number == null){
+            return 0d;
+        }
         return BigDecimal.valueOf(number)
                 .setScale(2, RoundingMode.HALF_UP)
                 .doubleValue();
