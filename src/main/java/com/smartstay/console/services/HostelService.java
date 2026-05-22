@@ -97,4 +97,8 @@ public class HostelService {
     public Set<String> getActiveHostelIds(){
         return hostelRepository.findActiveHostelIds();
     }
+
+    public HostelV1 getHostelByHostelId(String hostelId) {
+        return hostelRepository.findHostelByHostelId(hostelId);
+    }
 }
