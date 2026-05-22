@@ -201,6 +201,10 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
+        if (!Utils.checkDateIsFromFutureOrPresent(demoRequestPayload.requestedDate(), demoRequestPayload.requestedTime())) {
+            return new ResponseEntity<>(Utils.DATE_IS_NOT_FROM_FUTURE_OR_PRESENT, HttpStatus.BAD_REQUEST);
+        }
+
         DemoRequest demoRequest = new DemoRequest();
         demoRequest.setName(demoRequestPayload.name());
         demoRequest.setEmailId(demoRequestPayload.email());

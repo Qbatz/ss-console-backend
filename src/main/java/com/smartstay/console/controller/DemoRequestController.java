@@ -23,7 +23,7 @@ public class DemoRequestController {
     @Autowired
     DemoRequestService demoRequestService;
 
-    @GetMapping("")
+    @GetMapping
     public ResponseEntity<?> getAllDemoRequests(@RequestParam(value = "page", defaultValue = "0") int page,
                                                 @RequestParam(value = "size", defaultValue = "10") int size,
                                                 @RequestParam(value = "name", required = false) String name) {
@@ -41,7 +41,7 @@ public class DemoRequestController {
         return demoRequestService.getDemoRequest(demoRequestId);
     }
 
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity<?> addDemoRequest(@Valid @RequestBody DemoRequestPayload demoRequestPayload) {
         return demoRequestService.addDemoRequest(demoRequestPayload);
     }
