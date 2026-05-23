@@ -11,5 +11,13 @@ public record DemoRequestStatusPayload(@NotBlank(message = "Status can't be null
                                        String presentedBy,
                                        @JsonFormat(pattern = "dd-MM-yyyy HH:mm")
                                        LocalDateTime presentedAt,
-                                       String agentId) {
+                                       String agentId,
+                                       @JsonFormat(pattern = "dd-MM-yyyy HH:mm")
+                                       LocalDateTime demoFrom,
+                                       @JsonFormat(pattern = "dd-MM-yyyy HH:mm")
+                                       LocalDateTime demoTo,
+                                       String demoType,
+                                       String demoMeetLink,
+                                       String planCode,
+                                       String dropReason) {
 }

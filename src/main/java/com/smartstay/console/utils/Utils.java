@@ -77,6 +77,8 @@ public class Utils {
     public static final String PAYMENT_SUMMARY_NOT_FOUND = "Payment summary not found";
     public static final String ORDER_HISTORY_NOT_FOUND = "Order history not found";
     public static final String PAYMENT_ID_NOT_FOUND = "Payment id not found";
+    public static final String DEMO_TYPE_NOT_FOUND = "Demo type not found";
+    public static final String DROP_REASON_NOT_FOUND = "Drop reason not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -123,6 +125,8 @@ public class Utils {
     public static final String INVOICE_ID_REQUIRED = "InvoiceId is required";
     public static final String TENANT_MOBILE_REQUIRED = "Tenant mobile is required";
     public static final String AGENT_ID_REQUIRED = "AgentId is required";
+    public static final String PLAN_CODE_REQUIRED = "Plan code is required";
+    public static final Object DEMO_FROM_TO_DATE_REQUIRED = "Demo from and to date is required";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
@@ -596,13 +600,16 @@ public class Utils {
         );
     }
 
-    public static Date localDateToDate(LocalDate localDate) {
-        if (localDate == null) {
+    public static Date localDateTimeToDate(LocalDate localDate, LocalTime localTime) {
+
+        if (localDate == null || localTime == null) {
             return null;
         }
 
+        LocalDateTime localDateTime = LocalDateTime.of(localDate, localTime);
+
         return Date.from(
-                localDate.atStartOfDay(ZoneId.systemDefault()).toInstant()
+                localDateTime.atZone(ZoneId.systemDefault()).toInstant()
         );
     }
 
@@ -887,5 +894,45 @@ public class Utils {
                 LocalDateTime.of(requestedDate, requestedTime);
 
         return !requestedDateTime.isBefore(LocalDateTime.now());
+    }
+
+    public static boolean checkDateIsFromFutureOrPresent(LocalDateTime requestedDateTime) {
+
+        if (requestedDateTime == null) {
+            return false;
+        }
+
+        return !requestedDateTime.isBefore(LocalDateTime.now());
+    }
+
+    public static Date stringDateTimeToDate(String requestedDate, String requestedTime) {
+
+        if (requestedDate == null || requestedDate.isBlank()) {
+            return null;
+        }
+
+        DateTimeFormatter dateFormatter =
+                DateTimeFormatter.ofPattern("dd-MM-yyyy");
+
+        DateTimeFormatter timeFormatter =
+                DateTimeFormatter.ofPattern("HH:mm");
+
+        LocalDate localDate =
+                LocalDate.parse(requestedDate, dateFormatter);
+
+        LocalTime localTime;
+
+        if (requestedTime == null || requestedTime.isBlank()) {
+            localTime = LocalTime.MIDNIGHT;
+        } else {
+            localTime = LocalTime.parse(requestedTime, timeFormatter);
+        }
+
+        LocalDateTime localDateTime =
+                LocalDateTime.of(localDate, localTime);
+
+        return Date.from(
+                localDateTime.atZone(ZoneId.systemDefault()).toInstant()
+        );
     }
 }

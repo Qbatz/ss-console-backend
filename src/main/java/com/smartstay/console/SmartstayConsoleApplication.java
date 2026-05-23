@@ -1,10 +1,10 @@
 package com.smartstay.console;
 
 import com.smartstay.console.dao.*;
-import com.smartstay.console.ennum.PlanType;
+import com.smartstay.console.ennum.RequestStatus;
 import com.smartstay.console.repositories.AgentModulesRepository;
-import com.smartstay.console.repositories.AgentRolesRepository;
-import com.smartstay.console.repositories.PlansRepository;
+import com.smartstay.console.repositories.DemoRequestRepository;
+import com.smartstay.console.services.PlansService;
 import com.smartstay.console.utils.Utils;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
@@ -14,9 +14,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @SpringBootApplication
 @EnableScheduling
@@ -164,83 +164,80 @@ public class SmartstayConsoleApplication {
         };
     }
 
+    // IMPORTANT: This migration should be executed ONLY ONCE in production.
+    // Remove/comment this bean after successful deployment.
 //    @Bean
-//    CommandLineRunner enablePaymentsModuleForReadOnlyRole(AgentRolesRepository rolesRepository) {
+//    CommandLineRunner updateDemoRequestStatus(DemoRequestRepository demoRequestRepository, PlansService plansService) {
 //        return args -> {
 //
-//            final int PAYMENTS_MODULE_ID = 20;
-//            String roleName = "CONSOLE-ADMIN-READ-ONLY";
+//            Set<String> oldStatuses = Set.of(
+//                    "REQUESTED", "PENDING", "OPEN",
+//                    "ONHOLD", "IN_PROGRESS", "COMPLETED",
+//                    "ONBOARDED", "REJECTED", "CLOSED"
+//            );
 //
-//            rolesRepository.findByRoleName(roleName).ifPresent(role -> {
+//            List<DemoRequest> demoRequests = demoRequestRepository.findAll();
 //
-//                role.getPermissions()
-//                        .stream()
-//                        .filter(permission -> permission.getModuleId() == PAYMENTS_MODULE_ID)
-//                        .findFirst()
-//                        .ifPresent(permission -> {
-//                            permission.setCanRead(true);
-//                            permission.setCanWrite(true);
-//                            permission.setCanUpdate(true);
-//                            permission.setCanDelete(true);
+//            if (demoRequests.stream()
+//                    .noneMatch(d -> oldStatuses.contains(d.getDemoRequestStatus()))) {
+//                return;
+//            }
 //
-//                            rolesRepository.save(role);
-//                        });
+//            Plans trialPlan = plansService.findTrialPlan();
+//
+//            String trialPlanCode;
+//            if (trialPlan != null) {
+//                trialPlanCode = trialPlan.getPlanCode();
+//            } else {
+//                trialPlanCode = null;
+//            }
+//
+//            demoRequests.forEach(demoRequest -> {
+//
+//                Date createdAt = new Date();
+//
+//                if (demoRequest.getCreatedAt() == null) {
+//                    if (demoRequest.getBookedFor() != null){
+//                        createdAt = demoRequest.getBookedFor();
+//                    } else if (demoRequest.getRequestedDate() != null) {
+//                        createdAt = Utils.stringDateTimeToDate(demoRequest.getRequestedDate(), demoRequest.getRequestedTime());
+//                    }
+//                    demoRequest.setCreatedAt(createdAt);
+//                }
+//
+//                String demoRequestStatus = demoRequest.getDemoRequestStatus();
+//
+//                if (demoRequestStatus == null) {
+//                    return;
+//                }
+//
+//                String status = switch (demoRequestStatus) {
+//                    case "REQUESTED", "PENDING", "OPEN", "ONHOLD" ->
+//                            RequestStatus.NEW.name();
+//
+//                    case "IN_PROGRESS" ->
+//                            RequestStatus.CONTACTED.name();
+//
+//                    case "COMPLETED" ->
+//                            RequestStatus.DEMO_COMPLETED.name();
+//
+//                    case "ONBOARDED" ->
+//                            RequestStatus.TRIAL_STARTED.name();
+//
+//                    case "REJECTED", "CLOSED" ->
+//                            RequestStatus.DROPPED.name();
+//
+//                    default -> demoRequestStatus;
+//                };
+//
+//                if (RequestStatus.TRIAL_STARTED.name().equals(status)) {
+//                    demoRequest.setConvertedToPlanCode(trialPlanCode);
+//                }
+//
+//                demoRequest.setDemoRequestStatus(status);
 //            });
-//        };
-//    }
-
-//    @Bean
-//    CommandLineRunner extendablePlan(PlansRepository plansRepository) {
-//        return args -> {
-//            String planCode1 = Utils.generatePlanCode();
 //
-//            Plans planTrial = new Plans();
-//            planTrial.setPlanName("Expandable Trial");
-//            planTrial.setDuration(30l);
-//            planTrial.setPrice(0.0);
-//            planTrial.setDiscounts(0.0);
-//            planTrial.setPlanType(PlanType.EXPANDABLE_TRIAL.name());
-//            planTrial.setPlanCode(planCode1);
-//            planTrial.setShouldShow(false);
-//            planTrial.setActive(true);
-//            planTrial.setCanCustomize(false);
-//            planTrial.setCreatedAt(new Date());
-//            planTrial.setUpdatedAt(new Date());
-//
-//            List<PlanFeatures> listFeatures = new ArrayList<>();
-//            PlanFeatures planFeatures = new PlanFeatures();
-//            planFeatures.setActive(true);
-//            planFeatures.setPrice(0.0);
-//            planFeatures.setFeatureName("Tenant Management");
-//            planFeatures.setPlan(planTrial);
-//
-//            PlanFeatures planFeatures2 = new PlanFeatures();
-//            planFeatures2.setActive(true);
-//            planFeatures2.setPrice(0.0);
-//            planFeatures2.setFeatureName("PG Management");
-//            planFeatures2.setPlan(planTrial);
-//
-//            PlanFeatures planFeatures3 = new PlanFeatures();
-//            planFeatures3.setActive(true);
-//            planFeatures3.setPrice(0.0);
-//            planFeatures3.setFeatureName("Account Management");
-//            planFeatures3.setPlan(planTrial);
-//
-//            PlanFeatures planFeatures4 = new PlanFeatures();
-//            planFeatures4.setActive(true);
-//            planFeatures4.setPrice(0.0);
-//            planFeatures4.setFeatureName("Expense Management");
-//            planFeatures4.setPlan(planTrial);
-//
-//
-//            listFeatures.add(planFeatures);
-//            listFeatures.add(planFeatures2);
-//            listFeatures.add(planFeatures3);
-//            listFeatures.add(planFeatures4);
-//
-//            planTrial.setFeaturesList(listFeatures);
-//
-//            plansRepository.save(planTrial);
+//            demoRequestRepository.saveAll(demoRequests);
 //        };
 //    }
 }
