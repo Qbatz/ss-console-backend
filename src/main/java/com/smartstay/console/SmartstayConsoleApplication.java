@@ -167,7 +167,9 @@ public class SmartstayConsoleApplication {
     // IMPORTANT: This migration should be executed ONLY ONCE in production.
     // Remove/comment this bean after successful deployment.
 //    @Bean
-//    CommandLineRunner updateDemoRequestStatus(DemoRequestRepository demoRequestRepository, PlansService plansService) {
+//    CommandLineRunner updateDemoRequestStatus(DemoRequestRepository demoRequestRepository,
+//                                              PlansService plansService) {
+//
 //        return args -> {
 //
 //            Set<String> oldStatuses = Set.of(
@@ -178,40 +180,51 @@ public class SmartstayConsoleApplication {
 //
 //            List<DemoRequest> demoRequests = demoRequestRepository.findAll();
 //
-//            if (demoRequests.stream()
-//                    .noneMatch(d -> oldStatuses.contains(d.getDemoRequestStatus()))) {
-//                return;
-//            }
+//            boolean hasUpdates = false;
 //
 //            Plans trialPlan = plansService.findTrialPlan();
 //
-//            String trialPlanCode;
-//            if (trialPlan != null) {
-//                trialPlanCode = trialPlan.getPlanCode();
-//            } else {
-//                trialPlanCode = null;
-//            }
+//            String trialPlanCode = trialPlan != null
+//                    ? trialPlan.getPlanCode()
+//                    : null;
 //
-//            demoRequests.forEach(demoRequest -> {
+//            for (DemoRequest demoRequest : demoRequests) {
 //
-//                Date createdAt = new Date();
-//
+//                // createdAt migration
 //                if (demoRequest.getCreatedAt() == null) {
-//                    if (demoRequest.getBookedFor() != null){
+//
+//                    Date createdAt = new Date();
+//
+//                    if (demoRequest.getBookedFor() != null) {
+//
 //                        createdAt = demoRequest.getBookedFor();
+//
 //                    } else if (demoRequest.getRequestedDate() != null) {
-//                        createdAt = Utils.stringDateTimeToDate(demoRequest.getRequestedDate(), demoRequest.getRequestedTime());
+//
+//                        createdAt = Utils.stringDateTimeToDate(
+//                                demoRequest.getRequestedDate(),
+//                                demoRequest.getRequestedTime()
+//                        );
 //                    }
+//
 //                    demoRequest.setCreatedAt(createdAt);
+//
+//                    hasUpdates = true;
 //                }
 //
+//                // status migration
 //                String demoRequestStatus = demoRequest.getDemoRequestStatus();
 //
 //                if (demoRequestStatus == null) {
-//                    return;
+//                    continue;
+//                }
+//
+//                if (!oldStatuses.contains(demoRequestStatus)) {
+//                    continue;
 //                }
 //
 //                String status = switch (demoRequestStatus) {
+//
 //                    case "REQUESTED", "PENDING", "OPEN", "ONHOLD" ->
 //                            RequestStatus.NEW.name();
 //
@@ -235,7 +248,13 @@ public class SmartstayConsoleApplication {
 //                }
 //
 //                demoRequest.setDemoRequestStatus(status);
-//            });
+//
+//                hasUpdates = true;
+//            }
+//
+//            if (!hasUpdates) {
+//                return;
+//            }
 //
 //            demoRequestRepository.saveAll(demoRequests);
 //        };
