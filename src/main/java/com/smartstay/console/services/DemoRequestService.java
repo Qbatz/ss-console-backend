@@ -590,6 +590,32 @@ public class DemoRequestService {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
+    public ResponseEntity<?> deleteDemoRequest(Long demoRequestId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        DemoRequest demoRequest = demoRequestRepository.findByRequestId(demoRequestId);
+        if (demoRequest == null) {
+            return new ResponseEntity<>(Utils.DEMO_REQUEST_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        DemoRequestSnapshot oldRequest = SnapshotUtility.toSnapshot(demoRequest);
+
+        demoRequestRepository.delete(demoRequest);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.DEMO_REQUEST,
+                String.valueOf(demoRequestId), oldRequest, null);
+
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
+
     public ResponseEntity<?> addDemoRequestComment(Long demoRequestId, DemoRequestCommentPayload payload) {
 
         if (!authentication.isAuthenticated()) {
@@ -736,31 +762,5 @@ public class DemoRequestService {
 
     public long getDemoRequestCount(){
         return demoRequestRepository.getCount();
-    }
-
-    public ResponseEntity<?> deleteDemoRequest(Long demoRequestId) {
-
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        Agent agent = agentService.findUserByUserId(authentication.getName());
-        if (agent == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        DemoRequest demoRequest = demoRequestRepository.findByRequestId(demoRequestId);
-        if (demoRequest == null) {
-            return new ResponseEntity<>(Utils.DEMO_REQUEST_NOT_FOUND, HttpStatus.BAD_REQUEST);
-        }
-
-        DemoRequestSnapshot oldRequest = SnapshotUtility.toSnapshot(demoRequest);
-
-        demoRequestRepository.delete(demoRequest);
-
-        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.DEMO_REQUEST,
-                String.valueOf(demoRequestId), oldRequest, null);
-
-        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
 }
