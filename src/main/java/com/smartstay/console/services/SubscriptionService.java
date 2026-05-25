@@ -246,6 +246,8 @@ public class SubscriptionService {
             }
         }
 
+        duration = duration - 1;
+
         newSubscription.setPlanStartsAt(startsAt);
         Date endDate = Utils.addDaysToDate(startsAt, duration);
         newSubscription.setPlanEndsAt(endDate);
