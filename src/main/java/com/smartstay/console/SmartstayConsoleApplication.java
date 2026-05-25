@@ -1,7 +1,8 @@
 package com.smartstay.console;
 
 import com.smartstay.console.dao.*;
-import com.smartstay.console.ennum.RequestStatus;
+import com.smartstay.console.ennum.DemoRequestSource;
+import com.smartstay.console.ennum.DemoRequestStatus;
 import com.smartstay.console.repositories.AgentModulesRepository;
 import com.smartstay.console.repositories.DemoRequestRepository;
 import com.smartstay.console.services.PlansService;
@@ -190,6 +191,14 @@ public class SmartstayConsoleApplication {
 //
 //            for (DemoRequest demoRequest : demoRequests) {
 //
+//                //source migration
+//                if (demoRequest.getSource() == null) {
+//
+//                    demoRequest.setSource(DemoRequestSource.CONSOLE.name());
+//
+//                    hasUpdates = true;
+//                }
+//
 //                // createdAt migration
 //                if (demoRequest.getCreatedAt() == null) {
 //
@@ -226,24 +235,24 @@ public class SmartstayConsoleApplication {
 //                String status = switch (demoRequestStatus) {
 //
 //                    case "REQUESTED", "PENDING", "OPEN", "ONHOLD" ->
-//                            RequestStatus.NEW.name();
+//                            DemoRequestStatus.NEW.name();
 //
 //                    case "IN_PROGRESS" ->
-//                            RequestStatus.CONTACTED.name();
+//                            DemoRequestStatus.CONTACTED.name();
 //
 //                    case "COMPLETED" ->
-//                            RequestStatus.DEMO_COMPLETED.name();
+//                            DemoRequestStatus.DEMO_COMPLETED.name();
 //
 //                    case "ONBOARDED" ->
-//                            RequestStatus.TRIAL_STARTED.name();
+//                            DemoRequestStatus.TRIAL_STARTED.name();
 //
 //                    case "REJECTED", "CLOSED" ->
-//                            RequestStatus.DROPPED.name();
+//                            DemoRequestStatus.DROPPED.name();
 //
 //                    default -> demoRequestStatus;
 //                };
 //
-//                if (RequestStatus.TRIAL_STARTED.name().equals(status)) {
+//                if (DemoRequestStatus.TRIAL_STARTED.name().equals(status)) {
 //                    demoRequest.setConvertedToPlanCode(trialPlanCode);
 //                }
 //

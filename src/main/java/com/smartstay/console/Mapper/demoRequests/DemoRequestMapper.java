@@ -1,7 +1,7 @@
 package com.smartstay.console.Mapper.demoRequests;
 
 import com.smartstay.console.dao.*;
-import com.smartstay.console.ennum.RequestStatus;
+import com.smartstay.console.ennum.DemoRequestStatus;
 import com.smartstay.console.responses.demoRequest.DemoRequestActivityResponse;
 import com.smartstay.console.responses.demoRequest.DemoRequestCommentsResponse;
 import com.smartstay.console.responses.demoRequest.DemoRequestResponse;
@@ -97,9 +97,9 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
                     }).toList();
         }
 
-        RequestStatus currentStatus;
+        DemoRequestStatus currentStatus;
         try {
-            currentStatus = RequestStatus.valueOf(demoRequest.getDemoRequestStatus());
+            currentStatus = DemoRequestStatus.valueOf(demoRequest.getDemoRequestStatus());
         } catch (Exception e){
             currentStatus = null;
         }
@@ -107,10 +107,10 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
         boolean canAssignStaff = false;
         boolean canMarkDropped = false;
         if (currentStatus != null) {
-            if (currentStatus.canMoveTo(RequestStatus.ASSIGNED)){
+            if (currentStatus.canMoveTo(DemoRequestStatus.ASSIGNED)){
                 canAssignStaff = true;
             }
-            if (currentStatus.canMoveTo(RequestStatus.DROPPED)){
+            if (currentStatus.canMoveTo(DemoRequestStatus.DROPPED)){
                 canMarkDropped = true;
             }
         }

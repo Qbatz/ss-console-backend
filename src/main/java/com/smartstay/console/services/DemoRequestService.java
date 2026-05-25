@@ -69,7 +69,7 @@ public class DemoRequestService {
         demoRequest.setCity(demoRequestPayload.city());
         demoRequest.setState(demoRequestPayload.state());
         demoRequest.setCountry(demoRequestPayload.country());
-        demoRequest.setDemoRequestStatus(RequestStatus.NEW.name());
+        demoRequest.setDemoRequestStatus(DemoRequestStatus.NEW.name());
         demoRequest.setIsDemoCompleted(false);
         demoRequest.setIsAssigned(false);
         demoRequest.setComments(demoRequestPayload.comments());
@@ -84,8 +84,8 @@ public class DemoRequestService {
 
         DemoRequestActivity demoRequestActivity = new DemoRequestActivity();
         demoRequestActivity.setComment(demoRequestPayload.comments());
-        demoRequestActivity.setDescription(RequestStatus.NEW.getDescription());
-        demoRequestActivity.setStatus(RequestStatus.NEW.name());
+        demoRequestActivity.setDescription(DemoRequestStatus.NEW.getDescription());
+        demoRequestActivity.setStatus(DemoRequestStatus.NEW.name());
         demoRequestActivity.setCreatedByUserType(UserType.AGENT.name());
         demoRequestActivity.setCreatedBy(authentication.getName());
         demoRequestActivity.setCreatedAt(today);
@@ -286,16 +286,16 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.DEMO_REQUEST_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        RequestStatus currentStatus;
+        DemoRequestStatus currentStatus;
         try {
-            currentStatus = RequestStatus.valueOf(
+            currentStatus = DemoRequestStatus.valueOf(
                     demoRequest.getDemoRequestStatus()
             );
         } catch (IllegalArgumentException | NullPointerException e) {
             return new ResponseEntity<>(Utils.DEMO_REQUEST_STATUS_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        if (!currentStatus.canMoveTo(RequestStatus.ASSIGNED)) {
+        if (!currentStatus.canMoveTo(DemoRequestStatus.ASSIGNED)) {
             return new ResponseEntity<>(Utils.INVALID_STATUS_TRANSITION, HttpStatus.BAD_REQUEST);
         }
 
@@ -306,7 +306,7 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        demoRequest.setDemoRequestStatus(RequestStatus.ASSIGNED.name());
+        demoRequest.setDemoRequestStatus(DemoRequestStatus.ASSIGNED.name());
         demoRequest.setIsAssigned(true);
         demoRequest.setAssignedTo(assignedTo.getAgentId());
         demoRequest.setAssignedBy(agent.getAgentId());
@@ -316,8 +316,8 @@ public class DemoRequestService {
 
         DemoRequestActivity demoRequestActivity = new DemoRequestActivity();
         demoRequestActivity.setComment(payload.comments());
-        demoRequestActivity.setDescription(RequestStatus.ASSIGNED.getDescription());
-        demoRequestActivity.setStatus(RequestStatus.ASSIGNED.name());
+        demoRequestActivity.setDescription(DemoRequestStatus.ASSIGNED.getDescription());
+        demoRequestActivity.setStatus(DemoRequestStatus.ASSIGNED.name());
         demoRequestActivity.setCreatedByUserType(UserType.AGENT.name());
         demoRequestActivity.setCreatedBy(authentication.getName());
         demoRequestActivity.setCreatedAt(new Date());
@@ -354,16 +354,16 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.DEMO_REQUEST_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        RequestStatus currentStatus;
+        DemoRequestStatus currentStatus;
         try {
-            currentStatus = RequestStatus.valueOf(
+            currentStatus = DemoRequestStatus.valueOf(
                     demoRequest.getDemoRequestStatus()
             );
         } catch (IllegalArgumentException | NullPointerException e) {
             return new ResponseEntity<>(Utils.DEMO_REQUEST_STATUS_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        if (!currentStatus.canMoveTo(RequestStatus.DROPPED)) {
+        if (!currentStatus.canMoveTo(DemoRequestStatus.DROPPED)) {
             return new ResponseEntity<>(Utils.INVALID_STATUS_TRANSITION, HttpStatus.BAD_REQUEST);
         }
 
@@ -376,7 +376,7 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.DROP_REASON_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        demoRequest.setDemoRequestStatus(RequestStatus.DROPPED.name());
+        demoRequest.setDemoRequestStatus(DemoRequestStatus.DROPPED.name());
         demoRequest.setDropReason(dropReason.name());
         demoRequest.setComments(payload.comments());
 
@@ -384,8 +384,8 @@ public class DemoRequestService {
 
         DemoRequestActivity demoRequestActivity = new DemoRequestActivity();
         demoRequestActivity.setComment(payload.comments());
-        demoRequestActivity.setDescription(RequestStatus.DROPPED.getDescription());
-        demoRequestActivity.setStatus(RequestStatus.DROPPED.name());
+        demoRequestActivity.setDescription(DemoRequestStatus.DROPPED.getDescription());
+        demoRequestActivity.setStatus(DemoRequestStatus.DROPPED.name());
         demoRequestActivity.setCreatedByUserType(UserType.AGENT.name());
         demoRequestActivity.setCreatedBy(authentication.getName());
         demoRequestActivity.setCreatedAt(new Date());
@@ -425,18 +425,18 @@ public class DemoRequestService {
 
         DemoRequestSnapshot oldRequest = SnapshotUtility.toSnapshot(demoRequest);
 
-        RequestStatus requestStatus;
+        DemoRequestStatus requestStatus;
         try {
-            requestStatus = RequestStatus.valueOf(
+            requestStatus = DemoRequestStatus.valueOf(
                     demoRequestStatusPayload.demoRequestStatus().toUpperCase()
             );
         } catch (IllegalArgumentException | NullPointerException e) {
             return new ResponseEntity<>(Utils.DEMO_REQUEST_STATUS_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        RequestStatus currentStatus;
+        DemoRequestStatus currentStatus;
         try {
-            currentStatus = RequestStatus.valueOf(
+            currentStatus = DemoRequestStatus.valueOf(
                     demoRequest.getDemoRequestStatus()
             );
         } catch (IllegalArgumentException | NullPointerException e) {
@@ -453,7 +453,7 @@ public class DemoRequestService {
             demoRequest.setComments(demoRequestStatusPayload.comments());
         }
 
-        if (requestStatus.name().equals(RequestStatus.ASSIGNED.name())){
+        if (requestStatus.name().equals(DemoRequestStatus.ASSIGNED.name())){
 
             if (demoRequestStatusPayload.agentId() == null || demoRequestStatusPayload.agentId().isBlank()){
                 return new ResponseEntity<>(Utils.AGENT_ID_REQUIRED, HttpStatus.BAD_REQUEST);
@@ -469,7 +469,7 @@ public class DemoRequestService {
             demoRequest.setAssignedBy(agent.getAgentId());
         }
 
-        if (requestStatus.name().equals(RequestStatus.DEMO_SCHEDULED.name())){
+        if (requestStatus.name().equals(DemoRequestStatus.DEMO_SCHEDULED.name())){
 
             if (demoRequestStatusPayload.agentId() != null && !demoRequestStatusPayload.agentId().isBlank()){
                 Agent assignedTo = agentService.findUserByUserId(demoRequestStatusPayload.agentId());
@@ -503,7 +503,7 @@ public class DemoRequestService {
             demoRequest.setDemoMeetLink(demoRequestStatusPayload.demoMeetLink());
         }
 
-        if (requestStatus.name().equals(RequestStatus.DEMO_COMPLETED.name())) {
+        if (requestStatus.name().equals(DemoRequestStatus.DEMO_COMPLETED.name())) {
 
             if (demoRequestStatusPayload.presentedBy() == null || demoRequestStatusPayload.presentedBy().isBlank()){
                 return new ResponseEntity<>(Utils.PRESENTED_BY_REQUIRED, HttpStatus.BAD_REQUEST);
@@ -522,7 +522,7 @@ public class DemoRequestService {
             demoRequest.setPresentedAt(Utils.localDateTimeToDate(demoRequestStatusPayload.presentedAt()));
         }
 
-        if (requestStatus.name().equals(RequestStatus.TRIAL_STARTED.name())) {
+        if (requestStatus.name().equals(DemoRequestStatus.TRIAL_STARTED.name())) {
             Plans trialPlan = plansService.findTrialPlan();
             String trialPlanCode = null;
             if (trialPlan != null){
@@ -532,7 +532,7 @@ public class DemoRequestService {
             demoRequest.setConvertedToPlanCode(trialPlanCode);
         }
 
-        if (requestStatus.name().equals(RequestStatus.CONVERTED.name())) {
+        if (requestStatus.name().equals(DemoRequestStatus.CONVERTED.name())) {
             if (demoRequestStatusPayload.planCode() == null || demoRequestStatusPayload.planCode().isBlank()){
                 return new ResponseEntity<>(Utils.PLAN_CODE_REQUIRED, HttpStatus.BAD_REQUEST);
             }
@@ -545,7 +545,7 @@ public class DemoRequestService {
             demoRequest.setConvertedToPlanCode(demoRequestStatusPayload.planCode());
         }
 
-        if (requestStatus.name().equals(RequestStatus.DROPPED.name())) {
+        if (requestStatus.name().equals(DemoRequestStatus.DROPPED.name())) {
             DropReason dropReason;
             try {
                 dropReason = DropReason.valueOf(demoRequestStatusPayload.dropReason());
@@ -632,7 +632,7 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        List<DemoRequestStatusFlowResponse> response = Arrays.stream(RequestStatus.values())
+        List<DemoRequestStatusFlowResponse> response = Arrays.stream(DemoRequestStatus.values())
                 .map(requestStatus -> new DemoRequestStatusFlowResponse(
                         requestStatus.name(),
                         requestStatus.getAllowedStatuses().stream()
