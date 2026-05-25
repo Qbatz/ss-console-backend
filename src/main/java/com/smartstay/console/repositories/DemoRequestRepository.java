@@ -52,7 +52,9 @@ public interface DemoRequestRepository extends JpaRepository<DemoRequest, Long> 
     @Query("""
             select count(dr)
             from DemoRequest dr
-            where dr.createdAt = :date
+            where dr.createdAt >= :startDate
+            and dr.createdAt < :endDate
             """)
-    long getNewByDateCount(@Param("date") Date date);
+    long getNewByDateCount(@Param("startDate") Date startDate,
+                           @Param("endDate") Date endDate);
 }

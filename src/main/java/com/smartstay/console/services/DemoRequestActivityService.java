@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.List;
+import java.util.Set;
 
 @Service
 public class DemoRequestActivityService {
@@ -26,5 +28,13 @@ public class DemoRequestActivityService {
     public long getDemoScheduledCount(Date startDate, Date endDate) {
         String status = DemoRequestStatus.DEMO_SCHEDULED.name();
         return demoRequestActivityRepository.getStatusCount(startDate, endDate, status);
+    }
+
+    public List<DemoRequestActivity> getDemoRequestActivitiesByRequestIds(Set<Long> demoRequestIds) {
+        return demoRequestActivityRepository.findAllByRequestIdIn(demoRequestIds);
+    }
+
+    public List<DemoRequestActivity> getDemoRequestActivitiesByRequestId(Long requestId) {
+        return demoRequestActivityRepository.findAllByRequestId(requestId);
     }
 }

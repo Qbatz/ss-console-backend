@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
-import java.util.List;
 
 @Entity
 @AllArgsConstructor
@@ -52,10 +51,4 @@ public class DemoRequest {
     private String dropReason;
 
     private Date createdAt;
-
-    @OneToMany(mappedBy = "demoRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<DemoRequestComments> demoRequestComments;
-
-    @OneToMany(mappedBy = "demoRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<DemoRequestActivity> demoRequestActivities;
 }

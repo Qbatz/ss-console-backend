@@ -17,11 +17,17 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
 
     Map<String, Agent> agentMap;
     Plans plan;
+    List<DemoRequestComments> comments;
+    List<DemoRequestActivity> activities;
 
     public DemoRequestMapper(Map<String, Agent> agentMap,
-                             Plans plan) {
+                             Plans plan,
+                             List<DemoRequestComments> comments,
+                             List<DemoRequestActivity> activities) {
         this.agentMap = agentMap;
         this.plan = plan;
+        this.comments = comments;
+        this.activities = activities;
     }
 
     @Override
@@ -61,8 +67,8 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
         }
 
         List<DemoRequestCommentsResponse> demoRequestComments = new ArrayList<>();
-        if (demoRequest.getDemoRequestComments() != null) {
-            demoRequestComments = demoRequest.getDemoRequestComments().stream()
+        if (comments != null) {
+            demoRequestComments = comments.stream()
                     .sorted(Comparator.comparing(DemoRequestComments::getId).reversed())
                     .map(comment -> {
                         String commentCreatedBy = null;
@@ -78,8 +84,8 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
         }
 
         List<DemoRequestActivityResponse> demoRequestActivities = new ArrayList<>();
-        if (demoRequest.getDemoRequestActivities() != null) {
-            demoRequestActivities = demoRequest.getDemoRequestActivities().stream()
+        if (activities != null) {
+            demoRequestActivities = activities.stream()
                     .sorted(Comparator.comparing(DemoRequestActivity::getActivityId).reversed())
                     .map(activity -> {
                         String activityCreatedBy = null;

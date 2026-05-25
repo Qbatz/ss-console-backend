@@ -401,7 +401,7 @@ public class SnapshotUtility {
                 c.getCreatedByUserType(),
                 c.getCreatedBy(),
                 copyDate(c.getCreatedAt()),
-                c.getDemoRequest() != null ? c.getDemoRequest().getRequestId() : null
+                c.getRequestId()
         );
     }
 
@@ -417,21 +417,13 @@ public class SnapshotUtility {
                 a.getCreatedByUserType(),
                 a.getCreatedBy(),
                 copyDate(a.getCreatedAt()),
-                a.getDemoRequest() != null
-                        ? a.getDemoRequest().getRequestId()
-                        : null
+                a.getRequestId()
         );
     }
 
     public static DemoRequestSnapshot toSnapshot(DemoRequest d) {
 
         if (d == null) return null;
-
-        List<DemoRequestCommentsSnapshot> comments =
-                toSnapshotList(d.getDemoRequestComments(), SnapshotUtility::toSnapshot);
-
-        List<DemoRequestActivitySnapshot> activities =
-                toSnapshotList(d.getDemoRequestActivities(), SnapshotUtility::toSnapshot);
 
         return new DemoRequestSnapshot(
                 d.getRequestId(),
@@ -463,9 +455,7 @@ public class SnapshotUtility {
                 d.getDemoType(),
                 d.getDemoMeetLink(),
                 d.getDropReason(),
-                copyDate(d.getCreatedAt()),
-                comments,
-                activities
+                copyDate(d.getCreatedAt())
         );
     }
 

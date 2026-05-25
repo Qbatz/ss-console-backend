@@ -89,14 +89,9 @@ public class DemoRequestService {
         demoRequestActivity.setCreatedByUserType(UserType.AGENT.name());
         demoRequestActivity.setCreatedBy(authentication.getName());
         demoRequestActivity.setCreatedAt(today);
-        demoRequestActivity.setDemoRequest(demoRequest);
+        demoRequestActivity.setRequestId(demoRequest.getRequestId());
 
         demoRequestActivity = demoRequestActivityService.save(demoRequestActivity);
-
-        if (demoRequest.getDemoRequestActivities() == null) {
-            demoRequest.setDemoRequestActivities(new ArrayList<>());
-        }
-        demoRequest.getDemoRequestActivities().add(demoRequestActivity);
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.DEMO_REQUEST,
                 String.valueOf(demoRequest.getRequestId()), null, demoRequest);
@@ -119,13 +114,14 @@ public class DemoRequestService {
 
         LocalDate today = LocalDate.now();
         Date now = new Date();
+        Date nowEnds = Utils.addDaysToDate(now, 1);
 
         Date currentMonthStartDate = Utils.getStartDateOfMonth(today);
         Date currentMonthEndDate = Utils.getEndDateOfMonth(today);
         Date currentMonthEndDatePlus1 = Utils.addDaysToDate(currentMonthEndDate, 1);
 
         long totalLeads = demoRequestRepository.getTotalLeadsCount(currentMonthStartDate, currentMonthEndDatePlus1);
-        long todayNewCount = demoRequestRepository.getNewByDateCount(now);
+        long todayNewCount = demoRequestRepository.getNewByDateCount(now, nowEnds);
         long contactedCount = demoRequestActivityService.getContactedCount(currentMonthStartDate, currentMonthEndDatePlus1);
         long demoScheduledCount = demoRequestActivityService.getDemoScheduledCount(currentMonthStartDate, currentMonthEndDatePlus1);
 
@@ -151,6 +147,20 @@ public class DemoRequestService {
 
         List<DemoRequest> demoRequests = paginatedDemoRequest.getContent();
 
+        Set<Long> demoRequestIds = demoRequests.stream()
+                .map(DemoRequest::getRequestId)
+                .collect(Collectors.toSet());
+
+        List<DemoRequestComments> demoRequestComments = demoRequestCommentsService
+                .getDemoRequestCommentsByRequestIds(demoRequestIds);
+        Map<Long, List<DemoRequestComments>> demoRequestCommentsMap = demoRequestComments.stream()
+                .collect(Collectors.groupingBy(DemoRequestComments::getRequestId));
+
+        List<DemoRequestActivity> demoRequestActivities = demoRequestActivityService
+                .getDemoRequestActivitiesByRequestIds(demoRequestIds);
+        Map<Long, List<DemoRequestActivity>> demoRequestActivitiesMap = demoRequestActivities.stream()
+                .collect(Collectors.groupingBy(DemoRequestActivity::getRequestId));
+
         Set<String> assignedToIds = new HashSet<>();
         Set<String> assignedByIds = new HashSet<>();
         Set<String> presentedByIds = new HashSet<>();
@@ -165,15 +175,20 @@ public class DemoRequestService {
 
             planCodes.add(demoRequest.getConvertedToPlanCode());
 
-            if (demoRequest.getDemoRequestComments() != null){
-                for (DemoRequestComments demoRequestComment : demoRequest.getDemoRequestComments()) {
+            List<DemoRequestComments> comments = demoRequestCommentsMap
+                    .getOrDefault(demoRequest.getRequestId(), null);
+            if (comments != null){
+                for (DemoRequestComments demoRequestComment : comments) {
                     if (UserType.AGENT.name().equals(demoRequestComment.getCreatedByUserType())){
                         commentCreatedByIds.add(demoRequestComment.getCreatedBy());
                     }
                 }
             }
-            if (demoRequest.getDemoRequestActivities() != null){
-                for (DemoRequestActivity demoRequestActivity : demoRequest.getDemoRequestActivities()) {
+
+            List<DemoRequestActivity> activities = demoRequestActivitiesMap
+                    .getOrDefault(demoRequest.getRequestId(), null);
+            if (activities != null){
+                for (DemoRequestActivity demoRequestActivity : activities) {
                     if (UserType.AGENT.name().equals(demoRequestActivity.getCreatedByUserType())){
                         activityCreatedByIds.add(demoRequestActivity.getCreatedBy());
                     }
@@ -199,7 +214,10 @@ public class DemoRequestService {
         List<DemoRequestResponse> demoRequestList = demoRequests.stream()
                 .map(demoRequest -> {
                     Plans plan = plansMap.getOrDefault(demoRequest.getConvertedToPlanCode(), null);
-                    return new DemoRequestMapper(agentMap, plan).apply(demoRequest);
+                    return new DemoRequestMapper(agentMap, plan,
+                            demoRequestCommentsMap.getOrDefault(demoRequest.getRequestId(), null),
+                            demoRequestActivitiesMap.getOrDefault(demoRequest.getRequestId(), null))
+                            .apply(demoRequest);
                 })
                 .toList();
 
@@ -236,16 +254,20 @@ public class DemoRequestService {
         Set<String> commentCreatedByIds = new HashSet<>();
         Set<String> activityCreatedByIds = new HashSet<>();
 
-        if (demoRequest.getDemoRequestComments() != null){
-            for (DemoRequestComments demoRequestComment : demoRequest.getDemoRequestComments()) {
+        List<DemoRequestComments> demoRequestComments = demoRequestCommentsService
+                .getDemoRequestCommentsByRequestId(demoRequest.getRequestId());
+        if (demoRequestComments != null){
+            for (DemoRequestComments demoRequestComment : demoRequestComments) {
                 if (UserType.AGENT.name().equals(demoRequestComment.getCreatedByUserType())){
                     commentCreatedByIds.add(demoRequestComment.getCreatedBy());
                 }
             }
         }
 
-        if (demoRequest.getDemoRequestActivities() != null){
-            for (DemoRequestActivity demoRequestActivity : demoRequest.getDemoRequestActivities()) {
+        List<DemoRequestActivity> demoRequestActivities = demoRequestActivityService
+                .getDemoRequestActivitiesByRequestId(demoRequest.getRequestId());
+        if (demoRequestActivities != null){
+            for (DemoRequestActivity demoRequestActivity : demoRequestActivities) {
                 if (UserType.AGENT.name().equals(demoRequestActivity.getCreatedByUserType())){
                     activityCreatedByIds.add(demoRequestActivity.getCreatedBy());
                 }
@@ -265,7 +287,8 @@ public class DemoRequestService {
 
         Plans plan = plansService.findPlanByPlanCode(demoRequest.getConvertedToPlanCode());
 
-        DemoRequestResponse response = new DemoRequestMapper(agentMap, plan).apply(demoRequest);
+        DemoRequestResponse response = new DemoRequestMapper(agentMap, plan, demoRequestComments,
+                demoRequestActivities).apply(demoRequest);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -321,14 +344,9 @@ public class DemoRequestService {
         demoRequestActivity.setCreatedByUserType(UserType.AGENT.name());
         demoRequestActivity.setCreatedBy(authentication.getName());
         demoRequestActivity.setCreatedAt(new Date());
-        demoRequestActivity.setDemoRequest(demoRequest);
+        demoRequestActivity.setRequestId(demoRequest.getRequestId());
 
         demoRequestActivity = demoRequestActivityService.save(demoRequestActivity);
-
-        if (demoRequest.getDemoRequestActivities() == null) {
-            demoRequest.setDemoRequestActivities(new ArrayList<>());
-        }
-        demoRequest.getDemoRequestActivities().add(demoRequestActivity);
 
         DemoRequestSnapshot newRequest = SnapshotUtility.toSnapshot(demoRequest);
 
@@ -389,14 +407,9 @@ public class DemoRequestService {
         demoRequestActivity.setCreatedByUserType(UserType.AGENT.name());
         demoRequestActivity.setCreatedBy(authentication.getName());
         demoRequestActivity.setCreatedAt(new Date());
-        demoRequestActivity.setDemoRequest(demoRequest);
+        demoRequestActivity.setRequestId(demoRequest.getRequestId());
 
         demoRequestActivity = demoRequestActivityService.save(demoRequestActivity);
-
-        if (demoRequest.getDemoRequestActivities() == null) {
-            demoRequest.setDemoRequestActivities(new ArrayList<>());
-        }
-        demoRequest.getDemoRequestActivities().add(demoRequestActivity);
 
         DemoRequestSnapshot newRequest = SnapshotUtility.toSnapshot(demoRequest);
 
@@ -565,14 +578,9 @@ public class DemoRequestService {
         demoRequestActivity.setCreatedByUserType(UserType.AGENT.name());
         demoRequestActivity.setCreatedBy(authentication.getName());
         demoRequestActivity.setCreatedAt(new Date());
-        demoRequestActivity.setDemoRequest(demoRequest);
+        demoRequestActivity.setRequestId(demoRequest.getRequestId());
 
         demoRequestActivity = demoRequestActivityService.save(demoRequestActivity);
-
-        if (demoRequest.getDemoRequestActivities() == null) {
-            demoRequest.setDemoRequestActivities(new ArrayList<>());
-        }
-        demoRequest.getDemoRequestActivities().add(demoRequestActivity);
 
         DemoRequestSnapshot newRequest = SnapshotUtility.toSnapshot(demoRequest);
 
@@ -604,14 +612,9 @@ public class DemoRequestService {
         demoRequestComments.setCreatedByUserType(UserType.AGENT.name());
         demoRequestComments.setCreatedBy(agent.getAgentId());
         demoRequestComments.setCreatedAt(new Date());
-        demoRequestComments.setDemoRequest(demoRequest);
+        demoRequestComments.setRequestId(demoRequest.getRequestId());
 
         demoRequestComments = demoRequestCommentsService.save(demoRequestComments);
-
-        if (demoRequest.getDemoRequestComments() == null) {
-            demoRequest.setDemoRequestComments(new ArrayList<>());
-        }
-        demoRequest.getDemoRequestComments().add(demoRequestComments);
 
         DemoRequestCommentsSnapshot demoRequestCommentsSnapshot = SnapshotUtility.toSnapshot(demoRequestComments);
 
@@ -619,6 +622,54 @@ public class DemoRequestService {
                 String.valueOf(demoRequestComments.getId()), null, demoRequestCommentsSnapshot);
 
         return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getDemoRequestComment(Long demoRequestId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        DemoRequest demoRequest = demoRequestRepository.findByRequestId(demoRequestId);
+        if (demoRequest == null) {
+            return new ResponseEntity<>(Utils.DEMO_REQUEST_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<DemoRequestComments> demoRequestComments = demoRequestCommentsService
+                .getDemoRequestCommentsByRequestId(demoRequestId);
+
+        Set<String> commentCreatedByIds = new HashSet<>();
+
+        for (DemoRequestComments demoRequestComment : demoRequestComments) {
+            if (UserType.AGENT.name().equals(demoRequestComment.getCreatedByUserType())){
+                commentCreatedByIds.add(demoRequestComment.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(commentCreatedByIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId, a -> a));
+
+        List<DemoRequestCommentsResponse> response = demoRequestComments.stream()
+                .map(comment -> {
+
+                    String createdBy = null;
+                    Agent createdByAgent = agentMap.getOrDefault(comment.getCreatedBy(), null);
+                    if (createdByAgent != null){
+                        createdBy = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
+                    }
+
+                    return new DemoRequestCommentsResponse(comment.getId(),
+                            comment.getComment(), comment.getCreatedByUserType(), createdBy,
+                            Utils.dateToString(comment.getCreatedAt()), Utils.dateToTime(comment.getCreatedAt()));
+                }).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getDemoRequestStatus() {

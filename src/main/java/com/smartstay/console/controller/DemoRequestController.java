@@ -34,6 +34,16 @@ public class DemoRequestController {
         return demoRequestService.getAllDemoRequests(page, size, name, startDate, endDate, status, agentId);
     }
 
+    @GetMapping("/{demoRequestId}")
+    public ResponseEntity<?> getDemoRequest(@PathVariable("demoRequestId") Long demoRequestId) {
+        return demoRequestService.getDemoRequest(demoRequestId);
+    }
+
+    @PostMapping
+    public ResponseEntity<?> addDemoRequest(@Valid @RequestBody DemoRequestPayload demoRequestPayload) {
+        return demoRequestService.addDemoRequest(demoRequestPayload);
+    }
+
     @PutMapping("/assign/{demoRequestId}")
     public ResponseEntity<?> assignDemoRequest(@PathVariable("demoRequestId") Long demoRequestId,
                                                @Valid @RequestBody DemoRequestAssignPayload payload) {
@@ -44,16 +54,6 @@ public class DemoRequestController {
     public ResponseEntity<?> dropDemoRequest(@PathVariable("demoRequestId") Long demoRequestId,
                                              @Valid @RequestBody DemoRequestDroppedPayload payload) {
         return demoRequestService.markAsDropped(demoRequestId, payload);
-    }
-
-    @GetMapping("/{demoRequestId}")
-    public ResponseEntity<?> getDemoRequest(@PathVariable("demoRequestId") Long demoRequestId) {
-        return demoRequestService.getDemoRequest(demoRequestId);
-    }
-
-    @PostMapping
-    public ResponseEntity<?> addDemoRequest(@Valid @RequestBody DemoRequestPayload demoRequestPayload) {
-        return demoRequestService.addDemoRequest(demoRequestPayload);
     }
 
     @PutMapping("/update-status/{demoRequestId}")
@@ -67,12 +67,6 @@ public class DemoRequestController {
         return demoRequestService.getDemoRequestStatus();
     }
 
-    @PostMapping("/comment/{demoRequestId}")
-    public ResponseEntity<?> addDemoRequestComment(@PathVariable("demoRequestId") Long demoRequestId,
-                                                   @RequestBody @Valid DemoRequestCommentPayload payload){
-        return demoRequestService.addDemoRequestComment(demoRequestId, payload);
-    }
-
     @GetMapping("/demo-type")
     public ResponseEntity<?> getDemoType() {
         return demoRequestService.getDemoType();
@@ -81,5 +75,16 @@ public class DemoRequestController {
     @GetMapping("/drop-reason")
     public ResponseEntity<?> getDropReason() {
         return demoRequestService.getDropReason();
+    }
+
+    @PostMapping("/comment/{demoRequestId}")
+    public ResponseEntity<?> addDemoRequestComment(@PathVariable("demoRequestId") Long demoRequestId,
+                                                   @RequestBody @Valid DemoRequestCommentPayload payload){
+        return demoRequestService.addDemoRequestComment(demoRequestId, payload);
+    }
+
+    @GetMapping("/comment/{demoRequestId}")
+    public ResponseEntity<?> getDemoRequestComment(@PathVariable("demoRequestId") Long demoRequestId){
+        return demoRequestService.getDemoRequestComment(demoRequestId);
     }
 }

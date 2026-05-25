@@ -1,6 +1,5 @@
 package com.smartstay.console.dao;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,9 +20,5 @@ public class DemoRequestComments {
     private String createdByUserType;
     private String createdBy;
     private Date createdAt;
-
-    @ManyToOne
-    @JoinColumn(name = "request_id")
-    @JsonIgnore
-    private DemoRequest demoRequest;
+    private Long requestId;
 }

@@ -32,7 +32,5 @@ public record DemoRequestSnapshot(Long requestId,
                                   String demoType,
                                   String demoMeetLink,
                                   String dropReason,
-                                  Date createdAt,
-                                  List<DemoRequestCommentsSnapshot> demoRequestComments,
-                                  List<DemoRequestActivitySnapshot> demoRequestActivities) {
+                                  Date createdAt) {
 }
