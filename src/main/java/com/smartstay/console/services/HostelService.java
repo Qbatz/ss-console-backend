@@ -101,4 +101,8 @@ public class HostelService {
     public HostelV1 getHostelByHostelId(String hostelId) {
         return hostelRepository.findHostelByHostelId(hostelId);
     }
+
+    public long getHostelCount(){
+        return hostelRepository.findHostelCount();
+    }
 }

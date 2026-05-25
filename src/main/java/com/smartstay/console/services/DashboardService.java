@@ -2,6 +2,7 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
+import com.smartstay.console.dao.Subscription;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.responses.dashboard.DashboardResponse;
 import com.smartstay.console.utils.Utils;
@@ -10,13 +11,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Set;
+
 @Service
 public class DashboardService {
 
     @Autowired
     private Authentication authentication;
     @Autowired
-    private HostelsService hostelsService;
+    private HostelService hostelService;
     @Autowired
     private OwnersService ownersService;
     @Autowired
@@ -46,7 +50,7 @@ public class DashboardService {
         long expiredSubscriptionsCount = 0;
 
         if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
-            hostelCount = hostelsService.getHostelCount();
+            hostelCount = hostelService.getHostelCount();
         }
         if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
             ownersCount = ownersService.getOwnerCount();
@@ -56,7 +60,11 @@ public class DashboardService {
         }
         demoRequestCount = demoRequestService.getDemoRequestCount();
         if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_READ)) {
-            expiredSubscriptionsCount = subscriptionService.getExpiredSubscriptionsCount();
+
+            Set<String> activeHostelIds = hostelService.getActiveHostelIds();
+
+            expiredSubscriptionsCount = subscriptionService
+                    .getExpiredSubscriptionsCountByHostelIds(activeHostelIds);
         }
 
         DashboardResponse response = new DashboardResponse(hostelCount,  ownersCount, agentCount,

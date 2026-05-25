@@ -32,7 +32,8 @@ public class SubscriptionController {
     @GetMapping
     public ResponseEntity<?> getSubscriptions(@RequestParam(value = "page", defaultValue = "0") int page,
                                               @RequestParam(value = "size", defaultValue = "10") int size,
-                                              @RequestParam(value = "hostelName", required = false) String hostelName){
-        return subscriptionService.getSubscriptions(page, size, hostelName);
+                                              @RequestParam(value = "hostelName", required = false) String hostelName,
+                                              @RequestParam(defaultValue = "ALL") String filterBy){
+        return subscriptionService.getSubscriptions(page, size, hostelName, filterBy);
     }
 }
