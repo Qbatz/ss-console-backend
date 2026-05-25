@@ -28,7 +28,7 @@ public class HostelsController {
     @Autowired
     private HostelsService hostelsService;
 
-    @GetMapping("")
+    @GetMapping
     public ResponseEntity<?> getAllHostelsNew(@RequestParam(value = "page", defaultValue = "1") int page,
                                               @RequestParam(value = "size", defaultValue = "10") int size,
                                               @RequestParam(value = "hostelName", required = false) String hostelName,
