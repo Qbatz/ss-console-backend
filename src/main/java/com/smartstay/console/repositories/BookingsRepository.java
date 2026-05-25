@@ -46,4 +46,6 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     List<BookingsV1> findBookingsByHostelIds(@Param("hostelIds") Set<String> hostelIds);
 
     BookingsV1 findByCustomerId(@Param("customerId") String customerId);
+
+    List<BookingsV1> findAllByCustomerIdIn(Set<String> customerIds);
 }
