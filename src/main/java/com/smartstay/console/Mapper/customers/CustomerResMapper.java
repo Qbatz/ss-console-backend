@@ -15,9 +15,10 @@ public class CustomerResMapper implements Function<Customers, CustomerResponse> 
         if (customers.getJoiningDate() != null) {
             joiningDate = Utils.dateToString(customers.getJoiningDate());
         }
+
         return new CustomerResponse(customers.getCustomerId(), customers.getFirstName(),
                 customers.getLastName(), Utils.getFullName(customers.getFirstName(), customers.getLastName()),
-                Utils.getInitials(customers.getFirstName(), customers.getLastName()), customers.getMobile(),
+                Utils.getInitials(customers.getFirstName(), customers.getLastName()), Utils.maskMobileNo(customers.getMobile()),
                 customers.getEmailId(), customers.getCurrentStatus(), joiningDate);
     }
 }

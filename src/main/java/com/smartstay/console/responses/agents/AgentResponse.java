@@ -10,5 +10,6 @@ public record AgentResponse(String agentId,
                             Long roleId,
                             String roleName,
                             String lastActiveDate,
-                            String lastActiveTime) {
+                            String lastActiveTime,
+                            boolean isLoggedInUser) {
 }
