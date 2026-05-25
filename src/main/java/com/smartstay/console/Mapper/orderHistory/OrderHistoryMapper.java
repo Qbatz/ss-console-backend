@@ -49,6 +49,7 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
         int pincode = 0;
         String fullAddress = null;
         String mainImage = null;
+
         if (hostel != null) {
             hostelName = hostel.getHostelName();
             hostelInitials = Utils.getInitials(hostelName);

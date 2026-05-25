@@ -45,7 +45,7 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                 AND h.is_deleted = false
             ORDER BY hp.current_plan_ends_at ASC
             """,
-                countQuery = """
+            countQuery = """
             SELECT COUNT(*)
             FROM hostelv1 h
             INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
@@ -116,4 +116,14 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             """, nativeQuery = true)
     Page<HostelV1> findAllByHostelIdIn(@Param("hostelIds") Set<String> hostelIds,
                                        Pageable pageable);
+
+    @Query("""
+            SELECT h
+            FROM hostelv1 h
+            INNER JOIN h.hostelPlan hp
+            WHERE h.hostelId = :hostelId
+                AND h.isActive = true
+                AND h.isDeleted = false
+            """)
+    HostelV1 findHostelByHostelId(@Param("hostelId") String hostelId);
 }
