@@ -87,4 +87,9 @@ public class DemoRequestController {
     public ResponseEntity<?> getDemoRequestComment(@PathVariable("demoRequestId") Long demoRequestId){
         return demoRequestService.getDemoRequestComment(demoRequestId);
     }
+
+    @DeleteMapping("/{demoRequestId}")
+    public ResponseEntity<?> deleteDemoRequest(@PathVariable("demoRequestId") Long demoRequestId){
+        return demoRequestService.deleteDemoRequest(demoRequestId);
+    }
 }

@@ -12,6 +12,8 @@ public record UsersResponse(String userId,
                             String initials,
                             String mobileNo,
                             String emailId,
+                            String lastUpdateDate,
+                            String lastUpdateTime,
                             AddressResponse address,
                             List<TableColumnsResponse> tableColumns) {
 }

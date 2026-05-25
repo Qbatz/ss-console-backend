@@ -149,7 +149,7 @@ public class CustomerRecurringMapper implements Function<Customers, CustomerRecu
         }
 
         return new CustomerRecurringResponse(customers.getCustomerId(), firstName, lastName, fullName,
-                initials, customers.getMobile(), customers.getEmailId(), customers.getProfilePic(),
+                initials, Utils.maskMobileNo(customers.getMobile()), customers.getEmailId(), customers.getProfilePic(),
                 customers.getHouseNo(), customers.getStreet(), customers.getLandmark(), customers.getPincode(),
                 customers.getCity(), customers.getState(), customers.getCountry(), fullAddress,
                 customers.getCustomerBedStatus(), customers.getCurrentStatus(), joiningDate, expJoiningDate,

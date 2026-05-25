@@ -27,7 +27,7 @@ public class OwnersController {
         return ownersService.resetPassword(resetPassword);
     }
 
-    @GetMapping("")
+    @GetMapping
     public ResponseEntity<?> getAllOwnersList(@RequestParam(required = false) String name,
                                               @RequestParam(required = false) Boolean isPropertiesExpired,
                                               @RequestParam(required = false) Boolean isAboutToExpire,

@@ -5,6 +5,7 @@ import com.smartstay.console.dao.HostelPlan;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.ennum.BillingModel;
 import com.smartstay.console.ennum.BillingType;
+import com.smartstay.console.ennum.EBReadingType;
 import com.smartstay.console.responses.bills.BillingModelResponse;
 import com.smartstay.console.responses.bills.BillingRulesResponse;
 import com.smartstay.console.responses.bills.BillingTypeResponse;
@@ -203,8 +204,15 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
             }
         }
 
+        boolean showFlatCharge = false;
+        if (electricityConfig.getTypeOfReading() != null){
+            if (EBReadingType.FLAT_RATE.name().equals(electricityConfig.getTypeOfReading())){
+                showFlatCharge = true;
+            }
+        }
+
         EbConfig ebConfig = new EbConfig(electricityConfig.getId(), electricityConfig.isShouldIncludeInRent(),
-                electricityConfig.getTypeOfReading(), electricityConfig.getCharge(), electricityConfig.getFlatCharge(),
+                electricityConfig.getTypeOfReading(), showFlatCharge, electricityConfig.getCharge(), electricityConfig.getFlatCharge(),
                 electricityConfig.getBillDate(), electricityConfig.isUpdated(), Utils.dateToString(electricityConfig.getLastUpdate()),
                 Utils.dateToTime(electricityConfig.getLastUpdate()), ebConfigUpdatedBy);
 

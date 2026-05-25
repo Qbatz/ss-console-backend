@@ -79,6 +79,8 @@ public class Utils {
     public static final String PAYMENT_ID_NOT_FOUND = "Payment id not found";
     public static final String DEMO_TYPE_NOT_FOUND = "Demo type not found";
     public static final String DROP_REASON_NOT_FOUND = "Drop reason not found";
+    public static final String BOOKING_NOT_FOUND = "Booking not found";
+    public static final String BED_NOT_FOUND = "Bed not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -516,11 +518,17 @@ public class Utils {
 
     }
 
-    public static Double roundOfDouble(double number) {
+    public static Double roundOfDouble(Double number) {
+        if (number == null){
+            return 0d;
+        }
         return (double) Math.round(number);
     }
 
-    public static double roundOfDoubleTo2Digits(double number) {
+    public static double roundOfDoubleTo2Digits(Double number) {
+        if (number == null){
+            return 0d;
+        }
         return BigDecimal.valueOf(number)
                 .setScale(2, RoundingMode.HALF_UP)
                 .doubleValue();
@@ -788,6 +796,22 @@ public class Utils {
 
         String last4 = clean.substring(len - 4);
         return "****-****-****-" + last4;
+    }
+
+    public static String maskMobileNo(String mobileNo) {
+
+        if (mobileNo == null || mobileNo.isBlank()) {
+            return null;
+        }
+
+        String clean = mobileNo.replaceAll("\\D", "");
+
+        if (clean.length() <= 5) {
+            return clean;
+        }
+
+        return clean.substring(0, 5)
+                + "*".repeat(clean.length() - 5);
     }
 
     public static Date getStartDateOfMonth(LocalDate date){

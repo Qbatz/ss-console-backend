@@ -21,12 +21,12 @@ public class  AgentController {
     @Autowired
     private AgentService agentService;
 
-    @PostMapping("")
+    @PostMapping
     public ResponseEntity<?> addAdmin(@Valid @RequestBody AddAdmin addAdmin) {
         return agentService.addAdmin(addAdmin);
     }
 
-    @GetMapping("/")
+    @GetMapping
     public ResponseEntity<?> getAdminDetails() {
         return agentService.getAgentDetails();
     }

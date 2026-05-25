@@ -85,8 +85,15 @@ public class UsersResponseMapper implements Function<Users, UsersResponse> {
                     .toList();
         }
 
+        String lastUpdateDate = null;
+        String lastUpdateTime = null;
+        if (users.getLastUpdate() != null) {
+            lastUpdateDate = Utils.dateToString(users.getLastUpdate());
+            lastUpdateTime = Utils.dateToTime(users.getLastUpdate());
+        }
+
         return new UsersResponse(users.getUserId(), users.getParentId(), firstName,
                 lastName, fullName.toString(), initials.toString(), users.getMobileNo(),
-                users.getEmailId(), addressRes, tableColumnsRes);
+                users.getEmailId(), lastUpdateDate, lastUpdateTime, addressRes, tableColumnsRes);
     }
 }

@@ -4,6 +4,7 @@ import com.smartstay.console.Mapper.customers.CustomerRecHistoryMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecTrackerResMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecurringMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
+import com.smartstay.console.Mapper.hostelRelationalAgent.RelationalAgentResMapper;
 import com.smartstay.console.Mapper.hostels.*;
 import com.smartstay.console.Mapper.invoice.InvoiceResponseMapper;
 import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
@@ -439,6 +440,21 @@ public class HostelsService {
             }
         }
 
+        List<InvoicesV1> redemptionInvoices = invoiceV1Service.getInvoicesByIds(invoiceIds);
+
+        List<InvoicesV1> invoices = invoiceV1Service.getLimitedInvoicesByHostelId(hostelId, 50);
+
+        Set<String> invoiceCustomerIds = invoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        Set<String> redemptionInvoiceCustomerIds = redemptionInvoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        customerIds.addAll(invoiceCustomerIds);
+        customerIds.addAll(redemptionInvoiceCustomerIds);
+
         List<Agent> agents = createdByIds.isEmpty()
                 ? Collections.emptyList()
                 : agentService.getAgentsByIds(createdByIds);
@@ -510,35 +526,21 @@ public class HostelsService {
         List<RelationalAgentResponse> relationalAgentResponses = relationalAgents.stream()
                 .sorted(Comparator.comparing(HostelRelationalAgent::getId).reversed())
                 .map(hostelRelationalAgent -> {
-                    String agentName = null;
-                    String createdBy = null;
-                    if (agentMap.get(hostelRelationalAgent.getAgentId()) != null) {
-                        Agent relationalAgent = agentMap.get(hostelRelationalAgent.getAgentId());
-                        agentName = Utils.getFullName(relationalAgent.getFirstName(), relationalAgent.getLastName());
-                    }
-                    if (agentMap.get(hostelRelationalAgent.getCreatedBy()) != null) {
-                        Agent createdByAgent = agentMap.get(hostelRelationalAgent.getCreatedBy());
-                        createdBy = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
-                    }
-                    return new RelationalAgentResponse(hostelRelationalAgent.getId(), hostel.getHostelName(),
-                            agentName, hostelRelationalAgent.getReason().name(), hostelRelationalAgent.getComments(),
-                            createdBy, Utils.dateToString(hostelRelationalAgent.getCreatedAt()),
-                            Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
+                    Agent relationalAgent = agentMap.getOrDefault(hostelRelationalAgent.getAgentId(), null);
+                    Agent createdByAgent = agentMap.getOrDefault(hostelRelationalAgent.getCreatedBy(), null);
+
+                    return new RelationalAgentResMapper(
+                            hostel, relationalAgent, createdByAgent
+                    ).apply(hostelRelationalAgent);
                 }).toList();
 
-        Map<String, InvoicesV1> invoiceMap = invoiceV1Service
-                .getInvoicesByIds(invoiceIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        InvoicesV1::getInvoiceId,
-                        invoice -> invoice
-                ));
+        Map<String, InvoicesV1> redemptionInvoiceMap = redemptionInvoices.stream()
+                .collect(Collectors.toMap(InvoicesV1::getInvoiceId, invoice -> invoice));
 
         List<InvoiceRedemptionRes> invoiceRedemptionResList = invoiceRedemptions.stream()
                 .map(invoiceRedemption -> {
-
-                    InvoicesV1 targetInvoice = invoiceMap.getOrDefault(invoiceRedemption.getTargetInvoiceId(), null);
-                    InvoicesV1 sourceInvoice = invoiceMap.getOrDefault(invoiceRedemption.getSourceInvoiceId(), null);
+                    InvoicesV1 targetInvoice = redemptionInvoiceMap.getOrDefault(invoiceRedemption.getTargetInvoiceId(), null);
+                    InvoicesV1 sourceInvoice = redemptionInvoiceMap.getOrDefault(invoiceRedemption.getSourceInvoiceId(), null);
                     Users createdByUser = userLookup.getOrDefault(invoiceRedemption.getCreatedBy(), null);
                     String updatedBy = null;
                     if (UserType.OWNER.name().equals(invoiceRedemption.getUserType())) {
@@ -552,26 +554,19 @@ public class HostelsService {
                             updatedBy = Utils.getFullName(updatedByAgent.getFirstName(), updatedByAgent.getLastName());
                         }
                     }
+                    Customers tenant = null;
+                    if (targetInvoice != null){
+                        tenant = customersMap.getOrDefault(targetInvoice.getCustomerId(), null);
+                    }
 
                     return new InvoiceRedemptionResMapper(
-                            hostel, targetInvoice, sourceInvoice, createdByUser, updatedBy
+                            hostel, targetInvoice, sourceInvoice, createdByUser, updatedBy, tenant
                     ).apply(invoiceRedemption);
                 }).toList();
 
-        List<InvoicesV1> invoices = invoiceV1Service.getLimitedInvoicesByHostelId(hostelId, 50);
-
-        Set<String> invoiceCustomerIds = invoices.stream()
-                .map(InvoicesV1::getCustomerId)
-                .collect(Collectors.toSet());
-
-        List<Customers> invoiceCustomers = customersService.getCustomersByIds(invoiceCustomerIds);
-
-        Map<String, Customers> invoiceCustomerMap = invoiceCustomers.stream()
-                .collect(Collectors.toMap(Customers::getCustomerId, customer -> customer));
-
         List<InvoiceResponse> invoiceResponses = invoices.stream()
                 .map(invoice -> {
-                    Customers tenant = invoiceCustomerMap.getOrDefault(invoice.getCustomerId(), null);
+                    Customers tenant = customersMap.getOrDefault(invoice.getCustomerId(), null);
                     Users createdByUser = userLookup.getOrDefault(invoice.getCreatedBy(), null);
                     Users updatedByUser = userLookup.getOrDefault(invoice.getCreatedBy(), null);
                     return new InvoiceResponseMapper(tenant, createdByUser, updatedByUser).apply(invoice);
