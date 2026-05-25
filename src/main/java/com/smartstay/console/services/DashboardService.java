@@ -61,16 +61,10 @@ public class DashboardService {
         demoRequestCount = demoRequestService.getDemoRequestCount();
         if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_READ)) {
 
-            List<Subscription> expiredSubscriptions = subscriptionService.getExpiredSubscriptions();
             Set<String> activeHostelIds = hostelService.getActiveHostelIds();
 
-            for (Subscription subscription : expiredSubscriptions) {
-                if (subscription.getHostelId() != null){
-                    if (activeHostelIds.contains(subscription.getHostelId())){
-                       expiredSubscriptionsCount++;
-                    }
-                }
-            }
+            expiredSubscriptionsCount = subscriptionService
+                    .getExpiredSubscriptionsCountByHostelIds(activeHostelIds);
         }
 
         DashboardResponse response = new DashboardResponse(hostelCount,  ownersCount, agentCount,

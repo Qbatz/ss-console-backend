@@ -33,25 +33,25 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             """)
     List<Subscription> findSubscriptionStartingToday(@Param("date") Date date);
 
-    Page<Subscription> findAllByPlanCodeInOrderByCreatedAtDesc(Set<String> planCodes, Pageable pageable);
-
-    Page<Subscription> findByHostelIdInAndPlanCodeInOrderByCreatedAtDesc(Set<String> hostelIds,
-                                                                         Set<String> planCodes,
-                                                                         Pageable pageable);
-
     @Query("""
-           select s
+           select count(s)
            from Subscription s
-           where s.planEndsAt < CURRENT_DATE
-           and s.subscriptionId = (
-               SELECT s2.subscriptionId
-               FROM Subscription s2
-               WHERE s2.hostelId = s.hostelId
-               ORDER BY s2.planStartsAt DESC, s2.subscriptionId DESC
-               LIMIT 1
-           )
+           where s.hostelId IN :hostelIds
+           AND s.planEndsAt < CURRENT_DATE
+           AND s.planStartsAt = (
+                   SELECT MAX(s2.planStartsAt)
+                   FROM Subscription s2
+                   WHERE s2.hostelId = s.hostelId
+               )
+               AND s.subscriptionId = (
+                   SELECT MAX(s3.subscriptionId)
+                   FROM Subscription s3
+                   WHERE s3.hostelId = s.hostelId
+                     AND s3.planStartsAt = s.planStartsAt
+               )
+           ORDER BY s.createdAt DESC
            """)
-    List<Subscription> getExpiredLatestSubscription();
+    long getExpiredLatestSubscriptionCountByHostels(Set<String> hostelIds);
 
     List<Subscription> findByHostelIdAndPlanCode(String hostelId, String planCode);
 
@@ -70,13 +70,41 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     @Query("""
            SELECT s
            FROM Subscription s
-           WHERE s.subscriptionId = (
-               SELECT s2.subscriptionId
-               FROM Subscription s2
-               WHERE s2.hostelId = s.hostelId
-               ORDER BY s2.planStartsAt DESC, s2.subscriptionId DESC
-               LIMIT 1
-           )
+           WHERE s.hostelId IN :hostelIds
+               AND s.planStartsAt = (
+                   SELECT MAX(s2.planStartsAt)
+                   FROM Subscription s2
+                   WHERE s2.hostelId = s.hostelId
+               )
+               AND s.subscriptionId = (
+                   SELECT MAX(s3.subscriptionId)
+                   FROM Subscription s3
+                   WHERE s3.hostelId = s.hostelId
+                     AND s3.planStartsAt = s.planStartsAt
+               )
+           ORDER BY s.createdAt DESC
            """)
-    List<Subscription> findLatestSubscriptionsPerHostel();
+    List<Subscription> findLatestSubscriptionsPerHostel(Set<String> hostelIds);
+
+    @Query("""
+           SELECT s
+           FROM Subscription s
+           WHERE s.hostelId IN :hostelIds
+             AND s.planCode IN :planCodes
+             AND s.planStartsAt = (
+                 SELECT MAX(s2.planStartsAt)
+                 FROM Subscription s2
+                 WHERE s2.hostelId = s.hostelId
+             )
+             AND s.subscriptionId = (
+                 SELECT MAX(s3.subscriptionId)
+                 FROM Subscription s3
+                 WHERE s3.hostelId = s.hostelId
+                   AND s3.planStartsAt = s.planStartsAt
+             )
+           ORDER BY s.createdAt DESC
+           """)
+    Page<Subscription> findLatestByHostelIdInAndPlanCodeIn(Set<String> hostelIds,
+                                                           Set<String> planCodes,
+                                                           Pageable pageable);
 }
