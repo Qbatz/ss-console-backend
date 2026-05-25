@@ -190,10 +190,6 @@ public class HostelsService {
         return hostelRepository.findHostelPlanProjectionData(parentIds);
     }
 
-    public long getHostelCount(){
-        return hostelRepository.findHostelCount();
-    }
-
     public ResponseEntity<?> getHostelByHostelId(String hostelId) {
 
         if (!authentication.isAuthenticated()) {
