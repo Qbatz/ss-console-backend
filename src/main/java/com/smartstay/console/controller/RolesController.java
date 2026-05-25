@@ -21,7 +21,7 @@ public class RolesController {
     @Autowired
     private AgentRolesService agentRolesService;
 
-    @PostMapping("")
+    @PostMapping
     public ResponseEntity<?> addRole(@Valid @RequestBody AddRoles roleDto) {
         return agentRolesService.addRole(roleDto);
     }
@@ -36,7 +36,7 @@ public class RolesController {
         return agentRolesService.deleteRoleById(roleId);
     }
 
-    @GetMapping("")
+    @GetMapping
     public ResponseEntity<?> getAllRoles() {
         return agentRolesService.getAllRoles();
     }

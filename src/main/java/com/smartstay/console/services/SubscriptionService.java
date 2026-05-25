@@ -11,6 +11,7 @@ import com.smartstay.console.repositories.SubscriptionRepository;
 import com.smartstay.console.responses.subscriptions.SubscriptionsResponse;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.Utils;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -48,6 +49,7 @@ public class SubscriptionService {
     @Autowired
     private UsersService usersService;
 
+    @Transactional
     public ResponseEntity<?> subscribeHostel(String hostelId, Subscription payload, MultipartFile paymentProof) {
 
         if (!authentication.isAuthenticated()) {
@@ -63,12 +65,13 @@ public class SubscriptionService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        HostelV1 hostelV1 = hostelService.getHostelInfo(hostelId);
+        HostelV1 hostelV1 = hostelService.getHostelByHostelId(hostelId);
         if (hostelV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
 
-        com.smartstay.console.dao.Subscription latestSubscription = subscriptionRepository.findLatestSubscription(hostelId);
+        com.smartstay.console.dao.Subscription latestSubscription = subscriptionRepository
+                .findTopByHostelIdOrderByPlanStartsAtDesc(hostelId);
         if (latestSubscription == null) {
             return new ResponseEntity<>(Utils.INVALID_SUBSCRIPTION, HttpStatus.BAD_REQUEST);
         }
@@ -171,6 +174,16 @@ public class SubscriptionService {
         }
         else {
 
+            long diff = System.currentTimeMillis() - latestSubscription.getCreatedAt().getTime();
+
+            if (diff < 10000) {
+
+                long remaining = (long) Math.ceil((10000 - diff) / 1000.0);
+
+                return new ResponseEntity<>("Please wait " + remaining +
+                        " seconds before purchasing another plan", HttpStatus.TOO_MANY_REQUESTS);
+            }
+
             if (payload.paidAmount() == null) {
                 return new ResponseEntity<>(Utils.PAID_AMOUNT_REQUIRED, HttpStatus.BAD_REQUEST);
             }
@@ -232,6 +245,8 @@ public class SubscriptionService {
                 startsAt = Utils.addDaysToDate(latestSubscription.getPlanEndsAt(), 1);
             }
         }
+
+        duration = duration - 1;
 
         newSubscription.setPlanStartsAt(startsAt);
         Date endDate = Utils.addDaysToDate(startsAt, duration);

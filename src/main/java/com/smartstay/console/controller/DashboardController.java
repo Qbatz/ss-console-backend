@@ -21,7 +21,7 @@ public class DashboardController {
     @Autowired
     DashboardService dashboardService;
 
-    @GetMapping("/")
+    @GetMapping
     public ResponseEntity<?> getDashboard() {
         return dashboardService.getDashboard();
     }

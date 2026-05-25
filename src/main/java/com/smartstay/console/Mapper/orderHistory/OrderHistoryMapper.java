@@ -49,6 +49,7 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
         int pincode = 0;
         String fullAddress = null;
         String mainImage = null;
+
         if (hostel != null) {
             hostelName = hostel.getHostelName();
             hostelInitials = Utils.getInitials(hostelName);
@@ -138,7 +139,9 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
         boolean canVerifyPayment = false;
         if (orderHistory.getOrderStatus() != null){
             if (OrderStatus.CREATED.name().equals(orderHistory.getOrderStatus())){
-                canVerifyPayment = true;
+                if (!UserType.AGENT.name().equals(orderHistory.getUserType())){
+                    canVerifyPayment = true;
+                }
             }
         }
 
@@ -147,8 +150,8 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
                 fullAddress, mainImage, ownerInfo, orderHistory.getDiscountAmount(), Utils.roundOfDoubleTo2Digits(orderHistory.getPlanAmount()),
                 orderHistory.getPlanCode(), planName, planType, Utils.roundOfDoubleTo2Digits(orderHistory.getTotalAmount()),
                 orderHistory.getOrderStatus(), canVerifyPayment, orderHistory.getPaymentType(), orderHistory.getChannel(),
-                orderHistory.getPaymentProof(), paymentProofFileName, upiId, orderHistory.getCardHolderName(), orderHistory.getCardType(),
-                orderHistory.getCardBrand(), orderHistory.getIssuer(), cardNo, orderHistory.getUserType(), paidBy, collectedBy, createdBy,
-                Utils.dateToString(orderHistory.getCreatedAt()), Utils.dateToTime(orderHistory.getCreatedAt()));
+                orderHistory.getPaymentUrl(), orderHistory.getPaymentProof(), paymentProofFileName, upiId, orderHistory.getCardHolderName(),
+                orderHistory.getCardType(), orderHistory.getCardBrand(), orderHistory.getIssuer(), cardNo, orderHistory.getUserType(),
+                paidBy, collectedBy, createdBy, Utils.dateToString(orderHistory.getCreatedAt()), Utils.dateToTime(orderHistory.getCreatedAt()));
     }
 }

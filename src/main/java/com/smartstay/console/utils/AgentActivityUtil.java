@@ -146,6 +146,7 @@ public class AgentActivityUtil {
             case PLAN_FEATURES -> "Deleted a plan feature";
             case OWNERS -> "Deleted an owner";
             case INVOICE_REDEMPTION -> "Deleted an invoice redemption";
+            case DEMO_REQUEST -> "Deleted a demo request";
             default -> "Deleted successfully";
         };
     }

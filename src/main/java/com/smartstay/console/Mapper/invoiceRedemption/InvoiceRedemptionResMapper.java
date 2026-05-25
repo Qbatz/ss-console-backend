@@ -1,9 +1,6 @@
 package com.smartstay.console.Mapper.invoiceRedemption;
 
-import com.smartstay.console.dao.HostelV1;
-import com.smartstay.console.dao.InvoiceRedemption;
-import com.smartstay.console.dao.InvoicesV1;
-import com.smartstay.console.dao.Users;
+import com.smartstay.console.dao.*;
 import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
 import com.smartstay.console.utils.Utils;
 
@@ -16,17 +13,20 @@ public class InvoiceRedemptionResMapper implements Function<InvoiceRedemption, I
     InvoicesV1 sourceInvoice;
     Users createdByUser;
     String updatedBy;
+    Customers tenant;
 
     public InvoiceRedemptionResMapper(HostelV1 hostel,
                                       InvoicesV1 targetInvoice,
                                       InvoicesV1 sourceInvoice,
                                       Users createdByUser,
-                                      String updatedBy) {
+                                      String updatedBy,
+                                      Customers tenant) {
         this.hostel = hostel;
         this.targetInvoice = targetInvoice;
         this.sourceInvoice = sourceInvoice;
         this.createdByUser = createdByUser;
         this.updatedBy = updatedBy;
+        this.tenant = tenant;
     }
 
     @Override
@@ -36,6 +36,7 @@ public class InvoiceRedemptionResMapper implements Function<InvoiceRedemption, I
         String targetInvoiceNumber = null;
         String sourceInvoiceNumber = null;
         String createdBy = null;
+        String tenantName = null;
 
         if (hostel != null) {
             hostelName = hostel.getHostelName();
@@ -49,11 +50,14 @@ public class InvoiceRedemptionResMapper implements Function<InvoiceRedemption, I
         if (createdByUser != null) {
             createdBy = Utils.getFullName(createdByUser.getFirstName(), createdByUser.getLastName());
         }
+        if (tenant != null){
+            tenantName = Utils.getFullName(tenant.getFirstName(), tenant.getLastName());
+        }
 
         return new InvoiceRedemptionRes(invoiceRedemption.getId(), invoiceRedemption.getSourceInvoiceId(), sourceInvoiceNumber,
                 invoiceRedemption.getTargetInvoiceId(), targetInvoiceNumber, invoiceRedemption.getHostelId(), hostelName,
-                invoiceRedemption.getRedemptionAmount(), invoiceRedemption.getReferenceNumber(), invoiceRedemption.getTransactionId(),
-                invoiceRedemption.getReason(), Utils.dateToString(invoiceRedemption.getRedeemedAt()),
+                tenantName, invoiceRedemption.getRedemptionAmount(), invoiceRedemption.getReferenceNumber(),
+                invoiceRedemption.getTransactionId(), invoiceRedemption.getReason(), Utils.dateToString(invoiceRedemption.getRedeemedAt()),
                 Utils.dateToTime(invoiceRedemption.getRedeemedAt()), invoiceRedemption.getUserType(),
                 Utils.dateToString(invoiceRedemption.getCreatedAt()), Utils.dateToTime(invoiceRedemption.getCreatedAt()),
                 Utils.dateToString(invoiceRedemption.getUpdatedAt()), Utils.dateToTime(invoiceRedemption.getUpdatedAt()),

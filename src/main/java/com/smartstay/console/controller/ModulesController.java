@@ -20,7 +20,8 @@ public class ModulesController {
 
     @Autowired
     private ModulesService modulesService;
-    @GetMapping()
+
+    @GetMapping
     public ResponseEntity<?> getAllModules() {
         return modulesService.getAllModules();
     }

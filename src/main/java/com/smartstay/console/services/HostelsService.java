@@ -435,6 +435,21 @@ public class HostelsService {
             }
         }
 
+        List<InvoicesV1> redemptionInvoices = invoiceV1Service.getInvoicesByIds(invoiceIds);
+
+        List<InvoicesV1> invoices = invoiceV1Service.getLimitedInvoicesByHostelId(hostelId, 50);
+
+        Set<String> invoiceCustomerIds = invoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        Set<String> redemptionInvoiceCustomerIds = redemptionInvoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        customerIds.addAll(invoiceCustomerIds);
+        customerIds.addAll(redemptionInvoiceCustomerIds);
+
         List<Agent> agents = createdByIds.isEmpty()
                 ? Collections.emptyList()
                 : agentService.getAgentsByIds(createdByIds);
@@ -522,19 +537,13 @@ public class HostelsService {
                             Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
                 }).toList();
 
-        Map<String, InvoicesV1> invoiceMap = invoiceV1Service
-                .getInvoicesByIds(invoiceIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        InvoicesV1::getInvoiceId,
-                        invoice -> invoice
-                ));
+        Map<String, InvoicesV1> redemptionInvoiceMap = redemptionInvoices.stream()
+                .collect(Collectors.toMap(InvoicesV1::getInvoiceId, invoice -> invoice));
 
         List<InvoiceRedemptionRes> invoiceRedemptionResList = invoiceRedemptions.stream()
                 .map(invoiceRedemption -> {
-
-                    InvoicesV1 targetInvoice = invoiceMap.getOrDefault(invoiceRedemption.getTargetInvoiceId(), null);
-                    InvoicesV1 sourceInvoice = invoiceMap.getOrDefault(invoiceRedemption.getSourceInvoiceId(), null);
+                    InvoicesV1 targetInvoice = redemptionInvoiceMap.getOrDefault(invoiceRedemption.getTargetInvoiceId(), null);
+                    InvoicesV1 sourceInvoice = redemptionInvoiceMap.getOrDefault(invoiceRedemption.getSourceInvoiceId(), null);
                     Users createdByUser = userLookup.getOrDefault(invoiceRedemption.getCreatedBy(), null);
                     String updatedBy = null;
                     if (UserType.OWNER.name().equals(invoiceRedemption.getUserType())) {
@@ -548,26 +557,19 @@ public class HostelsService {
                             updatedBy = Utils.getFullName(updatedByAgent.getFirstName(), updatedByAgent.getLastName());
                         }
                     }
+                    Customers tenant = null;
+                    if (targetInvoice != null){
+                        tenant = customersMap.getOrDefault(targetInvoice.getCustomerId(), null);
+                    }
 
                     return new InvoiceRedemptionResMapper(
-                            hostel, targetInvoice, sourceInvoice, createdByUser, updatedBy
+                            hostel, targetInvoice, sourceInvoice, createdByUser, updatedBy, tenant
                     ).apply(invoiceRedemption);
                 }).toList();
 
-        List<InvoicesV1> invoices = invoiceV1Service.getLimitedInvoicesByHostelId(hostelId, 50);
-
-        Set<String> invoiceCustomerIds = invoices.stream()
-                .map(InvoicesV1::getCustomerId)
-                .collect(Collectors.toSet());
-
-        List<Customers> invoiceCustomers = customersService.getCustomersByIds(invoiceCustomerIds);
-
-        Map<String, Customers> invoiceCustomerMap = invoiceCustomers.stream()
-                .collect(Collectors.toMap(Customers::getCustomerId, customer -> customer));
-
         List<InvoiceResponse> invoiceResponses = invoices.stream()
                 .map(invoice -> {
-                    Customers tenant = invoiceCustomerMap.getOrDefault(invoice.getCustomerId(), null);
+                    Customers tenant = customersMap.getOrDefault(invoice.getCustomerId(), null);
                     Users createdByUser = userLookup.getOrDefault(invoice.getCreatedBy(), null);
                     Users updatedByUser = userLookup.getOrDefault(invoice.getCreatedBy(), null);
                     return new InvoiceResponseMapper(tenant, createdByUser, updatedByUser).apply(invoice);

@@ -1,9 +1,11 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.Subscription;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -19,12 +21,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     List<Subscription> findAllByHostelIdIn(Set<String> hostelIds);
 
-    @Query(value = """
-            SELECT * FROM subscription
-            WHERE hostel_id = :hostelId
-            order by plan_starts_at DESC LIMIT 1
-            """, nativeQuery = true)
-    Subscription findLatestSubscription(String hostelId);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Subscription findTopByHostelIdOrderByPlanStartsAtDesc(String hostelId);
 
     @Query("""
             SELECT sc FROM Subscription sc

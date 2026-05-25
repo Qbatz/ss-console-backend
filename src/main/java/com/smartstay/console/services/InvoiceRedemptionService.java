@@ -45,6 +45,9 @@ public class InvoiceRedemptionService {
     private InvoiceV1Service invoiceService;
     @Autowired
     private PaymentSummaryService paymentSummaryService;
+    @Autowired
+    @Lazy
+    private CustomersService customersService;
 
     public ResponseEntity<?> getInvoiceRedemption(int page, int size, String name) {
 
@@ -137,14 +140,6 @@ public class InvoiceRedemptionService {
                         user -> user
                 ));
 
-        Map<String, InvoicesV1> invoiceMap = invoiceService
-                .getInvoicesByIds(invoiceIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        InvoicesV1::getInvoiceId,
-                        invoice -> invoice
-                ));
-
         Map<String, Agent> agentMap = agentService
                 .getAgentsByIds(agentIds)
                 .stream()
@@ -152,6 +147,21 @@ public class InvoiceRedemptionService {
                         Agent::getAgentId,
                         ag -> ag
                 ));
+
+        List<InvoicesV1> invoices = invoiceService.getInvoicesByIds(invoiceIds);
+
+        Map<String, InvoicesV1> invoiceMap = invoices.stream()
+                .collect(Collectors.toMap(InvoicesV1::getInvoiceId, invoice -> invoice));
+
+        Set<String> customerIds = invoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        Map<String, Customers> customersMap = customersService
+                .getCustomersByIds(customerIds)
+                .stream()
+                .collect(Collectors.toMap(Customers::getCustomerId,
+                        customer -> customer, (a, b) -> a));
 
         List<InvoiceRedemptionRes> invoiceRedemptionResList = invoiceRedemptions.stream()
                 .map(invoiceRedemption -> {
@@ -172,9 +182,13 @@ public class InvoiceRedemptionService {
                             updatedBy = Utils.getFullName(updatedByAgent.getFirstName(), updatedByAgent.getLastName());
                         }
                     }
+                    Customers tenant = null;
+                    if (targetInvoice != null){
+                        tenant = customersMap.getOrDefault(targetInvoice.getCustomerId(), null);
+                    }
 
                     return new InvoiceRedemptionResMapper(
-                            hostel, targetInvoice, sourceInvoice, createdByUser, updatedBy
+                            hostel, targetInvoice, sourceInvoice, createdByUser, updatedBy, tenant
                     ).apply(invoiceRedemption);
                 }).toList();
 
@@ -259,14 +273,6 @@ public class InvoiceRedemptionService {
                         user -> user
                 ));
 
-        Map<String, InvoicesV1> invoiceMap = invoiceService
-                .getInvoicesByIds(invoiceIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        InvoicesV1::getInvoiceId,
-                        invoice -> invoice
-                ));
-
         Map<String, Agent> agentMap = agentService
                 .getAgentsByIds(agentIds)
                 .stream()
@@ -274,6 +280,21 @@ public class InvoiceRedemptionService {
                         Agent::getAgentId,
                         ag -> ag
                 ));
+
+        List<InvoicesV1> invoices = invoiceService.getInvoicesByIds(invoiceIds);
+
+        Map<String, InvoicesV1> invoiceMap = invoices.stream()
+                .collect(Collectors.toMap(InvoicesV1::getInvoiceId, invoice -> invoice));
+
+        Set<String> customerIds = invoices.stream()
+                .map(InvoicesV1::getCustomerId)
+                .collect(Collectors.toSet());
+
+        Map<String, Customers> customersMap = customersService
+                .getCustomersByIds(customerIds)
+                .stream()
+                .collect(Collectors.toMap(Customers::getCustomerId,
+                        customer -> customer, (a, b) -> a));
 
         List<InvoiceRedemptionRes> invoiceRedemptionResList = invoiceRedemptions.stream()
                 .map(invoiceRedemption -> {
@@ -293,8 +314,12 @@ public class InvoiceRedemptionService {
                             updatedBy = Utils.getFullName(updatedByAgent.getFirstName(), updatedByAgent.getLastName());
                         }
                     }
+                    Customers tenant = null;
+                    if (targetInvoice != null){
+                        tenant = customersMap.getOrDefault(targetInvoice.getCustomerId(), null);
+                    }
                     return new InvoiceRedemptionResMapper(
-                            hostel, targetInvoice, sourceInvoice, createdByUser, updatedBy
+                            hostel, targetInvoice, sourceInvoice, createdByUser, updatedBy, tenant
                     ).apply(invoiceRedemption);
                 }).toList();
 
