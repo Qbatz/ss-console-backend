@@ -1,9 +1,11 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.orderHistory.PaymentLinkGeneratePayload;
 import com.smartstay.console.services.OrderHistoryService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -33,5 +35,11 @@ public class OrderHistoryController {
     @GetMapping("/verify/{orderHistoryId}")
     public ResponseEntity<?> verifyOrderHistory(@PathVariable(value = "orderHistoryId") Long orderHistoryId) {
         return orderHistoryService.verifyOrderHistory(orderHistoryId);
+    }
+
+    @PostMapping("/generate/{hostelId}")
+    public ResponseEntity<?> generatePaymentLink(@PathVariable(value = "hostelId") String hostelId,
+                                                 @RequestBody @Valid PaymentLinkGeneratePayload payload) {
+        return orderHistoryService.generatePaymentLink(hostelId, payload);
     }
 }

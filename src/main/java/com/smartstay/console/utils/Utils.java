@@ -36,6 +36,7 @@ public class Utils {
     public static final String NO_CHANGES_DETECTED = "No changes detected";
     public static final String CANNOT_EDIT_YOURSELF = "Cannot edit yourself";
     public static final String UNABLE_TO_VERIFY_PAYMENT = "Unable to verify payment";
+    public static final String UNABLE_TO_GENERATE_PAYMENT_LINK = "Unable to generate payment link";
 
     public static final String UN_AUTHORIZED = "Unauthorized Access";
     public static final String ACCESS_RESTRICTED = "Access Restricted";
