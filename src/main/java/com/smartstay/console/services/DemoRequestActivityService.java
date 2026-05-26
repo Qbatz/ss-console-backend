@@ -31,10 +31,14 @@ public class DemoRequestActivityService {
     }
 
     public List<DemoRequestActivity> getDemoRequestActivitiesByRequestIds(Set<Long> demoRequestIds) {
-        return demoRequestActivityRepository.findAllByRequestIdIn(demoRequestIds);
+        return demoRequestActivityRepository.findAllByRequestIdInOrderByActivityIdDesc(demoRequestIds);
     }
 
     public List<DemoRequestActivity> getDemoRequestActivitiesByRequestId(Long requestId) {
-        return demoRequestActivityRepository.findAllByRequestId(requestId);
+        return demoRequestActivityRepository.findAllByRequestIdOrderByActivityIdDesc(requestId);
+    }
+
+    public void deleteAll(List<DemoRequestActivity> demoRequestActivities) {
+        demoRequestActivityRepository.deleteAll(demoRequestActivities);
     }
 }

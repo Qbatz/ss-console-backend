@@ -244,7 +244,7 @@ public class OrderHistoryService {
             return new ResponseEntity<>(Utils.PAYMENT_ID_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        VerifyResponse verifyResponse = null;
+        VerifyResponse verifyResponse;
 
         try {
             HttpHeaders headers = new HttpHeaders();
