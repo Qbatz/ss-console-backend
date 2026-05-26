@@ -47,5 +47,7 @@ public interface PlansRepository extends JpaRepository<Plans, Long> {
 
     List<Plans> findAllByPlanTypeAndIsActiveTrue(String planType);
 
+    Plans findTopByPlanTypeAndIsActiveTrueOrderByPlanIdAsc(String planType);
+
     List<Plans> findAllByPlanTypeNotIn(Set<String> planTypes);
 }

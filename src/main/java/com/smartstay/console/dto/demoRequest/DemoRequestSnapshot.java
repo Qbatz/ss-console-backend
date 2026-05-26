@@ -25,5 +25,12 @@ public record DemoRequestSnapshot(Long requestId,
                                   String requestedDate,
                                   String requestedTime,
                                   Date presentedAt,
-                                  List<DemoRequestCommentsSnapshot> demoRequestComments) {
+                                  String source,
+                                  String convertedToPlanCode,
+                                  Date demoDateFrom,
+                                  Date demoDateTo,
+                                  String demoType,
+                                  String demoMeetLink,
+                                  String dropReason,
+                                  Date createdAt) {
 }

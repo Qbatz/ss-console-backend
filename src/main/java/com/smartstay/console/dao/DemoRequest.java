@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.Date;
-import java.util.List;
 
 @Entity
 @AllArgsConstructor
@@ -41,6 +40,15 @@ public class DemoRequest {
     private String requestedTime;
     private Date presentedAt;
 
-    @OneToMany(mappedBy = "demoRequest", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<DemoRequestComments> demoRequestComments;
+    //from demo request source enum
+    private String source;
+    private String convertedToPlanCode;
+    private Date demoDateFrom;
+    private Date demoDateTo;
+    //from demo type enum
+    private String demoType;
+    private String demoMeetLink;
+    private String dropReason;
+
+    private Date createdAt;
 }

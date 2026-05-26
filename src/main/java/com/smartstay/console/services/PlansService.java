@@ -48,6 +48,10 @@ public class PlansService {
     @Autowired
     private PlanFeaturesService planFeaturesService;
 
+    public Plans findTrialPlan(){
+        return plansRepository.findTopByPlanTypeAndIsActiveTrueOrderByPlanIdAsc(PlanType.TRIAL.name());
+    }
+
     public List<Plans> findTrialPlans() {
         return plansRepository.findAllByPlanTypeAndIsActiveTrue(PlanType.TRIAL.name());
     }

@@ -1,13 +1,14 @@
 package com.smartstay.console.Mapper.demoRequests;
 
-import com.smartstay.console.dao.Agent;
-import com.smartstay.console.dao.DemoRequest;
-import com.smartstay.console.ennum.RequestStatus;
+import com.smartstay.console.dao.*;
+import com.smartstay.console.ennum.DemoRequestStatus;
+import com.smartstay.console.responses.demoRequest.DemoRequestActivityResponse;
 import com.smartstay.console.responses.demoRequest.DemoRequestCommentsResponse;
 import com.smartstay.console.responses.demoRequest.DemoRequestResponse;
 import com.smartstay.console.utils.Utils;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -15,9 +16,18 @@ import java.util.function.Function;
 public class DemoRequestMapper implements Function<DemoRequest, DemoRequestResponse> {
 
     Map<String, Agent> agentMap;
+    Plans plan;
+    List<DemoRequestComments> comments;
+    List<DemoRequestActivity> activities;
 
-    public DemoRequestMapper(Map<String, Agent> agentMap) {
+    public DemoRequestMapper(Map<String, Agent> agentMap,
+                             Plans plan,
+                             List<DemoRequestComments> comments,
+                             List<DemoRequestActivity> activities) {
         this.agentMap = agentMap;
+        this.plan = plan;
+        this.comments = comments;
+        this.activities = activities;
     }
 
     @Override
@@ -43,15 +53,23 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
         }
 
         String requestedDate = null;
+        String requestedTime = null;
         if (demoRequest.getBookedFor() != null) {
             requestedDate = Utils.dateToString(demoRequest.getBookedFor());
+            requestedTime = Utils.dateToTime(demoRequest.getBookedFor());
         } else if (demoRequest.getRequestedDate() != null) {
             requestedDate = Utils.formatDateString(demoRequest.getRequestedDate());
+            requestedTime = demoRequest.getRequestedTime();
+        }
+
+        if (requestedTime == null){
+            requestedTime = demoRequest.getRequestedTime();
         }
 
         List<DemoRequestCommentsResponse> demoRequestComments = new ArrayList<>();
-        if (demoRequest.getDemoRequestComments() != null) {
-            demoRequestComments = demoRequest.getDemoRequestComments().stream()
+        if (comments != null) {
+            demoRequestComments = comments.stream()
+                    .sorted(Comparator.comparing(DemoRequestComments::getId).reversed())
                     .map(comment -> {
                         String commentCreatedBy = null;
                         if (agentMap != null) {
@@ -65,28 +83,63 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
                     }).toList();
         }
 
-        RequestStatus currentStatus;
+        List<DemoRequestActivityResponse> demoRequestActivities = new ArrayList<>();
+        if (activities != null) {
+            demoRequestActivities = activities.stream()
+                    .sorted(Comparator.comparing(DemoRequestActivity::getActivityId).reversed())
+                    .map(activity -> {
+                        String activityCreatedBy = null;
+                        if (agentMap != null) {
+                            if (agentMap.get(activity.getCreatedBy()) != null) {
+                                Agent activityCreatedByAgent = agentMap.get(activity.getCreatedBy());
+                                activityCreatedBy = Utils.getFullName(activityCreatedByAgent.getFirstName(),
+                                        activityCreatedByAgent.getLastName());
+                            }
+                        }
+                        return new DemoRequestActivityResponse(activity.getActivityId(), activity.getComment(),
+                                activity.getDescription(), activity.getStatus(), activity.getCreatedByUserType(),
+                                activityCreatedBy, Utils.dateToString(activity.getCreatedAt()),
+                                Utils.dateToTime(activity.getCreatedAt()));
+                    }).toList();
+        }
+
+        DemoRequestStatus currentStatus;
         try {
-            currentStatus = RequestStatus.valueOf(demoRequest.getDemoRequestStatus());
+            currentStatus = DemoRequestStatus.valueOf(demoRequest.getDemoRequestStatus());
         } catch (Exception e){
             currentStatus = null;
         }
 
         boolean canAssignStaff = false;
+        boolean canMarkDropped = false;
         if (currentStatus != null) {
-            if (currentStatus.canMoveTo(RequestStatus.ASSIGNED)){
+            if (currentStatus.canMoveTo(DemoRequestStatus.ASSIGNED)){
                 canAssignStaff = true;
             }
+            if (currentStatus.canMoveTo(DemoRequestStatus.DROPPED)){
+                canMarkDropped = true;
+            }
+        }
+
+        String planName = null;
+        if (plan != null){
+            planName = plan.getPlanName();
         }
 
         return new DemoRequestResponse(demoRequest.getRequestId(), demoRequest.getName(),
                 demoRequest.getEmailId(), demoRequest.getContactNo(), demoRequest.getCountryCode(),
                 demoRequest.getOrganization(), demoRequest.getNoOfHostels(), demoRequest.getNoOfTenant(),
                 demoRequest.getCity(), demoRequest.getState(), demoRequest.getCountry(), demoRequest.getDemoRequestStatus(),
-                canAssignStaff, demoRequest.getIsDemoCompleted(), demoRequest.getIsAssigned(), assignedTo, assignedBy,
-                presentedBy, demoRequest.getComments(), requestedDate, demoRequest.getRequestedTime(),
+                canAssignStaff, canMarkDropped, demoRequest.getIsDemoCompleted(), demoRequest.getIsAssigned(),
+                assignedTo, assignedBy, presentedBy, demoRequest.getComments(), requestedDate, requestedTime,
                 demoRequest.getPresentedAt() != null ? Utils.dateToString(demoRequest.getPresentedAt()) :  null,
                 demoRequest.getPresentedAt() != null ? Utils.dateToTime(demoRequest.getPresentedAt()) : null,
-                demoRequestComments);
+                demoRequest.getSource(), demoRequest.getConvertedToPlanCode(), planName,
+                demoRequest.getDemoDateFrom() != null ? Utils.dateToString(demoRequest.getDemoDateFrom()) : null,
+                demoRequest.getDemoDateFrom() != null ? Utils.dateToTime(demoRequest.getDemoDateFrom()) : null,
+                demoRequest.getDemoDateTo() != null ? Utils.dateToTime(demoRequest.getDemoDateTo()) : null,
+                demoRequest.getDemoType(), demoRequest.getDemoMeetLink(),
+                demoRequest.getDropReason(), Utils.dateToString(demoRequest.getCreatedAt()),
+                Utils.dateToTime(demoRequest.getCreatedAt()), demoRequestComments, demoRequestActivities);
     }
 }

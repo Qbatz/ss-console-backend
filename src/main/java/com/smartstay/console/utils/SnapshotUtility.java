@@ -3,6 +3,7 @@ package com.smartstay.console.utils;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.agentRoles.AgentRoleSnapshot;
 import com.smartstay.console.dto.agentRoles.RolesPermissionSnapshot;
+import com.smartstay.console.dto.demoRequest.DemoRequestActivitySnapshot;
 import com.smartstay.console.dto.hostelRelationalAgent.HostelRelationalAgentSnapshot;
 import com.smartstay.console.dto.agent.AgentSnapshot;
 import com.smartstay.console.dto.customers.*;
@@ -400,16 +401,29 @@ public class SnapshotUtility {
                 c.getCreatedByUserType(),
                 c.getCreatedBy(),
                 copyDate(c.getCreatedAt()),
-                c.getDemoRequest() != null ? c.getDemoRequest().getRequestId() : null
+                c.getRequestId()
+        );
+    }
+
+    public static DemoRequestActivitySnapshot toSnapshot(DemoRequestActivity a) {
+
+        if (a == null) return null;
+
+        return new DemoRequestActivitySnapshot(
+                a.getActivityId(),
+                a.getComment(),
+                a.getDescription(),
+                a.getStatus(),
+                a.getCreatedByUserType(),
+                a.getCreatedBy(),
+                copyDate(a.getCreatedAt()),
+                a.getRequestId()
         );
     }
 
     public static DemoRequestSnapshot toSnapshot(DemoRequest d) {
 
         if (d == null) return null;
-
-        List<DemoRequestCommentsSnapshot> comments =
-                toSnapshotList(d.getDemoRequestComments(), SnapshotUtility::toSnapshot);
 
         return new DemoRequestSnapshot(
                 d.getRequestId(),
@@ -434,7 +448,14 @@ public class SnapshotUtility {
                 d.getRequestedDate(),
                 d.getRequestedTime(),
                 copyDate(d.getPresentedAt()),
-                comments
+                d.getSource(),
+                d.getConvertedToPlanCode(),
+                copyDate(d.getDemoDateFrom()),
+                copyDate(d.getDemoDateTo()),
+                d.getDemoType(),
+                d.getDemoMeetLink(),
+                d.getDropReason(),
+                copyDate(d.getCreatedAt())
         );
     }
 

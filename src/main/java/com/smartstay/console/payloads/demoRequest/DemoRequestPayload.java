@@ -34,10 +34,11 @@ public record DemoRequestPayload(@NotBlank(message = "Name can't be null or empt
                                  String country,
                                  String comments,
 
-                                 @FutureOrPresent(message = "Date must be from future or today")
+                                 @NotNull(message = "Requested date is required")
                                  @JsonFormat(pattern = "dd-MM-yyyy")
                                  LocalDate requestedDate,
 
+                                 @NotNull(message = "Requested time is required")
                                  @JsonFormat(pattern = "HH:mm")
                                  LocalTime requestedTime) {
 }

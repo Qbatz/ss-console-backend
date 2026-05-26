@@ -11,12 +11,14 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class DemoRequestComments {
+public class DemoRequestActivity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long activityId;
     private String comment;
+    private String description;
+    private String status;
     private String createdByUserType;
     private String createdBy;
     private Date createdAt;
