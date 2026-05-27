@@ -2,14 +2,11 @@ package com.smartstay.console.payloads.orderHistory;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Positive;
 
 public record PaymentLinkGeneratePayload(@NotBlank(message = "Plan code is required")
                                          String planCode,
-                                         @NotNull(message = "Paid amount is required")
-                                         @PositiveOrZero(message = "Paid amount must be positive or zero")
-                                         Double paidAmount,
                                          @NotNull(message = "Discount amount is required")
-                                         @PositiveOrZero(message = "Discount amount must be positive or zero")
+                                         @Positive(message = "Discount amount must be greater than 0")
                                          Double discountAmount) {
 }

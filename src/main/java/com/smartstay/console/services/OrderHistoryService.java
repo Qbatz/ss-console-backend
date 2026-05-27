@@ -302,7 +302,6 @@ public class OrderHistoryService {
         }
 
         double finalPrice = plan.getFinalPrice() != null ? plan.getFinalPrice() : 0;
-        double paidAmount;
         double discountAmount;
 
         try {
@@ -317,23 +316,8 @@ public class OrderHistoryService {
             return new ResponseEntity<>(Utils.INVALID_DISCOUNT, HttpStatus.BAD_REQUEST);
         }
 
-        try {
-            paidAmount = Double.parseDouble(payload.paidAmount().toString());
-        } catch (Exception e) {
-            paidAmount = 0.0;
-        }
-        paidAmount = Utils.roundOfDoubleTo2Digits(paidAmount);
-
-        double expectedAmount = finalPrice - discountAmount;
-        expectedAmount = Utils.roundOfDoubleTo2Digits(expectedAmount);
-
-        if (paidAmount < 0 || paidAmount != expectedAmount) {
-            return new ResponseEntity<>(Utils.INVALID_PAID_AMOUNT, HttpStatus.BAD_REQUEST);
-        }
-
-        if (paidAmount == finalPrice) {
-            return new ResponseEntity<>(Utils.INVALID_PAID_AMOUNT, HttpStatus.BAD_REQUEST);
-        }
+        double payableAmount = finalPrice - discountAmount;
+        payableAmount = Utils.roundOfDoubleTo2Digits(payableAmount);
 
         try {
             String generatePaymentLink = paymentUrl + "/v2/payments/generate/" + hostelId ;
@@ -341,7 +325,7 @@ public class OrderHistoryService {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            PaymentLinkGenerateDto requestPayload = new PaymentLinkGenerateDto(paidAmount, "INR",
+            PaymentLinkGenerateDto requestPayload = new PaymentLinkGenerateDto(payableAmount, "INR",
                     null, planCode, discountAmount, finalPrice, agent.getAgentId());
 
             HttpEntity<PaymentLinkGenerateDto> request =
@@ -369,7 +353,7 @@ public class OrderHistoryService {
             newOrder.setPlanAmount(finalPrice);
             newOrder.setPlanCode(planCode);
             newOrder.setPlanName(plan.getPlanName());
-            newOrder.setTotalAmount(paidAmount);
+            newOrder.setTotalAmount(payableAmount);
             newOrder.setOrderStatus(OrderStatus.CREATED.name());
             newOrder.setUserType(UserType.AGENT.name());
             newOrder.setActive(true);
