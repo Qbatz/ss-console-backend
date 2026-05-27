@@ -1,12 +1,14 @@
 package com.smartstay.console.Mapper.users;
 
 import com.smartstay.console.dao.*;
+import com.smartstay.console.responses.hostelRelationalAgent.HostelRelationalAgentResponse;
 import com.smartstay.console.responses.hostels.OwnerHostelResponse;
 import com.smartstay.console.responses.users.AddressResponse;
 import com.smartstay.console.responses.users.OwnerDetailsResponse;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.utils.Utils;
 
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -17,13 +19,19 @@ public class OwnerDetailsMapper implements Function<Users, OwnerDetailsResponse>
     List<HostelV1> hostels;
     List<UserActivities> userActivities;
     Map<Integer, HotelType> hotelTypeMap;
+    List<HostelRelationalAgent> relationalAgents;
+    Map<String, Agent> agentMap;
 
     public OwnerDetailsMapper(List<HostelV1> hostels,
                               List<UserActivities> userActivities,
-                              Map<Integer, HotelType> hotelTypeMap) {
+                              Map<Integer, HotelType> hotelTypeMap,
+                              List<HostelRelationalAgent> relationalAgents,
+                              Map<String, Agent> agentMap) {
         this.hostels = hostels;
         this.userActivities = userActivities;
         this.hotelTypeMap = hotelTypeMap;
+        this.relationalAgents = relationalAgents;
+        this.agentMap = agentMap;
     }
 
     @Override
@@ -59,6 +67,27 @@ public class OwnerDetailsMapper implements Function<Users, OwnerDetailsResponse>
                         activity.getSource(), activity.getActivityType(), activity.getPlatform()
                 )).toList();
 
+        List<HostelRelationalAgentResponse> relationalAgentResponses = relationalAgents.stream()
+                .sorted(Comparator.comparing(HostelRelationalAgent::getId).reversed())
+                .map(hostelRelationalAgent -> {
+                    Agent relationalAgent = agentMap.getOrDefault(hostelRelationalAgent.getAgentId(), null);
+                    Agent createdByAgent = agentMap.getOrDefault(hostelRelationalAgent.getCreatedBy(), null);
+
+                    String relationalAgentName = null;
+                    if (relationalAgent != null){
+                        relationalAgentName = Utils.getFullName(relationalAgent.getFirstName(), relationalAgent.getLastName());
+                    }
+
+                    String createdByAgentName = null;
+                    if (createdByAgent != null){
+                        createdByAgentName = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
+                    }
+
+                    return new HostelRelationalAgentResponse(hostelRelationalAgent.getId(), hostelRelationalAgent.getParentId(),
+                            hostelRelationalAgent.getAgentId(), relationalAgentName, hostelRelationalAgent.getReason().name(),
+                            hostelRelationalAgent.getComments(), createdByAgentName, Utils.dateToString(hostelRelationalAgent.getCreatedAt()),
+                            Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
+                }).toList();
 
         return new OwnerDetailsResponse(owner.getUserId(), owner.getParentId(),
                 firstName, lastName, fullName, Utils.getInitials(firstName, lastName),
@@ -66,6 +95,7 @@ public class OwnerDetailsMapper implements Function<Users, OwnerDetailsResponse>
                 Utils.dateToString(owner.getCreatedAt()),
                 lastActivityDate != null ? Utils.dateToString(lastActivityDate) : null,
                 lastActivityDate != null ? Utils.dateToTime(lastActivityDate) : null,
-                addressRes, hostels.size(), propertiesRes, activitiesRes);
+                addressRes, hostels.size(), propertiesRes, activitiesRes,
+                relationalAgentResponses);
     }
 }

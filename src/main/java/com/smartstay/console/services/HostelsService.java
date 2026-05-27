@@ -4,7 +4,6 @@ import com.smartstay.console.Mapper.customers.CustomerRecHistoryMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecTrackerResMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecurringMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
-import com.smartstay.console.Mapper.hostelRelationalAgent.RelationalAgentResMapper;
 import com.smartstay.console.Mapper.hostels.*;
 import com.smartstay.console.Mapper.invoice.InvoiceResponseMapper;
 import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
@@ -28,7 +27,7 @@ import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerRecTrackerRes;
 import com.smartstay.console.responses.customers.CustomerRecurringResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
-import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
+import com.smartstay.console.responses.hostelRelationalAgent.HostelRelationalAgentResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
 import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
@@ -407,7 +406,7 @@ public class HostelsService {
         }
 
         List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
-                .getByHostelId(hostelId);
+                .getByParentId(hostel.getParentId());
         for (HostelRelationalAgent relationalAgent : relationalAgents) {
             if (relationalAgent.getAgentId() != null){
                 createdByIds.add(relationalAgent.getAgentId());
@@ -519,15 +518,26 @@ public class HostelsService {
             }
         }
 
-        List<RelationalAgentResponse> relationalAgentResponses = relationalAgents.stream()
+        List<HostelRelationalAgentResponse> relationalAgentResponses = relationalAgents.stream()
                 .sorted(Comparator.comparing(HostelRelationalAgent::getId).reversed())
                 .map(hostelRelationalAgent -> {
                     Agent relationalAgent = agentMap.getOrDefault(hostelRelationalAgent.getAgentId(), null);
                     Agent createdByAgent = agentMap.getOrDefault(hostelRelationalAgent.getCreatedBy(), null);
 
-                    return new RelationalAgentResMapper(
-                            hostel, relationalAgent, createdByAgent
-                    ).apply(hostelRelationalAgent);
+                    String relationalAgentName = null;
+                    if (relationalAgent != null){
+                        relationalAgentName = Utils.getFullName(relationalAgent.getFirstName(), relationalAgent.getLastName());
+                    }
+
+                    String createdByAgentName = null;
+                    if (createdByAgent != null){
+                        createdByAgentName = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
+                    }
+
+                    return new HostelRelationalAgentResponse(hostelRelationalAgent.getId(), hostelRelationalAgent.getParentId(),
+                            hostelRelationalAgent.getAgentId(), relationalAgentName, hostelRelationalAgent.getReason().name(),
+                            hostelRelationalAgent.getComments(), createdByAgentName, Utils.dateToString(hostelRelationalAgent.getCreatedAt()),
+                            Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
                 }).toList();
 
         Map<String, InvoicesV1> redemptionInvoiceMap = redemptionInvoices.stream()
@@ -1007,7 +1017,6 @@ public class HostelsService {
         List<VendorV1> listVendors = vendorService.findByHostelId(hostelId);
         List<Beds> listBeds = bedsService.getBedsByHostelId(hostelId);
         List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
-        List<HostelRelationalAgent> hostelRelationalAgentList = hostelRelationalAgentService.getByHostelId(hostelId);
 
         if (listAmenities != null && !listAmenities.isEmpty()) {
             amenitiesService.deleteAll(listAmenities);
@@ -1050,9 +1059,6 @@ public class HostelsService {
         }
         if (bankingList != null && !bankingList.isEmpty()) {
             bankingService.deleteAll(bankingList);
-        }
-        if (hostelRelationalAgentList != null && !hostelRelationalAgentList.isEmpty()) {
-            hostelRelationalAgentService.deleteAll(hostelRelationalAgentList);
         }
     }
 
@@ -1128,9 +1134,9 @@ public class HostelsService {
                 .collect(Collectors.groupingBy(Subscription::getHostelId));
 
         List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
-                .getByHostelIds(new HashSet<>(hostelIds));
+                .getByParentIds(new HashSet<>(parentIds));
         Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
-                .collect(Collectors.groupingBy(HostelRelationalAgent::getHostelId));
+                .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
 
         Set<String> agentIds = new HashSet<>();
         for (HostelRelationalAgent relationalAgent : relationalAgents) {
@@ -1156,7 +1162,7 @@ public class HostelsService {
                         trialPlans,
                         expandableTrialPlans,
                         subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
-                        relationalAgentMap.getOrDefault(i.getHostelId(), null),
+                        relationalAgentMap.getOrDefault(i.getParentId(), null),
                         agentMap
                 ).apply(i))
                 .toList();
@@ -1227,9 +1233,9 @@ public class HostelsService {
                 .collect(Collectors.groupingBy(Subscription::getHostelId));
 
         List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
-                .getByHostelIds(new HashSet<>(hostelIds));
+                .getByParentIds(new HashSet<>(parentIds));
         Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
-                .collect(Collectors.groupingBy(HostelRelationalAgent::getHostelId));
+                .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
 
         Set<String> agentIds = new HashSet<>();
         for (HostelRelationalAgent relationalAgent : relationalAgents) {
@@ -1255,7 +1261,7 @@ public class HostelsService {
                         trialPlans,
                         expandableTrialPlans,
                         subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
-                        relationalAgentMap.getOrDefault(i.getHostelId(), null),
+                        relationalAgentMap.getOrDefault(i.getParentId(), null),
                         agentMap
                 ).apply(i))
                 .toList();

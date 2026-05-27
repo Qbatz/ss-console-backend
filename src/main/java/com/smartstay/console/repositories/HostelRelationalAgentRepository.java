@@ -12,9 +12,9 @@ import java.util.Set;
 @Repository
 public interface HostelRelationalAgentRepository extends JpaRepository<HostelRelationalAgent, Long> {
 
-    List<HostelRelationalAgent> findAllByHostelIdInOrderByIdDesc(Set<String> hostelIds);
+    List<HostelRelationalAgent> findAllByParentIdInOrderByIdDesc(Set<String> parentIds);
 
-    List<HostelRelationalAgent> findAllByHostelIdOrderByIdDesc(String hostelId);
+    List<HostelRelationalAgent> findAllByParentIdOrderByIdDesc(String parentId);
 
     @Query("""
                 SELECT hra
@@ -23,9 +23,9 @@ public interface HostelRelationalAgentRepository extends JpaRepository<HostelRel
                   AND hra.id = (
                       SELECT MAX(h2.id)
                       FROM HostelRelationalAgent h2
-                      WHERE h2.hostelId = hra.hostelId
+                      WHERE h2.parentId = hra.parentId
                   )
                 ORDER BY hra.id DESC
             """)
-    List<HostelRelationalAgent> findLatestByAgentIdPerHostel(@Param("agentId") String agentId);
+    List<HostelRelationalAgent> findLatestByAgentIdPerOwner(@Param("agentId") String agentId);
 }

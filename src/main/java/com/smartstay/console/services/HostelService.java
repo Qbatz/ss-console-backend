@@ -105,4 +105,8 @@ public class HostelService {
     public long getHostelCount(){
         return hostelRepository.findHostelCount();
     }
+
+    public List<HostelV1> getHostelsByParentIds(Set<String> parentIds) {
+        return hostelRepository.findAllByParentIdInAndIsActiveTrueAndIsDeletedFalse(parentIds);
+    }
 }

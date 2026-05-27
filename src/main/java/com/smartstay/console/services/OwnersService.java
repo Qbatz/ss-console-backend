@@ -53,6 +53,8 @@ public class OwnersService {
     private UserHostelService userHostelService;
     @Autowired
     private UsersService usersService;
+    @Autowired
+    private HostelRelationalAgentService hostelRelationalAgentService;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
@@ -292,10 +294,36 @@ public class OwnersService {
 
         List<OwnerWithAddressProjection> pagedOwners = sortedOwners.subList(fromIndex, toIndex);
 
+        Set<String> pagedOwnersParentIds = pagedOwners.stream()
+                .map(OwnerWithAddressProjection::getParentId)
+                .collect(Collectors.toSet());
+
+        List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
+                .getByParentIds(new HashSet<>(pagedOwnersParentIds));
+        Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
+                .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
+
+        Set<String> agentIds = new HashSet<>();
+        for (HostelRelationalAgent relationalAgent : relationalAgents) {
+            if (relationalAgent.getAgentId() != null){
+                agentIds.add(relationalAgent.getAgentId());
+            }
+            if (relationalAgent.getCreatedBy() != null){
+                agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        a -> a, (a, b) -> a));
+
         List<OwnerResponse> ownersList = pagedOwners.stream()
                 .map(owner -> new OwnerListMapper(
                         hostelCountMap.getOrDefault(owner.getParentId(), 0),
-                        userActivitiesMap.get(owner.getParentId())
+                        userActivitiesMap.get(owner.getParentId()),
+                        relationalAgentMap.getOrDefault(owner.getParentId(), null),
+                        agentMap
                 ).apply(owner))
                 .toList();
 
@@ -344,10 +372,32 @@ public class OwnersService {
         Map<Integer, HotelType> hotelTypeMap = hotelTypes.stream()
                 .collect(Collectors.toMap(HotelType::getId, hotelType -> hotelType));
 
-        List<UserActivities> userActivities = userActivitiesService.getLimitedActivitiesByUserId(ownerId, 50);
+        List<UserActivities> userActivities = userActivitiesService
+                .getLimitedActivitiesByUserId(ownerId, 50);
 
-        OwnerDetailsResponse response = new OwnerDetailsMapper(hostels, userActivities, hotelTypeMap)
-                .apply(owner);
+        Set<String> agentIds = new HashSet<>();
+
+        List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
+                .getByParentId(owner.getParentId());
+        for (HostelRelationalAgent relationalAgent : relationalAgents) {
+            if (relationalAgent.getAgentId() != null){
+                agentIds.add(relationalAgent.getAgentId());
+            }
+            if (relationalAgent.getCreatedBy() != null){
+                agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentIds.isEmpty()
+                ? Collections.emptyList()
+                : agentService.getAgentsByIds(agentIds);
+
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        agent1 -> agent1));
+
+        OwnerDetailsResponse response = new OwnerDetailsMapper(hostels, userActivities,
+                hotelTypeMap, relationalAgents, agentMap).apply(owner);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -433,6 +483,13 @@ public class OwnersService {
 
         if (!userHostels.isEmpty()){
             userHostelService.deleteAll(userHostels);
+        }
+
+        List<HostelRelationalAgent> hostelRelationalAgents = hostelRelationalAgentService
+                .getByParentId(owner.getParentId());
+
+        if (!hostelRelationalAgents.isEmpty()){
+            hostelRelationalAgentService.deleteAll(hostelRelationalAgents);
         }
 
         List<Users> users = usersRepository

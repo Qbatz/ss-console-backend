@@ -465,7 +465,7 @@ public class SnapshotUtility {
 
         return new HostelRelationalAgentSnapshot(
                 h.getId(),
-                h.getHostelId(),
+                h.getParentId(),
                 h.getAgentId(),
                 h.getReason(),
                 h.getComments(),

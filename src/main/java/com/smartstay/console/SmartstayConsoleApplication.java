@@ -5,6 +5,8 @@ import com.smartstay.console.ennum.DemoRequestSource;
 import com.smartstay.console.ennum.DemoRequestStatus;
 import com.smartstay.console.repositories.AgentModulesRepository;
 import com.smartstay.console.repositories.DemoRequestRepository;
+import com.smartstay.console.repositories.HostelRelationalAgentRepository;
+import com.smartstay.console.services.HostelService;
 import com.smartstay.console.services.PlansService;
 import com.smartstay.console.utils.Utils;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
@@ -15,9 +17,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @SpringBootApplication
 @EnableScheduling
@@ -266,6 +267,45 @@ public class SmartstayConsoleApplication {
 //            }
 //
 //            demoRequestRepository.saveAll(demoRequests);
+//        };
+//    }
+
+    // IMPORTANT: This migration should be executed ONLY ONCE in production.
+    // Remove/comment this bean after successful deployment.
+//    @Bean
+//    CommandLineRunner HostelRelationalAgentSetParentId(HostelRelationalAgentRepository repository,
+//                                                       HostelService hostelService){
+//        return (args) -> {
+//            List<HostelRelationalAgent> hostelRelationalAgents = repository.findAll();
+//
+//            Set<String> hostelIds = new HashSet<>();
+//
+//            for (HostelRelationalAgent hostelRelationalAgent : hostelRelationalAgents) {
+//                if (hostelRelationalAgent.getParentId() == null){
+//                    hostelIds.add(hostelRelationalAgent.getHostelId());
+//                }
+//            }
+//
+//            List<HostelV1> hostels = hostelService.getHostelsByHostelIds(hostelIds);
+//
+//            Map<String, HostelV1> hostelMap = hostels.stream()
+//                    .collect(Collectors.toMap(HostelV1::getHostelId, hostel -> hostel));
+//
+//            List<HostelRelationalAgent> changed = new ArrayList<>();
+//            for (HostelRelationalAgent hostelRelationalAgent : hostelRelationalAgents) {
+//                if (hostelRelationalAgent.getParentId() == null){
+//
+//                    HostelV1 hostel = hostelMap.getOrDefault(hostelRelationalAgent.getHostelId(), null);
+//
+//                    if (hostel != null){
+//                        hostelRelationalAgent.setParentId(hostel.getParentId());
+//
+//                        changed.add(hostelRelationalAgent);
+//                    }
+//                }
+//            }
+//
+//            repository.saveAll(changed);
 //        };
 //    }
 }

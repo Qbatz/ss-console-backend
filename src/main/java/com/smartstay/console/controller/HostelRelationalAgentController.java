@@ -20,10 +20,10 @@ public class HostelRelationalAgentController {
     @Autowired
     private HostelRelationalAgentService hostelRelationalAgentService;
 
-    @PostMapping("/{hostelId}")
-    public ResponseEntity<?> assignHostelRelationalAgent(@PathVariable("hostelId") String hostelId,
+    @PostMapping("/{parentId}")
+    public ResponseEntity<?> assignHostelRelationalAgent(@PathVariable("parentId") String parentId,
                                                          @RequestBody @Valid HostelRelationalAgentPayload payload) {
-        return hostelRelationalAgentService.assignHostelRelationalAgent(hostelId, payload);
+        return hostelRelationalAgentService.assignHostelRelationalAgent(parentId, payload);
     }
 
     @GetMapping("/reasons")

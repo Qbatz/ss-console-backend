@@ -49,6 +49,9 @@ public class AgentService {
     private HostelRelationalAgentService hostelRelationalAgentService;
     @Autowired
     private HostelService hostelService;
+    @Lazy
+    @Autowired
+    private UsersService usersService;
 
     public Agent findAgentByEmail(String agentEmail) {
         return agentRepository.findByAgentEmailId(agentEmail);
@@ -467,23 +470,27 @@ public class AgentService {
             updatedBy = agentRepository.findByAgentId(inputAgent.getUpdatedBy());
         }
 
-        Set<String> hostelIds = hostelRelations.stream()
-                .map(HostelRelationalAgent::getHostelId)
+        Set<String> parentIds = hostelRelations.stream()
+                .map(HostelRelationalAgent::getParentId)
                 .collect(Collectors.toSet());
 
-        List<HostelV1> hostels = hostelService.getHostelsByHostelIds(hostelIds);
-        Map<String, HostelV1> hostelMap = hostels.stream()
-                .collect(Collectors.toMap(HostelV1::getHostelId,
-                        a -> a, (a, b) -> b));
+        List<Users> owners = usersService.getOwners(new ArrayList<>(parentIds));
+        Map<String, Users> ownerMap = owners.stream()
+                .collect(Collectors.toMap(Users::getParentId, user -> user));
+
+        List<HostelV1> hostels = hostelService.getHostelsByParentIds(parentIds);
+        Map<String, List<HostelV1>> hostelMap = hostels.stream()
+                .collect(Collectors.groupingBy(HostelV1::getParentId));
 
         List<RelationalAgentResponse> hostelRelationsRes = hostelRelations.stream()
                 .map(hostelRelationalAgent -> {
-                    HostelV1 hostel = hostelMap.getOrDefault(hostelRelationalAgent.getHostelId(), null);
+                    Users owner = ownerMap.getOrDefault(hostelRelationalAgent.getParentId(), null);
+                    List<HostelV1> ownerHostels = hostelMap.getOrDefault(hostelRelationalAgent.getParentId(), null);
                     Agent relationalAgent = agentMap.getOrDefault(hostelRelationalAgent.getAgentId(), null);
                     Agent createdByAgent = agentMap.getOrDefault(hostelRelationalAgent.getCreatedBy(), null);
 
                     return new RelationalAgentResMapper(
-                            hostel, relationalAgent, createdByAgent
+                            owner, ownerHostels, relationalAgent, createdByAgent
                     ).apply(hostelRelationalAgent);
                 }).toList();
 
