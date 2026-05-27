@@ -148,6 +148,7 @@ public class Utils {
     public static final String COLUMN_FILTER_CAN_NOT_BE_NULL = "Column filter cannot be null";
     public static final String ORDER_CAN_NOT_BE_NEGATIVE = "Order cannot be negative";
     public static final String AT_LEAST_ONE_COLUMN_NEEDS_TO_BE_SELECTED = "At least one column must be selected";
+    public static final String CUSTOMER_INACTIVE_VACATED_SETTLEMENT_GENERATED = "Can not edit/delete redemption because customer is either vacated or settlement generated";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {

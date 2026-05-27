@@ -371,7 +371,20 @@ public class InvoiceRedemptionService {
             return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(targetInvoice.getCustomerId());
+        String customerId = targetInvoice.getCustomerId();
+
+        Customers customer = customersService.getCustomerInformation(customerId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (CustomerStatus.SETTLEMENT_GENERATED.name().equals(customer.getCurrentStatus()) ||
+                CustomerStatus.VACATED.name().equals(customer.getCurrentStatus()) ||
+                CustomerStatus.INACTIVE.name().equals(customer.getCurrentStatus())){
+            return new ResponseEntity<>(Utils.CUSTOMER_INACTIVE_VACATED_SETTLEMENT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+
+        PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(customerId);
         if (paymentSummary == null){
             return new ResponseEntity<>(Utils.PAYMENT_SUMMARY_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
@@ -483,7 +496,20 @@ public class InvoiceRedemptionService {
             return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(targetInvoice.getCustomerId());
+        String customerId = targetInvoice.getCustomerId();
+
+        Customers customer = customersService.getCustomerInformation(customerId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (CustomerStatus.SETTLEMENT_GENERATED.name().equals(customer.getCurrentStatus()) ||
+                CustomerStatus.VACATED.name().equals(customer.getCurrentStatus()) ||
+                CustomerStatus.INACTIVE.name().equals(customer.getCurrentStatus())){
+            return new ResponseEntity<>(Utils.CUSTOMER_INACTIVE_VACATED_SETTLEMENT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+
+        PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(customerId);
         if (paymentSummary == null){
             return new ResponseEntity<>(Utils.PAYMENT_SUMMARY_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
