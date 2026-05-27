@@ -81,6 +81,7 @@ public class Utils {
     public static final String DROP_REASON_NOT_FOUND = "Drop reason not found";
     public static final String BOOKING_NOT_FOUND = "Booking not found";
     public static final String BED_NOT_FOUND = "Bed not found";
+    public static final String NO_EXPENSES_FOUND = "Expenses not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";

@@ -21,6 +21,7 @@ import com.smartstay.console.dto.users.AddressSnapshot;
 import com.smartstay.console.dto.users.UserSnapshot;
 import com.smartstay.console.dto.users.UsersConfigSnapshot;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
@@ -284,7 +285,8 @@ public class SnapshotUtility {
 
         return new DeductionsSnapshot(
                 d.getType(),
-                d.getAmount()
+                d.getAmount(),
+                d.getPaidAmount()
         );
     }
 
@@ -542,6 +544,11 @@ public class SnapshotUtility {
 
         if (i == null) return null;
 
+        List<DeductionsSnapshot> deductions = new ArrayList<>();
+        if (i.getDeductions() != null){
+            deductions = toSnapshotList(i.getDeductions(), SnapshotUtility::toSnapshot);
+        }
+
         return new InvoiceSnapshot(
                 i.getInvoiceId(),
                 i.getCustomerId(),
@@ -554,11 +561,13 @@ public class SnapshotUtility {
                 i.getTotalAmount(),
                 i.getPaidAmount(),
                 i.getBalanceAmount(),
+                i.getSubTotal(),
                 i.getGst(),
                 i.getCgst(),
                 i.getSgst(),
                 i.getGstPercentile(),
                 i.getPaymentStatus(),
+                i.getDeductionAmount(),
                 i.getOthersDescription(),
                 i.getInvoiceMode(),
                 i.isCancelled(),
@@ -566,6 +575,7 @@ public class SnapshotUtility {
                 i.getCancelledInvoices() != null
                         ? List.copyOf(i.getCancelledInvoices())
                         : List.of(),
+                deductions,
                 i.getInvoiceUrl(),
                 i.getCreatedBy(),
                 i.getUpdatedBy(),
@@ -605,6 +615,41 @@ public class SnapshotUtility {
                 copyDate(r.getCreatedAt()),
                 copyDate(r.getUpdatedAt()),
                 toSnapshotList(r.getPermissions(), SnapshotUtility::toSnapshot)
+        );
+    }
+
+    public static ExpensesSnapshot toSnapshot(ExpensesV1 e) {
+
+        if (e == null) return null;
+
+        return new ExpensesSnapshot(
+                e.getExpenseId(),
+                e.getCategoryId(),
+                e.getSubCategoryId(),
+                e.getParentId(),
+                e.getHostelId(),
+                e.getBankId(),
+                e.getUnitPrice(),
+                e.getUnitCount(),
+                e.getTotalPrice(),
+                e.getGst(),
+                e.getCgst(),
+                e.getSgst(),
+                e.getGstAmount(),
+                e.getCgstAmount(),
+                e.getSgstAmount(),
+                e.getDiscounts(),
+                e.getDiscountAmount(),
+                e.getExpenseNumber(),
+                e.getTransactionAmount(),
+                e.getVendorId(),
+                e.getSource(),
+                copyDate(e.getTransactionDate()),
+                copyDate(e.getCreatedAt()),
+                copyDate(e.getUpdatedAt()),
+                e.getCreatedBy(),
+                e.isActive(),
+                e.getDescription()
         );
     }
 
