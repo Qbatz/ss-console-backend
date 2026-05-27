@@ -114,6 +114,7 @@ public class DemoRequestService {
 
         LocalDate today = LocalDate.now();
         Date now = new Date();
+        now = Utils.getStartOfDay(now);
         Date nowEnds = Utils.addDaysToDate(now, 1);
 
         Date currentMonthStartDate = Utils.getStartDateOfMonth(today);
