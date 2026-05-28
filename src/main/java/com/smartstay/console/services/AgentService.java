@@ -126,7 +126,7 @@ public class AgentService {
     }
 
     public List<Agent> findActiveUsersByRoleId(long roleId) {
-        return agentRepository.findByRoleIdAndIsActiveTrue(roleId);
+        return agentRepository.findByRoleIdAndIsActiveTrueAndIsMockAgentFalse(roleId);
     }
 
     public ResponseEntity<?> getAgentDetails() {

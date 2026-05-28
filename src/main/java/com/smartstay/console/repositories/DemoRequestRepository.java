@@ -1,6 +1,7 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.DemoRequest;
+import com.smartstay.console.dto.demoRequest.DemoRequestStatsProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -40,21 +41,62 @@ public interface DemoRequestRepository extends JpaRepository<DemoRequest, Long> 
             """)
     long getCount();
 
-    @Query("""
-            select count(dr)
-            from DemoRequest dr
-            where (:startDate is null or dr.createdAt >= :startDate)
-                and (:endDate is null or dr.createdAt < :endDate)
-            """)
-    long getTotalLeadsCount(@Param("startDate") Date startDate,
-                            @Param("endDate") Date endDate);
-
-    @Query("""
-            select count(dr)
-            from DemoRequest dr
-            where dr.createdAt >= :startDate
-            and dr.createdAt < :endDate
-            """)
-    long getNewByDateCount(@Param("startDate") Date startDate,
-                           @Param("endDate") Date endDate);
+    @Query(value = """
+            SELECT
+                COUNT(*) AS totalLeads,
+            
+                COUNT(CASE
+                    WHEN dr.created_at >= :todayStart
+                     AND dr.created_at < :todayEnd
+                    THEN 1
+                END) AS todayNewCount,
+            
+                COUNT(CASE
+                    WHEN dr.demo_request_status = 'NEW'
+                    THEN 1
+                END) AS newCount,
+           
+                COUNT(CASE
+                    WHEN dr.demo_request_status = 'ASSIGNED'
+                    THEN 1
+                END) AS assignedCount,
+            
+                COUNT(CASE
+                    WHEN dr.demo_request_status = 'CONTACTED'
+                    THEN 1
+                END) AS contactedCount,
+            
+                COUNT(CASE
+                    WHEN dr.demo_request_status = 'DEMO_SCHEDULED'
+                    THEN 1
+                END) AS demoScheduledCount,
+            
+                COUNT(CASE
+                    WHEN dr.demo_request_status = 'DEMO_COMPLETED'
+                    THEN 1
+                END) AS demoCompletedCount,
+            
+                COUNT(CASE
+                    WHEN dr.demo_request_status = 'TRIAL_STARTED'
+                    THEN 1
+                END) AS trialStartedCount,
+            
+                COUNT(CASE
+                    WHEN dr.demo_request_status = 'CONVERTED'
+                    THEN 1
+                END) AS convertedCount,
+            
+                COUNT(CASE
+                    WHEN dr.demo_request_status = 'DROPPED'
+                    THEN 1
+                END) AS droppedCount
+            
+            FROM demo_request dr
+            WHERE dr.created_at >= :monthStart
+              AND dr.created_at < :monthEnd
+            """, nativeQuery = true)
+    DemoRequestStatsProjection getDashboardStats(@Param("todayStart") Date todayStart,
+                                                 @Param("todayEnd") Date todayEnd,
+                                                 @Param("monthStart") Date monthStart,
+                                                 @Param("monthEnd") Date monthEnd);
 }

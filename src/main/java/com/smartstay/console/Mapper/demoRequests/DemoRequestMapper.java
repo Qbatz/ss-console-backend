@@ -58,13 +58,9 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
         String requestedTime = null;
         if (demoRequest.getBookedFor() != null) {
             requestedDate = Utils.dateToString(demoRequest.getBookedFor());
-            requestedTime = Utils.dateToTime(demoRequest.getBookedFor());
+            requestedTime = demoRequest.getRequestedTime();
         } else if (demoRequest.getRequestedDate() != null) {
             requestedDate = Utils.formatDateString(demoRequest.getRequestedDate());
-            requestedTime = demoRequest.getRequestedTime();
-        }
-
-        if (requestedTime == null){
             requestedTime = demoRequest.getRequestedTime();
         }
 

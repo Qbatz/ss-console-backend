@@ -5,6 +5,7 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.demoRequest.DemoRequestCommentsSnapshot;
 import com.smartstay.console.dto.demoRequest.DemoRequestSnapshot;
+import com.smartstay.console.dto.demoRequest.DemoRequestStatsProjection;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.demoRequest.*;
 import com.smartstay.console.repositories.DemoRequestRepository;
@@ -121,10 +122,23 @@ public class DemoRequestService {
         Date currentMonthEndDate = Utils.getEndDateOfMonth(today);
         Date currentMonthEndDatePlus1 = Utils.addDaysToDate(currentMonthEndDate, 1);
 
-        long totalLeads = demoRequestRepository.getTotalLeadsCount(currentMonthStartDate, currentMonthEndDatePlus1);
-        long todayNewCount = demoRequestRepository.getNewByDateCount(now, nowEnds);
-        long contactedCount = demoRequestActivityService.getContactedCount(currentMonthStartDate, currentMonthEndDatePlus1);
-        long demoScheduledCount = demoRequestActivityService.getDemoScheduledCount(currentMonthStartDate, currentMonthEndDatePlus1);
+        DemoRequestStatsProjection stats = demoRequestRepository.getDashboardStats(
+                now,
+                nowEnds,
+                currentMonthStartDate,
+                currentMonthEndDatePlus1
+        );
+
+        long totalLeads = stats.getTotalLeads();
+        long todayNewCount = stats.getTodayNewCount();
+        long newCount = stats.getNewCount();
+        long assignedCount = stats.getAssignedCount();
+        long contactedCount = stats.getContactedCount();
+        long demoScheduledCount = stats.getDemoScheduledCount();
+        long demoCompletedCount = stats.getDemoCompletedCount();
+        long trialStartedCount = stats.getTrialStartedCount();
+        long convertedCount = stats.getConvertedCount();
+        long droppedCount = stats.getDroppedCount();
 
         if (startDate == null) {
             startDate = currentMonthStartDate;
@@ -230,8 +244,14 @@ public class DemoRequestService {
         response.put("totalPages", paginatedDemoRequest.getTotalPages());
         response.put("totalLeads", totalLeads);
         response.put("newToday", todayNewCount);
+        response.put("new", newCount);
+        response.put("assigned", assignedCount);
         response.put("contacted", contactedCount);
         response.put("demoScheduled", demoScheduledCount);
+        response.put("demoCompleted", demoCompletedCount);
+        response.put("trialStarted", trialStartedCount);
+        response.put("converted", convertedCount);
+        response.put("dropped", droppedCount);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

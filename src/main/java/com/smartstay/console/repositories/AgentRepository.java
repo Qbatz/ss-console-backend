@@ -27,7 +27,7 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
 
     Agent findByAgentIdAndIsActiveTrue(String agentId);
 
-    List<Agent> findByRoleIdAndIsActiveTrue(long roleId);
+    List<Agent> findByRoleIdAndIsActiveTrueAndIsMockAgentFalse(long roleId);
 
     @Query("""
        SELECT a.roleId AS roleId, COUNT(a) AS count
