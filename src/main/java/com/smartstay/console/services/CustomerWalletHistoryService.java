@@ -48,4 +48,12 @@ public class CustomerWalletHistoryService {
     public List<CustomerWalletHistory> getByInvoiceIds(Set<String> invoiceIds) {
         return customersWalletHistoryRepository.findAllByInvoiceIdIn(invoiceIds);
     }
+
+    public List<CustomerWalletHistory> getByCustomerWalletHistoryIds(Set<Long> cwhIds) {
+        return customersWalletHistoryRepository.findAllByHistoryIdIn(cwhIds);
+    }
+
+    public List<CustomerWalletHistory> getAllInvoiceNotGeneratedWalletsByCustomerIds(Set<String> customerIds) {
+        return customersWalletHistoryRepository.findInvoiceNotGeneratedByCustomerIds(customerIds);
+    }
 }

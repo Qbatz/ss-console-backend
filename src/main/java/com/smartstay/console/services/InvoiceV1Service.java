@@ -5,6 +5,8 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoice.InvoiceSnapshotWrapper;
+import com.smartstay.console.dto.settlement.EBItems;
+import com.smartstay.console.dto.settlement.WalltetItems;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.payloads.invoice.InvoiceIdMobilePayload;
@@ -66,6 +68,8 @@ public class InvoiceV1Service {
     private BedsService bedsService;
     @Autowired
     private SettlementDetailsService settlementDetailsService;
+    @Autowired
+    private SettlementItemsService settlementItemsService;
 
     public List<InvoicesV1> findByListOfCustomers(String hostelId, List<String> customerIds) {
         return invoiceV1Repository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
@@ -398,6 +402,7 @@ public class InvoiceV1Service {
 
         Set<String> invoiceIds = payloads.stream()
                 .map(InvoiceIdMobilePayload::invoiceId)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
         List<InvoicesV1> invoices = invoiceV1Repository.findAllByInvoiceIdIn(invoiceIds);
@@ -407,7 +412,9 @@ public class InvoiceV1Service {
 
         Set<String> cancelledInvoiceIds = invoices.stream()
                 .filter(invoice -> InvoiceType.SETTLEMENT.name().equals(invoice.getInvoiceType()))
-                .flatMap(invoice -> invoice.getCancelledInvoices().stream())
+                .map(InvoicesV1::getCancelledInvoices)
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
                 .collect(Collectors.toSet());
 
         List<InvoicesV1> cancelledInvoices = invoiceV1Repository.findAllByInvoiceIdIn(cancelledInvoiceIds);
@@ -444,11 +451,33 @@ public class InvoiceV1Service {
         Map<String, SettlementDetails> settlementDetailsMap = settlementDetails.stream()
                 .collect(Collectors.toMap(SettlementDetails::getCustomerId, sd -> sd));
 
+        List<SettlementItems> settlementItems = settlementItemsService
+                .getByInvoiceIds(invoiceIds);
+
+        Map<String, SettlementItems> settlementItemsMap = settlementItems.stream()
+                .collect(Collectors.toMap(SettlementItems::getInvoiceId, item -> item));
+
+        Set<Long> cwhIds = settlementItems.stream()
+                .map(SettlementItems::getWalltetItems)
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .map(WalltetItems::getWalletId)
+                .collect(Collectors.toSet());
+
+        List<CustomerWalletHistory> customerWalletHistories = customerWalletHistoryService
+                .getByCustomerWalletHistoryIds(cwhIds);
+
+        Map<Long, CustomerWalletHistory> customerWalletHistoryMap = customerWalletHistories.stream()
+                .collect(Collectors.toMap(CustomerWalletHistory::getHistoryId, cwh -> cwh));
+
         List<InvoicesV1> cancelledInvoicesList = new ArrayList<>();
         List<Customers> customersList = new ArrayList<>();
         List<BookingsV1> bookingsList = new ArrayList<>();
         List<Beds> bedsList = new ArrayList<>();
         List<SettlementDetails> settlementDetailsList = new ArrayList<>();
+        List<CustomerWalletHistory> cwhList = new ArrayList<>();
+        List<SettlementItems> settlementItemsList = new ArrayList<>();
+        List<Customers> walletUpdateCustomers = new ArrayList<>();
 
         Date today = new Date();
 
@@ -520,11 +549,65 @@ public class InvoiceV1Service {
                 SettlementDetails settlementDetail = settlementDetailsMap
                         .getOrDefault(invoice.getCustomerId(), null);
 
-                settlementDetailsList.add(settlementDetail);
+                if (settlementDetail != null){
+                    settlementDetailsList.add(settlementDetail);
+                }
 
                 bookingsList.add(booking);
                 bedsList.add(bed);
                 customersList.add(customer);
+
+                SettlementItems settlementItem = settlementItemsMap
+                        .getOrDefault(invoice.getInvoiceId(), null);
+
+                if (settlementItem != null){
+                    settlementItemsList.add(settlementItem);
+
+                    boolean updateCustomerWallet = false;
+
+                    List<EBItems> ebItems = settlementItem.getEbItems();
+
+                    if (ebItems != null && !ebItems.isEmpty()){
+                        for (EBItems ebItem : ebItems) {
+                            CustomerWalletHistory cwh = new CustomerWalletHistory();
+                            cwh.setTransactionDate(ebItem.getToDate());
+                            cwh.setAmount(ebItem.getTotalAmount());
+                            cwh.setBillingStatus(WalletBillingStatus.INVOICE_NOT_GENERATED.name());
+                            cwh.setCustomerId(invoice.getCustomerId());
+                            cwh.setSourceId(String.valueOf(ebItem.getCustomerEBId()));
+                            cwh.setSourceType(WalletSource.ELECTRICITY.name());
+                            cwh.setTransactionType(WalletTransactionType.CREDIT.name());
+                            cwh.setBillStartDate(ebItem.getFromDate());
+                            cwh.setBillEndDate(ebItem.getToDate());
+                            cwh.setCreatedAt(today);
+
+                            cwhList.add(cwh);
+
+                            updateCustomerWallet = true;
+                        }
+                    }
+
+                    List<WalltetItems> walletItems = settlementItem.getWalltetItems();
+
+                    if (walletItems != null && !walletItems.isEmpty()){
+                        for (WalltetItems walletItem : walletItems) {
+                            CustomerWalletHistory cwh = customerWalletHistoryMap
+                                    .getOrDefault(walletItem.getWalletId(), null);
+
+                            if (cwh != null){
+                                cwh.setBillingStatus(WalletBillingStatus.INVOICE_NOT_GENERATED.name());
+
+                                cwhList.add(cwh);
+
+                                updateCustomerWallet = true;
+                            }
+                        }
+                    }
+
+                    if (updateCustomerWallet){
+                        walletUpdateCustomers.add(customer);
+                    }
+                }
             }
         }
 
@@ -532,8 +615,43 @@ public class InvoiceV1Service {
         bedsService.saveAll(bedsList);
         customersService.saveAll(customersList);
         invoiceV1Repository.saveAll(cancelledInvoicesList);
+        customerWalletHistoryService.saveAll(cwhList);
+
+        Set<String> walletUpdateCustomerIds = walletUpdateCustomers.stream()
+                .map(Customers::getCustomerId)
+                .collect(Collectors.toSet());
+
+        List<CustomerWalletHistory> updatedCwhList = customerWalletHistoryService
+                .getAllInvoiceNotGeneratedWalletsByCustomerIds(walletUpdateCustomerIds);
+
+        Map<String, List<CustomerWalletHistory>> updatedCwhMap = updatedCwhList.stream()
+                .collect(Collectors.groupingBy(CustomerWalletHistory::getCustomerId));
+
+        List<Customers> updatableCustomers = new ArrayList<>();
+
+        for (Customers walletUpdateCustomer : walletUpdateCustomers) {
+            List<CustomerWalletHistory> customerWalletHistoryList = updatedCwhMap
+                    .getOrDefault(walletUpdateCustomer.getCustomerId(), null);
+
+            if (customerWalletHistoryList != null && !customerWalletHistoryList.isEmpty()){
+                CustomerWallet cw = walletUpdateCustomer.getWallet();
+
+                if (cw != null){
+                    double amount = customerWalletHistoryList.stream()
+                            .mapToDouble(CustomerWalletHistory::getAmount)
+                            .sum();
+
+                    cw.setAmount(amount);
+
+                    updatableCustomers.add(walletUpdateCustomer);
+                }
+            }
+        }
+
+        customersService.saveAll(updatableCustomers);
 
         settlementDetailsService.deleteAll(settlementDetailsList);
+        settlementItemsService.deleteAll(settlementItemsList);
 
         deleteInvoiceRelatedData(invoiceIds);
 
