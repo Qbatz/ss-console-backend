@@ -178,4 +178,8 @@ public class UsersService {
 
         return new ResponseEntity<>(Constants.UPDATED_SUCCESSFULLY, HttpStatus.OK);
     }
+
+    public List<Users> getOwnersByMobileNo(String ownerMobile) {
+        return usersRepository.findOwnersByMobileNo(ownerMobile);
+    }
 }

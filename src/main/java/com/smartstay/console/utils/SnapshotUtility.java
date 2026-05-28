@@ -451,7 +451,7 @@ public class SnapshotUtility {
                 d.getRequestedTime(),
                 copyDate(d.getPresentedAt()),
                 d.getSource(),
-                d.getConvertedToPlanCode(),
+                d.getParentId(),
                 copyDate(d.getDemoDateFrom()),
                 copyDate(d.getDemoDateTo()),
                 d.getDemoType(),

@@ -2,6 +2,7 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.users.OwnerDetailsMapper;
 import com.smartstay.console.Mapper.users.OwnerListMapper;
+import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
@@ -14,8 +15,8 @@ import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.owners.ResetPassword;
 import com.smartstay.console.payloads.owners.UserEmailPayload;
 import com.smartstay.console.payloads.owners.UserMobilePayload;
-import com.smartstay.console.repositories.AgentRepository;
 import com.smartstay.console.repositories.UsersRepository;
+import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.responses.users.OwnerDetailsResponse;
 import com.smartstay.console.responses.users.OwnerResponse;
 import com.smartstay.console.utils.Constants;
@@ -34,7 +35,7 @@ import java.util.stream.Collectors;
 public class OwnersService {
 
     @Autowired
-    UsersRepository usersRepository;
+    private UsersRepository usersRepository;
     @Autowired
     private Authentication authentication;
     @Autowired
@@ -551,5 +552,29 @@ public class OwnersService {
                 ownerId, oldOwner, newOwner);
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getOwnerByMobile(String ownerMobile) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<Users> owners = usersRepository.findOwnersByMobileNo(ownerMobile);
+
+        List<OwnerInfo> ownerInfos = owners.stream()
+                .map(owner -> new UserOwnerInfoMapper().apply(owner))
+                .toList();
+
+        return new ResponseEntity<>(ownerInfos, HttpStatus.OK);
     }
 }

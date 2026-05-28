@@ -85,4 +85,13 @@ public interface UsersRepository extends JpaRepository<Users, String> {
     long getCount();
 
     boolean existsByMobileNoAndUserIdNotAndIsActiveTrueAndIsDeletedFalse(String newMobileNo, String ownerId);
+
+    @Query("""
+            SELECT usr FROM Users usr
+            WHERE usr.mobileNo = :ownerMobile
+                AND usr.roleId = 1
+                AND usr.isActive = true
+                AND usr.isDeleted = false
+            """)
+    List<Users> findOwnersByMobileNo(String ownerMobile);
 }

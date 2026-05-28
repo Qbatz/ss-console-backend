@@ -1,5 +1,7 @@
 package com.smartstay.console.responses.demoRequest;
 
+import com.smartstay.console.responses.hostels.OwnerInfo;
+
 import java.util.List;
 
 public record DemoRequestResponse(Long requestId,
@@ -27,8 +29,8 @@ public record DemoRequestResponse(Long requestId,
                                   String presentedAtDate,
                                   String presentedAtTime,
                                   String source,
-                                  String convertedToPlanCode,
-                                  String convertedToPlanName,
+                                  String parentId,
+                                  OwnerInfo owner,
                                   String demoDate,
                                   String demoDateFromTime,
                                   String demoDateToTime,

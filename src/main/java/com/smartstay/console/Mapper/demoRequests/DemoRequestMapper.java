@@ -1,10 +1,12 @@
 package com.smartstay.console.Mapper.demoRequests;
 
+import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.ennum.DemoRequestStatus;
 import com.smartstay.console.responses.demoRequest.DemoRequestActivityResponse;
 import com.smartstay.console.responses.demoRequest.DemoRequestCommentsResponse;
 import com.smartstay.console.responses.demoRequest.DemoRequestResponse;
+import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.utils.Utils;
 
 import java.util.ArrayList;
@@ -16,16 +18,16 @@ import java.util.function.Function;
 public class DemoRequestMapper implements Function<DemoRequest, DemoRequestResponse> {
 
     Map<String, Agent> agentMap;
-    Plans plan;
+    Users owner;
     List<DemoRequestComments> comments;
     List<DemoRequestActivity> activities;
 
     public DemoRequestMapper(Map<String, Agent> agentMap,
-                             Plans plan,
+                             Users owner,
                              List<DemoRequestComments> comments,
                              List<DemoRequestActivity> activities) {
         this.agentMap = agentMap;
-        this.plan = plan;
+        this.owner = owner;
         this.comments = comments;
         this.activities = activities;
     }
@@ -121,9 +123,9 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
             }
         }
 
-        String planName = null;
-        if (plan != null){
-            planName = plan.getPlanName();
+        OwnerInfo ownerInfo = null;
+        if (owner != null) {
+            ownerInfo = new UserOwnerInfoMapper().apply(owner);
         }
 
         return new DemoRequestResponse(demoRequest.getRequestId(), demoRequest.getName(),
@@ -134,7 +136,7 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
                 assignedTo, assignedBy, presentedBy, demoRequest.getComments(), requestedDate, requestedTime,
                 demoRequest.getPresentedAt() != null ? Utils.dateToString(demoRequest.getPresentedAt()) :  null,
                 demoRequest.getPresentedAt() != null ? Utils.dateToTime(demoRequest.getPresentedAt()) : null,
-                demoRequest.getSource(), demoRequest.getConvertedToPlanCode(), planName,
+                demoRequest.getSource(), demoRequest.getParentId(), ownerInfo,
                 demoRequest.getDemoDateFrom() != null ? Utils.dateToString(demoRequest.getDemoDateFrom()) : null,
                 demoRequest.getDemoDateFrom() != null ? Utils.dateToTime(demoRequest.getDemoDateFrom()) : null,
                 demoRequest.getDemoDateTo() != null ? Utils.dateToTime(demoRequest.getDemoDateTo()) : null,

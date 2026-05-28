@@ -39,7 +39,7 @@ public class DemoRequestService {
     @Autowired
     private DemoRequestActivityService demoRequestActivityService;
     @Autowired
-    private PlansService plansService;
+    private UsersService usersService;
 
     public ResponseEntity<?> addDemoRequest(DemoRequestPayload demoRequestPayload) {
 
@@ -167,14 +167,14 @@ public class DemoRequestService {
         Set<String> presentedByIds = new HashSet<>();
         Set<String> commentCreatedByIds = new HashSet<>();
         Set<String> activityCreatedByIds = new HashSet<>();
-        Set<String> planCodes = new HashSet<>();
+        Set<String> parentIds = new HashSet<>();
 
         for (DemoRequest demoRequest : demoRequests) {
             assignedToIds.add(demoRequest.getAssignedTo());
             assignedByIds.add(demoRequest.getAssignedBy());
             presentedByIds.add(demoRequest.getPresentedBy());
 
-            planCodes.add(demoRequest.getConvertedToPlanCode());
+            parentIds.add(demoRequest.getParentId());
 
             List<DemoRequestComments> comments = demoRequestCommentsMap
                     .getOrDefault(demoRequest.getRequestId(), null);
@@ -208,14 +208,14 @@ public class DemoRequestService {
         Map<String, Agent> agentMap = agents.stream()
                 .collect(Collectors.toMap(Agent::getAgentId, a -> a));
 
-        List<Plans> plans = plansService.findPlansByPlanCodes(planCodes);
-        Map<String, Plans> plansMap = plans.stream()
-                .collect(Collectors.toMap(Plans::getPlanCode, a -> a));
+        List<Users> owners = usersService.getOwners(new ArrayList<>(parentIds));
+        Map<String, Users> ownerMap = owners.stream()
+                .collect(Collectors.toMap(Users::getParentId, a -> a));
 
         List<DemoRequestResponse> demoRequestList = demoRequests.stream()
                 .map(demoRequest -> {
-                    Plans plan = plansMap.getOrDefault(demoRequest.getConvertedToPlanCode(), null);
-                    return new DemoRequestMapper(agentMap, plan,
+                    Users owner = ownerMap.getOrDefault(demoRequest.getParentId(), null);
+                    return new DemoRequestMapper(agentMap, owner,
                             demoRequestCommentsMap.getOrDefault(demoRequest.getRequestId(), null),
                             demoRequestActivitiesMap.getOrDefault(demoRequest.getRequestId(), null))
                             .apply(demoRequest);
@@ -286,9 +286,9 @@ public class DemoRequestService {
         Map<String, Agent> agentMap = agents.stream()
                 .collect(Collectors.toMap(Agent::getAgentId, a -> a));
 
-        Plans plan = plansService.findPlanByPlanCode(demoRequest.getConvertedToPlanCode());
+        Users owner = usersService.getOwner(demoRequest.getParentId());
 
-        DemoRequestResponse response = new DemoRequestMapper(agentMap, plan, demoRequestComments,
+        DemoRequestResponse response = new DemoRequestMapper(agentMap, owner, demoRequestComments,
                 demoRequestActivities).apply(demoRequest);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -537,26 +537,17 @@ public class DemoRequestService {
         }
 
         if (requestStatus.name().equals(DemoRequestStatus.TRIAL_STARTED.name())) {
-            Plans trialPlan = plansService.findTrialPlan();
-            String trialPlanCode = null;
-            if (trialPlan != null){
-                trialPlanCode = trialPlan.getPlanCode();
+
+            if (demoRequestStatusPayload.parentId() == null || demoRequestStatusPayload.parentId().isBlank()){
+                return new ResponseEntity<>(Utils.PARENT_ID_REQUIRED, HttpStatus.BAD_REQUEST);
             }
 
-            demoRequest.setConvertedToPlanCode(trialPlanCode);
-        }
-
-        if (requestStatus.name().equals(DemoRequestStatus.CONVERTED.name())) {
-            if (demoRequestStatusPayload.planCode() == null || demoRequestStatusPayload.planCode().isBlank()){
-                return new ResponseEntity<>(Utils.PLAN_CODE_REQUIRED, HttpStatus.BAD_REQUEST);
+            Users owner = usersService.getOwner(demoRequestStatusPayload.parentId());
+            if (owner == null){
+                return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
             }
 
-            Plans plan = plansService.findPlanByPlanCode(demoRequestStatusPayload.planCode());
-            if (plan == null){
-                return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
-            }
-
-            demoRequest.setConvertedToPlanCode(demoRequestStatusPayload.planCode());
+            demoRequest.setParentId(demoRequestStatusPayload.parentId());
         }
 
         if (requestStatus.name().equals(DemoRequestStatus.DROPPED.name())) {

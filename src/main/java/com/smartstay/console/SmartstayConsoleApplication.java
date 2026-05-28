@@ -7,7 +7,7 @@ import com.smartstay.console.repositories.AgentModulesRepository;
 import com.smartstay.console.repositories.DemoRequestRepository;
 import com.smartstay.console.repositories.HostelRelationalAgentRepository;
 import com.smartstay.console.services.HostelService;
-import com.smartstay.console.services.PlansService;
+import com.smartstay.console.services.UsersService;
 import com.smartstay.console.utils.Utils;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
@@ -170,7 +170,7 @@ public class SmartstayConsoleApplication {
     // Remove/comment this bean after successful deployment.
 //    @Bean
 //    CommandLineRunner updateDemoRequestStatus(DemoRequestRepository demoRequestRepository,
-//                                              PlansService plansService) {
+//                                              UsersService usersService) {
 //
 //        return args -> {
 //
@@ -184,12 +184,6 @@ public class SmartstayConsoleApplication {
 //
 //            boolean hasUpdates = false;
 //
-//            Plans trialPlan = plansService.findTrialPlan();
-//
-//            String trialPlanCode = trialPlan != null
-//                    ? trialPlan.getPlanCode()
-//                    : null;
-//
 //            for (DemoRequest demoRequest : demoRequests) {
 //
 //                //source migration
@@ -198,6 +192,19 @@ public class SmartstayConsoleApplication {
 //                    demoRequest.setSource(DemoRequestSource.CONSOLE.name());
 //
 //                    hasUpdates = true;
+//                }
+//
+//                //parentId migration
+//                if (DemoRequestStatus.TRIAL_STARTED.name().equals(demoRequest.getDemoRequestStatus()) ||
+//                        DemoRequestStatus.CONVERTED.name().equals(demoRequest.getDemoRequestStatus())) {
+//                    String ownerMobile = demoRequest.getContactNo();
+//                    if (ownerMobile != null) {
+//                        List<Users> owners = usersService.getOwnersByMobileNo(ownerMobile);
+//                        if (owners != null && !owners.isEmpty()) {
+//                            demoRequest.setParentId(owners.getFirst().getParentId());
+//                            hasUpdates = true;
+//                        }
+//                    }
 //                }
 //
 //                // createdAt migration
@@ -253,8 +260,15 @@ public class SmartstayConsoleApplication {
 //                    default -> demoRequestStatus;
 //                };
 //
-//                if (DemoRequestStatus.TRIAL_STARTED.name().equals(status)) {
-//                    demoRequest.setConvertedToPlanCode(trialPlanCode);
+//                if (DemoRequestStatus.TRIAL_STARTED.name().equals(status) ||
+//                        DemoRequestStatus.CONVERTED.name().equals(status)) {
+//                    String ownerMobile = demoRequest.getContactNo();
+//                    if (ownerMobile != null) {
+//                        List<Users> owners = usersService.getOwnersByMobileNo(ownerMobile);
+//                        if (owners != null && !owners.isEmpty()) {
+//                            demoRequest.setParentId(owners.getFirst().getParentId());
+//                        }
+//                    }
 //                }
 //
 //                demoRequest.setDemoRequestStatus(status);
