@@ -181,6 +181,8 @@ public class HostelsService {
     private HostelRelationalAgentService hostelRelationalAgentService;
     @Autowired
     private InvoiceRedemptionService invoiceRedemptionService;
+    @Autowired
+    private SettlementItemsService settlementItemsService;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -729,6 +731,7 @@ public class HostelsService {
         List<PaymentSummary> listPaymentSummary = paymentSummaryService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<RentHistory> listRentHistory = rentHistoryService.findByCustomerIds(customerIds);
         List<SettlementDetails> listSettlementDetails = settlementDetailsService.findByCustomerIds(customerIds);
+        List<SettlementItems> listSettlementItems = settlementItemsService.findByCustomerIds(customerIdsSet);
         List<ComplaintsV1> complaints = complaintService.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
         List<CreditDebitNotes> listCreditDebits = creditDebitNotesService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomersAmenity> listCustomersAmenity = customersAmenityService.findByCustomerIdIn(customerIds);
@@ -810,6 +813,9 @@ public class HostelsService {
         }
         if (listSettlementDetails != null && !listSettlementDetails.isEmpty()) {
             settlementDetailsService.deleteAll(listSettlementDetails);
+        }
+        if (listSettlementItems != null && !listSettlementItems.isEmpty()) {
+            settlementItemsService.deleteAll(listSettlementItems);
         }
         if (listAmenityRequests != null && !listAmenityRequests.isEmpty()) {
             amenityRequestService.deleteAmenities(listAmenityRequests);

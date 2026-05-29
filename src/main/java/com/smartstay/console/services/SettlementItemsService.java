@@ -21,4 +21,12 @@ public class SettlementItemsService {
     public void deleteAll(List<SettlementItems> settlementItemsList) {
         settlementItemsRepository.deleteAll(settlementItemsList);
     }
+
+    public List<SettlementItems> findByCustomerId(String customerId) {
+        return settlementItemsRepository.findAllByCustomerId(customerId);
+    }
+
+    public List<SettlementItems> findByCustomerIds(Set<String> customerIdsSet) {
+        return settlementItemsRepository.findAllByCustomerIdIn(customerIdsSet);
+    }
 }

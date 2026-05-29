@@ -11,4 +11,8 @@ import java.util.Set;
 public interface SettlementItemsRepository extends JpaRepository<SettlementItems, Long> {
 
     List<SettlementItems> findAllByInvoiceIdIn(Set<String> invoiceIds);
+
+    List<SettlementItems> findAllByCustomerId(String customerId);
+
+    List<SettlementItems> findAllByCustomerIdIn(Set<String> customerIdsSet);
 }

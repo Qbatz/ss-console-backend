@@ -90,6 +90,8 @@ public class CustomersService {
     private SettlementDetailsService settlementDetailsService;
     @Autowired
     private CustomerNotificationsService customerNotificationsService;
+    @Autowired
+    private SettlementItemsService settlementItemsService;
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
@@ -238,6 +240,7 @@ public class CustomersService {
         List<PaymentSummary> listPaymentSummary = paymentSummaryService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<RentHistory> listRentHistory = rentHistoryService.findByCustomerId(customerId);
         List<SettlementDetails> listSettlementDetails = settlementDetailsService.findByCustomerId(customerId);
+        List<SettlementItems> listSettlementItems = settlementItemsService.findByCustomerId(customerId);
         List<ComplaintsV1> complaints = complaintService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CreditDebitNotes> listCreditDebits = creditDebitNotesService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomersAmenity> listCustomersAmenity = customersAmenityService.findByCustomerId(customerId);
@@ -320,6 +323,9 @@ public class CustomersService {
         }
         if (listSettlementDetails != null && !listSettlementDetails.isEmpty()) {
             settlementDetailsService.deleteAll(listSettlementDetails);
+        }
+        if (listSettlementItems != null && !listSettlementItems.isEmpty()) {
+            settlementItemsService.deleteAll(listSettlementItems);
         }
         if (listCustomerDocuments != null && !listCustomerDocuments.isEmpty()) {
             customerDocumentService.deleteDocuments(listCustomerDocuments);
