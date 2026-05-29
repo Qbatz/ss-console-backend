@@ -119,6 +119,13 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
             }
         }
 
+        boolean isOwnerDeleted = false;
+        if (demoRequest.getParentId() != null) {
+            if (owner == null){
+                isOwnerDeleted = true;
+            }
+        }
+
         OwnerInfo ownerInfo = null;
         if (owner != null) {
             ownerInfo = new UserOwnerInfoMapper().apply(owner);
@@ -132,7 +139,7 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
                 assignedTo, assignedBy, presentedBy, demoRequest.getComments(), requestedDate, requestedTime,
                 demoRequest.getPresentedAt() != null ? Utils.dateToString(demoRequest.getPresentedAt()) :  null,
                 demoRequest.getPresentedAt() != null ? Utils.dateToTime(demoRequest.getPresentedAt()) : null,
-                demoRequest.getSource(), demoRequest.getParentId(), ownerInfo,
+                demoRequest.getSource(), demoRequest.getParentId(), isOwnerDeleted, ownerInfo,
                 demoRequest.getDemoDateFrom() != null ? Utils.dateToString(demoRequest.getDemoDateFrom()) : null,
                 demoRequest.getDemoDateFrom() != null ? Utils.dateToTime(demoRequest.getDemoDateFrom()) : null,
                 demoRequest.getDemoDateTo() != null ? Utils.dateToTime(demoRequest.getDemoDateTo()) : null,
