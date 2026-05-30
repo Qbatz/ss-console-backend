@@ -3,6 +3,7 @@ package com.smartstay.console.responses.orderHistory;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 
 public record OrderHistoryResponse(Long historyId,
+                                   boolean isHostelDeleted,
                                    String hostelId,
                                    String hostelName,
                                    String hostelInitials,
