@@ -412,9 +412,10 @@ public class OrderHistoryService {
             return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        String ownerName = Utils.getFullName(owner.getFirstName(), owner.getLastName());
         String ownerMobile = owner.getMobileNo();
 
-        whatsappService.sendPaymentLink(ownerMobile, paymentLink);
+        whatsappService.sendPaymentLink(ownerName, ownerMobile, paymentLink);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

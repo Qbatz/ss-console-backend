@@ -9,9 +9,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class WhatsappService {
@@ -30,7 +28,7 @@ public class WhatsappService {
         restTemplate.setInterceptors(Collections.singletonList(new RestTemplateLoggingInterceptor()));
     }
 
-    public void sendPaymentLink(String mobileNo, String paymentLink) {
+    public void sendPaymentLink(String ownerName, String mobileNo, String paymentLink) {
 
         String url = "https://graph.facebook.com/v17.0/" + whatsappPhoneNumberId + "/messages";
 
@@ -58,13 +56,33 @@ public class WhatsappService {
 
         Map<String, Object> bodyComponent = new HashMap<>();
         bodyComponent.put("type", "body");
+        bodyComponent.put("parameters", List.of(
+                Map.of(
+                        "type", "text",
+                        "text", ownerName != null ? ownerName : "Client"
+                )
+        ));
 
-        Map<String, String> parameter = new HashMap<>();
-        parameter.put("type", "text");
-        parameter.put("text", paymentLink != null ? paymentLink : "Error in payment link");
+        String normalizedLink = paymentLink.endsWith("/")
+                ? paymentLink.substring(0, paymentLink.length() - 1)
+                : paymentLink;
 
-        bodyComponent.put("parameters", Collections.singletonList(parameter));
-        template.put("components", Collections.singletonList(bodyComponent));
+        String paymentId = normalizedLink.substring(
+                normalizedLink.lastIndexOf('/') + 1
+        );
+
+        Map<String, Object> buttonComponent = new HashMap<>();
+        buttonComponent.put("type", "button");
+        buttonComponent.put("sub_type", "url");
+        buttonComponent.put("index", "0");
+        buttonComponent.put("parameters", List.of(
+                Map.of(
+                        "type", "text",
+                        "text", paymentId
+                )
+        ));
+
+        template.put("components", List.of(bodyComponent, buttonComponent));
 
         body.put("template", template);
 
