@@ -33,16 +33,18 @@ public class HostelsController {
                                               @RequestParam(value = "size", defaultValue = "10") int size,
                                               @RequestParam(value = "hostelName", required = false) String hostelName,
                                               @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
-                                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate) {
-        return hostelsService.getAllHostelsNew(page, size, hostelName, startDate, endDate);
+                                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
+                                              @RequestParam(required = false) Boolean subActive) {
+        return hostelsService.getAllHostelsNew(page, size, hostelName, startDate, endDate, subActive);
     }
 
     @GetMapping("/export")
     public void exportHostels(@RequestParam(required = false) String hostelName,
                               @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
                               @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
+                              @RequestParam(required = false) Boolean subActive,
                               HttpServletResponse response) throws IOException {
-        hostelsService.exportHostels(hostelName, startDate, endDate, response);
+        hostelsService.exportHostels(hostelName, startDate, endDate, subActive, response);
     }
 
     @GetMapping("/{hostelId}")

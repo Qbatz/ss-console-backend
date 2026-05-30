@@ -1062,7 +1062,8 @@ public class HostelsService {
         }
     }
 
-    public ResponseEntity<?> getAllHostelsNew(int page, int size, String hostelName, Date startDate, Date endDate) {
+    public ResponseEntity<?> getAllHostelsNew(int page, int size, String hostelName,
+                                              Date startDate, Date endDate, Boolean subActive) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -1093,7 +1094,7 @@ public class HostelsService {
 
         Pageable pageableRequest = PageRequest.of(page-1, size);
         Page<HostelV1> pageableHostelV1 = hostelRepository
-                .findAllHostelsNew(hostelName, startDate, endDate, pageableRequest);
+                .findAllHostelsNew(hostelName, startDate, endDate, subActive, pageableRequest);
 
         List<HostelV1> listHostels = pageableHostelV1.stream().toList();
 
@@ -1173,12 +1174,14 @@ public class HostelsService {
                 pageableHostelV1.getPageable().getPageNumber()+1,
                 size,
                 pageableHostelV1.getTotalPages(),
+                pageableHostelV1.getTotalElements(),
                 hostelsList);
 
         return new ResponseEntity<>(hostels, HttpStatus.OK);
     }
 
-    public List<HostelList> getHostelsDataForExport(String hostelName, Date startDate, Date endDate){
+    public List<HostelList> getHostelsDataForExport(String hostelName, Date startDate,
+                                                    Date endDate, Boolean subActive){
 
         if (hostelName == null || hostelName.isBlank()){
             hostelName = null;
@@ -1189,7 +1192,7 @@ public class HostelsService {
         }
 
         List<HostelV1> listHostels = hostelRepository
-                .findAllHostelsByNameAndJoiningDate(hostelName, startDate, endDate);
+                .findAllHostelsByNameAndJoiningDate(hostelName, startDate, endDate, subActive);
 
         Set<String> hostelIds = new HashSet<>();
         Set<String> parentIds = new HashSet<>();
@@ -1267,7 +1270,8 @@ public class HostelsService {
                 .toList();
     }
 
-    public void exportHostels(String hostelName, Date startDate, Date endDate, HttpServletResponse response) throws IOException {
+    public void exportHostels(String hostelName, Date startDate, Date endDate,
+                              Boolean subActive, HttpServletResponse response) throws IOException {
 
         if (!authentication.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Utils.UN_AUTHORIZED);
@@ -1282,7 +1286,8 @@ public class HostelsService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, Utils.ACCESS_RESTRICTED);
         }
 
-        List<HostelList> hostels = getHostelsDataForExport(hostelName, startDate, endDate);
+        List<HostelList> hostels = getHostelsDataForExport(hostelName,
+                startDate, endDate, subActive);
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Hostels");
