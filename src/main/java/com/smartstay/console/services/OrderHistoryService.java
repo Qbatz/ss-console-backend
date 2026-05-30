@@ -8,6 +8,7 @@ import com.smartstay.console.dto.orderHistory.PaymentLinkGenerateDto;
 import com.smartstay.console.dto.orderHistory.PaymentLinkGenerateResDto;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.orderHistory.PaymentLinkGeneratePayload;
+import com.smartstay.console.payloads.orderHistory.PaymentLinkSharePayload;
 import com.smartstay.console.repositories.OrderHistoryRepository;
 import com.smartstay.console.responses.orderHistory.GeneratePaymentLinkRes;
 import com.smartstay.console.responses.orderHistory.OrderHistoryResponse;
@@ -47,6 +48,8 @@ public class OrderHistoryService {
     private PlansService plansService;
     @Autowired
     private UsersService usersService;
+    @Autowired
+    private WhatsappService whatsappService;
 
     @Value("${PAYMENT_URL}")
     private String paymentUrl;
@@ -368,5 +371,51 @@ public class OrderHistoryService {
         } catch (Exception e) {
             return new ResponseEntity<>(Utils.UNABLE_TO_GENERATE_PAYMENT_LINK, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public ResponseEntity<?> sharePaymentLinkToWhatsapp(String hostelId, PaymentLinkSharePayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Payments.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelService.getHostelByHostelId(hostelId);
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        String paymentLink = payload.paymentLink();
+
+        OrderHistory orderHistory = orderHistoryRepository
+                .findByPaymentUrlAndOrderStatusAndIsActiveTrue(paymentLink, OrderStatus.CREATED.name());
+        if (orderHistory == null){
+            return new ResponseEntity<>(Utils.ORDER_HISTORY_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!orderHistory.getHostelId().equals(hostelId)){
+            return new ResponseEntity<>(Utils.PAYMENT_URL_AND_HOSTEL_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
+
+        String parentId = hostel.getParentId();
+
+        Users owner = usersService.getOwner(parentId);
+        if (owner == null){
+            return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        String ownerMobile = owner.getMobileNo();
+
+        whatsappService.sendPaymentLink(ownerMobile, paymentLink);
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

@@ -107,6 +107,7 @@ public class Utils {
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
     public static final String PLAN_FEATURE_MISMATCH = "Plan of plan feature does not match plan";
     public static final String PAID_BY_HOSTEL_MISMATCH = "Paid by does not match with hostel users";
+    public static final String PAYMENT_URL_AND_HOSTEL_MISMATCH = "Payment link and hostel id does not match";
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";

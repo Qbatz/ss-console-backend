@@ -1,6 +1,7 @@
 package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.orderHistory.PaymentLinkGeneratePayload;
+import com.smartstay.console.payloads.orderHistory.PaymentLinkSharePayload;
 import com.smartstay.console.services.OrderHistoryService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -41,5 +42,11 @@ public class OrderHistoryController {
     public ResponseEntity<?> generatePaymentLink(@PathVariable(value = "hostelId") String hostelId,
                                                  @RequestBody @Valid PaymentLinkGeneratePayload payload) {
         return orderHistoryService.generatePaymentLink(hostelId, payload);
+    }
+
+    @PostMapping("/share/{hostelId}")
+    public ResponseEntity<?> sharePaymentLinkToWhatsapp(@PathVariable(value = "hostelId") String hostelId,
+                                                        @RequestBody @Valid PaymentLinkSharePayload payload) {
+        return orderHistoryService.sharePaymentLinkToWhatsapp(hostelId, payload);
     }
 }
