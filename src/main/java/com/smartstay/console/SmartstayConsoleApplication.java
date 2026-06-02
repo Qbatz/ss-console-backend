@@ -17,6 +17,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -201,8 +203,12 @@ public class SmartstayConsoleApplication {
 //                    if (ownerMobile != null) {
 //                        List<Users> owners = usersService.getOwnersByMobileNo(ownerMobile);
 //                        if (owners != null && !owners.isEmpty()) {
-//                            demoRequest.setParentId(owners.getFirst().getParentId());
-//                            hasUpdates = true;
+//                            String parentId = owners.getFirst().getParentId();
+//
+//                            if (!Objects.equals(demoRequest.getParentId(), parentId)) {
+//                                demoRequest.setParentId(parentId);
+//                                hasUpdates = true;
+//                            }
 //                        }
 //                    }
 //                }
@@ -214,7 +220,23 @@ public class SmartstayConsoleApplication {
 //
 //                    if (demoRequest.getBookedFor() != null) {
 //
-//                        createdAt = demoRequest.getBookedFor();
+//                        Calendar cal = Calendar.getInstance();
+//                        cal.setTime(demoRequest.getBookedFor());
+//
+//                        if (demoRequest.getRequestedTime() != null &&
+//                                !demoRequest.getRequestedTime().isBlank()) {
+//                            LocalTime time = LocalTime.parse(
+//                                    demoRequest.getRequestedTime(),
+//                                    DateTimeFormatter.ofPattern("HH:mm")
+//                            );
+//
+//                            cal.set(Calendar.HOUR_OF_DAY, time.getHour());
+//                            cal.set(Calendar.MINUTE, time.getMinute());
+//                            cal.set(Calendar.SECOND, 0);
+//                            cal.set(Calendar.MILLISECOND, 0);
+//                        }
+//
+//                        createdAt = cal.getTime();
 //
 //                    } else if (demoRequest.getRequestedDate() != null) {
 //
