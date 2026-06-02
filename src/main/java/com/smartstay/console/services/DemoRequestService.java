@@ -120,13 +120,20 @@ public class DemoRequestService {
 
         Date currentMonthStartDate = Utils.getStartDateOfMonth(today);
         Date currentMonthEndDate = Utils.getEndDateOfMonth(today);
-        Date currentMonthEndDatePlus1 = Utils.addDaysToDate(currentMonthEndDate, 1);
+
+        if (startDate == null) {
+            startDate = currentMonthStartDate;
+        }
+        if (endDate == null) {
+            endDate = currentMonthEndDate;
+        }
+        endDate = Utils.addDaysToDate(endDate, 1);
 
         DemoRequestStatsProjection stats = demoRequestRepository.getDashboardStats(
                 now,
                 nowEnds,
-                currentMonthStartDate,
-                currentMonthEndDatePlus1
+                startDate,
+                endDate
         );
 
         long totalLeads = stats.getTotalLeads();
@@ -139,14 +146,6 @@ public class DemoRequestService {
         long trialStartedCount = stats.getTrialStartedCount();
         long convertedCount = stats.getConvertedCount();
         long droppedCount = stats.getDroppedCount();
-
-        if (startDate == null) {
-            startDate = currentMonthStartDate;
-        }
-        if (endDate == null) {
-            endDate = currentMonthEndDate;
-        }
-        endDate = Utils.addDaysToDate(endDate, 1);
 
         page = Math.max(page - 1, 0);
         size = Math.max(size, 1);
