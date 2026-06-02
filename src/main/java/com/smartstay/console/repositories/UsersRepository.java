@@ -69,6 +69,11 @@ public interface UsersRepository extends JpaRepository<Users, String> {
                      :name IS NULL OR :name = '' OR
                      LOWER(u.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
                      OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
+                     OR LOWER(CONCAT(
+                         COALESCE(u.firstName, ''),
+                         ' ',
+                         COALESCE(u.lastName, '')
+                     )) LIKE LOWER(CONCAT('%', TRIM(:name), '%'))
                 )
                 AND u.isActive = true
                 AND u.isDeleted = false
