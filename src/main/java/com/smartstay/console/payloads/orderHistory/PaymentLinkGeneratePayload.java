@@ -8,5 +8,7 @@ public record PaymentLinkGeneratePayload(@NotBlank(message = "Plan code is requi
                                          String planCode,
                                          @NotNull(message = "Discount amount is required")
                                          @Positive(message = "Discount amount must be greater than 0")
-                                         Double discountAmount) {
+                                         Double discountAmount,
+                                         @NotBlank(message = "Paid by is required")
+                                         String paidBy) {
 }

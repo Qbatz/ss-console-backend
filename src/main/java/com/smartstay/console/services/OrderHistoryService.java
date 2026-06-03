@@ -293,6 +293,15 @@ public class OrderHistoryService {
             return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        String paidBy = payload.paidBy();
+        Users users = usersService.getUserById(paidBy);
+        if (users == null){
+            return new ResponseEntity<>(Utils.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (!hostel.getParentId().equals(users.getParentId())){
+            return new ResponseEntity<>(Utils.PAID_BY_HOSTEL_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
+
         String planCode = payload.planCode();
         Plans plan = plansService.findPlanByPlanCode(planCode);
         if (plan == null){
@@ -359,6 +368,7 @@ public class OrderHistoryService {
             newOrder.setTotalAmount(payableAmount);
             newOrder.setOrderStatus(OrderStatus.CREATED.name());
             newOrder.setUserType(UserType.AGENT.name());
+            newOrder.setPaidBy(paidBy);
             newOrder.setActive(true);
             newOrder.setCreatedAt(new Date());
             newOrder.setCreatedBy(agent.getAgentId());
