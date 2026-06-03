@@ -2,6 +2,7 @@ package com.smartstay.console.dao;
 
 import com.smartstay.console.converters.DeductionsConverter;
 import com.smartstay.console.converters.StringListConverter;
+import com.smartstay.console.dto.customers.Deductions;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

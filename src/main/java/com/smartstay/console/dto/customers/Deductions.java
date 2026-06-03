@@ -1,4 +1,4 @@
-package com.smartstay.console.dao;
+package com.smartstay.console.dto.customers;
 
 import lombok.*;
 
