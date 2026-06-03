@@ -121,13 +121,18 @@ public class RecurringTrackerResMapper implements Function<HostelV1, RecurringTr
                     billingRules.getBillingStartDate(), latestRecurringTracker, cycleStartDate);
         }
 
+        boolean canGenerateRecurring = true;
+        if (noOfActiveTenants == 0){
+            canGenerateRecurring = false;
+        }
+
         return new RecurringTrackerRes(hostel.getHostelId(), hostelType, hostelName, Utils.getInitials(hostelName),
                 hostel.getMobile(), hostel.getEmailId(), hostel.getHouseNo(), hostel.getStreet(), hostel.getLandmark(),
                 hostel.getCity(), hostel.getState(), hostel.getCountry(), hostel.getPincode(), fullAddress, hostel.getMainImage(),
                 ownerInfo, noOfActiveTenants, invoiceAboutToBeGenerated, billingRules.getTypeOfBilling(), billingRules.getBillingModel(),
                 startDay, endDay, Utils.dateToString(cycleStartDate), Utils.dateToString(cycleEndDate),
                 Utils.dateToString(lastRecurringDate), Utils.dateToString(nextRecurringDate), isSubscriptionActive,
-                recurringStatus, page, size, paginatedRecurringTrackers.getTotalElements(), paginatedRecurringTrackers.getTotalPages(),
-                recurringHistory);
+                recurringStatus, canGenerateRecurring, page, size, paginatedRecurringTrackers.getTotalElements(),
+                paginatedRecurringTrackers.getTotalPages(), recurringHistory);
     }
 }

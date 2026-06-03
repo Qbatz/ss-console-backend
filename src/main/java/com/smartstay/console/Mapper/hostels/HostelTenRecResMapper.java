@@ -66,11 +66,16 @@ public class HostelTenRecResMapper implements Function<HostelV1, HostelTenRecRes
 
         int invoiceAboutToBeGenerated = tenantList.size();
 
+        boolean canGenerateRecurring = true;
+        if (noOfActiveTenants == 0){
+            canGenerateRecurring = false;
+        }
+
         return new HostelTenRecResponse(hostel.getHostelId(), hostelType, hostelName, Utils.getInitials(hostelName),
                 hostel.getMobile(), hostel.getEmailId(), hostel.getHouseNo(), hostel.getStreet(), hostel.getLandmark(),
                 hostel.getCity(), hostel.getState(), hostel.getCountry(), hostel.getPincode(), fullAddress, hostel.getMainImage(),
                 ownerInfo, noOfActiveTenants, invoiceAboutToBeGenerated, billingType, billingModel, isSubscriptionActive,
-                tenantList
+                canGenerateRecurring, tenantList
         );
     }
 }
