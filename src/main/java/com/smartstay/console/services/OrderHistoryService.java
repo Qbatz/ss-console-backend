@@ -105,6 +105,7 @@ public class OrderHistoryService {
 
         double totalRevenue = orderHistoryRepository
                 .findTotalRevenueBetween(startDate, endDate, orderStatuses);
+        totalRevenue = Utils.roundOfDoubleTo2Digits(totalRevenue);
 
         if (name != null && !name.trim().isEmpty()
                 && filteredHostelIds.isEmpty() && filteredUserIds.isEmpty()) {
