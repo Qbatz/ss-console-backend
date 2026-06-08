@@ -23,6 +23,18 @@ public interface HostelPlanRepository extends JpaRepository<HostelPlan, Long> {
             """, nativeQuery = true)
     long findActiveHostels(@Param("todaysDate") Date todaysDate);
 
+    @Query(value = """
+            SELECT count(hp.hostel_plan_id) as count
+            FROM hostel_plan hp
+            INNER JOIN hostelv1 h ON h.hostel_id = hp.hostel_id
+            WHERE DATE(hp.current_plan_ends_at) >= DATE(:todayDate)
+                AND h.is_active = true
+                AND h.is_deleted = false
+                AND h.parent_id in :parentIds
+            """, nativeQuery = true)
+    long findActiveHostelsByParentIds(@Param("todayDate") Date todayDate,
+                                      @Param("parentIds") Set<String> parentIds);
+
     List<HostelPlan> findByHostel_HostelIdIn(List<String> hostelIds);
 
     List<HostelPlan> findByHostel_HostelIdIn(Set<String> hostelIds);

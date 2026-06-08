@@ -98,6 +98,10 @@ public class HostelService {
         return hostelRepository.findActiveHostelIds();
     }
 
+    public Set<String> getActiveParentIds(){
+        return hostelRepository.findActiveParentIds();
+    }
+
     public HostelV1 getHostelByHostelId(String hostelId) {
         return hostelRepository.findHostelByHostelId(hostelId);
     }

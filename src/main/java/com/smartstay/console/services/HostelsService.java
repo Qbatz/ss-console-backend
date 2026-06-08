@@ -52,6 +52,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.io.IOException;
 import java.time.YearMonth;
 import java.util.*;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -1171,6 +1172,7 @@ public class HostelsService {
         Hostels hostels = new Hostels(totalHostels,
                 activeHostels,
                 inactiveHostels,
+                0,0,0,0,0,0,0,
                 pageableHostelV1.getPageable().getPageNumber()+1,
                 size,
                 pageableHostelV1.getTotalPages(),
@@ -1178,6 +1180,262 @@ public class HostelsService {
                 hostelsList);
 
         return new ResponseEntity<>(hostels, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAllHostels(int page, int size, String name,
+                                           Date startDate, Date endDate,
+                                           String agentId, String filterOption) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (endDate != null) {
+            endDate = Utils.addDaysToDate(endDate, 1);
+        }
+
+        name = (name == null || name.isBlank()) ? null : name.trim();
+        agentId = (agentId == null || agentId.isBlank()) ? null : agentId.trim();
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Date today = new Date();
+        Date todayStart = Utils.getStartOfDay(today);
+
+        Set<String> targetParentIds = hostelService
+                .getActiveParentIds();
+
+        Set<String> relationalAgentsParentIds = new HashSet<>();
+        if (agentId != null){
+            List<HostelRelationalAgent> hostelRelationalAgents = hostelRelationalAgentService
+                    .getByAgentId(agentId);
+
+            relationalAgentsParentIds = hostelRelationalAgents.stream()
+                    .map(HostelRelationalAgent::getParentId)
+                    .collect(Collectors.toSet());
+        }
+
+        if (!relationalAgentsParentIds.isEmpty()){
+            targetParentIds.retainAll(relationalAgentsParentIds);
+        }
+
+        List<LoginHistory> latestLogins = loginHistoryService
+                .getLoginHistoriesByParentIds(new ArrayList<>(targetParentIds));
+
+        Set<String> usedToday = new HashSet<>();
+        Set<String> used2To7Days = new HashSet<>();
+        Set<String> used8To14Days = new HashSet<>();
+        Set<String> used15To30Days = new HashSet<>();
+        Set<String> used30DaysAgo = new HashSet<>();
+
+        Set<String> usedEverParentIds = new HashSet<>();
+
+        List<HostelV1> allHostels = hostelService
+                .getHostelsByParentIds(targetParentIds);
+
+        Map<String, Date> parentCreatedDateMap =
+                allHostels.stream()
+                        .collect(Collectors.toMap(
+                                HostelV1::getParentId, HostelV1::getCreatedAt,
+                                BinaryOperator.minBy(Date::compareTo)));
+
+        for (LoginHistory login : latestLogins) {
+            Date loginAtStart = Utils.getStartOfDay(login.getLoginAt());
+            Date parentCreatedDate = Utils.getStartOfDay(
+                    parentCreatedDateMap.get(login.getParentId()));
+
+            if (parentCreatedDate.equals(loginAtStart)) {
+                continue;
+            }
+
+            usedEverParentIds.add(login.getParentId());
+
+            long days = Utils.daysBetween(loginAtStart, todayStart);
+
+            if (days == 0) {
+                usedToday.add(login.getParentId());
+            } else if (days <= 7) {
+                used2To7Days.add(login.getParentId());
+            } else if (days <= 14) {
+                used8To14Days.add(login.getParentId());
+            } else if (days <= 30) {
+                used15To30Days.add(login.getParentId());
+            } else {
+                used30DaysAgo.add(login.getParentId());
+            }
+        }
+
+        Set<String> neverUsedParentIds = new HashSet<>(targetParentIds);
+        neverUsedParentIds.removeAll(usedEverParentIds);
+
+        usedToday.retainAll(targetParentIds);
+        used2To7Days.retainAll(targetParentIds);
+        used8To14Days.retainAll(targetParentIds);
+        used15To30Days.retainAll(targetParentIds);
+        used30DaysAgo.retainAll(targetParentIds);
+
+        Date trialStartDate = null;
+        Date trialEndDate = null;
+
+        Date trialCountEndDate = Utils.addDaysToDate(todayStart, 7);
+
+        long totalPropertiesCount = hostelRepository.findHostelCountByParentIds(targetParentIds);
+        long activePropertiesCount = hostelPlansService.findActiveHostelsByParentIds(targetParentIds);
+        long inactivePropertiesCount = totalPropertiesCount - activePropertiesCount;
+        long usedTodayCount = hostelRepository.findHostelCountByParentIds(usedToday);
+        long used2To7DaysCount = hostelRepository.findHostelCountByParentIds(used2To7Days);
+        long used8To14DaysCount = hostelRepository.findHostelCountByParentIds(used8To14Days);
+        long used15To30DaysCount = hostelRepository.findHostelCountByParentIds(used15To30Days);
+        long used30DaysAgoCount = hostelRepository.findHostelCountByParentIds(used30DaysAgo);
+        long neverUsedCount = hostelRepository.findHostelCountByParentIds(neverUsedParentIds);
+        long trialExpiringCount = hostelRepository
+                .findTrialExpiringCount(todayStart, trialCountEndDate, targetParentIds);
+
+        HostelFilterOptions hostelFilterOption = HostelFilterOptions.get(filterOption);
+
+        Boolean subActive = null;
+        Set<String> activeParentIds = new HashSet<>();
+
+        switch (hostelFilterOption) {
+            case TOTAL_PROPERTIES -> {}
+            case ACTIVE_PROPERTIES -> subActive = true;
+            case INACTIVE_PROPERTIES -> subActive = false;
+            case USED_TODAY -> activeParentIds = usedToday;
+            case USED_2TO7_DAYS -> activeParentIds = used2To7Days;
+            case USED_8TO14_DAYS -> activeParentIds = used8To14Days;
+            case USED_15TO30_DAYS -> activeParentIds = used15To30Days;
+            case USED_30_DAYS_AGO -> activeParentIds = used30DaysAgo;
+            case NEVER_USED -> activeParentIds = neverUsedParentIds;
+            case TRIAL_EXPIRING_SOON -> {
+                trialStartDate = todayStart;
+                trialEndDate = Utils.addDaysToDate(todayStart, 7);
+            }
+            case null, default -> {}
+        }
+
+        boolean usageFilter = hostelFilterOption == HostelFilterOptions.USED_TODAY
+                        || hostelFilterOption == HostelFilterOptions.USED_2TO7_DAYS
+                        || hostelFilterOption == HostelFilterOptions.USED_8TO14_DAYS
+                        || hostelFilterOption == HostelFilterOptions.USED_15TO30_DAYS
+                        || hostelFilterOption == HostelFilterOptions.USED_30_DAYS_AGO
+                        || hostelFilterOption == HostelFilterOptions.NEVER_USED;
+
+        if (usageFilter) {
+            targetParentIds.retainAll(activeParentIds);
+        }
+
+        List<HostelV1> targetHostels = allHostels.stream()
+                .filter(h -> targetParentIds.contains(h.getParentId()))
+                .toList();
+
+        Set<String> targetHostelIds = targetHostels.stream()
+                .map(HostelV1::getHostelId)
+                .collect(Collectors.toSet());
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<HostelV1> pagedHostels = hostelRepository
+                .findAllHostels(name, startDate, endDate, subActive, targetHostelIds,
+                        trialStartDate, trialEndDate, pageable);
+
+        List<HostelV1> hostels = pagedHostels.getContent();
+
+        List<String> hostelIds = new ArrayList<>();
+        List<String> parentIds = new ArrayList<>();
+
+        for (HostelV1 hostel : hostels) {
+            hostelIds.add(hostel.getHostelId());
+            parentIds.add(hostel.getParentId());
+        }
+
+        List<Users> createdUsers = usersService.getOwners(parentIds);
+        List<OwnerInfo> ownerInfos = createdUsers
+                .stream()
+                .map(i -> new UserOwnerInfoMapper().apply(i))
+                .toList();
+        List<UserActivities> listActivities = userActivitiesService
+                .findLatestActivities(hostelIds);
+        List<LoginHistory> loginHistories = loginHistoryService
+                .getLoginHistoriesByParentIds(parentIds);
+
+        Map<String, OwnerInfo> ownerMap = ownerInfos.stream()
+                .collect(Collectors.toMap(OwnerInfo::parentId, Function.identity(),
+                        (a, b) -> a));
+        Map<String, UserActivities> activityMap = listActivities.stream()
+                .collect(Collectors.toMap(UserActivities::getHostelId, Function.identity(),
+                        (a, b) -> a));
+        Map<String, LoginHistory> loginMap = loginHistories.stream()
+                .collect(Collectors.toMap(LoginHistory::getParentId, Function.identity(),
+                        (a, b) -> a));
+
+        List<Plans> trialPlans = plansService.findTrialPlans();
+        List<Plans> expandableTrialPlans = plansService.findExpandableTrialPlans();
+
+        List<Subscription> subscriptions = subscriptionService
+                .getSubscriptionsByHostelIds(new HashSet<>(hostelIds));
+        Map<String, List<Subscription>> subscriptionHostelMap = subscriptions.stream()
+                .collect(Collectors.groupingBy(Subscription::getHostelId));
+
+        List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
+                .getByParentIds(new HashSet<>(parentIds));
+        Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
+                .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
+
+        Set<String> agentIds = new HashSet<>();
+        for (HostelRelationalAgent relationalAgent : relationalAgents) {
+            if (relationalAgent.getAgentId() != null){
+                agentIds.add(relationalAgent.getAgentId());
+            }
+            if (relationalAgent.getCreatedBy() != null){
+                agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        a -> a, (a, b) -> a));
+
+        List<HostelList> hostelsList = hostels.stream()
+                .map(i -> new HostelsListMapper(
+                        ownerMap.getOrDefault(i.getParentId(), null),
+                        activityMap.getOrDefault(i.getHostelId(), null),
+                        loginMap.getOrDefault(i.getParentId(), null),
+                        trialPlans,
+                        expandableTrialPlans,
+                        subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
+                        relationalAgentMap.getOrDefault(i.getParentId(), null),
+                        agentMap
+                ).apply(i))
+                .toList();
+
+        Hostels hostelsResponse = new Hostels(totalPropertiesCount,
+                activePropertiesCount,
+                inactivePropertiesCount,
+                usedTodayCount,
+                used2To7DaysCount,
+                used8To14DaysCount,
+                used15To30DaysCount,
+                used30DaysAgoCount,
+                neverUsedCount,
+                trialExpiringCount,
+                page + 1,
+                size,
+                pagedHostels.getTotalPages(),
+                pagedHostels.getTotalElements(),
+                hostelsList);
+
+        return new ResponseEntity<>(hostelsResponse, HttpStatus.OK);
     }
 
     public List<HostelList> getHostelsDataForExport(String hostelName, Date startDate,
