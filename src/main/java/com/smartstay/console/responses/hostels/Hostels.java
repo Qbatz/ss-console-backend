@@ -16,5 +16,6 @@ public record Hostels(long totalHostels,
                       int sizePerPage,
                       int totalPages,
                       long totalItems,
+                      List<HostelFilterOptionsRes> hostelFilterOptions,
                       List<HostelList> hostels) {
 }

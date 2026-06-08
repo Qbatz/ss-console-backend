@@ -1169,14 +1169,18 @@ public class HostelsService {
                 ).apply(i))
                 .toList();
 
+        List<HostelFilterOptionsRes> hostelFilterOptionsRes = Collections.emptyList();
+
         Hostels hostels = new Hostels(totalHostels,
                 activeHostels,
                 inactiveHostels,
-                0,0,0,0,0,0,0,
+                0,0,0,0,
+                0,0,0,
                 pageableHostelV1.getPageable().getPageNumber()+1,
                 size,
                 pageableHostelV1.getTotalPages(),
                 pageableHostelV1.getTotalElements(),
+                hostelFilterOptionsRes,
                 hostelsList);
 
         return new ResponseEntity<>(hostels, HttpStatus.OK);
@@ -1419,6 +1423,26 @@ public class HostelsService {
                 ).apply(i))
                 .toList();
 
+        List<HostelFilterOptionsRes> hostelFilterOptionsRes = Arrays.stream(HostelFilterOptions.values())
+                .filter(Objects::nonNull)
+                .map(f -> {
+                    long count;
+                    switch (f) {
+                        case TOTAL_PROPERTIES -> count = totalPropertiesCount;
+                        case ACTIVE_PROPERTIES -> count = activePropertiesCount;
+                        case INACTIVE_PROPERTIES -> count = inactivePropertiesCount;
+                        case USED_TODAY -> count = usedTodayCount;
+                        case USED_2TO7_DAYS -> count = used2To7DaysCount;
+                        case USED_8TO14_DAYS -> count = used8To14DaysCount;
+                        case USED_15TO30_DAYS -> count = used15To30DaysCount;
+                        case USED_30_DAYS_AGO -> count = used30DaysAgoCount;
+                        case NEVER_USED -> count = neverUsedCount;
+                        case TRIAL_EXPIRING_SOON -> count = trialExpiringCount;
+                        default -> count = 0;
+                    }
+                    return new HostelFilterOptionsRes(f.name(), f.getLabel(), count);
+                }).toList();
+
         Hostels hostelsResponse = new Hostels(totalPropertiesCount,
                 activePropertiesCount,
                 inactivePropertiesCount,
@@ -1433,6 +1457,7 @@ public class HostelsService {
                 size,
                 pagedHostels.getTotalPages(),
                 pagedHostels.getTotalElements(),
+                hostelFilterOptionsRes,
                 hostelsList);
 
         return new ResponseEntity<>(hostelsResponse, HttpStatus.OK);
