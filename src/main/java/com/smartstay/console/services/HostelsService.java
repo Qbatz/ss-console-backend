@@ -1228,8 +1228,12 @@ public class HostelsService {
                     .collect(Collectors.toSet());
         }
 
-        if (!relationalAgentsParentIds.isEmpty()){
-            targetParentIds.retainAll(relationalAgentsParentIds);
+        if (agentId != null) {
+            if (relationalAgentsParentIds.isEmpty()) {
+                targetParentIds.clear();
+            } else {
+                targetParentIds.retainAll(relationalAgentsParentIds);
+            }
         }
 
         List<LoginHistory> latestLogins = loginHistoryService
