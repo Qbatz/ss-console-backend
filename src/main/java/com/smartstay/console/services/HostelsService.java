@@ -1216,8 +1216,7 @@ public class HostelsService {
         Date today = new Date();
         Date todayStart = Utils.getStartOfDay(today);
 
-        Set<String> targetParentIds = hostelService
-                .getActiveParentIds();
+        Set<String> targetParentIds = hostelService.getActiveParentIds();
 
         Set<String> relationalAgentsParentIds = new HashSet<>();
         if (agentId != null){
@@ -1244,13 +1243,13 @@ public class HostelsService {
 
         Set<String> usedEverParentIds = new HashSet<>();
 
-        List<HostelV1> allHostels = hostelService
-                .getHostelsByParentIds(targetParentIds);
+        List<HostelLiteProjection> allHostels = hostelService
+                .getHostelsLiteProjectionByParentIds(targetParentIds);
 
-        Map<String, Date> parentCreatedDateMap =
-                allHostels.stream()
+        Map<String, Date> parentCreatedDateMap = allHostels.stream()
                         .collect(Collectors.toMap(
-                                HostelV1::getParentId, HostelV1::getCreatedAt,
+                                HostelLiteProjection::getParentId,
+                                HostelLiteProjection::getCreatedAt,
                                 BinaryOperator.minBy(Date::compareTo)));
 
         for (LoginHistory login : latestLogins) {
@@ -1338,13 +1337,10 @@ public class HostelsService {
             targetParentIds.retainAll(activeParentIds);
         }
 
-        List<HostelV1> targetHostels = allHostels.stream()
-                .filter(h -> targetParentIds.contains(h.getParentId()))
-                .toList();
-
-        Set<String> targetHostelIds = targetHostels.stream()
-                .map(HostelV1::getHostelId)
-                .collect(Collectors.toSet());
+        Set<String> targetHostelIds = allHostels.stream()
+                        .filter(h -> targetParentIds.contains(h.getParentId()))
+                        .map(HostelLiteProjection::getHostelId)
+                        .collect(Collectors.toSet());
 
         Pageable pageable = PageRequest.of(page, size);
 

@@ -1,6 +1,7 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.HostelV1;
+import com.smartstay.console.dto.hostel.HostelLiteProjection;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -261,4 +262,16 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
     long findTrialExpiringCount(@Param("trialStartDate") Date trialStartDate,
                                 @Param("trialEndDate") Date trialEndDate,
                                 @Param("parentIds") Set<String> parentIds);
+
+    @Query("""
+            SELECT h.hostelId as hostelId,
+                   h.parentId as parentId,
+                   h.createdAt as createdAt
+            FROM hostelv1 h
+            INNER JOIN h.hostelPlan hp
+            WHERE h.parentId IN :parentIds
+              AND h.isActive = true
+              AND h.isDeleted = false
+            """)
+    List<HostelLiteProjection> findLiteByParentIds(@Param("parentIds") Set<String> parentIds);
 }
