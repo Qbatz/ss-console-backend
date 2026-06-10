@@ -15,6 +15,9 @@ import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
+import com.smartstay.console.dto.supportTicket.SupportTicketActivitySnapshot;
+import com.smartstay.console.dto.supportTicket.SupportTicketNotesSnapshot;
+import com.smartstay.console.dto.supportTicket.SupportTicketSnapshot;
 import com.smartstay.console.dto.tableColumns.ColumnFiltersSnapshot;
 import com.smartstay.console.dto.tableColumns.TableColumnsSnapshot;
 import com.smartstay.console.dto.users.AddressSnapshot;
@@ -605,6 +608,62 @@ public class SnapshotUtility {
                 copyDate(r.getCreatedAt()),
                 copyDate(r.getUpdatedAt()),
                 toSnapshotList(r.getPermissions(), SnapshotUtility::toSnapshot)
+        );
+    }
+
+    public static SupportTicketSnapshot toSnapshot(SupportTicket t) {
+
+        if (t == null) return null;
+
+        return new SupportTicketSnapshot(
+                t.getTicketId(),
+                t.getTicketNumber(),
+                t.getParentId(),
+                t.getHostelId(),
+                t.getRaisedBy(),
+                t.getQueryType(),
+                t.getSubject(),
+                t.getPriority(),
+                copyDate(t.getIssueDate()),
+                t.getAssignedTo(),
+                t.getAssignedBy(),
+                t.getRemarks(),
+                t.getPaymentProof(),
+                t.getSource(),
+                t.getTicketStatus(),
+                t.getCreatedByUserType(),
+                t.getCreatedBy(),
+                copyDate(t.getCreatedAt())
+        );
+    }
+
+    public static SupportTicketActivitySnapshot toSnapshot(SupportTicketActivity a) {
+
+        if (a == null) return null;
+
+        return new SupportTicketActivitySnapshot(
+                a.getActivityId(),
+                a.getComment(),
+                a.getDescription(),
+                a.getStatus(),
+                a.getCreatedByUserType(),
+                a.getCreatedBy(),
+                copyDate(a.getCreatedAt()),
+                a.getTicketId()
+        );
+    }
+
+    public static SupportTicketNotesSnapshot toSnapshot(SupportTicketNotes n) {
+
+        if (n == null) return null;
+
+        return new SupportTicketNotesSnapshot(
+                n.getId(),
+                n.getComment(),
+                n.getCreatedByUserType(),
+                n.getCreatedBy(),
+                copyDate(n.getCreatedAt()),
+                n.getTicketId()
         );
     }
 

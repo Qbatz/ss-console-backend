@@ -91,6 +91,7 @@ public class AgentActivityUtil {
             case BILLING_RULES -> "Created a new billing rules";
             case DEMO_REQUEST_COMMENTS -> "Created a new demo request comment";
             case HOSTEL_RELATIONAL_AGENT -> "Assigned hostel relational agent";
+            case SUPPORT_TICKET -> "Created a support ticket";
             default -> "Created successfully";
         };
     }

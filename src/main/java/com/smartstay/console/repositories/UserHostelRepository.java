@@ -12,4 +12,6 @@ public interface UserHostelRepository extends JpaRepository<UserHostel, Integer>
     List<UserHostel> findAllByHostelId(String hostelId);
 
     List<UserHostel> findAllByParentId(String parentId);
+
+    boolean existsByHostelIdAndUserId(String hostelId, String userId);
 }

@@ -11,7 +11,7 @@ import java.util.List;
 public class UserHostelService {
 
     @Autowired
-    UserHostelRepository userHostelRepository;
+    private UserHostelRepository userHostelRepository;
 
     public List<UserHostel> getUsersByHostelId(String hostelId) {
         return userHostelRepository.findAllByHostelId(hostelId);
@@ -23,5 +23,9 @@ public class UserHostelService {
 
     public void deleteAll(List<UserHostel> userHostels) {
         userHostelRepository.deleteAll(userHostels);
+    }
+
+    public boolean existsByHostelIdAndUserId(String hostelId, String userId) {
+        return userHostelRepository.existsByHostelIdAndUserId(hostelId, userId);
     }
 }

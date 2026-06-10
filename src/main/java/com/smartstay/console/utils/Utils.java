@@ -81,6 +81,7 @@ public class Utils {
     public static final String DROP_REASON_NOT_FOUND = "Drop reason not found";
     public static final String BOOKING_NOT_FOUND = "Booking not found";
     public static final String BED_NOT_FOUND = "Bed not found";
+    public static final String QUERY_TYPE_NOT_FOUND = "Query type not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -106,6 +107,8 @@ public class Utils {
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
     public static final String PLAN_FEATURE_MISMATCH = "Plan of plan feature does not match plan";
     public static final String PAID_BY_HOSTEL_MISMATCH = "Paid by does not match with hostel users";
+    public static final String HOSTEL_PARENT_ID_MISMATCH = "Hostel's parentId doesn't match with parentId";
+    public static final String USER_HOSTEL_MISMATCH = "User does not match the hostel users";
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";
@@ -148,6 +151,7 @@ public class Utils {
     public static final String COLUMN_FILTER_CAN_NOT_BE_NULL = "Column filter cannot be null";
     public static final String ORDER_CAN_NOT_BE_NEGATIVE = "Order cannot be negative";
     public static final String AT_LEAST_ONE_COLUMN_NEEDS_TO_BE_SELECTED = "At least one column must be selected";
+    public static final String TICKET_NUMBER_GENERATION_FAILED = "Failed to generate ticket number, retry";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
@@ -618,6 +622,14 @@ public class Utils {
 
         return Date.from(
                 localDateTime.atZone(ZoneId.systemDefault()).toInstant()
+        );
+    }
+
+    public static Date localDateToDate(LocalDate localDate) {
+        if (localDate == null) return null;
+
+        return Date.from(
+                localDate.atStartOfDay(ZoneId.systemDefault()).toInstant()
         );
     }
 

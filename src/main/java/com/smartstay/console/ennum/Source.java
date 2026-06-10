@@ -23,5 +23,6 @@ public enum Source {
     TABLE_COLUMNS,
     RESET_USER_PIN,
     INVOICE_REDEMPTION,
-    INVOICE
+    INVOICE,
+    SUPPORT_TICKET
 }
