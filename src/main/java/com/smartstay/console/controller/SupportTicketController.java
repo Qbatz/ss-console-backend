@@ -7,10 +7,13 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Date;
 
 @RestController
 @RequestMapping("/v2/support-ticket")
@@ -26,5 +29,31 @@ public class SupportTicketController {
     public ResponseEntity<?> addSupportTicket(@Valid @RequestPart SupportTicketPayload payload,
                                               @RequestPart(value = "paymentProof", required = false) MultipartFile paymentProof){
         return supportTicketService.addSupportTicket(payload, paymentProof);
+    }
+
+    @GetMapping
+    public ResponseEntity<?> getAllSupportTickets(@RequestParam(value = "page", defaultValue = "0") int page,
+                                                  @RequestParam(value = "size", defaultValue = "10") int size,
+                                                  @RequestParam(value = "name", required = false) String name,
+                                                  @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
+                                                  @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
+                                                  @RequestParam(value = "status", required = false) String status,
+                                                  @RequestParam(value = "agentId", required = false) String agentId) {
+        return supportTicketService.getAllSupportTickets(page, size, name, startDate, endDate, status, agentId);
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<?> getStatus() {
+        return supportTicketService.getStatus();
+    }
+
+    @GetMapping("/query-type")
+    public ResponseEntity<?> getQueryType() {
+        return supportTicketService.getQueryType();
+    }
+
+    @GetMapping("/priority")
+    public ResponseEntity<?> getPriority() {
+        return supportTicketService.getPriority();
     }
 }

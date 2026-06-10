@@ -4,6 +4,7 @@ import com.smartstay.console.dao.Users;
 import com.smartstay.console.dto.users.OwnerWithAddressProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -85,4 +86,19 @@ public interface UsersRepository extends JpaRepository<Users, String> {
     long getCount();
 
     boolean existsByMobileNoAndUserIdNotAndIsActiveTrueAndIsDeletedFalse(String newMobileNo, String ownerId);
+
+    @Query("""
+            SELECT usr FROM Users usr
+            WHERE usr.roleId = 1
+                AND usr.isActive = true
+                AND usr.isDeleted = false
+                AND (
+                     :name IS NULL OR :name = '' OR
+                     LOWER(usr.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
+                     OR LOWER(usr.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
+                     OR LOWER(CONCAT(usr.firstName, ' ', usr.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))
+                     OR usr.mobileNo LIKE CONCAT('%', :name, '%')
+                )
+            """)
+    List<Users> findOwnersByMobileNoOrName(@Param("name") String name);
 }

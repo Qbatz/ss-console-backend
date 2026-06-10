@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class UserHostelService {
@@ -27,5 +28,9 @@ public class UserHostelService {
 
     public boolean existsByHostelIdAndUserId(String hostelId, String userId) {
         return userHostelRepository.existsByHostelIdAndUserId(hostelId, userId);
+    }
+
+    public List<UserHostel> getUserHostelsByParentIds(Set<String> parentIds) {
+        return userHostelRepository.findAllByParentIdIn(parentIds);
     }
 }

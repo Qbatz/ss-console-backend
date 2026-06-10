@@ -126,4 +126,6 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                 AND h.isDeleted = false
             """)
     HostelV1 findHostelByHostelId(@Param("hostelId") String hostelId);
+
+    List<HostelV1> findAllByParentIdInAndIsActiveTrueAndIsDeletedFalse(Set<String> parentIds);
 }

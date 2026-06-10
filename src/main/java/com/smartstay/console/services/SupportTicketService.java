@@ -8,15 +8,23 @@ import com.smartstay.console.dto.supportTicket.SupportTicketSnapshot;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.supportTicket.SupportTicketPayload;
 import com.smartstay.console.repositories.SupportTicketRepository;
+import com.smartstay.console.responses.supportTicket.PriorityResponse;
+import com.smartstay.console.responses.supportTicket.QueryTypeResponse;
+import com.smartstay.console.responses.supportTicket.TicketAllowedStatusResponse;
+import com.smartstay.console.responses.supportTicket.TicketCurrentStatusResponse;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -177,5 +185,95 @@ public class SupportTicketService {
                 year,
                 nextSequence
         );
+    }
+
+    public ResponseEntity<?> getStatus() {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        List<TicketCurrentStatusResponse> responses = Arrays.stream(TicketStatus.values())
+                .map(currentStatus -> {
+                    List<TicketAllowedStatusResponse> allowedStatusResponses = currentStatus
+                            .getAllowedStatuses().stream()
+                            .map(allowedStatus -> new TicketAllowedStatusResponse(
+                                    allowedStatus.name(), allowedStatus.getLabel()))
+                            .toList();
+
+                    return new TicketCurrentStatusResponse(currentStatus.name(),
+                            currentStatus.getLabel(), allowedStatusResponses);
+                }).toList();
+
+        return new ResponseEntity<>(responses, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getQueryType() {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        List<QueryTypeResponse> responses = Arrays.stream(QueryType.values())
+                .map(queryType -> new QueryTypeResponse(queryType.name(),
+                        queryType.getLabel()))
+                .toList();
+
+        return new ResponseEntity<>(responses, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getPriority() {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        List<PriorityResponse> responses = Arrays.stream(Priority.values())
+                .map(priority -> new PriorityResponse(priority.name(),
+                        priority.getLabel()))
+                .toList();
+
+        return new ResponseEntity<>(responses, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getAllSupportTickets(int page, int size, String name,
+                                                  Date startDate, Date endDate,
+                                                  String status, String agentId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<SupportTicket> pagedSupportTickets = supportTicketRepository
+                .findAll(pageable);
+
+        List<SupportTicket> supportTickets = pagedSupportTickets.getContent();
+
+        return new ResponseEntity<>(supportTickets, HttpStatus.OK);
     }
 }
