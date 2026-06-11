@@ -1,5 +1,8 @@
 package com.smartstay.console.ennum;
 
+import lombok.Getter;
+
+@Getter
 public enum RelationalAgentReason {
 
     LEAD_GENERATION("Lead generation"),
@@ -17,9 +20,5 @@ public enum RelationalAgentReason {
 
     RelationalAgentReason(String label) {
         this.label = label;
-    }
-
-    public String getLabel() {
-        return label;
     }
 }

@@ -3,7 +3,7 @@ package com.smartstay.console.services;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.HostelRelationalAgent;
-import com.smartstay.console.dao.HostelV1;
+import com.smartstay.console.dao.Users;
 import com.smartstay.console.dto.hostelRelationalAgent.HostelRelationalAgentSnapshot;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
@@ -36,11 +36,11 @@ public class HostelRelationalAgentService {
     @Autowired
     private AgentRolesService agentRolesService;
     @Autowired
-    private HostelService hostelService;
+    private UsersService usersService;
     @Autowired
     private AgentActivitiesService agentActivitiesService;
 
-    public ResponseEntity<?> assignHostelRelationalAgent(String hostelId, HostelRelationalAgentPayload payload) {
+    public ResponseEntity<?> assignHostelRelationalAgent(String parentId, HostelRelationalAgentPayload payload) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -58,9 +58,9 @@ public class HostelRelationalAgentService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        HostelV1 hostel = hostelService.getHostelInfo(hostelId);
-        if (hostel == null) {
-            return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
+        Users owner = usersService.getOwner(parentId);
+        if (owner == null) {
+            return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
         }
 
         Agent payloadAgent = agentService.findUserByUserId(payload.agentId());
@@ -78,7 +78,7 @@ public class HostelRelationalAgentService {
 
         HostelRelationalAgent hostelRelationalAgent = new HostelRelationalAgent();
 
-        hostelRelationalAgent.setHostelId(hostelId);
+        hostelRelationalAgent.setParentId(parentId);
         hostelRelationalAgent.setAgentId(payloadAgent.getAgentId());
         hostelRelationalAgent.setReason(reasonEnum);
         hostelRelationalAgent.setComments(payload.comments());
@@ -120,16 +120,16 @@ public class HostelRelationalAgentService {
         return new ResponseEntity<>(responseList, HttpStatus.OK);
     }
 
-    public List<HostelRelationalAgent> getByHostelIds(Set<String> hostelIds) {
-        return hostelRelationalAgentRepository.findAllByHostelIdInOrderByIdDesc(hostelIds);
+    public List<HostelRelationalAgent> getByParentIds(Set<String> parentIds) {
+        return hostelRelationalAgentRepository.findAllByParentIdInOrderByIdDesc(parentIds);
     }
 
-    public List<HostelRelationalAgent> getByHostelId(String hostelId) {
-        return hostelRelationalAgentRepository.findAllByHostelIdOrderByIdDesc(hostelId);
+    public List<HostelRelationalAgent> getByParentId(String parentId) {
+        return hostelRelationalAgentRepository.findAllByParentIdOrderByIdDesc(parentId);
     }
 
     public List<HostelRelationalAgent> getByAgentId(String agentId) {
-        return hostelRelationalAgentRepository.findLatestByAgentIdPerHostel(agentId);
+        return hostelRelationalAgentRepository.findLatestByAgentIdPerOwner(agentId);
     }
 
     public void deleteAll(List<HostelRelationalAgent> hostelRelationalAgentList) {

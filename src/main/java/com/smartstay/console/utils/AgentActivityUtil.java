@@ -130,6 +130,7 @@ public class AgentActivityUtil {
     private static String getSnapshotDeleteDescription(Source source) {
         return switch (source){
             case INVOICE -> "Deleted invoices";
+            case HOSTEL_EXPENSE -> "Deleted expenses";
             default -> "Deleted successfully";
         };
     }
@@ -174,16 +175,5 @@ public class AgentActivityUtil {
             case MOCK_AGENT_LOGIN -> "Mock agent logged in";
             default -> "Login successful";
         };
-    }
-
-    public static <T> List<T> cloneList(List<T> source, Class<T> clazz) {
-        if (source == null || source.isEmpty()) {
-            return List.of();
-        }
-
-        return source.stream()
-                .map(item -> mapper.convertValue(
-                        mapper.convertValue(item, Object.class), clazz))
-                .toList();
     }
 }

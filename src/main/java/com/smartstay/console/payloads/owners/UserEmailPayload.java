@@ -1,9 +1,9 @@
 package com.smartstay.console.payloads.owners;
 
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 
-public record UserEmailPayload(@NotNull(message = "Email can't be null")
-                               @NotEmpty(message = "Email can't be empty")
+public record UserEmailPayload(@NotBlank(message = "Email is required")
+                               @Email(message = "Invalid email format")
                                String newEmail) {
 }

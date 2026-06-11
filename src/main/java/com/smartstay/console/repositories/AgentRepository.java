@@ -27,7 +27,7 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
 
     Agent findByAgentIdAndIsActiveTrue(String agentId);
 
-    List<Agent> findByRoleIdAndIsActiveTrue(long roleId);
+    List<Agent> findByRoleIdAndIsActiveTrueAndIsMockAgentFalse(long roleId);
 
     @Query("""
        SELECT a.roleId AS roleId, COUNT(a) AS count
@@ -69,6 +69,11 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
                     :name is null or :name = '' or
                     lower(a.firstName) like lower(concat('%', :name, '%')) or
                     lower(a.lastName) like lower(concat('%', :name, '%')) or
+                    LOWER(CONCAT(
+                         COALESCE(a.firstName, ''),
+                         ' ',
+                         COALESCE(a.lastName, '')
+                     )) LIKE LOWER(CONCAT('%', TRIM(:name), '%')) or
                     lower(a.agentEmailId) like lower(concat('%', :name, '%'))
                 )
             order by a.createdAt desc

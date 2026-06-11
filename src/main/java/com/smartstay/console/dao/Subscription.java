@@ -36,4 +36,5 @@ public class Subscription {
     private Date createdAt;
     private Boolean isActive;
     private String paymentProof;
+    private String invoiceUrl;
 }

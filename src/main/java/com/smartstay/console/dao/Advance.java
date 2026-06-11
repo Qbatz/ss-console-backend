@@ -2,6 +2,7 @@ package com.smartstay.console.dao;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.smartstay.console.converters.DeductionsConverter;
+import com.smartstay.console.dto.customers.Deductions;
 import jakarta.persistence.*;
 import lombok.*;
 

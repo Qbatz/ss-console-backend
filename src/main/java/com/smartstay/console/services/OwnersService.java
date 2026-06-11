@@ -3,6 +3,7 @@ package com.smartstay.console.services;
 import com.smartstay.console.Mapper.users.OwnerDetailsMapper;
 import com.smartstay.console.Mapper.users.OwnerHostelListResMapper;
 import com.smartstay.console.Mapper.users.OwnerListMapper;
+import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
@@ -16,6 +17,7 @@ import com.smartstay.console.payloads.owners.ResetPassword;
 import com.smartstay.console.payloads.owners.UserEmailPayload;
 import com.smartstay.console.payloads.owners.UserMobilePayload;
 import com.smartstay.console.repositories.UsersRepository;
+import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.responses.users.OwnerDetailsResponse;
 import com.smartstay.console.responses.users.OwnerHostelListResponse;
 import com.smartstay.console.responses.users.OwnerResponse;
@@ -35,7 +37,7 @@ import java.util.stream.Collectors;
 public class OwnersService {
 
     @Autowired
-    UsersRepository usersRepository;
+    private UsersRepository usersRepository;
     @Autowired
     private Authentication authentication;
     @Autowired
@@ -54,6 +56,8 @@ public class OwnersService {
     private UserHostelService userHostelService;
     @Autowired
     private UsersService usersService;
+    @Autowired
+    private HostelRelationalAgentService hostelRelationalAgentService;
     @Autowired
     private HostelService hostelService;
 
@@ -295,10 +299,36 @@ public class OwnersService {
 
         List<OwnerWithAddressProjection> pagedOwners = sortedOwners.subList(fromIndex, toIndex);
 
+        Set<String> pagedOwnersParentIds = pagedOwners.stream()
+                .map(OwnerWithAddressProjection::getParentId)
+                .collect(Collectors.toSet());
+
+        List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
+                .getByParentIds(new HashSet<>(pagedOwnersParentIds));
+        Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
+                .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
+
+        Set<String> agentIds = new HashSet<>();
+        for (HostelRelationalAgent relationalAgent : relationalAgents) {
+            if (relationalAgent.getAgentId() != null){
+                agentIds.add(relationalAgent.getAgentId());
+            }
+            if (relationalAgent.getCreatedBy() != null){
+                agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        a -> a, (a, b) -> a));
+
         List<OwnerResponse> ownersList = pagedOwners.stream()
                 .map(owner -> new OwnerListMapper(
                         hostelCountMap.getOrDefault(owner.getParentId(), 0),
-                        userActivitiesMap.get(owner.getParentId())
+                        userActivitiesMap.get(owner.getParentId()),
+                        relationalAgentMap.getOrDefault(owner.getParentId(), null),
+                        agentMap
                 ).apply(owner))
                 .toList();
 
@@ -347,10 +377,32 @@ public class OwnersService {
         Map<Integer, HotelType> hotelTypeMap = hotelTypes.stream()
                 .collect(Collectors.toMap(HotelType::getId, hotelType -> hotelType));
 
-        List<UserActivities> userActivities = userActivitiesService.getLimitedActivitiesByUserId(ownerId, 50);
+        List<UserActivities> userActivities = userActivitiesService
+                .getLimitedActivitiesByUserId(ownerId, 50);
 
-        OwnerDetailsResponse response = new OwnerDetailsMapper(hostels, userActivities, hotelTypeMap)
-                .apply(owner);
+        Set<String> agentIds = new HashSet<>();
+
+        List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
+                .getByParentId(owner.getParentId());
+        for (HostelRelationalAgent relationalAgent : relationalAgents) {
+            if (relationalAgent.getAgentId() != null){
+                agentIds.add(relationalAgent.getAgentId());
+            }
+            if (relationalAgent.getCreatedBy() != null){
+                agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentIds.isEmpty()
+                ? Collections.emptyList()
+                : agentService.getAgentsByIds(agentIds);
+
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        agent1 -> agent1));
+
+        OwnerDetailsResponse response = new OwnerDetailsMapper(hostels, userActivities,
+                hotelTypeMap, relationalAgents, agentMap).apply(owner);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -438,6 +490,13 @@ public class OwnersService {
             userHostelService.deleteAll(userHostels);
         }
 
+        List<HostelRelationalAgent> hostelRelationalAgents = hostelRelationalAgentService
+                .getByParentId(owner.getParentId());
+
+        if (!hostelRelationalAgents.isEmpty()){
+            hostelRelationalAgentService.deleteAll(hostelRelationalAgents);
+        }
+
         List<Users> users = usersRepository
                 .findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(owner.getParentId());
 
@@ -497,6 +556,30 @@ public class OwnersService {
                 ownerId, oldOwner, newOwner);
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getOwnerByMobile(String ownerMobile) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<Users> owners = usersRepository.findOwnersByMobileNo(ownerMobile);
+
+        List<OwnerInfo> ownerInfos = owners.stream()
+                .map(owner -> new UserOwnerInfoMapper().apply(owner))
+                .toList();
+
+        return new ResponseEntity<>(ownerInfos, HttpStatus.OK);
     }
 
     public ResponseEntity<?> getOwnerByMobileNoOrName(String name) {

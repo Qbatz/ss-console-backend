@@ -70,6 +70,11 @@ public interface UsersRepository extends JpaRepository<Users, String> {
                      :name IS NULL OR :name = '' OR
                      LOWER(u.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
                      OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
+                     OR LOWER(CONCAT(
+                         COALESCE(u.firstName, ''),
+                         ' ',
+                         COALESCE(u.lastName, '')
+                     )) LIKE LOWER(CONCAT('%', TRIM(:name), '%'))
                 )
                 AND u.isActive = true
                 AND u.isDeleted = false
@@ -86,6 +91,15 @@ public interface UsersRepository extends JpaRepository<Users, String> {
     long getCount();
 
     boolean existsByMobileNoAndUserIdNotAndIsActiveTrueAndIsDeletedFalse(String newMobileNo, String ownerId);
+
+    @Query("""
+            SELECT usr FROM Users usr
+            WHERE usr.mobileNo = :ownerMobile
+                AND usr.roleId = 1
+                AND usr.isActive = true
+                AND usr.isDeleted = false
+            """)
+    List<Users> findOwnersByMobileNo(String ownerMobile);
 
     @Query("""
             SELECT usr FROM Users usr

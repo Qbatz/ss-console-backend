@@ -18,6 +18,6 @@ public record DemoRequestStatusPayload(@NotBlank(message = "Status can't be null
                                        LocalDateTime demoTo,
                                        String demoType,
                                        String demoMeetLink,
-                                       String planCode,
+                                       String parentId,
                                        String dropReason) {
 }

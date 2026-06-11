@@ -81,6 +81,7 @@ public class Utils {
     public static final String DROP_REASON_NOT_FOUND = "Drop reason not found";
     public static final String BOOKING_NOT_FOUND = "Booking not found";
     public static final String BED_NOT_FOUND = "Bed not found";
+    public static final String NO_EXPENSES_FOUND = "Expenses not found";
     public static final String QUERY_TYPE_NOT_FOUND = "Query type not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
@@ -132,6 +133,7 @@ public class Utils {
     public static final String AGENT_ID_REQUIRED = "AgentId is required";
     public static final String PLAN_CODE_REQUIRED = "Plan code is required";
     public static final Object DEMO_FROM_TO_DATE_REQUIRED = "Demo from and to date is required";
+    public static final String PARENT_ID_REQUIRED = "ParentId is required";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
@@ -151,6 +153,7 @@ public class Utils {
     public static final String COLUMN_FILTER_CAN_NOT_BE_NULL = "Column filter cannot be null";
     public static final String ORDER_CAN_NOT_BE_NEGATIVE = "Order cannot be negative";
     public static final String AT_LEAST_ONE_COLUMN_NEEDS_TO_BE_SELECTED = "At least one column must be selected";
+    public static final String CUSTOMER_INACTIVE_VACATED_SETTLEMENT_GENERATED = "Can not edit/delete redemption because customer is either vacated or settlement generated";
     public static final String TICKET_NUMBER_GENERATION_FAILED = "Failed to generate ticket number, retry";
 
 

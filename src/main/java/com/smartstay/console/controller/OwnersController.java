@@ -70,6 +70,11 @@ public class OwnersController {
         return ownersService.updateOwnerMobileById(ownerId, payload);
     }
 
+    @GetMapping("/mobile")
+    public ResponseEntity<?> getOwnerByMobile(@RequestParam String mobileNumber){
+        return ownersService.getOwnerByMobile(mobileNumber);
+    }
+
     @GetMapping("/search")
     public ResponseEntity<?> getOwnerByMobileNoOrName(@RequestParam String name){
         return ownersService.getOwnerByMobileNoOrName(name);
