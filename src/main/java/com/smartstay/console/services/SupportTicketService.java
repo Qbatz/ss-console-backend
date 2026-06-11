@@ -1,17 +1,16 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.Mapper.supportTicket.SupportTicketListResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.config.FilesConfig;
 import com.smartstay.console.config.UploadFileToS3;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.supportTicket.SupportTicketSnapshot;
+import com.smartstay.console.dto.supportTicket.SupportTicketStatsProjection;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.supportTicket.SupportTicketPayload;
 import com.smartstay.console.repositories.SupportTicketRepository;
-import com.smartstay.console.responses.supportTicket.PriorityResponse;
-import com.smartstay.console.responses.supportTicket.QueryTypeResponse;
-import com.smartstay.console.responses.supportTicket.TicketAllowedStatusResponse;
-import com.smartstay.console.responses.supportTicket.TicketCurrentStatusResponse;
+import com.smartstay.console.responses.supportTicket.*;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,10 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class SupportTicketService {
@@ -264,16 +261,165 @@ public class SupportTicketService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
+        LocalDate today = LocalDate.now();
+        Date now = new Date();
+        now = Utils.getStartOfDay(now);
+        Date nowEnds = Utils.addDaysToDate(now, 1);
+
+        Date currentMonthStartDate = Utils.getStartDateOfMonth(today);
+        Date currentMonthEndDate = Utils.getEndDateOfMonth(today);
+
+        if (startDate == null) {
+            startDate = currentMonthStartDate;
+        }
+        if (endDate == null) {
+            endDate = currentMonthEndDate;
+        }
+        endDate = Utils.addDaysToDate(endDate, 1);
+
+        SupportTicketStatsProjection stats = supportTicketRepository
+                .getDashboardStats(now, nowEnds, startDate, endDate);
+
+        long totalLeads = stats.getTotalLeads();
+        long todayNewCount = stats.getTodayNewCount();
+        long waitingCount = stats.getWaitingCount();
+        long assignedCount = stats.getAssignedCount();
+        long inProgressCount = stats.getInProgressCount();
+        long resolvedCount = stats.getResolvedCount();
+        long closedCount = stats.getClosedCount();
+
+        name = (name == null || name.isBlank()) ? null : name.trim();
+        status = (status == null || status.isBlank()) ? null : status.trim();
+        agentId = (agentId == null || agentId.isBlank()) ? null : agentId.trim();
+
+        Set<Long> ticketIds = null;
+        if (name != null){
+            Set<Long> ids = new HashSet<>();
+
+            // 1. Search by ticket number
+            List<SupportTicket> tickets = supportTicketRepository
+                    .findByTicketNumberContainingIgnoreCase(name);
+
+            tickets.forEach(ticket ->
+                    ids.add(ticket.getTicketId())
+            );
+
+            // 2. Search hostel name from another table
+            Set<String> hostelIds = hostelService
+                    .getHostelsByHostelName(name)
+                    .stream()
+                    .map(HostelV1::getHostelId)
+                    .collect(Collectors.toSet());
+
+            if (!hostelIds.isEmpty()) {
+                List<SupportTicket> hostelTickets = supportTicketRepository
+                        .findAllByHostelIdIn(hostelIds);
+
+                hostelTickets.forEach(ticket ->
+                        ids.add(ticket.getTicketId())
+                );
+            }
+
+            ticketIds = ids;
+
+            // no match found
+            if(ticketIds.isEmpty()){
+                Map<String, Object> response = new HashMap<>();
+                response.put("supportTicketList", Collections.emptyList());
+                response.put("currentPage", page + 1);
+                response.put("pageSize", size);
+                response.put("totalItems", 0);
+                response.put("totalPages", 0);
+                response.put("totalLeads", totalLeads);
+                response.put("newToday", todayNewCount);
+                response.put("waitingCount", waitingCount);
+                response.put("assignedCount", assignedCount);
+                response.put("inProgressCount", inProgressCount);
+                response.put("resolvedCount", resolvedCount);
+                response.put("closedCount", closedCount);
+
+                return new ResponseEntity<>(response, HttpStatus.OK);
+            }
+        }
+
         page = Math.max(page - 1, 0);
         size = Math.max(size, 1);
 
         Pageable pageable = PageRequest.of(page, size);
 
         Page<SupportTicket> pagedSupportTickets = supportTicketRepository
-                .findAll(pageable);
+                .findAllPaginated(ticketIds, startDate, endDate, status, agentId, pageable);
 
         List<SupportTicket> supportTickets = pagedSupportTickets.getContent();
 
-        return new ResponseEntity<>(supportTickets, HttpStatus.OK);
+        Set<String> parentIds = new HashSet<>();
+        Set<String> hostelIds = new HashSet<>();
+        Set<String> raisedByIds = new HashSet<>();
+        Set<String> assignedToIds = new HashSet<>();
+        Set<String> assignedByIds = new HashSet<>();
+        Set<String> createdByAgentIds = new HashSet<>();
+        Set<String> createdByUserIds = new HashSet<>();
+        for (SupportTicket supportTicket : supportTickets) {
+            parentIds.add(supportTicket.getParentId());
+            hostelIds.add(supportTicket.getHostelId());
+            raisedByIds.add(supportTicket.getRaisedBy());
+            assignedToIds.add(supportTicket.getAssignedTo());
+            assignedByIds.add(supportTicket.getAssignedBy());
+            if (UserType.AGENT.name().equals(supportTicket.getCreatedByUserType())){
+                createdByAgentIds.add(supportTicket.getCreatedBy());
+            } else {
+                createdByUserIds.add(supportTicket.getCreatedBy());
+            }
+        }
+
+        Set<String> userIds = new HashSet<>();
+        userIds.addAll(raisedByIds);
+        userIds.addAll(createdByUserIds);
+
+        Set<String> agentIds = new HashSet<>();
+        agentIds.addAll(assignedToIds);
+        agentIds.addAll(assignedByIds);
+        agentIds.addAll(createdByAgentIds);
+
+        List<Users> owners = usersService.getOwners(new ArrayList<>(parentIds));
+        Map<String, Users> ownerByParentIdMap = owners.stream()
+                .collect(Collectors.toMap(Users::getParentId, user -> user));
+
+        List<HostelV1> hostels = hostelService.getHostelsByHostelIds(hostelIds);
+        Map<String, HostelV1> hostelByHostelIdMap = hostels.stream()
+                .collect(Collectors.toMap(HostelV1::getHostelId, hostel -> hostel));
+
+        List<Users> users = usersService.getUsersByIds(userIds);
+        Map<String, Users> userByUserIdMap = users.stream()
+                .collect(Collectors.toMap(Users::getUserId, user -> user));
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentByAgentIdMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId, a -> a));
+
+        List<SupportTicketListResponse> responses = supportTickets.stream()
+                .map(supportTicket -> {
+                    Users owner = ownerByParentIdMap.getOrDefault(supportTicket.getParentId(), null);
+                    HostelV1 hostel = hostelByHostelIdMap.getOrDefault(supportTicket.getHostelId(), null);
+                    return new SupportTicketListResMapper(owner, hostel,
+                            userByUserIdMap, agentByAgentIdMap)
+                            .apply(supportTicket);
+                }).toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("supportTicketList", responses);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedSupportTickets.getTotalElements());
+        response.put("totalPages", pagedSupportTickets.getTotalPages());
+        response.put("totalLeads", totalLeads);
+        response.put("newToday", todayNewCount);
+        response.put("waitingCount", waitingCount);
+        response.put("assignedCount", assignedCount);
+        response.put("inProgressCount", inProgressCount);
+        response.put("resolvedCount", resolvedCount);
+        response.put("closedCount", closedCount);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
