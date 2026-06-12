@@ -84,6 +84,8 @@ public class Utils {
     public static final String NO_EXPENSES_FOUND = "Expenses not found";
     public static final String QUERY_TYPE_NOT_FOUND = "Query type not found";
     public static final String SUPPORT_TICKET_NOT_FOUND = "Support ticket not found";
+    public static final String SUPPORT_TICKET_STATUS_NOT_FOUND = "Support ticket status not found";
+    public static final String PRIORITY_NOT_FOUND = "Priority not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
