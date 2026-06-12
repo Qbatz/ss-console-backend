@@ -7,10 +7,13 @@ import com.smartstay.console.services.OwnersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/v2/owners")
@@ -37,15 +40,21 @@ public class OwnersController {
                                               @RequestParam(defaultValue = "10") int size,
                                               @RequestParam(defaultValue = "JOINING_DATE") String sortBy,
                                               @RequestParam(defaultValue = "desc") String direction) {
-        return ownersService.getAllOwnersList(name,
-                                              isPropertiesExpired,
-                                              isAboutToExpire,
-                                              isActive,
-                                              hasNoProperties,
-                                              page,
-                                              size,
-                                              sortBy,
-                                              direction);
+        return ownersService.getAllOwnersList(name, isPropertiesExpired, isAboutToExpire, isActive,
+                                              hasNoProperties, page, size, sortBy, direction);
+    }
+
+    @GetMapping("/export")
+    public void exportOwners(@RequestParam(required = false) String name,
+                                          @RequestParam(required = false) Boolean isPropertiesExpired,
+                                          @RequestParam(required = false) Boolean isAboutToExpire,
+                                          @RequestParam(required = false) Boolean isActive,
+                                          @RequestParam(required = false) Boolean hasNoProperties,
+                                          @RequestParam(defaultValue = "JOINING_DATE") String sortBy,
+                                          @RequestParam(defaultValue = "desc") String direction,
+                                          HttpServletResponse response) throws IOException {
+        ownersService.exportOwners(name, isPropertiesExpired, isAboutToExpire, isActive,
+                hasNoProperties, sortBy, direction, response);
     }
 
     @GetMapping("/{ownerId}")

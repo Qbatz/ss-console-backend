@@ -64,7 +64,7 @@ public class HostelsController {
                                  @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
                                  @RequestParam(value = "agentId", required = false) String agentId,
                                  @RequestParam(defaultValue = "TOTAL_PROPERTIES") String filterOption,
-                              HttpServletResponse response) throws IOException {
+                                 HttpServletResponse response) throws IOException {
         hostelsService.exportHostelsNew(name, startDate, endDate, agentId, filterOption, response);
     }
 

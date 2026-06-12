@@ -1921,10 +1921,8 @@ public class HostelsService {
         int rowIdx = 1;
         for (HostelList h : hostels) {
             HostelRelationalAgentResponse relationalAgentRes = null;
-            if (h.relationalAgents() != null){
-                if (h.relationalAgents().getFirst() != null){
-                    relationalAgentRes = h.relationalAgents().getFirst();
-                }
+            if (h.relationalAgents() != null && !h.relationalAgents().isEmpty()){
+                relationalAgentRes = h.relationalAgents().getFirst();
             }
             Row row = sheet.createRow(rowIdx++);
             row.createCell(0).setCellValue(h.hostelName() != null ? h.hostelName() : "");
