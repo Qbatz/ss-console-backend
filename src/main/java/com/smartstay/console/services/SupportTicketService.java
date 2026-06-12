@@ -525,7 +525,7 @@ public class SupportTicketService {
 
         Priority priority;
         try {
-            priority = Priority.valueOf(supportTicket.getPriority());
+            priority = Priority.valueOf(payload.priority());
         } catch (IllegalArgumentException | NullPointerException e) {
             return new ResponseEntity<>(Utils.PRIORITY_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
