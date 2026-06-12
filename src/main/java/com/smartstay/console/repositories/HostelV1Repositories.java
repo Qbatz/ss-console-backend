@@ -163,6 +163,45 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                                   @Param("trialEndDate") Date trialEndDate,
                                   Pageable pageable);
 
+    @Query(value = """
+            SELECT h.*
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+                AND (:startDate IS NULL OR h.created_at >= :startDate)
+                AND (:endDate IS NULL OR h.created_at < :endDate)
+                AND h.is_active = true
+                AND h.is_deleted = false
+                AND (
+                    :subActive IS NULL
+                    OR (:subActive = TRUE AND DATE(hp.current_plan_ends_at) >= CURRENT_DATE)
+                    OR (:subActive = FALSE AND DATE(hp.current_plan_ends_at) < CURRENT_DATE)
+                )
+                AND h.hostel_id in :hostelIds
+                AND (
+                    :trialStartDate IS NULL
+                    OR (
+                        hp.is_trial = true
+                        AND hp.current_plan_ends_at >= :trialStartDate
+                    )
+                )
+                AND (
+                    :trialEndDate IS NULL
+                    OR (
+                        hp.is_trial = true
+                        AND hp.current_plan_ends_at < :trialEndDate
+                    )
+                )
+            ORDER BY hp.current_plan_ends_at ASC
+            """, nativeQuery = true)
+    List<HostelV1> findAllHostels(@Param("name") String name,
+                                  @Param("startDate") Date startDate,
+                                  @Param("endDate") Date endDate,
+                                  @Param("subActive") Boolean subActive,
+                                  @Param("hostelIds") Set<String> hostelIds,
+                                  @Param("trialStartDate") Date trialStartDate,
+                                  @Param("trialEndDate") Date trialEndDate);
+
     HostelV1 findByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
 
     List<HostelV1> findAllByHostelIdInAndIsActiveTrueAndIsDeletedFalse(Set<String> hostelIds);

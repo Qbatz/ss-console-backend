@@ -38,6 +38,15 @@ public class HostelsController {
         return hostelsService.getAllHostelsNew(page, size, hostelName, startDate, endDate, subActive);
     }
 
+    @GetMapping("/export")
+    public void exportHostels(@RequestParam(required = false) String hostelName,
+                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
+                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
+                              @RequestParam(required = false) Boolean subActive,
+                              HttpServletResponse response) throws IOException {
+        hostelsService.exportHostels(hostelName, startDate, endDate, subActive, response);
+    }
+
     @GetMapping("/new")
     public ResponseEntity<?> getAllHostels(@RequestParam(value = "page", defaultValue = "1") int page,
                                            @RequestParam(value = "size", defaultValue = "10") int size,
@@ -49,13 +58,14 @@ public class HostelsController {
         return hostelsService.getAllHostels(page, size, name, startDate, endDate, agentId, filterOption);
     }
 
-    @GetMapping("/export")
-    public void exportHostels(@RequestParam(required = false) String hostelName,
-                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
-                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
-                              @RequestParam(required = false) Boolean subActive,
+    @GetMapping("/export/new")
+    public void exportHostelsNew(@RequestParam(value = "name", required = false) String name,
+                                 @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
+                                 @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
+                                 @RequestParam(value = "agentId", required = false) String agentId,
+                                 @RequestParam(defaultValue = "TOTAL_PROPERTIES") String filterOption,
                               HttpServletResponse response) throws IOException {
-        hostelsService.exportHostels(hostelName, startDate, endDate, subActive, response);
+        hostelsService.exportHostelsNew(name, startDate, endDate, agentId, filterOption, response);
     }
 
     @GetMapping("/{hostelId}")

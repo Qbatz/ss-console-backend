@@ -1596,13 +1596,20 @@ public class HostelsService {
         header.createCell(16).setCellValue("Can Add Trial");
         header.createCell(17).setCellValue("Can Add Expandable Trial");
         header.createCell(18).setCellValue("Is Subscription Active");
-        header.createCell(19).setCellValue("Subscription Active Days");
+        header.createCell(19).setCellValue("Days to expire");
         header.createCell(20).setCellValue("Last Updated Date");
         header.createCell(21).setCellValue("Last Updated Time");
         header.createCell(22).setCellValue("Platform");
+        header.createCell(23).setCellValue("Relational Agent Name");
+        header.createCell(24).setCellValue("Relational Agent Reason");
+        header.createCell(25).setCellValue("Relational Agent Comments");
 
         int rowIdx = 1;
         for (HostelList h : hostels) {
+            HostelRelationalAgentResponse relationalAgentRes = null;
+            if (h.relationalAgents() != null && !h.relationalAgents().isEmpty()){
+                relationalAgentRes = h.relationalAgents().getFirst();
+            }
             Row row = sheet.createRow(rowIdx++);
             row.createCell(0).setCellValue(h.hostelName() != null ? h.hostelName() : "");
             row.createCell(1).setCellValue(h.countryCode() != null ? h.countryCode() : "");
@@ -1627,6 +1634,325 @@ public class HostelsService {
             row.createCell(20).setCellValue(h.lastUpdateDate() != null ? h.lastUpdateDate() : "");
             row.createCell(21).setCellValue(h.lastUpdateTime() != null ? h.lastUpdateTime() : "");
             row.createCell(22).setCellValue(h.platform() != null ? h.platform() : "");
+            row.createCell(23).setCellValue(relationalAgentRes != null ? relationalAgentRes.agentName() != null ? relationalAgentRes.agentName() : "" : "");
+            row.createCell(24).setCellValue(relationalAgentRes != null ? relationalAgentRes.reason() != null ? relationalAgentRes.reason() : "" : "");
+            row.createCell(25).setCellValue(relationalAgentRes != null ? relationalAgentRes.comments() != null ? relationalAgentRes.comments() : "" : "");
+        }
+
+        Row headerRow = sheet.getRow(0);
+        int totalColumns = headerRow.getLastCellNum();
+
+        for (int col = 0; col < totalColumns; col++) {
+            sheet.autoSizeColumn(col);
+        }
+
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=\"hostels.xlsx\"");
+
+        ServletOutputStream out = response.getOutputStream();
+        workbook.write(out);
+        out.flush();
+        workbook.close();
+    }
+
+    public List<HostelList> getHostelsDataForExport(String name, Date startDate,
+                                                    Date endDate, String agentId,
+                                                    String filterOption){
+
+        if (name == null || name.isBlank()){
+            name = null;
+        }
+
+        if (endDate != null) {
+            endDate = Utils.addDaysToDate(endDate, 1);
+        }
+
+        Date today = new Date();
+        Date todayStart = Utils.getStartOfDay(today);
+
+        Set<String> targetParentIds = hostelService.getActiveParentIds();
+
+        Set<String> relationalAgentsParentIds = new HashSet<>();
+        if (agentId != null){
+            List<HostelRelationalAgent> hostelRelationalAgents = hostelRelationalAgentService
+                    .getByAgentId(agentId);
+
+            relationalAgentsParentIds = hostelRelationalAgents.stream()
+                    .map(HostelRelationalAgent::getParentId)
+                    .collect(Collectors.toSet());
+        }
+
+        if (agentId != null) {
+            if (relationalAgentsParentIds.isEmpty()) {
+                targetParentIds.clear();
+            } else {
+                targetParentIds.retainAll(relationalAgentsParentIds);
+            }
+        }
+
+        List<LoginHistory> latestLogins = loginHistoryService
+                .getLoginHistoriesByParentIds(new ArrayList<>(targetParentIds));
+
+        Set<String> usedToday = new HashSet<>();
+        Set<String> used2To7Days = new HashSet<>();
+        Set<String> used8To14Days = new HashSet<>();
+        Set<String> used15To30Days = new HashSet<>();
+        Set<String> used30DaysAgo = new HashSet<>();
+
+        Set<String> usedEverParentIds = new HashSet<>();
+
+        List<HostelLiteProjection> allHostels = hostelService
+                .getHostelsLiteProjectionByParentIds(targetParentIds);
+
+        Map<String, Date> parentCreatedDateMap = allHostels.stream()
+                .collect(Collectors.toMap(
+                        HostelLiteProjection::getParentId,
+                        HostelLiteProjection::getCreatedAt,
+                        BinaryOperator.minBy(Date::compareTo)));
+
+        for (LoginHistory login : latestLogins) {
+            Date loginAtStart = Utils.getStartOfDay(login.getLoginAt());
+            Date parentCreatedDate = Utils.getStartOfDay(
+                    parentCreatedDateMap.get(login.getParentId()));
+
+            if (parentCreatedDate.equals(loginAtStart)) {
+                continue;
+            }
+
+            usedEverParentIds.add(login.getParentId());
+
+            long days = Utils.daysBetween(loginAtStart, todayStart);
+
+            if (days == 0) {
+                usedToday.add(login.getParentId());
+            } else if (days <= 7) {
+                used2To7Days.add(login.getParentId());
+            } else if (days <= 14) {
+                used8To14Days.add(login.getParentId());
+            } else if (days <= 30) {
+                used15To30Days.add(login.getParentId());
+            } else {
+                used30DaysAgo.add(login.getParentId());
+            }
+        }
+
+        Set<String> neverUsedParentIds = new HashSet<>(targetParentIds);
+        neverUsedParentIds.removeAll(usedEverParentIds);
+
+        usedToday.retainAll(targetParentIds);
+        used2To7Days.retainAll(targetParentIds);
+        used8To14Days.retainAll(targetParentIds);
+        used15To30Days.retainAll(targetParentIds);
+        used30DaysAgo.retainAll(targetParentIds);
+
+        Date trialStartDate = null;
+        Date trialEndDate = null;
+
+        HostelFilterOptions hostelFilterOption = HostelFilterOptions.get(filterOption);
+
+        Boolean subActive = null;
+        Set<String> activeParentIds = new HashSet<>();
+
+        switch (hostelFilterOption) {
+            case TOTAL_PROPERTIES -> {}
+            case ACTIVE_PROPERTIES -> subActive = true;
+            case INACTIVE_PROPERTIES -> subActive = false;
+            case USED_TODAY -> activeParentIds = usedToday;
+            case USED_2TO7_DAYS -> activeParentIds = used2To7Days;
+            case USED_8TO14_DAYS -> activeParentIds = used8To14Days;
+            case USED_15TO30_DAYS -> activeParentIds = used15To30Days;
+            case USED_30_DAYS_AGO -> activeParentIds = used30DaysAgo;
+            case NEVER_USED -> activeParentIds = neverUsedParentIds;
+            case TRIAL_EXPIRING_SOON -> {
+                trialStartDate = todayStart;
+                trialEndDate = Utils.addDaysToDate(todayStart, 7);
+            }
+            case null, default -> {}
+        }
+
+        boolean usageFilter = hostelFilterOption == HostelFilterOptions.USED_TODAY
+                || hostelFilterOption == HostelFilterOptions.USED_2TO7_DAYS
+                || hostelFilterOption == HostelFilterOptions.USED_8TO14_DAYS
+                || hostelFilterOption == HostelFilterOptions.USED_15TO30_DAYS
+                || hostelFilterOption == HostelFilterOptions.USED_30_DAYS_AGO
+                || hostelFilterOption == HostelFilterOptions.NEVER_USED;
+
+        if (usageFilter) {
+            targetParentIds.retainAll(activeParentIds);
+        }
+
+        Set<String> targetHostelIds = allHostels.stream()
+                .filter(h -> targetParentIds.contains(h.getParentId()))
+                .map(HostelLiteProjection::getHostelId)
+                .collect(Collectors.toSet());
+
+        List<HostelV1> listHostels = hostelRepository
+                .findAllHostels(name, startDate, endDate, subActive,
+                        targetHostelIds, trialStartDate, trialEndDate);
+
+        Set<String> hostelIds = new HashSet<>();
+        Set<String> parentIds = new HashSet<>();
+
+        for (HostelV1 hostel : listHostels) {
+            hostelIds.add(hostel.getHostelId());
+            parentIds.add(hostel.getParentId());
+        }
+
+        List<Users> createdUsers = usersService.getOwners(new ArrayList<>(parentIds));
+
+        List<OwnerInfo> ownerInfos = createdUsers
+                .stream()
+                .map(i -> new UserOwnerInfoMapper().apply(i))
+                .toList();
+
+        List<UserActivities> listActivities = userActivitiesService
+                .findLatestActivities(new ArrayList<>(hostelIds));
+
+        List<LoginHistory> loginHistories = loginHistoryService
+                .getLoginHistoriesByParentIds(new ArrayList<>(parentIds));
+
+        Map<String, OwnerInfo> ownerMap = ownerInfos.stream()
+                .collect(Collectors.toMap(OwnerInfo::parentId, Function.identity(),
+                        (a, b) -> a));
+
+        Map<String, UserActivities> activityMap = listActivities.stream()
+                .collect(Collectors.toMap(UserActivities::getHostelId, Function.identity(),
+                        (a, b) -> a));
+
+        Map<String, LoginHistory> loginMap = loginHistories.stream()
+                .collect(Collectors.toMap(LoginHistory::getParentId, Function.identity(),
+                        (a, b) -> a));
+
+        List<Plans> trialPlans = plansService.findTrialPlans();
+        List<Plans> expandableTrialPlans = plansService.findExpandableTrialPlans();
+
+        List<Subscription> subscriptions = subscriptionService
+                .getSubscriptionsByHostelIds(new HashSet<>(hostelIds));
+        Map<String, List<Subscription>> subscriptionHostelMap = subscriptions.stream()
+                .collect(Collectors.groupingBy(Subscription::getHostelId));
+
+        List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
+                .getByParentIds(new HashSet<>(parentIds));
+        Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
+                .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
+
+        Set<String> agentIds = new HashSet<>();
+        for (HostelRelationalAgent relationalAgent : relationalAgents) {
+            if (relationalAgent.getAgentId() != null){
+                agentIds.add(relationalAgent.getAgentId());
+            }
+            if (relationalAgent.getCreatedBy() != null){
+                agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        a -> a, (a, b) -> a));
+
+        return listHostels
+                .stream()
+                .map(i -> new HostelsListMapper(
+                        ownerMap.getOrDefault(i.getParentId(), null),
+                        activityMap.getOrDefault(i.getHostelId(), null),
+                        loginMap.getOrDefault(i.getParentId(), null),
+                        trialPlans,
+                        expandableTrialPlans,
+                        subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
+                        relationalAgentMap.getOrDefault(i.getParentId(), null),
+                        agentMap
+                ).apply(i))
+                .toList();
+    }
+
+    public void exportHostelsNew(String name, Date startDate, Date endDate,
+                                 String agentId, String filterOption,
+                                 HttpServletResponse response) throws IOException {
+
+        if (!authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Utils.UN_AUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Utils.UN_AUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, Utils.ACCESS_RESTRICTED);
+        }
+
+        List<HostelList> hostels = getHostelsDataForExport(name, startDate, endDate,
+                agentId, filterOption);
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Hostels");
+
+        // Header
+        Row header = sheet.createRow(0);
+        header.createCell(0).setCellValue("Hostel Name");
+        header.createCell(1).setCellValue("Country Code");
+        header.createCell(2).setCellValue("Mobile");
+        header.createCell(3).setCellValue("City");
+        header.createCell(4).setCellValue("State");
+        header.createCell(5).setCellValue("Address");
+        header.createCell(6).setCellValue("Owner Name");
+        header.createCell(7).setCellValue("Owner Country Code");
+        header.createCell(8).setCellValue("Owner Mobile");
+        header.createCell(9).setCellValue("Hostel Plan Name");
+        header.createCell(10).setCellValue("Hostel Plan Code");
+        header.createCell(11).setCellValue("Hostel Plan Amount");
+        header.createCell(12).setCellValue("Hostel Joined On");
+        header.createCell(13).setCellValue("Plan Expired On");
+        header.createCell(14).setCellValue("Plan Expiring At");
+        header.createCell(15).setCellValue("Is Trial");
+        header.createCell(16).setCellValue("Can Add Trial");
+        header.createCell(17).setCellValue("Can Add Expandable Trial");
+        header.createCell(18).setCellValue("Is Subscription Active");
+        header.createCell(19).setCellValue("Days to expire");
+        header.createCell(20).setCellValue("Last Updated Date");
+        header.createCell(21).setCellValue("Last Updated Time");
+        header.createCell(22).setCellValue("Platform");
+        header.createCell(23).setCellValue("Relational Agent Name");
+        header.createCell(24).setCellValue("Relational Agent Reason");
+        header.createCell(25).setCellValue("Relational Agent Comments");
+
+        int rowIdx = 1;
+        for (HostelList h : hostels) {
+            HostelRelationalAgentResponse relationalAgentRes = null;
+            if (h.relationalAgents() != null){
+                if (h.relationalAgents().getFirst() != null){
+                    relationalAgentRes = h.relationalAgents().getFirst();
+                }
+            }
+            Row row = sheet.createRow(rowIdx++);
+            row.createCell(0).setCellValue(h.hostelName() != null ? h.hostelName() : "");
+            row.createCell(1).setCellValue(h.countryCode() != null ? h.countryCode() : "");
+            row.createCell(2).setCellValue(h.mobile() != null ? h.mobile() : "");
+            row.createCell(3).setCellValue(h.city() != null ? h.city() : "");
+            row.createCell(4).setCellValue(h.state() != null ? h.state() : "");
+            row.createCell(5).setCellValue(h.fullAddress() != null  ? h.fullAddress() : "");
+            row.createCell(6).setCellValue(h.ownerInfo() != null ? h.ownerInfo().fullName() != null ? h.ownerInfo().fullName() : "" : "");
+            row.createCell(7).setCellValue(h.ownerInfo() != null ? h.ownerInfo().countryCode() != null ? h.ownerInfo().countryCode() : "" : "");
+            row.createCell(8).setCellValue(h.ownerInfo() != null ? h.ownerInfo().mobile() != null ? h.ownerInfo().mobile() : "" : "");
+            row.createCell(9).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlan() != null ? h.hostelPlan().currentPlan() : "" : "");
+            row.createCell(10).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlanCode() != null ? h.hostelPlan().currentPlanCode() : "" : "");
+            row.createCell(11).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlanAmount() != null ? h.hostelPlan().currentPlanAmount() : 0D : 0D);
+            row.createCell(12).setCellValue(h.joinedOn() != null ? h.joinedOn() : "");
+            row.createCell(13).setCellValue(h.expiredOn() != null ? h.expiredOn() : "");
+            row.createCell(14).setCellValue(h.expiringAt() !=  null ? h.expiringAt() : "");
+            row.createCell(15).setCellValue(h.isTrial());
+            row.createCell(16).setCellValue(h.canAddTrial());
+            row.createCell(17).setCellValue(h.canAddExpandableTrial());
+            row.createCell(18).setCellValue(h.subscriptionIsActive());
+            row.createCell(19).setCellValue(h.noOfdaysSubscriptionActive());
+            row.createCell(20).setCellValue(h.lastUpdateDate() != null ? h.lastUpdateDate() : "");
+            row.createCell(21).setCellValue(h.lastUpdateTime() != null ? h.lastUpdateTime() : "");
+            row.createCell(22).setCellValue(h.platform() != null ? h.platform() : "");
+            row.createCell(23).setCellValue(relationalAgentRes != null ? relationalAgentRes.agentName() != null ? relationalAgentRes.agentName() : "" : "");
+            row.createCell(24).setCellValue(relationalAgentRes != null ? relationalAgentRes.reason() != null ? relationalAgentRes.reason() : "" : "");
+            row.createCell(25).setCellValue(relationalAgentRes != null ? relationalAgentRes.comments() != null ? relationalAgentRes.comments() : "" : "");
         }
 
         Row headerRow = sheet.getRow(0);
