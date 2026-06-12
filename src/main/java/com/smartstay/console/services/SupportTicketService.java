@@ -1,6 +1,7 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.supportTicket.SupportTicketListResMapper;
+import com.smartstay.console.Mapper.supportTicket.SupportTicketResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.config.FilesConfig;
 import com.smartstay.console.config.UploadFileToS3;
@@ -419,6 +420,70 @@ public class SupportTicketService {
         response.put("inProgressCount", inProgressCount);
         response.put("resolvedCount", resolvedCount);
         response.put("closedCount", closedCount);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getSupportTicketById(Long supportTicketId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        SupportTicket supportTicket = supportTicketRepository.findByTicketId(supportTicketId);
+        if (supportTicket == null){
+            return new ResponseEntity<>(Utils.SUPPORT_TICKET_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Set<String> userIds = new HashSet<>();
+        userIds.add(supportTicket.getRaisedBy());
+
+        Set<String> agentIds = new HashSet<>();
+        agentIds.add(supportTicket.getAssignedTo());
+        agentIds.add(supportTicket.getAssignedBy());
+
+        if (UserType.AGENT.name().equals(supportTicket.getCreatedByUserType())){
+            agentIds.add(supportTicket.getCreatedBy());
+        } else {
+            userIds.add(supportTicket.getCreatedBy());
+        }
+
+        List<SupportTicketActivity> supportTicketActivities = supportTicketActivityService
+                .getAllByTicketId(supportTicketId);
+
+        Set<String> createdByAgentIds = new HashSet<>();
+        Set<String> createdByUserIds = new HashSet<>();
+        for (SupportTicketActivity supportTicketActivity : supportTicketActivities) {
+            if (UserType.AGENT.name().equals(supportTicketActivity.getCreatedByUserType())){
+                createdByAgentIds.add(supportTicketActivity.getCreatedBy());
+            } else {
+                createdByUserIds.add(supportTicketActivity.getCreatedBy());
+            }
+        }
+
+        userIds.addAll(createdByUserIds);
+        agentIds.addAll(createdByAgentIds);
+
+        Users owner = usersService.getOwner(supportTicket.getParentId());
+
+        HostelV1 hostel = hostelService.getHostelByHostelId(supportTicket.getHostelId());
+
+        List<Users> users = usersService.getUsersByIds(userIds);
+        Map<String, Users> userByUserIdMap = users.stream()
+                .collect(Collectors.toMap(Users::getUserId, user -> user));
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentByAgentIdMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId, a -> a));
+
+        SupportTicketResponse response = new SupportTicketResMapper(
+                owner, hostel, userByUserIdMap, agentByAgentIdMap, supportTicketActivities
+        ).apply(supportTicket);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

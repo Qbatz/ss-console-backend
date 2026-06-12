@@ -82,4 +82,6 @@ public interface SupportTicketRepository extends JpaRepository<SupportTicket, Lo
     List<SupportTicket> findAllByHostelIdIn(Set<String> hostelIds);
 
     List<SupportTicket> findByTicketNumberContainingIgnoreCase(String name);
+
+    SupportTicket findByTicketId(Long ticketId);
 }

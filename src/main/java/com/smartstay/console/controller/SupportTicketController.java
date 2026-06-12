@@ -42,6 +42,11 @@ public class SupportTicketController {
         return supportTicketService.getAllSupportTickets(page, size, name, startDate, endDate, status, agentId);
     }
 
+    @GetMapping("/{supportTicketId}")
+    public ResponseEntity<?> getSupportTicketById(@PathVariable("supportTicketId") Long supportTicketId) {
+        return supportTicketService.getSupportTicketById(supportTicketId);
+    }
+
     @GetMapping("/status")
     public ResponseEntity<?> getStatus() {
         return supportTicketService.getStatus();
