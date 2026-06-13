@@ -2,6 +2,7 @@ package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.supportTicket.SupportTicketAssignPayload;
 import com.smartstay.console.payloads.supportTicket.SupportTicketPayload;
+import com.smartstay.console.payloads.supportTicket.SupportTicketStatusPayload;
 import com.smartstay.console.services.SupportTicketService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -52,6 +53,12 @@ public class SupportTicketController {
     public ResponseEntity<?> assignSupportTicket(@PathVariable("supportTicketId") Long supportTicketId,
                                                  @Valid @RequestBody SupportTicketAssignPayload payload) {
         return supportTicketService.assignSupportTicket(supportTicketId, payload);
+    }
+
+    @PutMapping("/update-status/{supportTicketId}")
+    public ResponseEntity<?> updateSupportTicketStatus(@PathVariable("supportTicketId") Long supportTicketId,
+                                                       @Valid @RequestBody SupportTicketStatusPayload payload){
+        return supportTicketService.updateSupportTicketStatus(supportTicketId, payload);
     }
 
     @GetMapping("/status")

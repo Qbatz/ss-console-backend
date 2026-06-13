@@ -11,6 +11,7 @@ import com.smartstay.console.dto.supportTicket.SupportTicketStatsProjection;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.supportTicket.SupportTicketAssignPayload;
 import com.smartstay.console.payloads.supportTicket.SupportTicketPayload;
+import com.smartstay.console.payloads.supportTicket.SupportTicketStatusPayload;
 import com.smartstay.console.repositories.SupportTicketRepository;
 import com.smartstay.console.responses.supportTicket.*;
 import com.smartstay.console.utils.SnapshotUtility;
@@ -543,6 +544,94 @@ public class SupportTicketService {
         activity.setComment(payload.comments());
         activity.setDescription(TicketStatus.ASSIGNED.getDescription());
         activity.setStatus(TicketStatus.ASSIGNED.name());
+        activity.setCreatedByUserType(UserType.AGENT.name());
+        activity.setCreatedBy(authentication.getName());
+        activity.setCreatedAt(today);
+        activity.setTicketId(supportTicket.getTicketId());
+
+        activity = supportTicketActivityService.save(activity);
+
+        SupportTicketSnapshot newTicket = SnapshotUtility.toSnapshot(supportTicket);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.SUPPORT_TICKET,
+                String.valueOf(supportTicketId), oldTicket, newTicket);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateSupportTicketStatus(Long supportTicketId, SupportTicketStatusPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        SupportTicket supportTicket = supportTicketRepository.findByTicketId(supportTicketId);
+        if (supportTicket == null){
+            return new ResponseEntity<>(Utils.SUPPORT_TICKET_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        SupportTicketSnapshot oldTicket = SnapshotUtility.toSnapshot(supportTicket);
+
+        TicketStatus requestStatus;
+        try {
+            requestStatus = TicketStatus.valueOf(payload.ticketStatus());
+        } catch (IllegalArgumentException | NullPointerException e){
+            return new ResponseEntity<>(Utils.SUPPORT_TICKET_STATUS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        TicketStatus currentStatus;
+        try {
+            currentStatus = TicketStatus.valueOf(supportTicket.getTicketStatus());
+        } catch (IllegalArgumentException | NullPointerException e){
+            return new ResponseEntity<>(Utils.SUPPORT_TICKET_STATUS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!currentStatus.canMoveTo(requestStatus)) {
+            return new ResponseEntity<>(Utils.INVALID_STATUS_TRANSITION, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        supportTicket.setTicketStatus(requestStatus.name());
+
+        if (requestStatus.name().equals(TicketStatus.ASSIGNED.name())) {
+
+            if (payload.agentId() == null || payload.agentId().isBlank()){
+                return new ResponseEntity<>(Utils.AGENT_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            if (payload.priority() == null || payload.priority().isBlank()){
+                return new ResponseEntity<>(Utils.PRIORITY_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            Agent assignedTo = agentService.findUserByUserId(payload.agentId());
+            if (assignedTo == null) {
+                return new ResponseEntity<>(Utils.NO_AGENT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            Priority priority;
+            try {
+                priority = Priority.valueOf(payload.priority());
+            } catch (IllegalArgumentException | NullPointerException e) {
+                return new ResponseEntity<>(Utils.PRIORITY_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            supportTicket.setPriority(priority.name());
+            supportTicket.setAssignedTo(assignedTo.getAgentId());
+            supportTicket.setAssignedBy(authentication.getName());
+        }
+
+        supportTicket = supportTicketRepository.save(supportTicket);
+
+        SupportTicketActivity activity = new SupportTicketActivity();
+        activity.setComment(payload.comments());
+        activity.setDescription(requestStatus.getDescription());
+        activity.setStatus(requestStatus.name());
         activity.setCreatedByUserType(UserType.AGENT.name());
         activity.setCreatedBy(authentication.getName());
         activity.setCreatedAt(today);
