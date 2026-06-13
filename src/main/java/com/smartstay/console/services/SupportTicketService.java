@@ -6,10 +6,12 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.config.FilesConfig;
 import com.smartstay.console.config.UploadFileToS3;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.supportTicket.SupportTicketNotesSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketStatsProjection;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.supportTicket.SupportTicketAssignPayload;
+import com.smartstay.console.payloads.supportTicket.SupportTicketNotesPayload;
 import com.smartstay.console.payloads.supportTicket.SupportTicketPayload;
 import com.smartstay.console.payloads.supportTicket.SupportTicketStatusPayload;
 import com.smartstay.console.repositories.SupportTicketRepository;
@@ -50,6 +52,8 @@ public class SupportTicketService {
     private SupportTicketActivityService supportTicketActivityService;
     @Autowired
     private UserHostelService userHostelService;
+    @Autowired
+    private SupportTicketNotesService supportTicketNotesService;
 
     public ResponseEntity<?> addSupportTicket(SupportTicketPayload payload, MultipartFile paymentProof) {
 
@@ -645,5 +649,88 @@ public class SupportTicketService {
                 String.valueOf(supportTicketId), oldTicket, newTicket);
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> addSupportTicketNotes(Long supportTicketId, SupportTicketNotesPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        SupportTicket supportTicket = supportTicketRepository.findByTicketId(supportTicketId);
+        if (supportTicket == null){
+            return new ResponseEntity<>(Utils.SUPPORT_TICKET_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        SupportTicketNotes supportTicketNotes = new SupportTicketNotes();
+
+        supportTicketNotes.setComment(payload.notes());
+        supportTicketNotes.setCreatedByUserType(UserType.AGENT.name());
+        supportTicketNotes.setCreatedBy(authentication.getName());
+        supportTicketNotes.setCreatedAt(today);
+        supportTicketNotes.setTicketId(supportTicketId);
+
+        supportTicketNotes = supportTicketNotesService.save(supportTicketNotes);
+
+        SupportTicketNotesSnapshot newNotes = SnapshotUtility.toSnapshot(supportTicketNotes);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.SUPPORT_TICKET_NOTES,
+                String.valueOf(supportTicketNotes.getId()), null, newNotes);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getSupportTicketNotes(Long supportTicketId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        SupportTicket supportTicket = supportTicketRepository.findByTicketId(supportTicketId);
+        if (supportTicket == null){
+            return new ResponseEntity<>(Utils.SUPPORT_TICKET_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<SupportTicketNotes> supportTicketNotes = supportTicketNotesService
+                .getSupportTicketNotesByTicketId(supportTicketId);
+
+        Set<String> notesCreatedByAgentIds = new HashSet<>();
+        for (SupportTicketNotes note : supportTicketNotes) {
+            if (UserType.AGENT.name().equals(note.getCreatedByUserType())){
+                notesCreatedByAgentIds.add(note.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(notesCreatedByAgentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId, a -> a));
+
+        List<SupportTicketNotesResponse> response = supportTicketNotes.stream()
+                .map(notes -> {
+
+                    String createdBy = null;
+                    Agent createdByAgent = agentMap.getOrDefault(notes.getCreatedBy(), null);
+                    if (createdByAgent != null){
+                        createdBy = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
+                    }
+
+                    return new SupportTicketNotesResponse(notes.getId(), notes.getComment(),
+                            notes.getCreatedByUserType(), notes.getCreatedBy(), createdBy,
+                            Utils.dateToString(notes.getCreatedAt()), Utils.dateToTime(notes.getCreatedAt()));
+                }).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

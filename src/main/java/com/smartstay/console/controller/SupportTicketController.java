@@ -1,6 +1,7 @@
 package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.supportTicket.SupportTicketAssignPayload;
+import com.smartstay.console.payloads.supportTicket.SupportTicketNotesPayload;
 import com.smartstay.console.payloads.supportTicket.SupportTicketPayload;
 import com.smartstay.console.payloads.supportTicket.SupportTicketStatusPayload;
 import com.smartstay.console.services.SupportTicketService;
@@ -74,5 +75,16 @@ public class SupportTicketController {
     @GetMapping("/priority")
     public ResponseEntity<?> getPriority() {
         return supportTicketService.getPriority();
+    }
+
+    @PostMapping("/notes/{supportTicketId}")
+    public ResponseEntity<?> addSupportTicketNotes(@PathVariable("supportTicketId") Long supportTicketId,
+                                                   @Valid @RequestBody SupportTicketNotesPayload payload){
+        return supportTicketService.addSupportTicketNotes(supportTicketId, payload);
+    }
+
+    @GetMapping("/notes/{supportTicketId}")
+    public ResponseEntity<?> getSupportTicketNotes(@PathVariable("supportTicketId") Long supportTicketId){
+        return supportTicketService.getSupportTicketNotes(supportTicketId);
     }
 }
