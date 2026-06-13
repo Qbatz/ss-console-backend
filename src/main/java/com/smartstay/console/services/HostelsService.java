@@ -842,6 +842,7 @@ public class HostelsService {
             settlementDetailsService.deleteAll(listSettlementDetails);
         }
         if (listSettlementItems != null && !listSettlementItems.isEmpty()) {
+            recordsFound = true;
             settlementItemsService.deleteAll(listSettlementItems);
         }
         if (listAmenityRequests != null && !listAmenityRequests.isEmpty()) {
