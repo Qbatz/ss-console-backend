@@ -43,8 +43,26 @@ public class SupportTicketResMapper implements Function<SupportTicket, SupportTi
         }
 
         String hostelName = null;
+        String hostelMobile = null;
+        String hostelHouseNo = null;
+        String hostelStreet = null;
+        String hostelLandmark = null;
+        String hostelCity = null;
+        String hostelState = null;
+        int hostelCountry = 0;
+        int hostelPincode = 0;
+        String fullAddress = null;
         if (hostel != null) {
             hostelName = hostel.getHostelName();
+            hostelMobile = hostel.getMobile();
+            hostelHouseNo = hostel.getHouseNo();
+            hostelStreet = hostel.getStreet();
+            hostelLandmark = hostel.getLandmark();
+            hostelCity = hostel.getCity();
+            hostelState = hostel.getState();
+            hostelCountry = hostel.getCountry();
+            hostelPincode = hostel.getPincode();
+            fullAddress = Utils.buildFullAddress(hostel);
         }
 
         boolean isOwnerDeleted = false;
@@ -146,11 +164,13 @@ public class SupportTicketResMapper implements Function<SupportTicket, SupportTi
         return new SupportTicketResponse(supportTicket.getTicketId(), supportTicket.getTicketNumber(),
                 canAssignStaff, isOwnerDeleted, isHostelDeleted, isRaisedByDeleted,
                 supportTicket.getParentId(), ownerInfo, supportTicket.getHostelId(), hostelName,
-                supportTicket.getRaisedBy(), raisedBy, supportTicket.getQueryType(), supportTicket.getSubject(),
-                supportTicket.getPriority(), Utils.dateToString(supportTicket.getIssueDate()),
-                supportTicket.getAssignedTo(), assignedTo, supportTicket.getAssignedBy(),
-                assignedBy, supportTicket.getRemarks(), supportTicket.getPaymentProof(), paymentProofFileName,
-                supportTicket.getSource(), supportTicket.getTicketStatus(), supportTicket.getCreatedByUserType(),
+                hostelMobile, hostelHouseNo, hostelStreet, hostelLandmark, hostelCity, hostelState,
+                hostelCountry, hostelPincode, fullAddress, supportTicket.getRaisedBy(), raisedBy,
+                supportTicket.getQueryType(), supportTicket.getSubject(), supportTicket.getPriority(),
+                Utils.dateToString(supportTicket.getIssueDate()), supportTicket.getAssignedTo(),
+                assignedTo, supportTicket.getAssignedBy(), assignedBy, supportTicket.getRemarks(),
+                supportTicket.getPaymentProof(), paymentProofFileName, supportTicket.getSource(),
+                supportTicket.getTicketStatus(), supportTicket.getCreatedByUserType(),
                 supportTicket.getCreatedBy(), createdBy, Utils.dateToString(supportTicket.getCreatedAt()),
                 Utils.dateToTime(supportTicket.getCreatedAt()), activitiesRes);
     }
