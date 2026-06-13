@@ -82,6 +82,7 @@ public class Utils {
     public static final String BOOKING_NOT_FOUND = "Booking not found";
     public static final String BED_NOT_FOUND = "Bed not found";
     public static final String NO_EXPENSES_FOUND = "Expenses not found";
+    public static final String RESET_DONE_NO_RECORDS_FOUND = "Reset completed, no records found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
