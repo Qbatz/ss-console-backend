@@ -233,6 +233,7 @@ public class RecurringEventListener {
                 invoicesV1.setBasePrice(finalAmount);
                 invoicesV1.setTotalAmount(finalAmount);
                 invoicesV1.setPaidAmount(0.0);
+                invoicesV1.setSubTotal(finalAmount);
                 invoicesV1.setCgst(0.0);
                 invoicesV1.setSgst(0.0);
                 invoicesV1.setGst(0.0);

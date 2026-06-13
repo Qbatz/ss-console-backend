@@ -396,7 +396,7 @@ public class CustomersService {
             bankingService.updateBankAccount(newBalanceAmounts);
         }
         if (listBeds != null && !listBeds.isEmpty()) {
-            bedsService.makeAllBedAvailabe(listBeds);
+            bedsService.makeAllBedAvailable(listBeds);
         }
 
         customersRepository.delete(customer);

@@ -89,6 +89,7 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
            FROM Subscription s
            WHERE s.hostelId IN :hostelIds
              AND s.planCode IN :planCodes
+             AND s.planEndsAt >= CURRENT_DATE
              AND s.planStartsAt = (
                  SELECT MAX(s2.planStartsAt)
                  FROM Subscription s2

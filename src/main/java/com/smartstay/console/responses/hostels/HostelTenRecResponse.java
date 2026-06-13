@@ -25,5 +25,6 @@ public record HostelTenRecResponse(String hostelId,
                                    String billingType,
                                    String billingModel,
                                    boolean isSubscriptionActive,
+                                   boolean canGenerateRecurring,
                                    List<CustomerRecurringResponse> customerList) {
 }

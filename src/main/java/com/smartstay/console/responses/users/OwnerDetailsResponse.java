@@ -1,5 +1,6 @@
 package com.smartstay.console.responses.users;
 
+import com.smartstay.console.responses.hostelRelationalAgent.HostelRelationalAgentResponse;
 import com.smartstay.console.responses.hostels.OwnerHostelResponse;
 
 import java.util.List;
@@ -19,5 +20,6 @@ public record OwnerDetailsResponse(String ownerId,
                                    AddressResponse address,
                                    int noOfProperties,
                                    List<OwnerHostelResponse> properties,
-                                   List<UserActivitiesResponse> activities) {
+                                   List<UserActivitiesResponse> activities,
+                                   List<HostelRelationalAgentResponse> relationalAgents) {
 }

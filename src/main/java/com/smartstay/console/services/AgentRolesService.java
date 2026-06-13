@@ -172,7 +172,9 @@ public class AgentRolesService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        if (agentService.findActiveUsersByRoleId(roleId) != null && !agentService.findActiveUsersByRoleId(roleId).isEmpty()) {
+        List<Agent> activeAgents = agentService.findActiveUsersByRoleId(roleId);
+
+        if (activeAgents != null && !activeAgents.isEmpty()) {
             return new ResponseEntity<>(Utils.ACTIVE_USERS_FOUND, HttpStatus.BAD_REQUEST);
         }
 

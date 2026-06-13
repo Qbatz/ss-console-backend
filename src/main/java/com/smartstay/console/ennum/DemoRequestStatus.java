@@ -26,7 +26,7 @@ public enum DemoRequestStatus {
     public Set<DemoRequestStatus> getAllowedStatuses() {
         return switch (this) {
             case NEW -> Set.of(ASSIGNED, DROPPED);
-            case ASSIGNED -> Set.of(ASSIGNED, CONTACTED, DROPPED);
+            case ASSIGNED -> Set.of(ASSIGNED, CONTACTED, DEMO_SCHEDULED, DROPPED);
             case CONTACTED -> Set.of(DEMO_SCHEDULED, DROPPED);
             case DEMO_SCHEDULED -> Set.of(DEMO_COMPLETED, DROPPED);
             case DEMO_COMPLETED -> Set.of(TRIAL_STARTED, DROPPED);

@@ -510,7 +510,12 @@ public class SubscriptionService {
 
         subscriptions = pagedSubscriptions.getContent();
 
-        List<HostelV1> hostels = hostelService.getHostelsByHostelIds(targetHostelIds);
+        Set<String> pagedHostelIds = subscriptions.stream()
+                .map(com.smartstay.console.dao.Subscription::getHostelId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        List<HostelV1> hostels = hostelService.getHostelsByHostelIds(pagedHostelIds);
 
         hostelMap = hostels.stream()
                 .collect(Collectors.toMap(
