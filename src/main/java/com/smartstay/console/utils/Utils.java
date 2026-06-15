@@ -57,6 +57,7 @@ public class Utils {
     public static final String BILLING_TYPE_DOES_NOT_EXIST = "Billing type does not exist";
     public static final String BILLING_MODEL_DOES_NOT_EXIST = "Billing model does not exist";
     public static final String FIXED_DATE_PREPAID_TO_POSTPAID_ONLY_ALLOWED = "Only fixed date prepaid to postpaid is allowed";
+    public static final String BUY_PLAN_NOT_ALLOWED_IN_DEV = "Buy plan is not allowed for dev environment";
 
     public static final String NO_ROLES_FOUND = "No roles found";
     public static final String NO_HOSTEL_FOUND = "No hostel found";

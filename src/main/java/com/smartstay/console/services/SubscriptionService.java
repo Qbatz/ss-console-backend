@@ -14,6 +14,7 @@ import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.Utils;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -51,6 +52,8 @@ public class SubscriptionService {
     private UsersService usersService;
     @Autowired
     private TrialDaysExtensionService trialDaysExtensionService;
+    @Autowired
+    private Environment environment;
 
     @Transactional
     public ResponseEntity<?> subscribeHostel(String hostelId, Subscription payload, MultipartFile paymentProof) {
@@ -99,6 +102,7 @@ public class SubscriptionService {
         double discountPercentage = 100.0;
         String paymentProofUrl = null;
         int duration = 1;
+        TrialDaysExtReason trialDaysExtReason = null;
         Date today = new Date();
 
         Plans plans = plansService.findPlanByPlanCode(payload.planCode());
@@ -134,6 +138,16 @@ public class SubscriptionService {
             duration = plans.getDuration().intValue();
         }
         else if (plans.getPlanType().equalsIgnoreCase(PlanType.EXPANDABLE_TRIAL.name())) {
+
+            if (payload.trialDaysReason() == null || payload.trialDaysReason().isBlank()){
+                return new ResponseEntity<>(Utils.TRIAL_DAYS_REASON_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            try {
+                trialDaysExtReason = TrialDaysExtReason.valueOf(payload.trialDaysReason());
+            } catch (Exception e) {
+                return new ResponseEntity<>(Utils.TRIAL_DAYS_REASON_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
 
             isTrial = true;
 
@@ -176,6 +190,10 @@ public class SubscriptionService {
             duration = freeTrialDays;
         }
         else {
+
+            if (environment.matchesProfiles("local")){
+                return new ResponseEntity<>(Utils.BUY_PLAN_NOT_ALLOWED_IN_DEV, HttpStatus.FORBIDDEN);
+            }
 
             long diff = System.currentTimeMillis() - latestSubscription.getCreatedAt().getTime();
 
@@ -302,20 +320,9 @@ public class SubscriptionService {
 
         if (plans.getPlanType().equalsIgnoreCase(PlanType.EXPANDABLE_TRIAL.name())) {
 
-            if (payload.trialDaysReason() == null || payload.trialDaysReason().isBlank()){
-                return new ResponseEntity<>(Utils.TRIAL_DAYS_REASON_REQUIRED, HttpStatus.BAD_REQUEST);
-            }
-
-            TrialDaysExtReason trialDaysExtReason;
-            try {
-                trialDaysExtReason = TrialDaysExtReason.valueOf(payload.trialDaysReason());
-            } catch (Exception e) {
-                return new ResponseEntity<>(Utils.TRIAL_DAYS_REASON_NOT_FOUND, HttpStatus.BAD_REQUEST);
-            }
-
             TrialDaysExtension trialDaysExtension = new TrialDaysExtension();
             trialDaysExtension.setDuration(duration + 1);
-            trialDaysExtension.setReason(trialDaysExtReason.name());
+            trialDaysExtension.setReason(trialDaysExtReason != null ? trialDaysExtReason.name() : null);
             trialDaysExtension.setRemarks(payload.trialDaysRemarks());
             trialDaysExtension.setSubscriptionId(newSubscription.getSubscriptionId());
             trialDaysExtension.setCreatedByUserType(UserType.AGENT.name());
