@@ -10,5 +10,7 @@ public record SubscriptionResponse(Long subscriptionId,
                                    Double paidAmount,
                                    Double discount,
                                    Double discountAmount,
-                                   String paymentProof) {
+                                   String paymentProof,
+                                   String createdAtDate,
+                                   String createdAtTime) {
 }
