@@ -19,10 +19,14 @@ public class DemoRequestCommentsService {
     }
 
     public List<DemoRequestComments> getDemoRequestCommentsByRequestIds(Set<Long> demoRequestIds) {
-        return demoRequestCommentsRepository.findAllByRequestIdIn(demoRequestIds);
+        return demoRequestCommentsRepository.findAllByRequestIdInOrderByIdDesc(demoRequestIds);
     }
 
     public List<DemoRequestComments> getDemoRequestCommentsByRequestId(Long requestId) {
-        return demoRequestCommentsRepository.findAllByRequestId(requestId);
+        return demoRequestCommentsRepository.findAllByRequestIdOrderByIdDesc(requestId);
+    }
+
+    public void deleteAll(List<DemoRequestComments> demoRequestComments) {
+        demoRequestCommentsRepository.deleteAll(demoRequestComments);
     }
 }

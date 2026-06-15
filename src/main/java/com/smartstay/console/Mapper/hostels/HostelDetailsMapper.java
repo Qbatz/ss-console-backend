@@ -285,7 +285,9 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                     currentSubscription.getPaidAmount(),
                     currentSubscription.getDiscount(),
                     currentSubscription.getDiscountAmount(),
-                    currentSubscription.getPaymentProof()
+                    currentSubscription.getPaymentProof(),
+                    Utils.dateToString(currentSubscription.getCreatedAt()),
+                    Utils.dateToTime(currentSubscription.getCreatedAt())
             );
         }
 
@@ -302,7 +304,9 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                         subscription.getPaidAmount(),
                         subscription.getDiscount(),
                         subscription.getDiscountAmount(),
-                        subscription.getPaymentProof()
+                        subscription.getPaymentProof(),
+                        Utils.dateToString(subscription.getCreatedAt()),
+                        Utils.dateToTime(subscription.getCreatedAt())
                 )).toList();
 
         List<UserActivitiesResponse> activitiesRes = activities.stream()

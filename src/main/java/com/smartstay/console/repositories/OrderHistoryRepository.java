@@ -48,4 +48,6 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
                                    @Param("orderStatuses") List<String> orderStatuses);
 
     OrderHistory findByHistoryIdAndIsActiveTrue(Long orderHistoryId);
+
+    OrderHistory findByPaymentUrlAndOrderStatusAndIsActiveTrue(String paymentLink, String name);
 }

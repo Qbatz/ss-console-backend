@@ -10,7 +10,7 @@ import java.util.Set;
 @Repository
 public interface DemoRequestCommentsRepository extends JpaRepository<DemoRequestComments, Long> {
 
-    List<DemoRequestComments> findAllByRequestIdIn(Set<Long> demoRequestIds);
+    List<DemoRequestComments> findAllByRequestIdInOrderByIdDesc(Set<Long> demoRequestIds);
 
-    List<DemoRequestComments> findAllByRequestId(Long requestId);
+    List<DemoRequestComments> findAllByRequestIdOrderByIdDesc(Long requestId);
 }

@@ -36,6 +36,7 @@ public class Utils {
     public static final String NO_CHANGES_DETECTED = "No changes detected";
     public static final String CANNOT_EDIT_YOURSELF = "Cannot edit yourself";
     public static final String UNABLE_TO_VERIFY_PAYMENT = "Unable to verify payment";
+    public static final String UNABLE_TO_GENERATE_PAYMENT_LINK = "Unable to generate payment link";
 
     public static final String UN_AUTHORIZED = "Unauthorized Access";
     public static final String ACCESS_RESTRICTED = "Access Restricted";
@@ -110,6 +111,7 @@ public class Utils {
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
     public static final String PLAN_FEATURE_MISMATCH = "Plan of plan feature does not match plan";
     public static final String PAID_BY_HOSTEL_MISMATCH = "Paid by does not match with hostel users";
+    public static final String PAYMENT_URL_AND_HOSTEL_MISMATCH = "Payment link and hostel id does not match";
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";

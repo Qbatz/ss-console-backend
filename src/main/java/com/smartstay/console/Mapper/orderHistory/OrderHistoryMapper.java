@@ -159,6 +159,7 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
                 orderHistory.getOrderStatus(), canVerifyPayment, orderHistory.getPaymentType(), orderHistory.getChannel(),
                 orderHistory.getPaymentUrl(), orderHistory.getPaymentProof(), paymentProofFileName, upiId, orderHistory.getCardHolderName(),
                 orderHistory.getCardType(), orderHistory.getCardBrand(), orderHistory.getIssuer(), cardNo, orderHistory.getUserType(),
-                paidBy, collectedBy, createdBy, Utils.dateToString(orderHistory.getCreatedAt()), Utils.dateToTime(orderHistory.getCreatedAt()));
+                Utils.dateToString(orderHistory.getPaidAt()), Utils.dateToTime(orderHistory.getPaidAt()), paidBy, collectedBy,
+                createdBy, Utils.dateToString(orderHistory.getCreatedAt()), Utils.dateToTime(orderHistory.getCreatedAt()));
     }
 }
