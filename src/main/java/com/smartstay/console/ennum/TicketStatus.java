@@ -22,7 +22,7 @@ public enum TicketStatus {
 
     public Set<TicketStatus> getAllowedStatuses() {
         return switch (this) {
-            case WAITING -> Set.of(ASSIGNED, RESOLVED, CLOSED);
+            case WAITING -> Set.of(ASSIGNED);
             case ASSIGNED -> Set.of(ASSIGNED, IN_PROGRESS, RESOLVED, CLOSED);
             case IN_PROGRESS -> Set.of(RESOLVED, CLOSED);
             case RESOLVED -> Set.of();
