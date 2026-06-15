@@ -251,33 +251,11 @@ public class SubscriptionService {
 
         duration = duration - 1;
 
-        newSubscription.setPlanStartsAt(startsAt);
-        Date endDate = Utils.addDaysToDate(startsAt, duration);
-        newSubscription.setPlanEndsAt(endDate);
-        newSubscription.setNextBillingAt(endDate);
-
-        newSubscription.setPaidAmount(paidAmount);
-        newSubscription.setDiscountAmount(discountAmount);
-        newSubscription.setDiscount(discountPercentage);
-        newSubscription.setPaymentProof(paymentProofUrl);
-
-        newSubscription.setSubscriptionNumber(latestSubscription.getSubscriptionNumber());
-        newSubscription.setHostelId(hostelId);
-        newSubscription.setPlanCode(plans.getPlanCode());
-        newSubscription.setPlanName(plans.getPlanName());
-        newSubscription.setPlanAmount(plans.getFinalPrice());
-        newSubscription.setCreatedAt(today);
-        newSubscription.setIsActive(true);
-        newSubscription.setCreatedBy(agent.getAgentId());
-        newSubscription.setCreatedByUserType(UserType.AGENT.name());
-        newSubscription.setActivatedAt(today);
-
-        newSubscription = subscriptionRepository.save(newSubscription);
-
+        OrderHistory newOrder = null;
         if (!plans.getPlanType().equalsIgnoreCase(PlanType.TRIAL.name()) &&
                 !plans.getPlanType().equalsIgnoreCase(PlanType.EXPANDABLE_TRIAL.name())){
 
-            OrderHistory newOrder = new OrderHistory();
+            newOrder = new OrderHistory();
             newOrder.setHostelId(hostelId);
             newOrder.setDiscountAmount(newSubscription.getDiscountAmount());
             newOrder.setPlanAmount(plans.getFinalPrice());
@@ -295,9 +273,34 @@ public class SubscriptionService {
             newOrder.setCreatedAt(today);
             newOrder.setCreatedBy(agent.getAgentId());
 
-            orderHistoryService.save(newOrder);
+            newOrder = orderHistoryService.save(newOrder);
         }
-        else if (plans.getPlanType().equalsIgnoreCase(PlanType.EXPANDABLE_TRIAL.name())) {
+
+        newSubscription.setPlanStartsAt(startsAt);
+        Date endDate = Utils.addDaysToDate(startsAt, duration);
+        newSubscription.setPlanEndsAt(endDate);
+        newSubscription.setNextBillingAt(endDate);
+
+        newSubscription.setPaidAmount(paidAmount);
+        newSubscription.setDiscountAmount(discountAmount);
+        newSubscription.setDiscount(discountPercentage);
+        newSubscription.setPaymentProof(paymentProofUrl);
+
+        newSubscription.setSubscriptionNumber(latestSubscription.getSubscriptionNumber());
+        newSubscription.setOrderId(newOrder != null ? newOrder.getHistoryId() : null);
+        newSubscription.setHostelId(hostelId);
+        newSubscription.setPlanCode(plans.getPlanCode());
+        newSubscription.setPlanName(plans.getPlanName());
+        newSubscription.setPlanAmount(plans.getFinalPrice());
+        newSubscription.setCreatedAt(today);
+        newSubscription.setIsActive(true);
+        newSubscription.setCreatedBy(agent.getAgentId());
+        newSubscription.setCreatedByUserType(UserType.AGENT.name());
+        newSubscription.setActivatedAt(today);
+
+        newSubscription = subscriptionRepository.save(newSubscription);
+
+        if (plans.getPlanType().equalsIgnoreCase(PlanType.EXPANDABLE_TRIAL.name())) {
 
             if (payload.trialDaysReason() == null || payload.trialDaysReason().isBlank()){
                 return new ResponseEntity<>(Utils.TRIAL_DAYS_REASON_REQUIRED, HttpStatus.BAD_REQUEST);

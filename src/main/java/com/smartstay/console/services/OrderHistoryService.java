@@ -213,8 +213,8 @@ public class OrderHistoryService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    public void save(OrderHistory newOrder) {
-        orderHistoryRepository.save(newOrder);
+    public OrderHistory save(OrderHistory newOrder) {
+        return orderHistoryRepository.save(newOrder);
     }
 
     public ResponseEntity<?> verifyOrderHistory(Long orderHistoryId) {
