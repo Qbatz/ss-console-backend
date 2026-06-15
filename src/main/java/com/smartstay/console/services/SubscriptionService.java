@@ -9,6 +9,7 @@ import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.subscription.Subscription;
 import com.smartstay.console.repositories.SubscriptionRepository;
 import com.smartstay.console.responses.subscriptions.SubscriptionsResponse;
+import com.smartstay.console.responses.subscriptions.TrialDaysExtReasonRes;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.Utils;
 import jakarta.transaction.Transactional;
@@ -48,6 +49,8 @@ public class SubscriptionService {
     private UploadFileToS3 uploadFileToS3;
     @Autowired
     private UsersService usersService;
+    @Autowired
+    private TrialDaysExtensionService trialDaysExtensionService;
 
     @Transactional
     public ResponseEntity<?> subscribeHostel(String hostelId, Subscription payload, MultipartFile paymentProof) {
@@ -293,6 +296,30 @@ public class SubscriptionService {
             newOrder.setCreatedBy(agent.getAgentId());
 
             orderHistoryService.save(newOrder);
+        }
+        else if (plans.getPlanType().equalsIgnoreCase(PlanType.EXPANDABLE_TRIAL.name())) {
+
+            if (payload.trialDaysReason() == null || payload.trialDaysReason().isBlank()){
+                return new ResponseEntity<>(Utils.TRIAL_DAYS_REASON_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            TrialDaysExtReason trialDaysExtReason;
+            try {
+                trialDaysExtReason = TrialDaysExtReason.valueOf(payload.trialDaysReason());
+            } catch (Exception e) {
+                return new ResponseEntity<>(Utils.TRIAL_DAYS_REASON_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            TrialDaysExtension trialDaysExtension = new TrialDaysExtension();
+            trialDaysExtension.setDuration(duration + 1);
+            trialDaysExtension.setReason(trialDaysExtReason.name());
+            trialDaysExtension.setRemarks(payload.trialDaysRemarks());
+            trialDaysExtension.setSubscriptionId(newSubscription.getSubscriptionId());
+            trialDaysExtension.setCreatedByUserType(UserType.AGENT.name());
+            trialDaysExtension.setCreatedBy(agent.getAgentId());
+            trialDaysExtension.setCreatedAt(today);
+
+            trialDaysExtensionService.save(trialDaysExtension);
         }
 
         if (latestSubscription.getPlanEndsAt() != null) {
@@ -564,5 +591,15 @@ public class SubscriptionService {
 
     public void deleteAll(List<com.smartstay.console.dao.Subscription> listSubscriptions) {
         subscriptionRepository.deleteAll(listSubscriptions);
+    }
+
+    public ResponseEntity<?> getTrialDaysExtReason() {
+
+        List<TrialDaysExtReasonRes> response = Arrays.stream(TrialDaysExtReason.values())
+                .map(reason -> new TrialDaysExtReasonRes(
+                        reason.name(), reason.getLabel()
+                )).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

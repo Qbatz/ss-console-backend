@@ -9,5 +9,7 @@ public record Subscription(Integer trialDays,
                            String planCode,
                            Double paidAmount,
                            Double discountAmount,
-                           String paidBy) {
+                           String paidBy,
+                           String trialDaysReason,
+                           String trialDaysRemarks) {
 }

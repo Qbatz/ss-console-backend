@@ -83,6 +83,7 @@ public class Utils {
     public static final String BED_NOT_FOUND = "Bed not found";
     public static final String NO_EXPENSES_FOUND = "Expenses not found";
     public static final String RESET_DONE_NO_RECORDS_FOUND = "Reset completed, no records found";
+    public static final String TRIAL_DAYS_REASON_NOT_FOUND = "Trial days reason not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -132,6 +133,7 @@ public class Utils {
     public static final String PLAN_CODE_REQUIRED = "Plan code is required";
     public static final Object DEMO_FROM_TO_DATE_REQUIRED = "Demo from and to date is required";
     public static final String PARENT_ID_REQUIRED = "ParentId is required";
+    public static final String TRIAL_DAYS_REASON_REQUIRED = "Trial days reason is required";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
