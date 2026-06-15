@@ -216,8 +216,9 @@ public class InvoiceV1Service {
                     throw new BadRequestException(Utils.BED_NOT_FOUND);
                 }
 
+                bed.setFreeFrom(booking.getLeavingDate());
                 bed.setStatus(BedStatus.OCCUPIED.name());
-                bed.setCurrentStatus(BedStatus.NOTICE.name());
+                bed.setCurrentStatus(BedStatus.OCCUPIED.name());
                 bed.setUpdatedAt(today);
 
                 SettlementDetails settlementDetail = settlementDetailsMap
@@ -674,8 +675,9 @@ public class InvoiceV1Service {
                     return new ResponseEntity<>(Utils.BED_NOT_FOUND, HttpStatus.BAD_REQUEST);
                 }
 
+                bed.setFreeFrom(booking.getLeavingDate());
                 bed.setStatus(BedStatus.OCCUPIED.name());
-                bed.setCurrentStatus(BedStatus.NOTICE.name());
+                bed.setCurrentStatus(BedStatus.OCCUPIED.name());
                 bed.setUpdatedAt(today);
 
                 SettlementDetails settlementDetail = settlementDetailsMap
