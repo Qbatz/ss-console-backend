@@ -283,7 +283,6 @@ public class SubscriptionService {
             newOrder.setTotalAmount(paidAmount);
             newOrder.setOrderStatus(OrderStatus.PAID.name());
             newOrder.setPaymentType(PaymentType.MANUAL.name());
-            newOrder.setChannel(Channel.CONSOLE.name());
             newOrder.setUserType(UserType.AGENT.name());
             newOrder.setPaymentProof(newSubscription.getPaymentProof());
             newOrder.setPaidBy(payload.paidBy());

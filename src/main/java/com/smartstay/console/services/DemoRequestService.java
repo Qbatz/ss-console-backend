@@ -621,6 +621,14 @@ public class DemoRequestService {
 
         DemoRequestSnapshot oldRequest = SnapshotUtility.toSnapshot(demoRequest);
 
+        List<DemoRequestComments> demoRequestComments = demoRequestCommentsService
+                .getDemoRequestCommentsByRequestId(demoRequestId);
+        List<DemoRequestActivity> demoRequestActivities = demoRequestActivityService
+                .getDemoRequestActivitiesByRequestId(demoRequestId);
+
+        demoRequestCommentsService.deleteAll(demoRequestComments);
+        demoRequestActivityService.deleteAll(demoRequestActivities);
+
         demoRequestRepository.delete(demoRequest);
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.DEMO_REQUEST,
