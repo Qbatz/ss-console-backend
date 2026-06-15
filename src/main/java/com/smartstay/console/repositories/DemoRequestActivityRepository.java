@@ -23,7 +23,7 @@ public interface DemoRequestActivityRepository extends JpaRepository<DemoRequest
                         @Param("endDate") Date endDate,
                         @Param("status") String status);
 
-    List<DemoRequestActivity> findAllByRequestIdIn(Set<Long> demoRequestIds);
+    List<DemoRequestActivity> findAllByRequestIdInOrderByActivityIdDesc(Set<Long> demoRequestIds);
 
-    List<DemoRequestActivity> findAllByRequestId(Long requestId);
+    List<DemoRequestActivity> findAllByRequestIdOrderByActivityIdDesc(Long requestId);
 }

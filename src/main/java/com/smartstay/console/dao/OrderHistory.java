@@ -21,6 +21,7 @@ public class OrderHistory {
     private Long historyId;
     private String hostelId;
     private String paymentUrl;
+    private String paymentId;
     private String paymentLinkId;
     private String paymentSessionId;
     private Double discountAmount;
@@ -49,6 +50,7 @@ public class OrderHistory {
     private String paidBy;
     //agent
     private String collectedBy;
+    private Date paidAt;
     private boolean isActive;
     private Date createdAt;
     //agent && user
