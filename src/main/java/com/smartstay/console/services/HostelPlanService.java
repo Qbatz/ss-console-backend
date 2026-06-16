@@ -19,6 +19,10 @@ public class HostelPlanService {
         return hostelPlanRepository.findActiveHostels(new Date());
     }
 
+    public Long findActiveHostelsByParentIds(Set<String> parentIds) {
+        return hostelPlanRepository.findActiveHostelsByParentIds(new Date(), parentIds);
+    }
+
     public List<HostelPlan> findByHostelIds(List<String> hostelIds) {
         return hostelPlanRepository.findByHostel_HostelIdIn(hostelIds);
     }

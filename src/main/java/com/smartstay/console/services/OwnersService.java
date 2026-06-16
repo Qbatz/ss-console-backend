@@ -16,18 +16,27 @@ import com.smartstay.console.payloads.owners.ResetPassword;
 import com.smartstay.console.payloads.owners.UserEmailPayload;
 import com.smartstay.console.payloads.owners.UserMobilePayload;
 import com.smartstay.console.repositories.UsersRepository;
+import com.smartstay.console.responses.hostelRelationalAgent.HostelRelationalAgentResponse;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.responses.users.OwnerDetailsResponse;
 import com.smartstay.console.responses.users.OwnerResponse;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
+import jakarta.servlet.ServletOutputStream;
+import jakarta.servlet.http.HttpServletResponse;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -113,15 +122,10 @@ public class OwnersService {
         return new ResponseEntity<>(Constants.UPDATED_SUCCESSFULLY, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getAllOwnersList(String name,
-                                              Boolean isPropertiesExpired,
-                                              Boolean isAboutToExpire,
-                                              Boolean isActive,
-                                              Boolean hasNoProperties,
-                                              int page,
-                                              int size,
-                                              String sortBy,
-                                              String direction) {
+    public ResponseEntity<?> getAllOwnersList(String name, Boolean isPropertiesExpired,
+                                              Boolean isAboutToExpire, Boolean isActive,
+                                              Boolean hasNoProperties, int page, int size,
+                                              String sortBy, String direction) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -345,6 +349,246 @@ public class OwnersService {
         response.put("availableDirection", List.of("asc", "desc"));
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public void exportOwners(String name, Boolean isPropertiesExpired,
+                             Boolean isAboutToExpire, Boolean isActive,
+                             Boolean hasNoProperties, String sortBy,
+                             String direction, HttpServletResponse response) throws IOException {
+
+        if (!authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Constants.UN_AUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Constants.UN_AUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, Utils.ACCESS_RESTRICTED);
+        }
+
+        List<OwnerResponse> ownersList = getDataForExport(name, isPropertiesExpired, isAboutToExpire,
+                isActive, hasNoProperties, sortBy, direction);
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Proprietors");
+
+        // Header
+        Row header = sheet.createRow(0);
+        header.createCell(0).setCellValue("Client Name");
+        header.createCell(1).setCellValue("Client Mobile No");
+        header.createCell(2).setCellValue("Client Email Id");
+        header.createCell(3).setCellValue("No Of Properties");
+        header.createCell(4).setCellValue("Client Joined On");
+        header.createCell(5).setCellValue("Client Last Activity Date");
+        header.createCell(6).setCellValue("Client Last Activity Time");
+        header.createCell(7).setCellValue("Relational Agent Name");
+        header.createCell(8).setCellValue("Relational Agent Reason");
+        header.createCell(9).setCellValue("Relational Agent Comments");
+
+        int rowIdx = 1;
+        for (OwnerResponse owner : ownersList) {
+            String ownerName = null;
+            if (owner.firstName() != null){
+                ownerName = Utils.getFullName(owner.firstName(), owner.lastName());
+            }
+
+            HostelRelationalAgentResponse relationalAgentRes = null;
+            if (owner.relationalAgents() != null && !owner.relationalAgents().isEmpty()){
+                relationalAgentRes = owner.relationalAgents().getFirst();
+            }
+
+            Row row = sheet.createRow(rowIdx++);
+            row.createCell(0).setCellValue(ownerName != null ? ownerName : "");
+            row.createCell(1).setCellValue(owner.mobileNo() != null ? owner.mobileNo() : "");
+            row.createCell(2).setCellValue(owner.emailId() != null ? owner.emailId() : "");
+            row.createCell(3).setCellValue(owner.noOfProperties());
+            row.createCell(4).setCellValue(owner.joinedDate() != null ? owner.joinedDate() : "");
+            row.createCell(5).setCellValue(owner.lastActivityDate() != null ? owner.lastActivityDate() : "");
+            row.createCell(6).setCellValue(owner.lastActivityTime() != null ? owner.lastActivityTime() : "");
+            row.createCell(7).setCellValue(relationalAgentRes != null ? relationalAgentRes.agentName() != null ? relationalAgentRes.agentName() : "" : "");
+            row.createCell(8).setCellValue(relationalAgentRes != null ? relationalAgentRes.reason() != null ? relationalAgentRes.reason() : "" : "");
+            row.createCell(9).setCellValue(relationalAgentRes != null ? relationalAgentRes.comments() != null ? relationalAgentRes.comments() : "" : "");
+        }
+
+        Row headerRow = sheet.getRow(0);
+        int totalColumns = headerRow.getLastCellNum();
+
+        for (int col = 0; col < totalColumns; col++) {
+            sheet.autoSizeColumn(col);
+        }
+
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=\"client.xlsx\"");
+
+        ServletOutputStream out = response.getOutputStream();
+        workbook.write(out);
+        out.flush();
+        workbook.close();
+    }
+
+    private List<OwnerResponse> getDataForExport(String name, Boolean isPropertiesExpired,
+                                                 Boolean isAboutToExpire, Boolean isActive,
+                                                 Boolean hasNoProperties, String sortBy,
+                                                 String direction) {
+
+        OwnerSortField sortField = OwnerSortField.from(sortBy);
+        String finalDirection = "desc".equalsIgnoreCase(direction) ? "desc" : "asc";
+
+        boolean isDesc = "desc".equalsIgnoreCase(finalDirection);
+
+        boolean expired = Boolean.TRUE.equals(isPropertiesExpired);
+        boolean aboutToExpire = Boolean.TRUE.equals(isAboutToExpire);
+        boolean active = Boolean.TRUE.equals(isActive);
+        boolean noProperties = Boolean.TRUE.equals(hasNoProperties);
+
+        List<OwnerWithAddressProjection> owners = usersRepository.findAllOwnersWithAddressProjection(name);
+
+        if (owners.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<String> parentIds = owners.stream()
+                .map(OwnerWithAddressProjection::getParentId)
+                .collect(Collectors.toSet());
+
+        List<HostelPlanProjection> hostels = hostelsService.getHostelPlanProjectionData(parentIds);
+
+        Map<String, Integer> hostelCountMap = new HashMap<>();
+
+        Set<String> expiredOwnerIds = new HashSet<>();
+        Set<String> aboutToExpireOwnerIds = new HashSet<>();
+        Set<String> activeOwnerIds = new HashSet<>();
+
+        Date today = new Date();
+        Date plus10 = Utils.addDaysToDate(today, 10);
+
+        for (HostelPlanProjection hostel : hostels) {
+
+            String parentId = hostel.parentId();
+            Date end = hostel.currentPlanEndsAt();
+
+            hostelCountMap.merge(parentId, 1, Integer::sum);
+
+            if (end == null) {
+                expiredOwnerIds.add(parentId);
+                continue;
+            }
+
+            int cmpToday = Utils.compareWithTwoDates(end, today);
+            int cmpPlus10 = Utils.compareWithTwoDates(end, plus10);
+
+            if (cmpToday < 0) {
+                expiredOwnerIds.add(parentId);
+            }
+            else if (cmpPlus10 < 0) {
+                aboutToExpireOwnerIds.add(parentId);
+                activeOwnerIds.add(parentId);
+            }
+            else {
+                activeOwnerIds.add(parentId);
+            }
+        }
+
+        Set<String> parentIdsWithHostels = hostelCountMap.keySet();
+
+        List<OwnerWithAddressProjection> filteredOwners = owners.stream()
+                .filter(owner -> {
+
+                    String parentId = owner.getParentId();
+
+                    boolean hasNoHostels = !parentIdsWithHostels.contains(parentId);
+
+                    if (expired && expiredOwnerIds.contains(parentId)) {
+                        return true;
+                    }
+
+                    if (aboutToExpire && aboutToExpireOwnerIds.contains(parentId)) {
+                        return true;
+                    }
+
+                    if (active && activeOwnerIds.contains(parentId)) {
+                        return true;
+                    }
+
+                    if (noProperties && hasNoHostels) {
+                        return true;
+                    }
+
+                    return !expired && !aboutToExpire && !active && !noProperties;
+                }).toList();
+
+        List<UserActivities> userActivitiesList =
+                userActivitiesService.findLatestActivitiesByParentIds(parentIds);
+
+        Map<String, UserActivities> userActivitiesMap = userActivitiesList.stream()
+                .collect(Collectors.toMap(UserActivities::getParentId, ua -> ua));
+
+        Comparator<OwnerWithAddressProjection> comparator;
+
+        switch (sortField) {
+
+            case OWNER_NAME -> comparator = Comparator.comparing(
+                    u -> (u.getFirstName() + " " + u.getLastName()).toLowerCase()
+            );
+
+            case HOSTEL_COUNT -> comparator = Comparator.comparing(
+                    u -> hostelCountMap.getOrDefault(u.getParentId(), 0)
+            );
+
+            case LATEST_ACTIVITY -> comparator = Comparator.comparing(
+                    u -> {
+                        UserActivities ua = userActivitiesMap.get(u.getParentId());
+                        return ua != null ? ua.getCreatedAt() : null;
+                    },
+                    Comparator.nullsFirst(Comparator.naturalOrder())
+            );
+
+            default -> comparator = Comparator.comparing(OwnerWithAddressProjection::getCreatedAt);
+        }
+
+        if (isDesc) {
+            comparator = comparator.reversed();
+        }
+
+        List<OwnerWithAddressProjection> sortedOwners = filteredOwners.stream()
+                .sorted(comparator)
+                .toList();
+
+        Set<String> sortedOwnersParentIds = sortedOwners.stream()
+                .map(OwnerWithAddressProjection::getParentId)
+                .collect(Collectors.toSet());
+
+        List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
+                .getByParentIds(new HashSet<>(sortedOwnersParentIds));
+        Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
+                .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
+
+        Set<String> agentIds = new HashSet<>();
+        for (HostelRelationalAgent relationalAgent : relationalAgents) {
+            if (relationalAgent.getAgentId() != null){
+                agentIds.add(relationalAgent.getAgentId());
+            }
+            if (relationalAgent.getCreatedBy() != null){
+                agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        a -> a, (a, b) -> a));
+
+        return sortedOwners.stream()
+                .map(owner -> new OwnerListMapper(
+                        hostelCountMap.getOrDefault(owner.getParentId(), 0),
+                        userActivitiesMap.get(owner.getParentId()),
+                        relationalAgentMap.getOrDefault(owner.getParentId(), null),
+                        agentMap
+                ).apply(owner))
+                .toList();
     }
 
     public ResponseEntity<?> getOwnerById(String ownerId) {

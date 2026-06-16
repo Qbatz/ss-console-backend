@@ -5,6 +5,7 @@ import com.smartstay.console.dao.BillingRules;
 import com.smartstay.console.dao.ElectricityConfig;
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dto.hostel.BillingDates;
+import com.smartstay.console.dto.hostel.HostelLiteProjection;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.utils.Utils;
 import jakarta.persistence.EntityNotFoundException;
@@ -98,6 +99,10 @@ public class HostelService {
         return hostelRepository.findActiveHostelIds();
     }
 
+    public Set<String> getActiveParentIds(){
+        return hostelRepository.findActiveParentIds();
+    }
+
     public HostelV1 getHostelByHostelId(String hostelId) {
         return hostelRepository.findHostelByHostelId(hostelId);
     }
@@ -108,5 +113,9 @@ public class HostelService {
 
     public List<HostelV1> getHostelsByParentIds(Set<String> parentIds) {
         return hostelRepository.findAllByParentIdInAndIsActiveTrueAndIsDeletedFalse(parentIds);
+    }
+
+    public List<HostelLiteProjection> getHostelsLiteProjectionByParentIds(Set<String> parentIds) {
+        return hostelRepository.findLiteByParentIds(parentIds);
     }
 }

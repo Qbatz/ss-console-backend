@@ -185,6 +185,19 @@ public class Utils {
         return ChronoUnit.DAYS.between(start, end) + 1;
     }
 
+    public static long daysBetween(Date olderDate, Date newerDate) {
+
+        LocalDate d1 = olderDate.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        LocalDate d2 = newerDate.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return ChronoUnit.DAYS.between(d1, d2);
+    }
+
     public static String dateToString(Date date) {
         if (date == null) {
             return "";

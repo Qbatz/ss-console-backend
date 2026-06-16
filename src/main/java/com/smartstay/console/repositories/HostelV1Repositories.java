@@ -1,6 +1,7 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.HostelV1;
+import com.smartstay.console.dto.hostel.HostelLiteProjection;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +27,16 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
     Long findHostelCount();
 
     @Query("""
+            SELECT COUNT(h.hostelId)
+            FROM hostelv1 h
+            INNER JOIN h.hostelPlan hp
+            WHERE h.isActive = true
+                AND h.isDeleted = false
+                AND h.parentId in :parentIds
+            """)
+    Long findHostelCountByParentIds(Set<String> parentIds);
+
+    @Query("""
             SELECT DISTINCT h.hostelId
             FROM hostelv1 h
             INNER JOIN h.hostelPlan hp
@@ -33,6 +44,15 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                 AND h.isDeleted = false
             """)
     Set<String> findActiveHostelIds();
+
+    @Query("""
+            SELECT DISTINCT h.parentId
+            FROM hostelv1 h
+            INNER JOIN h.hostelPlan hp
+            WHERE h.isActive = true
+                AND h.isDeleted = false
+            """)
+    Set<String> findActiveParentIds();
 
     @Query(value = """
             SELECT h.*
@@ -71,6 +91,116 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                                      @Param("endDate") Date endDate,
                                      @Param("subActive") Boolean subActive,
                                      Pageable pageable);
+
+    @Query(value = """
+            SELECT h.*
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+                AND (:startDate IS NULL OR h.created_at >= :startDate)
+                AND (:endDate IS NULL OR h.created_at < :endDate)
+                AND h.is_active = true
+                AND h.is_deleted = false
+                AND (
+                    :subActive IS NULL
+                    OR (:subActive = TRUE AND DATE(hp.current_plan_ends_at) >= CURRENT_DATE)
+                    OR (:subActive = FALSE AND DATE(hp.current_plan_ends_at) < CURRENT_DATE)
+                )
+                AND h.hostel_id in :hostelIds
+                AND (
+                    :trialStartDate IS NULL
+                    OR (
+                        hp.is_trial = true
+                        AND hp.current_plan_ends_at >= :trialStartDate
+                    )
+                )
+                AND (
+                    :trialEndDate IS NULL
+                    OR (
+                        hp.is_trial = true
+                        AND hp.current_plan_ends_at < :trialEndDate
+                    )
+                )
+            ORDER BY hp.current_plan_ends_at ASC
+            """,
+            countQuery = """
+            SELECT COUNT(*)
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+                AND (:startDate IS NULL OR h.created_at >= :startDate)
+                AND (:endDate IS NULL OR h.created_at < :endDate)
+                AND h.is_active = true
+                AND h.is_deleted = false
+                AND (
+                    :subActive IS NULL
+                    OR (:subActive = TRUE AND DATE(hp.current_plan_ends_at) >= CURRENT_DATE)
+                    OR (:subActive = FALSE AND DATE(hp.current_plan_ends_at) < CURRENT_DATE)
+                )
+                AND h.hostel_id in :hostelIds
+                AND (
+                    :trialStartDate IS NULL
+                    OR (
+                        hp.is_trial = true
+                        AND hp.current_plan_ends_at >= :trialStartDate
+                    )
+                )
+                AND (
+                    :trialEndDate IS NULL
+                    OR (
+                        hp.is_trial = true
+                        AND hp.current_plan_ends_at < :trialEndDate
+                    )
+                )
+            """,
+            nativeQuery = true)
+    Page<HostelV1> findAllHostels(@Param("name") String name,
+                                  @Param("startDate") Date startDate,
+                                  @Param("endDate") Date endDate,
+                                  @Param("subActive") Boolean subActive,
+                                  @Param("hostelIds") Set<String> hostelIds,
+                                  @Param("trialStartDate") Date trialStartDate,
+                                  @Param("trialEndDate") Date trialEndDate,
+                                  Pageable pageable);
+
+    @Query(value = """
+            SELECT h.*
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+                AND (:startDate IS NULL OR h.created_at >= :startDate)
+                AND (:endDate IS NULL OR h.created_at < :endDate)
+                AND h.is_active = true
+                AND h.is_deleted = false
+                AND (
+                    :subActive IS NULL
+                    OR (:subActive = TRUE AND DATE(hp.current_plan_ends_at) >= CURRENT_DATE)
+                    OR (:subActive = FALSE AND DATE(hp.current_plan_ends_at) < CURRENT_DATE)
+                )
+                AND h.hostel_id in :hostelIds
+                AND (
+                    :trialStartDate IS NULL
+                    OR (
+                        hp.is_trial = true
+                        AND hp.current_plan_ends_at >= :trialStartDate
+                    )
+                )
+                AND (
+                    :trialEndDate IS NULL
+                    OR (
+                        hp.is_trial = true
+                        AND hp.current_plan_ends_at < :trialEndDate
+                    )
+                )
+            ORDER BY hp.current_plan_ends_at ASC
+            """, nativeQuery = true)
+    List<HostelV1> findAllHostels(@Param("name") String name,
+                                  @Param("startDate") Date startDate,
+                                  @Param("endDate") Date endDate,
+                                  @Param("subActive") Boolean subActive,
+                                  @Param("hostelIds") Set<String> hostelIds,
+                                  @Param("trialStartDate") Date trialStartDate,
+                                  @Param("trialEndDate") Date trialEndDate);
 
     HostelV1 findByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
 
@@ -145,4 +275,42 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
     HostelV1 findHostelByHostelId(@Param("hostelId") String hostelId);
 
     List<HostelV1> findAllByParentIdInAndIsActiveTrueAndIsDeletedFalse(Set<String> parentIds);
+
+    @Query(value = """
+            SELECT count(h.hostel_id)
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE h.is_active = true
+                AND h.is_deleted = false
+                AND h.parent_id in :parentIds
+                AND (
+                    :trialStartDate IS NULL
+                    OR (
+                        hp.is_trial = true
+                        AND hp.current_plan_ends_at >= :trialStartDate
+                    )
+                )
+                AND (
+                    :trialEndDate IS NULL
+                    OR (
+                        hp.is_trial = true
+                        AND hp.current_plan_ends_at < :trialEndDate
+                    )
+                )
+            """, nativeQuery = true)
+    long findTrialExpiringCount(@Param("trialStartDate") Date trialStartDate,
+                                @Param("trialEndDate") Date trialEndDate,
+                                @Param("parentIds") Set<String> parentIds);
+
+    @Query("""
+            SELECT h.hostelId as hostelId,
+                   h.parentId as parentId,
+                   h.createdAt as createdAt
+            FROM hostelv1 h
+            INNER JOIN h.hostelPlan hp
+            WHERE h.parentId IN :parentIds
+              AND h.isActive = true
+              AND h.isDeleted = false
+            """)
+    List<HostelLiteProjection> findLiteByParentIds(@Param("parentIds") Set<String> parentIds);
 }

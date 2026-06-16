@@ -47,6 +47,27 @@ public class HostelsController {
         hostelsService.exportHostels(hostelName, startDate, endDate, subActive, response);
     }
 
+    @GetMapping("/new")
+    public ResponseEntity<?> getAllHostels(@RequestParam(value = "page", defaultValue = "1") int page,
+                                           @RequestParam(value = "size", defaultValue = "10") int size,
+                                           @RequestParam(value = "name", required = false) String name,
+                                           @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
+                                           @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
+                                           @RequestParam(value = "agentId", required = false) String agentId,
+                                           @RequestParam(defaultValue = "TOTAL_PROPERTIES") String filterOption) {
+        return hostelsService.getAllHostels(page, size, name, startDate, endDate, agentId, filterOption);
+    }
+
+    @GetMapping("/export/new")
+    public void exportHostelsNew(@RequestParam(value = "name", required = false) String name,
+                                 @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
+                                 @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
+                                 @RequestParam(value = "agentId", required = false) String agentId,
+                                 @RequestParam(defaultValue = "TOTAL_PROPERTIES") String filterOption,
+                                 HttpServletResponse response) throws IOException {
+        hostelsService.exportHostelsNew(name, startDate, endDate, agentId, filterOption, response);
+    }
+
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getHostelByHostelId(@PathVariable("hostelId") String hostelId){
         return hostelsService.getHostelByHostelId(hostelId);
