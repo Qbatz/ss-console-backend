@@ -22,6 +22,7 @@ import com.smartstay.console.events.RecurringEvents;
 import com.smartstay.console.payloads.billingRules.UpdateBillingRulesPayload;
 import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
+import com.smartstay.console.payloads.hostel.HostelNotesPayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerRecTrackerRes;
@@ -183,6 +184,8 @@ public class HostelsService {
     private InvoiceRedemptionService invoiceRedemptionService;
     @Autowired
     private SettlementItemsService settlementItemsService;
+    @Autowired
+    private HostelNotesService hostelNotesService;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -3382,5 +3385,97 @@ public class HostelsService {
                 String.valueOf(newBillingRules.getId()), null, newBillingRulesSnapshot);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> addHostelNotes(String hostelId, HostelNotesPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        HostelNotes hostelNotes = new HostelNotes();
+
+        hostelNotes.setComment(payload.notes());
+        hostelNotes.setCreatedByUserType(UserType.AGENT.name());
+        hostelNotes.setCreatedBy(authentication.getName());
+        hostelNotes.setCreatedAt(today);
+        hostelNotes.setHostelId(hostelId);
+        hostelNotes.setParentId(hostel.getParentId());
+
+        hostelNotes = hostelNotesService.save(hostelNotes);
+
+        HostelNotesSnapshot newNotes = SnapshotUtility.toSnapshot(hostelNotes);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.HOSTEL_NOTES,
+                String.valueOf(hostelNotes.getId()), null, newNotes);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getHostelNotes(String hostelId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<HostelNotes> hostelNotes = hostelNotesService
+                .getAllByHostelId(hostelId);
+
+        Set<String> notesCreatedByAgentIds = new HashSet<>();
+        for (HostelNotes note : hostelNotes) {
+            if (UserType.AGENT.name().equals(note.getCreatedByUserType())){
+                notesCreatedByAgentIds.add(note.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(notesCreatedByAgentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId, a -> a));
+
+        List<HostelNotesResponse> response = hostelNotes.stream()
+                .map(notes -> {
+
+                    String createdBy = null;
+                    Agent createdByAgent = agentMap.getOrDefault(notes.getCreatedBy(), null);
+                    if (createdByAgent != null){
+                        createdBy = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
+                    }
+
+                    return new HostelNotesResponse(notes.getId(), notes.getComment(),
+                            notes.getCreatedByUserType(), notes.getCreatedBy(), createdBy,
+                            Utils.dateToString(notes.getCreatedAt()), Utils.dateToTime(notes.getCreatedAt()));
+                }).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

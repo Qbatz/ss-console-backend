@@ -3,6 +3,7 @@ package com.smartstay.console.controller;
 import com.smartstay.console.payloads.billingRules.UpdateBillingRulesPayload;
 import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
+import com.smartstay.console.payloads.hostel.HostelNotesPayload;
 import com.smartstay.console.services.HostelsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -137,5 +138,16 @@ public class HostelsController {
     public ResponseEntity<?> updateBillingRuleConfiguration(@PathVariable("hostelId") String hostelId,
                                                             @RequestBody @Valid UpdateBillingRulesPayload payload){
         return hostelsService.updateBillingRuleConfiguration(hostelId, payload);
+    }
+
+    @PostMapping("/notes/{hostelId}")
+    public ResponseEntity<?> addHostelNotes(@PathVariable("hostelId") String hostelId,
+                                            @Valid @RequestBody HostelNotesPayload payload){
+        return hostelsService.addHostelNotes(hostelId, payload);
+    }
+
+    @GetMapping("/notes/{hostelId}")
+    public ResponseEntity<?> getHostelNotes(@PathVariable("hostelId") String hostelId){
+        return hostelsService.getHostelNotes(hostelId);
     }
 }

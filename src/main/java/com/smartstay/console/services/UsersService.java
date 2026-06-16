@@ -3,10 +3,14 @@ package com.smartstay.console.services;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.users.UserSnapshot;
+import com.smartstay.console.dto.users.UsersNotesSnapshot;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.Source;
+import com.smartstay.console.ennum.UserType;
+import com.smartstay.console.payloads.users.UsersNotesPayload;
 import com.smartstay.console.repositories.UsersRepository;
+import com.smartstay.console.responses.users.UsersNotesResponse;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
@@ -15,10 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -52,6 +53,8 @@ public class UsersService {
     private CommentsService commentsService;
     @Autowired
     private UsersConfigService usersConfigService;
+    @Autowired
+    private UserNotesService userNotesService;
 
     public List<Users> getOwners(List<String> parentId) {
         if (!authentication.isAuthenticated()) {
@@ -181,5 +184,97 @@ public class UsersService {
 
     public List<Users> getOwnersByMobileNo(String ownerMobile) {
         return usersRepository.findOwnersByMobileNo(ownerMobile);
+    }
+
+    public ResponseEntity<?> addUsersNotes(String userId, UsersNotesPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Users users = usersRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalse(userId);
+        if (users == null) {
+            return new ResponseEntity<>(Constants.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        UsersNotes usersNotes = new UsersNotes();
+
+        usersNotes.setComment(payload.notes());
+        usersNotes.setCreatedByUserType(UserType.AGENT.name());
+        usersNotes.setCreatedBy(authentication.getName());
+        usersNotes.setCreatedAt(today);
+        usersNotes.setUserId(userId);
+        usersNotes.setParentId(users.getParentId());
+
+        usersNotes = userNotesService.save(usersNotes);
+
+        UsersNotesSnapshot newNotes = SnapshotUtility.toSnapshot(usersNotes);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.USERS_NOTES,
+                String.valueOf(usersNotes.getId()), null, newNotes);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getUsersNotes(String userId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Users users = usersRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalse(userId);
+        if (users == null) {
+            return new ResponseEntity<>(Constants.USER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<UsersNotes> usersNotes = userNotesService
+                .getUserNotesByUserId(userId);
+
+        Set<String> notesCreatedByAgentIds = new HashSet<>();
+        for (UsersNotes note : usersNotes) {
+            if (UserType.AGENT.name().equals(note.getCreatedByUserType())){
+                notesCreatedByAgentIds.add(note.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(notesCreatedByAgentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId, a -> a));
+
+        List<UsersNotesResponse> response = usersNotes.stream()
+                .map(notes -> {
+
+                    String createdBy = null;
+                    Agent createdByAgent = agentMap.getOrDefault(notes.getCreatedBy(), null);
+                    if (createdByAgent != null){
+                        createdBy = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
+                    }
+
+                    return new UsersNotesResponse(notes.getId(), notes.getComment(),
+                            notes.getCreatedByUserType(), notes.getCreatedBy(), createdBy,
+                            Utils.dateToString(notes.getCreatedAt()), Utils.dateToTime(notes.getCreatedAt()));
+                }).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

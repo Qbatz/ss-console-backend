@@ -1,9 +1,11 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.users.UsersNotesPayload;
 import com.smartstay.console.services.UsersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,8 +20,19 @@ public class UsersController {
     @Autowired
     private UsersService usersService;
 
-    @PutMapping("reset-pin/{userId}")
+    @PutMapping("/reset-pin/{userId}")
     public ResponseEntity<?> resetPinById(@PathVariable("userId") String userId) {
         return usersService.resetPinById(userId);
+    }
+
+    @PostMapping("/notes/{userId}")
+    public ResponseEntity<?> addUsersNotes(@PathVariable("userId") String userId,
+                                           @Valid @RequestBody UsersNotesPayload payload){
+        return usersService.addUsersNotes(userId, payload);
+    }
+
+    @GetMapping("/notes/{userId}")
+    public ResponseEntity<?> getUsersNotes(@PathVariable("userId") String userId){
+        return usersService.getUsersNotes(userId);
     }
 }
