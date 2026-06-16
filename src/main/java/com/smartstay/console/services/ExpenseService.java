@@ -2,11 +2,13 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.ExpensesV1;
-import com.smartstay.console.dto.hostel.ExpensesResetSnapshot;
+import com.smartstay.console.dto.hostel.ExpensesSnapshot;
+import com.smartstay.console.dto.hostel.ExpensesSnapshotWrapper;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.Source;
 import com.smartstay.console.repositories.ExpenseRepository;
-import com.smartstay.console.utils.AgentActivityUtil;
+import com.smartstay.console.utils.SnapshotUtility;
+import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,9 +33,14 @@ public class ExpenseService {
 
         List<ExpensesV1> listExpenses = expenseRepository.findByHostelId(hostelId);
 
-        ExpensesResetSnapshot snapshot = new ExpensesResetSnapshot(
-                AgentActivityUtil.cloneList(listExpenses, ExpensesV1.class)
-        );
+        if (listExpenses.isEmpty()) {
+            return new ResponseEntity<>(Utils.NO_EXPENSES_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<ExpensesSnapshot> snapshots =
+                SnapshotUtility.toSnapshotList(listExpenses, SnapshotUtility::toSnapshot);
+
+        ExpensesSnapshotWrapper snapshotWrapper = new ExpensesSnapshotWrapper(snapshots);
 
         List<String> bankIds = listExpenses
                 .stream()
@@ -66,8 +73,8 @@ public class ExpenseService {
         bankingService.removeExpenses(bankIds, expensePerBankIds);
         expenseRepository.deleteAll(listExpenses);
 
-        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.HOSTEL_EXPENSE,
-                hostelId, snapshot, null);
+        agentActivitiesService.createAgentActivity(agent, ActivityType.SNAPSHOT_DELETE, Source.HOSTEL_EXPENSE,
+                hostelId, snapshotWrapper, null);
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }

@@ -20,6 +20,7 @@ public class Subscription {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long subscriptionId;
     private String subscriptionNumber;
+    private Long orderId;
     private String hostelId;
     private String planCode;
     private String planName;
@@ -36,4 +37,5 @@ public class Subscription {
     private Date createdAt;
     private Boolean isActive;
     private String paymentProof;
+    private String invoiceUrl;
 }

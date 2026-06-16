@@ -11,6 +11,7 @@ import com.smartstay.console.responses.bills.BillingRulesResponse;
 import com.smartstay.console.responses.bills.BillingTypeResponse;
 import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerResponse;
+import com.smartstay.console.responses.hostelRelationalAgent.HostelRelationalAgentResponse;
 import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
@@ -50,7 +51,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
     boolean recurringStatus;
     Date currentBillLastRecDate;
     BillingRules currentBillingRules;
-    List<RelationalAgentResponse> relationalAgentResponses;
+    List<HostelRelationalAgentResponse> relationalAgentResponses;
     List<InvoiceRedemptionRes> invoiceRedemptionResponses;
     List<InvoiceResponse> invoiceResponses;
 
@@ -80,7 +81,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                                boolean recurringStatus,
                                Date currentBillLastRecDate,
                                BillingRules currentBillingRules,
-                               List<RelationalAgentResponse> relationalAgentResponses,
+                               List<HostelRelationalAgentResponse> relationalAgentResponses,
                                List<InvoiceRedemptionRes> invoiceRedemptionResponses,
                                List<InvoiceResponse> invoiceResponses) {
         this.owner = owner;

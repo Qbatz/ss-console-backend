@@ -1,4 +1,4 @@
-package com.smartstay.console.dao;
+package com.smartstay.console.dto.customers;
 
 import lombok.*;
 
@@ -10,4 +10,5 @@ import lombok.*;
 public class Deductions {
     private String type;
     private Double amount;
+    private Double paidAmount;
 }

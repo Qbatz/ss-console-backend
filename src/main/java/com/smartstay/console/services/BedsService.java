@@ -20,21 +20,18 @@ public class BedsService {
     }
 
     public List<Beds> findOccupiedBeds(String hostelId) {
-        return bedsRepository.findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        return bedsRepository
+                .findAllByHostelIdAndStatusAndIsActiveTrueAndIsDeletedFalse(hostelId, BedStatus.OCCUPIED.name());
     }
 
-    public void makeAllBedAvailabe(List<Beds> listBeds) {
-        List<Beds> beds = listBeds
-                .stream()
-                .map(i -> {
+    public void makeAllBedAvailable(List<Beds> listBeds) {
+        listBeds.forEach(i -> {
                     i.setBooked(false);
                     i.setCurrentStatus(BedStatus.VACANT.name());
                     i.setFreeFrom(null);
                     i.setStatus(BedStatus.VACANT.name());
-                    return i;
-                })
-                .toList();
-        bedsRepository.saveAll(beds);
+                });
+        bedsRepository.saveAll(listBeds);
     }
 
     public List<Beds> getBedsByBedIds(Set<Integer> occupiedBedIds) {

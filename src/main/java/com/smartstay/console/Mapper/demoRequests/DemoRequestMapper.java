@@ -1,10 +1,12 @@
 package com.smartstay.console.Mapper.demoRequests;
 
+import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.ennum.DemoRequestStatus;
 import com.smartstay.console.responses.demoRequest.DemoRequestActivityResponse;
 import com.smartstay.console.responses.demoRequest.DemoRequestCommentsResponse;
 import com.smartstay.console.responses.demoRequest.DemoRequestResponse;
+import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.utils.Utils;
 
 import java.util.ArrayList;
@@ -16,16 +18,16 @@ import java.util.function.Function;
 public class DemoRequestMapper implements Function<DemoRequest, DemoRequestResponse> {
 
     Map<String, Agent> agentMap;
-    Plans plan;
+    Users owner;
     List<DemoRequestComments> comments;
     List<DemoRequestActivity> activities;
 
     public DemoRequestMapper(Map<String, Agent> agentMap,
-                             Plans plan,
+                             Users owner,
                              List<DemoRequestComments> comments,
                              List<DemoRequestActivity> activities) {
         this.agentMap = agentMap;
-        this.plan = plan;
+        this.owner = owner;
         this.comments = comments;
         this.activities = activities;
     }
@@ -56,13 +58,9 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
         String requestedTime = null;
         if (demoRequest.getBookedFor() != null) {
             requestedDate = Utils.dateToString(demoRequest.getBookedFor());
-            requestedTime = Utils.dateToTime(demoRequest.getBookedFor());
+            requestedTime = demoRequest.getRequestedTime();
         } else if (demoRequest.getRequestedDate() != null) {
             requestedDate = Utils.formatDateString(demoRequest.getRequestedDate());
-            requestedTime = demoRequest.getRequestedTime();
-        }
-
-        if (requestedTime == null){
             requestedTime = demoRequest.getRequestedTime();
         }
 
@@ -121,9 +119,16 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
             }
         }
 
-        String planName = null;
-        if (plan != null){
-            planName = plan.getPlanName();
+        boolean isOwnerDeleted = false;
+        if (demoRequest.getParentId() != null) {
+            if (owner == null){
+                isOwnerDeleted = true;
+            }
+        }
+
+        OwnerInfo ownerInfo = null;
+        if (owner != null) {
+            ownerInfo = new UserOwnerInfoMapper().apply(owner);
         }
 
         return new DemoRequestResponse(demoRequest.getRequestId(), demoRequest.getName(),
@@ -131,10 +136,11 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
                 demoRequest.getOrganization(), demoRequest.getNoOfHostels(), demoRequest.getNoOfTenant(),
                 demoRequest.getCity(), demoRequest.getState(), demoRequest.getCountry(), demoRequest.getDemoRequestStatus(),
                 canAssignStaff, canMarkDropped, demoRequest.getIsDemoCompleted(), demoRequest.getIsAssigned(),
-                assignedTo, assignedBy, presentedBy, demoRequest.getComments(), requestedDate, requestedTime,
+                demoRequest.getAssignedTo(), assignedTo, demoRequest.getAssignedBy(), assignedBy,
+                demoRequest.getPresentedBy(), presentedBy, demoRequest.getComments(), requestedDate, requestedTime,
                 demoRequest.getPresentedAt() != null ? Utils.dateToString(demoRequest.getPresentedAt()) :  null,
                 demoRequest.getPresentedAt() != null ? Utils.dateToTime(demoRequest.getPresentedAt()) : null,
-                demoRequest.getSource(), demoRequest.getConvertedToPlanCode(), planName,
+                demoRequest.getSource(), demoRequest.getParentId(), isOwnerDeleted, ownerInfo,
                 demoRequest.getDemoDateFrom() != null ? Utils.dateToString(demoRequest.getDemoDateFrom()) : null,
                 demoRequest.getDemoDateFrom() != null ? Utils.dateToTime(demoRequest.getDemoDateFrom()) : null,
                 demoRequest.getDemoDateTo() != null ? Utils.dateToTime(demoRequest.getDemoDateTo()) : null,

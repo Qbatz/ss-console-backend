@@ -2,6 +2,7 @@ package com.smartstay.console.responses.subscriptions;
 
 public record SubscriptionsResponse(Long subscriptionId,
                                     String subscriptionNumber,
+                                    Long orderHistoryId,
                                     String hostelId,
                                     String hostelName,
                                     String hostelInitials,

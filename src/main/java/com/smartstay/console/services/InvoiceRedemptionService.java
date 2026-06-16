@@ -3,6 +3,7 @@ package com.smartstay.console.services;
 import com.smartstay.console.Mapper.invoiceRedemption.InvoiceRedemptionResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
@@ -371,7 +372,20 @@ public class InvoiceRedemptionService {
             return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(targetInvoice.getCustomerId());
+        String customerId = targetInvoice.getCustomerId();
+
+        Customers customer = customersService.getCustomerInformation(customerId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (CustomerStatus.SETTLEMENT_GENERATED.name().equals(customer.getCurrentStatus()) ||
+                CustomerStatus.VACATED.name().equals(customer.getCurrentStatus()) ||
+                CustomerStatus.INACTIVE.name().equals(customer.getCurrentStatus())){
+            return new ResponseEntity<>(Utils.CUSTOMER_INACTIVE_VACATED_SETTLEMENT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+
+        PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(customerId);
         if (paymentSummary == null){
             return new ResponseEntity<>(Utils.PAYMENT_SUMMARY_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
@@ -413,6 +427,119 @@ public class InvoiceRedemptionService {
 
         if (targetInvoiceNewPaidAmount > targetTotal) {
             return new ResponseEntity<>(Utils.PAID_AMOUNT_EXCEEDS_TOTAL_AMOUNT, HttpStatus.BAD_REQUEST);
+        }
+
+        if (InvoiceType.ADVANCE.name().equals(targetInvoice.getInvoiceType())) {
+
+            double deductionAmount = 0;
+
+            Advance advance = customer.getAdvance();
+            if (advance != null) {
+                List<Deductions> deductions = advance.getDeductions();
+                if (deductions != null && !deductions.isEmpty()) {
+                    deductionAmount = deductions.stream()
+                            .mapToDouble(Deductions::getAmount)
+                            .sum();
+                }
+            }
+
+            if (deductionAmount > 0 && targetInvoiceNewPaidAmount < deductionAmount) {
+
+                List<Deductions> invoiceDeductions = targetInvoice.getDeductions();
+
+                if (invoiceDeductions != null && !invoiceDeductions.isEmpty()) {
+
+                    // Redemption amount decreased
+                    if (differenceAmount > 0) {
+
+                        double remainingToRollback = differenceAmount;
+
+                        List<Deductions> reversed = new ArrayList<>(invoiceDeductions);
+
+                        for (int i = reversed.size() - 1;
+                             i >= 0 && remainingToRollback > 0;
+                             i--) {
+
+                            Deductions deduction = reversed.get(i);
+
+                            double paidAmount = deduction.getPaidAmount() != null
+                                    ? deduction.getPaidAmount()
+                                    : 0;
+
+                            if (paidAmount <= 0) {
+                                continue;
+                            }
+
+                            if (paidAmount >= remainingToRollback) {
+
+                                deduction.setPaidAmount(
+                                        paidAmount - remainingToRollback
+                                );
+
+                                remainingToRollback = 0;
+
+                            } else {
+
+                                deduction.setPaidAmount(0.0);
+
+                                remainingToRollback -= paidAmount;
+                            }
+                        }
+
+                        targetInvoice.setDeductions(reversed);
+                    }
+
+                    // Redemption amount increased
+                    else if (differenceAmount < 0) {
+
+                        double allocationAmount = Math.abs(differenceAmount);
+
+                        final double[] tempAmount = {allocationAmount};
+
+                        List<Deductions> updated = invoiceDeductions.stream()
+                                .map(deduction -> {
+
+                                    double paidAmount = deduction.getPaidAmount() != null
+                                            ? deduction.getPaidAmount()
+                                            : 0;
+
+                                    double totalAmount = deduction.getAmount() != null
+                                            ? deduction.getAmount()
+                                            : 0;
+
+                                    if (paidAmount >= totalAmount) {
+                                        return deduction;
+                                    }
+
+                                    if (tempAmount[0] <= 0) {
+                                        return deduction;
+                                    }
+
+                                    double balanceAmount = totalAmount - paidAmount;
+
+                                    if (tempAmount[0] >= balanceAmount) {
+
+                                        deduction.setPaidAmount(totalAmount);
+
+                                        tempAmount[0] -= balanceAmount;
+
+                                    } else {
+
+                                        deduction.setPaidAmount(
+                                                paidAmount + tempAmount[0]
+                                        );
+
+                                        tempAmount[0] = 0;
+                                    }
+
+                                    return deduction;
+                                })
+                                .toList();
+
+                        targetInvoice.setDeductions(updated);
+                    }
+                }
+            }
         }
 
         targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
@@ -483,7 +610,20 @@ public class InvoiceRedemptionService {
             return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(targetInvoice.getCustomerId());
+        String customerId = targetInvoice.getCustomerId();
+
+        Customers customer = customersService.getCustomerInformation(customerId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (CustomerStatus.SETTLEMENT_GENERATED.name().equals(customer.getCurrentStatus()) ||
+                CustomerStatus.VACATED.name().equals(customer.getCurrentStatus()) ||
+                CustomerStatus.INACTIVE.name().equals(customer.getCurrentStatus())){
+            return new ResponseEntity<>(Utils.CUSTOMER_INACTIVE_VACATED_SETTLEMENT_GENERATED, HttpStatus.BAD_REQUEST);
+        }
+
+        PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(customerId);
         if (paymentSummary == null){
             return new ResponseEntity<>(Utils.PAYMENT_SUMMARY_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
@@ -513,6 +653,60 @@ public class InvoiceRedemptionService {
 
         if (targetInvoiceNewPaidAmount < 0) {
             return new ResponseEntity<>(Utils.PAID_AMOUNT_GOES_NEGATIVE, HttpStatus.BAD_REQUEST);
+        }
+
+        if (InvoiceType.ADVANCE.name().equals(targetInvoice.getInvoiceType())){
+            double deductionAmount = 0;
+            Advance advance = customer.getAdvance();
+            if (advance != null){
+                List<Deductions> deductions = advance.getDeductions();
+                if (deductions != null && !deductions.isEmpty()){
+                    deductionAmount = deductions.stream()
+                            .mapToDouble(Deductions::getAmount)
+                            .sum();
+                }
+            }
+            if (deductionAmount > 0 && targetInvoiceNewPaidAmount < deductionAmount) {
+
+                List<Deductions> invoiceDeductions = targetInvoice.getDeductions();
+
+                if (invoiceDeductions != null && !invoiceDeductions.isEmpty()) {
+
+                    double remainingToRollback = redemptionAmount;
+
+                    List<Deductions> reversed = new ArrayList<>(invoiceDeductions);
+
+                    for (int i = reversed.size() - 1; i >= 0 && remainingToRollback > 0; i--) {
+
+                        Deductions deduction = reversed.get(i);
+
+                        double paidAmount = deduction.getPaidAmount() != null
+                                ? deduction.getPaidAmount()
+                                : 0;
+
+                        if (paidAmount <= 0) {
+                            continue;
+                        }
+
+                        if (paidAmount >= remainingToRollback) {
+
+                            deduction.setPaidAmount(
+                                    paidAmount - remainingToRollback
+                            );
+
+                            remainingToRollback = 0;
+
+                        } else {
+
+                            deduction.setPaidAmount(0.0);
+
+                            remainingToRollback -= paidAmount;
+                        }
+                    }
+
+                    targetInvoice.setDeductions(reversed);
+                }
+            }
         }
 
         targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
@@ -570,6 +764,11 @@ public class InvoiceRedemptionService {
                 .map(InvoicesV1::getCustomerId)
                 .collect(Collectors.toSet());
 
+        List<Customers> customers = customersService.getCustomersByIds(customerIds);
+
+        Map<String, Customers> customersMap = customers.stream()
+                .collect(Collectors.toMap(Customers::getCustomerId, customer -> customer));
+
         List<PaymentSummary> paymentSummaries = paymentSummaryService.getSummaryByCustomerIds(customerIds);
 
         Map<String, PaymentSummary> paymentSummaryMap = paymentSummaries.stream()
@@ -602,6 +801,11 @@ public class InvoiceRedemptionService {
                 throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
             }
 
+            Customers customer = customersMap.getOrDefault(targetInvoice.getCustomerId(), null);
+            if (customer == null){
+                throw new BadRequestException(Utils.NO_CUSTOMER_FOUND);
+            }
+
             PaymentSummary paymentSummary = paymentSummaryMap.getOrDefault(targetInvoice.getCustomerId(), null);
             if (paymentSummary == null){
                 throw new BadRequestException(Utils.PAYMENT_SUMMARY_NOT_FOUND);
@@ -630,6 +834,60 @@ public class InvoiceRedemptionService {
 
             if (targetInvoiceNewPaidAmount < 0) {
                 throw new BadRequestException(Utils.PAID_AMOUNT_GOES_NEGATIVE);
+            }
+
+            if (InvoiceType.ADVANCE.name().equals(targetInvoice.getInvoiceType())){
+                double deductionAmount = 0;
+                Advance advance = customer.getAdvance();
+                if (advance != null){
+                    List<Deductions> deductions = advance.getDeductions();
+                    if (deductions != null && !deductions.isEmpty()){
+                        deductionAmount = deductions.stream()
+                                .mapToDouble(Deductions::getAmount)
+                                .sum();
+                    }
+                }
+                if (deductionAmount > 0 && targetInvoiceNewPaidAmount < deductionAmount) {
+
+                    List<Deductions> invoiceDeductions = targetInvoice.getDeductions();
+
+                    if (invoiceDeductions != null && !invoiceDeductions.isEmpty()) {
+
+                        double remainingToRollback = redemptionAmount;
+
+                        List<Deductions> reversed = new ArrayList<>(invoiceDeductions);
+
+                        for (int i = reversed.size() - 1; i >= 0 && remainingToRollback > 0; i--) {
+
+                            Deductions deduction = reversed.get(i);
+
+                            double paidAmount = deduction.getPaidAmount() != null
+                                    ? deduction.getPaidAmount()
+                                    : 0;
+
+                            if (paidAmount <= 0) {
+                                continue;
+                            }
+
+                            if (paidAmount >= remainingToRollback) {
+
+                                deduction.setPaidAmount(
+                                        paidAmount - remainingToRollback
+                                );
+
+                                remainingToRollback = 0;
+
+                            } else {
+
+                                deduction.setPaidAmount(0.0);
+
+                                remainingToRollback -= paidAmount;
+                            }
+                        }
+
+                        targetInvoice.setDeductions(reversed);
+                    }
+                }
             }
 
             targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);

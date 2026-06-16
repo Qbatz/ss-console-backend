@@ -50,6 +50,13 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
         String fullAddress = null;
         String mainImage = null;
 
+        boolean isHostelDeleted = false;
+        if (orderHistory.getHostelId() != null){
+            if (hostel == null){
+                isHostelDeleted = true;
+            }
+        }
+
         if (hostel != null) {
             hostelName = hostel.getHostelName();
             hostelInitials = Utils.getInitials(hostelName);
@@ -145,7 +152,7 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
             }
         }
 
-        return new OrderHistoryResponse(orderHistory.getHistoryId(), orderHistory.getHostelId(), hostelName,
+        return new OrderHistoryResponse(orderHistory.getHistoryId(), isHostelDeleted, orderHistory.getHostelId(), hostelName,
                 hostelInitials, hostelType, mobile, houseNo, street, landmark, city, state, country, pincode,
                 fullAddress, mainImage, ownerInfo, orderHistory.getDiscountAmount(), Utils.roundOfDoubleTo2Digits(orderHistory.getPlanAmount()),
                 orderHistory.getPlanCode(), planName, planType, Utils.roundOfDoubleTo2Digits(orderHistory.getTotalAmount()),

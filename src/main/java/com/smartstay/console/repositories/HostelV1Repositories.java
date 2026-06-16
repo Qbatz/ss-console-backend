@@ -43,6 +43,11 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                 AND (:endDate IS NULL OR h.created_at < :endDate)
                 AND h.is_active = true
                 AND h.is_deleted = false
+                AND (
+                    :subActive IS NULL
+                    OR (:subActive = TRUE AND DATE(hp.current_plan_ends_at) >= CURRENT_DATE)
+                    OR (:subActive = FALSE AND DATE(hp.current_plan_ends_at) < CURRENT_DATE)
+                )
             ORDER BY hp.current_plan_ends_at ASC
             """,
             countQuery = """
@@ -54,11 +59,17 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                 AND (:endDate IS NULL OR h.created_at < :endDate)
                 AND h.is_active = true
                 AND h.is_deleted = false
+                AND (
+                    :subActive IS NULL
+                    OR (:subActive = TRUE AND DATE(hp.current_plan_ends_at) >= CURRENT_DATE)
+                    OR (:subActive = FALSE AND DATE(hp.current_plan_ends_at) < CURRENT_DATE)
+                )
             """,
             nativeQuery = true)
     Page<HostelV1> findAllHostelsNew(@Param("name") String name,
                                      @Param("startDate") Date startDate,
                                      @Param("endDate") Date endDate,
+                                     @Param("subActive") Boolean subActive,
                                      Pageable pageable);
 
     HostelV1 findByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
@@ -91,12 +102,18 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                         AND (:endDate IS NULL OR h.created_at < :endDate)
                         AND h.is_active = true
                         AND h.is_deleted = false
+                        AND (
+                            :subActive IS NULL
+                            OR (:subActive = TRUE AND DATE(hp.current_plan_ends_at) >= CURRENT_DATE)
+                            OR (:subActive = FALSE AND DATE(hp.current_plan_ends_at) < CURRENT_DATE)
+                        )
                     ORDER BY hp.current_plan_ends_at ASC
                     """,
             nativeQuery = true)
     List<HostelV1> findAllHostelsByNameAndJoiningDate(@Param("name") String name,
                                                       @Param("startDate") Date startDate,
-                                                      @Param("endDate") Date endDate);
+                                                      @Param("endDate") Date endDate,
+                                                      @Param("subActive") Boolean subActive);
 
     @Query(value = """
             SELECT h.*
@@ -126,4 +143,6 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                 AND h.isDeleted = false
             """)
     HostelV1 findHostelByHostelId(@Param("hostelId") String hostelId);
+
+    List<HostelV1> findAllByParentIdInAndIsActiveTrueAndIsDeletedFalse(Set<String> parentIds);
 }

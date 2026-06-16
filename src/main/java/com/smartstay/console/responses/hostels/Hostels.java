@@ -8,5 +8,6 @@ public record Hostels(long totalHostels,
                       int currentPage,
                       int sizePerPage,
                       int totalPages,
+                      long totalItems,
                       List<HostelList> hostels) {
 }

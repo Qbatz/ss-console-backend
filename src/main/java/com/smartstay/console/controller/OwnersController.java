@@ -69,4 +69,9 @@ public class OwnersController {
                                                    @Valid @RequestBody UserMobilePayload payload){
         return ownersService.updateOwnerMobileById(ownerId, payload);
     }
+
+    @GetMapping("/mobile")
+    public ResponseEntity<?> getOwnerByMobile(@RequestParam String mobileNumber){
+        return ownersService.getOwnerByMobile(mobileNumber);
+    }
 }

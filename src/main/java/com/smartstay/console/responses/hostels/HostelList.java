@@ -1,6 +1,6 @@
 package com.smartstay.console.responses.hostels;
 
-import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
+import com.smartstay.console.responses.hostelRelationalAgent.HostelRelationalAgentResponse;
 
 import java.util.List;
 
@@ -27,5 +27,5 @@ public record HostelList(String hostelName,
                          String platform,
                          OwnerInfo ownerInfo,
                          HostelPlan hostelPlan,
-                         List<RelationalAgentResponse> relationalAgents) {
+                         List<HostelRelationalAgentResponse> relationalAgents) {
 }

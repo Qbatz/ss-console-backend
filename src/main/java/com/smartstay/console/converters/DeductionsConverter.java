@@ -3,7 +3,7 @@ package com.smartstay.console.converters;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.smartstay.console.dao.Deductions;
+import com.smartstay.console.dto.customers.Deductions;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 

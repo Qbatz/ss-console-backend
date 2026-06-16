@@ -5,7 +5,9 @@ import com.smartstay.console.ennum.DemoRequestSource;
 import com.smartstay.console.ennum.DemoRequestStatus;
 import com.smartstay.console.repositories.AgentModulesRepository;
 import com.smartstay.console.repositories.DemoRequestRepository;
-import com.smartstay.console.services.PlansService;
+import com.smartstay.console.repositories.HostelRelationalAgentRepository;
+import com.smartstay.console.services.HostelService;
+import com.smartstay.console.services.UsersService;
 import com.smartstay.console.utils.Utils;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
@@ -15,9 +17,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @SpringBootApplication
 @EnableScheduling
@@ -169,7 +172,7 @@ public class SmartstayConsoleApplication {
     // Remove/comment this bean after successful deployment.
 //    @Bean
 //    CommandLineRunner updateDemoRequestStatus(DemoRequestRepository demoRequestRepository,
-//                                              PlansService plansService) {
+//                                              UsersService usersService) {
 //
 //        return args -> {
 //
@@ -183,12 +186,6 @@ public class SmartstayConsoleApplication {
 //
 //            boolean hasUpdates = false;
 //
-//            Plans trialPlan = plansService.findTrialPlan();
-//
-//            String trialPlanCode = trialPlan != null
-//                    ? trialPlan.getPlanCode()
-//                    : null;
-//
 //            for (DemoRequest demoRequest : demoRequests) {
 //
 //                //source migration
@@ -199,6 +196,23 @@ public class SmartstayConsoleApplication {
 //                    hasUpdates = true;
 //                }
 //
+//                //parentId migration
+//                if (DemoRequestStatus.TRIAL_STARTED.name().equals(demoRequest.getDemoRequestStatus()) ||
+//                        DemoRequestStatus.CONVERTED.name().equals(demoRequest.getDemoRequestStatus())) {
+//                    String ownerMobile = demoRequest.getContactNo();
+//                    if (ownerMobile != null) {
+//                        List<Users> owners = usersService.getOwnersByMobileNo(ownerMobile);
+//                        if (owners != null && !owners.isEmpty()) {
+//                            String parentId = owners.getFirst().getParentId();
+//
+//                            if (!Objects.equals(demoRequest.getParentId(), parentId)) {
+//                                demoRequest.setParentId(parentId);
+//                                hasUpdates = true;
+//                            }
+//                        }
+//                    }
+//                }
+//
 //                // createdAt migration
 //                if (demoRequest.getCreatedAt() == null) {
 //
@@ -206,7 +220,23 @@ public class SmartstayConsoleApplication {
 //
 //                    if (demoRequest.getBookedFor() != null) {
 //
-//                        createdAt = demoRequest.getBookedFor();
+//                        Calendar cal = Calendar.getInstance();
+//                        cal.setTime(demoRequest.getBookedFor());
+//
+//                        if (demoRequest.getRequestedTime() != null &&
+//                                !demoRequest.getRequestedTime().isBlank()) {
+//                            LocalTime time = LocalTime.parse(
+//                                    demoRequest.getRequestedTime(),
+//                                    DateTimeFormatter.ofPattern("HH:mm")
+//                            );
+//
+//                            cal.set(Calendar.HOUR_OF_DAY, time.getHour());
+//                            cal.set(Calendar.MINUTE, time.getMinute());
+//                            cal.set(Calendar.SECOND, 0);
+//                            cal.set(Calendar.MILLISECOND, 0);
+//                        }
+//
+//                        createdAt = cal.getTime();
 //
 //                    } else if (demoRequest.getRequestedDate() != null) {
 //
@@ -252,8 +282,15 @@ public class SmartstayConsoleApplication {
 //                    default -> demoRequestStatus;
 //                };
 //
-//                if (DemoRequestStatus.TRIAL_STARTED.name().equals(status)) {
-//                    demoRequest.setConvertedToPlanCode(trialPlanCode);
+//                if (DemoRequestStatus.TRIAL_STARTED.name().equals(status) ||
+//                        DemoRequestStatus.CONVERTED.name().equals(status)) {
+//                    String ownerMobile = demoRequest.getContactNo();
+//                    if (ownerMobile != null) {
+//                        List<Users> owners = usersService.getOwnersByMobileNo(ownerMobile);
+//                        if (owners != null && !owners.isEmpty()) {
+//                            demoRequest.setParentId(owners.getFirst().getParentId());
+//                        }
+//                    }
 //                }
 //
 //                demoRequest.setDemoRequestStatus(status);
@@ -266,6 +303,45 @@ public class SmartstayConsoleApplication {
 //            }
 //
 //            demoRequestRepository.saveAll(demoRequests);
+//        };
+//    }
+
+    // IMPORTANT: This migration should be executed ONLY ONCE in production.
+    // Remove/comment this bean after successful deployment.
+//    @Bean
+//    CommandLineRunner HostelRelationalAgentSetParentId(HostelRelationalAgentRepository repository,
+//                                                       HostelService hostelService){
+//        return (args) -> {
+//            List<HostelRelationalAgent> hostelRelationalAgents = repository.findAll();
+//
+//            Set<String> hostelIds = new HashSet<>();
+//
+//            for (HostelRelationalAgent hostelRelationalAgent : hostelRelationalAgents) {
+//                if (hostelRelationalAgent.getParentId() == null){
+//                    hostelIds.add(hostelRelationalAgent.getHostelId());
+//                }
+//            }
+//
+//            List<HostelV1> hostels = hostelService.getHostelsByHostelIds(hostelIds);
+//
+//            Map<String, HostelV1> hostelMap = hostels.stream()
+//                    .collect(Collectors.toMap(HostelV1::getHostelId, hostel -> hostel));
+//
+//            List<HostelRelationalAgent> changed = new ArrayList<>();
+//            for (HostelRelationalAgent hostelRelationalAgent : hostelRelationalAgents) {
+//                if (hostelRelationalAgent.getParentId() == null){
+//
+//                    HostelV1 hostel = hostelMap.getOrDefault(hostelRelationalAgent.getHostelId(), null);
+//
+//                    if (hostel != null){
+//                        hostelRelationalAgent.setParentId(hostel.getParentId());
+//
+//                        changed.add(hostelRelationalAgent);
+//                    }
+//                }
+//            }
+//
+//            repository.saveAll(changed);
 //        };
 //    }
 }

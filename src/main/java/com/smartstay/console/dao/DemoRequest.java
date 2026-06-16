@@ -42,7 +42,7 @@ public class DemoRequest {
 
     //from demo request source enum
     private String source;
-    private String convertedToPlanCode;
+    private String parentId;
     private Date demoDateFrom;
     private Date demoDateTo;
     //from demo type enum

@@ -4,7 +4,6 @@ import com.smartstay.console.Mapper.customers.CustomerRecHistoryMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecTrackerResMapper;
 import com.smartstay.console.Mapper.customers.CustomerRecurringMapper;
 import com.smartstay.console.Mapper.customers.CustomerResMapper;
-import com.smartstay.console.Mapper.hostelRelationalAgent.RelationalAgentResMapper;
 import com.smartstay.console.Mapper.hostels.*;
 import com.smartstay.console.Mapper.invoice.InvoiceResponseMapper;
 import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
@@ -28,7 +27,7 @@ import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerRecTrackerRes;
 import com.smartstay.console.responses.customers.CustomerRecurringResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
-import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
+import com.smartstay.console.responses.hostelRelationalAgent.HostelRelationalAgentResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
 import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
@@ -407,7 +406,7 @@ public class HostelsService {
         }
 
         List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
-                .getByHostelId(hostelId);
+                .getByParentId(hostel.getParentId());
         for (HostelRelationalAgent relationalAgent : relationalAgents) {
             if (relationalAgent.getAgentId() != null){
                 createdByIds.add(relationalAgent.getAgentId());
@@ -519,15 +518,26 @@ public class HostelsService {
             }
         }
 
-        List<RelationalAgentResponse> relationalAgentResponses = relationalAgents.stream()
+        List<HostelRelationalAgentResponse> relationalAgentResponses = relationalAgents.stream()
                 .sorted(Comparator.comparing(HostelRelationalAgent::getId).reversed())
                 .map(hostelRelationalAgent -> {
                     Agent relationalAgent = agentMap.getOrDefault(hostelRelationalAgent.getAgentId(), null);
                     Agent createdByAgent = agentMap.getOrDefault(hostelRelationalAgent.getCreatedBy(), null);
 
-                    return new RelationalAgentResMapper(
-                            hostel, relationalAgent, createdByAgent
-                    ).apply(hostelRelationalAgent);
+                    String relationalAgentName = null;
+                    if (relationalAgent != null){
+                        relationalAgentName = Utils.getFullName(relationalAgent.getFirstName(), relationalAgent.getLastName());
+                    }
+
+                    String createdByAgentName = null;
+                    if (createdByAgent != null){
+                        createdByAgentName = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
+                    }
+
+                    return new HostelRelationalAgentResponse(hostelRelationalAgent.getId(), hostelRelationalAgent.getParentId(),
+                            hostelRelationalAgent.getAgentId(), relationalAgentName, hostelRelationalAgent.getReason().name(),
+                            hostelRelationalAgent.getComments(), createdByAgentName, Utils.dateToString(hostelRelationalAgent.getCreatedAt()),
+                            Utils.dateToTime(hostelRelationalAgent.getCreatedAt()));
                 }).toList();
 
         Map<String, InvoicesV1> redemptionInvoiceMap = redemptionInvoices.stream()
@@ -689,9 +699,11 @@ public class HostelsService {
         return expenseService.deleteExpenses(hostelId, agent);
     }
 
-    public void resetHostel(HostelV1 hostel, Agent loggedInAgent){
+    public boolean resetHostel(HostelV1 hostel, Agent loggedInAgent){
 
         String hostelId = hostel.getHostelId();
+
+        boolean recordsFound = false;
 
         List<Customers> customersList = customersService.findCustomersByHostelId(hostelId);
         List<String> customerIds = customersList
@@ -767,91 +779,130 @@ public class HostelsService {
         );
 
         if (invoicesList != null && !invoicesList.isEmpty()) {
+            recordsFound = true;
             invoiceV1Service.deleteAllInvoices(invoicesList);
+
+            Set<String> invoiceIds = invoicesList.stream()
+                    .map(InvoicesV1::getInvoiceId)
+                    .collect(Collectors.toSet());
+
+            List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
+                    .getInvoiceRedemptionByInvoiceIds(invoiceIds);
+
+            if (!invoiceRedemptions.isEmpty()){
+                invoiceRedemptionService.deleteAll(invoiceRedemptions);
+            }
         }
         if (listBookings != null && !listBookings.isEmpty()) {
+            recordsFound = true;
             bookingsService.deleteBookings(listBookings);
         }
         if (listConfigs != null && !listConfigs.isEmpty()) {
+            recordsFound = true;
             customersConfigService.deleteAll(listConfigs);
         }
         if (listCustomerDocuments != null && !listCustomerDocuments.isEmpty()) {
+            recordsFound = true;
             customerDocumentService.deleteDocuments(listCustomerDocuments);
         }
         if (listCustomerAdditionalContacts != null && !listCustomerAdditionalContacts.isEmpty()) {
+            recordsFound = true;
             customerAdditionalContactsService.deleteAll(listCustomerAdditionalContacts);
         }
         if (listCustomerCredentials != null && !listCustomerCredentials.isEmpty()) {
+            recordsFound = true;
             customersCredentialService.deleteCredentials(listCustomerCredentials);
         }
         if (listCustomersOtp != null && !listCustomersOtp.isEmpty()) {
+            recordsFound = true;
             customersOtpService.deleteAll(listCustomersOtp);
         }
         if (listBedChangeRequests != null && !listBedChangeRequests.isEmpty()) {
+            recordsFound = true;
             bedChangeRequestService.deleteAll(listBedChangeRequests);
         }
         if (listCustomerNotifications != null && !listCustomerNotifications.isEmpty()) {
+            recordsFound = true;
             customerNotificationsService.deleteAll(listCustomerNotifications);
         }
         if (listCustomerBillingRules != null && !listCustomerBillingRules.isEmpty()) {
+            recordsFound = true;
             customerBillingRulesService.deleteAll(listCustomerBillingRules);
         }
         if (listCustomerRecurringTrackers != null && !listCustomerRecurringTrackers.isEmpty()) {
+            recordsFound = true;
             customerRecurringTrackerService.deleteAll(listCustomerRecurringTrackers);
         }
         if (listInvoiceDiscounts != null && !listInvoiceDiscounts.isEmpty()) {
+            recordsFound = true;
             invoiceDiscountsService.deleteAll(listInvoiceDiscounts);
         }
         if (listPaymentSummary != null && !listPaymentSummary.isEmpty()) {
+            recordsFound = true;
             paymentSummaryService.deleteAll(listPaymentSummary);
         }
         if (listRentHistory != null && !listRentHistory.isEmpty()) {
+            recordsFound = true;
             rentHistoryService.deleteAll(listRentHistory);
         }
         if (listSettlementDetails != null && !listSettlementDetails.isEmpty()) {
+            recordsFound = true;
             settlementDetailsService.deleteAll(listSettlementDetails);
         }
         if (listAmenityRequests != null && !listAmenityRequests.isEmpty()) {
+            recordsFound = true;
             amenityRequestService.deleteAmenities(listAmenityRequests);
         }
         if (complaints != null && !complaints.isEmpty()) {
+            recordsFound = true;
             complaintService.deleteAll(complaints);
         }
         if (listCreditDebits != null && !listCreditDebits.isEmpty()) {
+            recordsFound = true;
             creditDebitNotesService.deleteAll(listCreditDebits);
         }
         if (listCustomersAmenity != null && !listCustomersAmenity.isEmpty()) {
+            recordsFound = true;
             customersAmenityService.deleteAll(listCustomersAmenity);
         }
         if (listCustomerBedHistory != null && !listCustomerBedHistory.isEmpty()) {
+            recordsFound = true;
             customerBedHistoryService.deleteAll(listCustomerBedHistory);
         }
         if (listCustomerEbHistory != null && !listCustomerEbHistory.isEmpty()) {
+            recordsFound = true;
             customerEbHistoryService.deleteAll(listCustomerEbHistory);
         }
         if (listCustomersWallet != null && !listCustomersWallet.isEmpty()) {
+            recordsFound = true;
             customerWalletHistoryService.deleteAll(listCustomersWallet);
         }
         if (listElectricityReadings != null && !listElectricityReadings.isEmpty()) {
+            recordsFound = true;
             electricityReadingsService.deleteAll(listElectricityReadings);
         }
         if (listHostelReadings != null && !listHostelReadings.isEmpty()) {
+            recordsFound = true;
             hostelReadingService.deleteAll(listHostelReadings);
         }
         if (listTransactions != null && !listTransactions.isEmpty()) {
+            recordsFound = true;
             transactionV1Service.deleteAll(listTransactions);
         }
         if (listBeds != null && !listBeds.isEmpty()) {
-            bedsService.makeAllBedAvailabe(listBeds);
+            recordsFound = true;
+            bedsService.makeAllBedAvailable(listBeds);
         }
-        if (customersList != null && !customersList.isEmpty()) {
+        if (!customersList.isEmpty()) {
+            recordsFound = true;
             customersService.deleteAll(customersList);
         }
-        if (listItemsOtherThanExpense != null && !listItemsOtherThanExpense.isEmpty()) {
+        if (!listItemsOtherThanExpense.isEmpty()) {
+            recordsFound = true;
             bankTransactionService.deleteItemsOtherThanExpense(listItemsOtherThanExpense);
         }
-
         if (!listBankTransactions.isEmpty()) {
+            recordsFound = true;
             listBankTransactions.forEach(item -> {
                 double currentBalance = bankBalances.getOrDefault(item.getBankId(), 0.0);
 
@@ -864,36 +915,35 @@ public class HostelsService {
                 bankBalances.put(item.getBankId(), currentBalance);
             });
         }
-
         if (bankingList != null && !bankingList.isEmpty()) {
-            List<BankingV1> newBalanceAmounts = bankingList
-                    .stream()
-                    .map(i -> {
-                        if (bankBalances != null && bankBalances.get(i.getBankId()) != null) {
-                            double amount = bankBalances.get(i.getBankId());
-                            i.setBalance(i.getBalance() - amount);
-                        }
-
-                        return i;
-                    })
-                    .toList();
-            bankingService.updateBankAccount(newBalanceAmounts);
+            recordsFound = bankingList.stream()
+                    .anyMatch(i -> bankBalances.containsKey(i.getBankId()));
+            bankingList.forEach(i -> {
+                Double amount = bankBalances.get(i.getBankId());
+                if (amount != null) {
+                    i.setBalance(i.getBalance() - amount);
+                }
+            });
+            bankingService.updateBankAccount(bankingList);
         }
-
         if (!listItemsExpense.isEmpty()) {
+            recordsFound = true;
             bankTransactionService.deleteExpenseItems(listItemsExpense);
             expenseService.deleteExpensesByHostelId(hostelId);
         }
-
         if (listAdminNotifications != null && !listAdminNotifications.isEmpty()) {
+            recordsFound = true;
             notificationService.deleteAll(listAdminNotifications);
         }
         if (listRecurringTrackers != null && !listRecurringTrackers.isEmpty()) {
+            recordsFound = true;
             recurringTrackerService.deleteAll(listRecurringTrackers);
         }
 
         agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.RESET, Source.HOSTEL,
                 hostelId, snapshot, null);
+
+        return recordsFound;
     }
 
     public ResponseEntity<?> resetHostelTenant(String hostelId, HostelIdPayload hostelIdPayload) {
@@ -920,13 +970,18 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.HOSTEL_ID_MISMATCH, HttpStatus.BAD_REQUEST);
         }
 
+        boolean recordsFound;
         try {
-            resetHostel(hostelV1, agent);
+            recordsFound = resetHostel(hostelV1, agent);
         } catch (Exception e){
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        return new ResponseEntity<>(HttpStatus.OK);
+        if (recordsFound) {
+            return new ResponseEntity<>(HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(Utils.RESET_DONE_NO_RECORDS_FOUND, HttpStatus.OK);
+        }
     }
 
     public ResponseEntity<?> deleteHostel(String hostelId) {
@@ -1007,7 +1062,6 @@ public class HostelsService {
         List<VendorV1> listVendors = vendorService.findByHostelId(hostelId);
         List<Beds> listBeds = bedsService.getBedsByHostelId(hostelId);
         List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
-        List<HostelRelationalAgent> hostelRelationalAgentList = hostelRelationalAgentService.getByHostelId(hostelId);
 
         if (listAmenities != null && !listAmenities.isEmpty()) {
             amenitiesService.deleteAll(listAmenities);
@@ -1051,12 +1105,10 @@ public class HostelsService {
         if (bankingList != null && !bankingList.isEmpty()) {
             bankingService.deleteAll(bankingList);
         }
-        if (hostelRelationalAgentList != null && !hostelRelationalAgentList.isEmpty()) {
-            hostelRelationalAgentService.deleteAll(hostelRelationalAgentList);
-        }
     }
 
-    public ResponseEntity<?> getAllHostelsNew(int page, int size, String hostelName, Date startDate, Date endDate) {
+    public ResponseEntity<?> getAllHostelsNew(int page, int size, String hostelName,
+                                              Date startDate, Date endDate, Boolean subActive) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -1087,7 +1139,7 @@ public class HostelsService {
 
         Pageable pageableRequest = PageRequest.of(page-1, size);
         Page<HostelV1> pageableHostelV1 = hostelRepository
-                .findAllHostelsNew(hostelName, startDate, endDate, pageableRequest);
+                .findAllHostelsNew(hostelName, startDate, endDate, subActive, pageableRequest);
 
         List<HostelV1> listHostels = pageableHostelV1.stream().toList();
 
@@ -1128,9 +1180,9 @@ public class HostelsService {
                 .collect(Collectors.groupingBy(Subscription::getHostelId));
 
         List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
-                .getByHostelIds(new HashSet<>(hostelIds));
+                .getByParentIds(new HashSet<>(parentIds));
         Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
-                .collect(Collectors.groupingBy(HostelRelationalAgent::getHostelId));
+                .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
 
         Set<String> agentIds = new HashSet<>();
         for (HostelRelationalAgent relationalAgent : relationalAgents) {
@@ -1156,7 +1208,7 @@ public class HostelsService {
                         trialPlans,
                         expandableTrialPlans,
                         subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
-                        relationalAgentMap.getOrDefault(i.getHostelId(), null),
+                        relationalAgentMap.getOrDefault(i.getParentId(), null),
                         agentMap
                 ).apply(i))
                 .toList();
@@ -1167,12 +1219,14 @@ public class HostelsService {
                 pageableHostelV1.getPageable().getPageNumber()+1,
                 size,
                 pageableHostelV1.getTotalPages(),
+                pageableHostelV1.getTotalElements(),
                 hostelsList);
 
         return new ResponseEntity<>(hostels, HttpStatus.OK);
     }
 
-    public List<HostelList> getHostelsDataForExport(String hostelName, Date startDate, Date endDate){
+    public List<HostelList> getHostelsDataForExport(String hostelName, Date startDate,
+                                                    Date endDate, Boolean subActive){
 
         if (hostelName == null || hostelName.isBlank()){
             hostelName = null;
@@ -1183,7 +1237,7 @@ public class HostelsService {
         }
 
         List<HostelV1> listHostels = hostelRepository
-                .findAllHostelsByNameAndJoiningDate(hostelName, startDate, endDate);
+                .findAllHostelsByNameAndJoiningDate(hostelName, startDate, endDate, subActive);
 
         Set<String> hostelIds = new HashSet<>();
         Set<String> parentIds = new HashSet<>();
@@ -1227,9 +1281,9 @@ public class HostelsService {
                 .collect(Collectors.groupingBy(Subscription::getHostelId));
 
         List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
-                .getByHostelIds(new HashSet<>(hostelIds));
+                .getByParentIds(new HashSet<>(parentIds));
         Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
-                .collect(Collectors.groupingBy(HostelRelationalAgent::getHostelId));
+                .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
 
         Set<String> agentIds = new HashSet<>();
         for (HostelRelationalAgent relationalAgent : relationalAgents) {
@@ -1255,13 +1309,14 @@ public class HostelsService {
                         trialPlans,
                         expandableTrialPlans,
                         subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
-                        relationalAgentMap.getOrDefault(i.getHostelId(), null),
+                        relationalAgentMap.getOrDefault(i.getParentId(), null),
                         agentMap
                 ).apply(i))
                 .toList();
     }
 
-    public void exportHostels(String hostelName, Date startDate, Date endDate, HttpServletResponse response) throws IOException {
+    public void exportHostels(String hostelName, Date startDate, Date endDate,
+                              Boolean subActive, HttpServletResponse response) throws IOException {
 
         if (!authentication.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Utils.UN_AUTHORIZED);
@@ -1276,7 +1331,8 @@ public class HostelsService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, Utils.ACCESS_RESTRICTED);
         }
 
-        List<HostelList> hostels = getHostelsDataForExport(hostelName, startDate, endDate);
+        List<HostelList> hostels = getHostelsDataForExport(hostelName,
+                startDate, endDate, subActive);
 
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Hostels");

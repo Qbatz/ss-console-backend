@@ -1,7 +1,6 @@
 package com.smartstay.console.dto.demoRequest;
 
 import java.util.Date;
-import java.util.List;
 
 public record DemoRequestSnapshot(Long requestId,
                                   String name,
@@ -26,7 +25,7 @@ public record DemoRequestSnapshot(Long requestId,
                                   String requestedTime,
                                   Date presentedAt,
                                   String source,
-                                  String convertedToPlanCode,
+                                  String parentId,
                                   Date demoDateFrom,
                                   Date demoDateTo,
                                   String demoType,
