@@ -28,25 +28,6 @@ public class HostelsController {
     @Autowired
     private HostelsService hostelsService;
 
-    @GetMapping
-    public ResponseEntity<?> getAllHostelsNew(@RequestParam(value = "page", defaultValue = "1") int page,
-                                              @RequestParam(value = "size", defaultValue = "10") int size,
-                                              @RequestParam(value = "hostelName", required = false) String hostelName,
-                                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
-                                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
-                                              @RequestParam(required = false) Boolean subActive) {
-        return hostelsService.getAllHostelsNew(page, size, hostelName, startDate, endDate, subActive);
-    }
-
-    @GetMapping("/export")
-    public void exportHostels(@RequestParam(required = false) String hostelName,
-                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
-                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
-                              @RequestParam(required = false) Boolean subActive,
-                              HttpServletResponse response) throws IOException {
-        hostelsService.exportHostels(hostelName, startDate, endDate, subActive, response);
-    }
-
     @GetMapping("/new")
     public ResponseEntity<?> getAllHostels(@RequestParam(value = "page", defaultValue = "1") int page,
                                            @RequestParam(value = "size", defaultValue = "10") int size,
