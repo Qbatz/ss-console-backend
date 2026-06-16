@@ -83,4 +83,9 @@ public class OwnersController {
     public ResponseEntity<?> getOwnerByMobile(@RequestParam String mobileNumber){
         return ownersService.getOwnerByMobile(mobileNumber);
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> getOwnerByMobileNoOrName(@RequestParam String name){
+        return ownersService.getOwnerByMobileNoOrName(name);
+    }
 }

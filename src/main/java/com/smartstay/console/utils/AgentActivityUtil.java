@@ -91,6 +91,8 @@ public class AgentActivityUtil {
             case BILLING_RULES -> "Created a new billing rules";
             case DEMO_REQUEST_COMMENTS -> "Created a new demo request comment";
             case HOSTEL_RELATIONAL_AGENT -> "Assigned hostel relational agent";
+            case SUPPORT_TICKET -> "Created a support ticket";
+            case SUPPORT_TICKET_NOTES -> "Created a new support ticket note";
             default -> "Created successfully";
         };
     }
@@ -116,6 +118,7 @@ public class AgentActivityUtil {
             case OWNERS -> "Updated an owner";
             case RESET_USER_PIN -> "User pin has been reset";
             case INVOICE_REDEMPTION -> "Updated an invoice redemption";
+            case SUPPORT_TICKET -> "Updated a support ticket";
             default -> "Updated successfully";
         };
     }

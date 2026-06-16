@@ -1,0 +1,47 @@
+package com.smartstay.console.responses.supportTicket;
+
+import com.smartstay.console.responses.hostels.OwnerInfo;
+
+import java.util.List;
+
+public record SupportTicketResponse(Long ticketId,
+                                    String ticketNumber,
+                                    boolean canAssignStaff,
+                                    boolean isOwnerDeleted,
+                                    boolean isHostelDeleted,
+                                    boolean isRaisedByDeleted,
+                                    String parentId,
+                                    OwnerInfo owner,
+                                    String hostelId,
+                                    String hostelName,
+                                    String hostelMobile,
+                                    String hostelHouseNo,
+                                    String hostelStreet,
+                                    String hostelLandmark,
+                                    String hostelCity,
+                                    String hostelState,
+                                    int hostelCountry,
+                                    int hostelPincode,
+                                    String fullAddress,
+                                    String raisedById,
+                                    String raisedBy,
+                                    String queryType,
+                                    String subject,
+                                    String priority,
+                                    String issueDate,
+                                    String assignedToId,
+                                    String assignedTo,
+                                    String assignedById,
+                                    String assignedBy,
+                                    String remarks,
+                                    String paymentProof,
+                                    String paymentProofFileName,
+                                    String source,
+                                    String ticketStatus,
+                                    String createdByUserType,
+                                    String createdById,
+                                    String createdBy,
+                                    String createdAtDate,
+                                    String createdAtTime,
+                                    List<SupportTicketActivityResponse> activities) {
+}

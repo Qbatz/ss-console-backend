@@ -94,8 +94,10 @@ public class DemoRequestService {
 
         demoRequestActivity = demoRequestActivityService.save(demoRequestActivity);
 
+        DemoRequestSnapshot snapshot = SnapshotUtility.toSnapshot(demoRequest);
+
         agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.DEMO_REQUEST,
-                String.valueOf(demoRequest.getRequestId()), null, demoRequest);
+                String.valueOf(demoRequest.getRequestId()), null, snapshot);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

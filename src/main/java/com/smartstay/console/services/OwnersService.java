@@ -1,6 +1,7 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.users.OwnerDetailsMapper;
+import com.smartstay.console.Mapper.users.OwnerHostelListResMapper;
 import com.smartstay.console.Mapper.users.OwnerListMapper;
 import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.config.Authentication;
@@ -19,6 +20,7 @@ import com.smartstay.console.repositories.UsersRepository;
 import com.smartstay.console.responses.hostelRelationalAgent.HostelRelationalAgentResponse;
 import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.responses.users.OwnerDetailsResponse;
+import com.smartstay.console.responses.users.OwnerHostelListResponse;
 import com.smartstay.console.responses.users.OwnerResponse;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.SnapshotUtility;
@@ -65,6 +67,8 @@ public class OwnersService {
     private UsersService usersService;
     @Autowired
     private HostelRelationalAgentService hostelRelationalAgentService;
+    @Autowired
+    private HostelService hostelService;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
@@ -820,5 +824,68 @@ public class OwnersService {
                 .toList();
 
         return new ResponseEntity<>(ownerInfos, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getOwnerByMobileNoOrName(String name) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<Users> owners = usersRepository.findOwnersByMobileNoOrName(name);
+
+        Set<String> parentIds = owners.stream()
+                .map(Users::getParentId)
+                .collect(Collectors.toSet());
+
+        List<HostelV1> hostels = hostelService.getHostelsByParentIds(parentIds);
+
+        Map<String, List<HostelV1>> hostelMap = hostels.stream()
+                .collect(Collectors.groupingBy(HostelV1::getParentId));
+
+        List<HotelType> hotelTypes = hotelTypeService.getAllHotelTypes();
+        Map<Integer, HotelType> hotelTypeMap = hotelTypes.stream()
+                .collect(Collectors.toMap(HotelType::getId, hotelType -> hotelType));
+
+        List<UserHostel> userHostels = userHostelService.getUserHostelsByParentIds(parentIds);
+
+        Map<String, List<UserHostel>> userHostelParentIdMap = userHostels.stream()
+                .collect(Collectors.groupingBy(UserHostel::getParentId));
+
+        Set<String> userIds = userHostels.stream()
+                .map(UserHostel::getUserId)
+                .collect(Collectors.toSet());
+
+        List<Users> users = usersRepository.findAllByUserIdInAndIsActiveTrueAndIsDeletedFalse(userIds);
+
+        Map<String, Users> usersMap = users.stream()
+                .collect(Collectors.toMap(Users::getUserId, user -> user));
+
+        List<OwnerHostelListResponse> responses = owners.stream()
+                .map(owner -> {
+                    List<HostelV1> ownerHostels = hostelMap.getOrDefault(owner.getParentId(), null);
+                    List<UserHostel> hostelUsers = userHostelParentIdMap.getOrDefault(owner.getParentId(), null);
+                    Map<String, Set<String>> hostelToUserIdsMap = null;
+                    if (hostelUsers != null) {
+                        hostelToUserIdsMap = hostelUsers.stream()
+                                .collect(Collectors.groupingBy(
+                                        UserHostel::getHostelId,
+                                        Collectors.mapping(UserHostel::getUserId, Collectors.toSet())
+                                ));
+                    }
+                    return new OwnerHostelListResMapper(ownerHostels, hotelTypeMap,
+                            hostelToUserIdsMap, usersMap).apply(owner);
+                }).toList();
+
+        return new ResponseEntity<>(responses, HttpStatus.OK);
     }
 }
