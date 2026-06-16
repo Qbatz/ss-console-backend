@@ -92,6 +92,8 @@ public class CustomersService {
     private CustomerNotificationsService customerNotificationsService;
     @Autowired
     private SettlementItemsService settlementItemsService;
+    @Autowired
+    private InvoiceRedemptionService invoiceRedemptionService;
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
@@ -287,6 +289,17 @@ public class CustomersService {
 
         if (invoicesList != null && !invoicesList.isEmpty()) {
             invoiceV1Service.deleteAllInvoices(invoicesList);
+
+            Set<String> invoiceIds = invoicesList.stream()
+                    .map(InvoicesV1::getInvoiceId)
+                    .collect(Collectors.toSet());
+
+            List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
+                    .getInvoiceRedemptionByInvoiceIds(invoiceIds);
+
+            if (!invoiceRedemptions.isEmpty()){
+                invoiceRedemptionService.deleteAll(invoiceRedemptions);
+            }
         }
         if (!listBookings.isEmpty()) {
             bookingsService.deleteBookings(listBookings);
