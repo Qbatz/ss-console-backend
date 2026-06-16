@@ -613,6 +613,7 @@ public class SnapshotUtility {
         return new AgentRoleSnapshot(
                 r.getRoleId(),
                 r.getRoleName(),
+                r.getDescription(),
                 r.getIsActive(),
                 r.getIsDeleted(),
                 r.getIsEditable(),

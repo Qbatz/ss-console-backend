@@ -188,6 +188,10 @@ public class AgentService {
                 ));
     }
 
+    public long getCountOfAgentByRoleId(Long roleId){
+        return agentRepository.countAgentsByRoleId(roleId);
+    }
+
     public ResponseEntity<?> addMockAgent(AddMockAgent addMockAgent) {
 
         if (!authentication.isAuthenticated()) {

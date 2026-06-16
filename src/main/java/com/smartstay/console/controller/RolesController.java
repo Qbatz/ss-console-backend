@@ -27,7 +27,8 @@ public class RolesController {
     }
 
     @PutMapping("/{roleId}")
-    public ResponseEntity<?> updateRole(@PathVariable("roleId") Long roleId, @RequestBody UpdateRoles updateRoles) {
+    public ResponseEntity<?> updateRole(@PathVariable("roleId") Long roleId,
+                                        @RequestBody UpdateRoles updateRoles) {
         return agentRolesService.updateRoleById(roleId, updateRoles);
     }
 

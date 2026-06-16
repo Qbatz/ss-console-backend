@@ -19,6 +19,7 @@ public class AgentRoles {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long roleId;
     private String roleName;
+    private String description;
     private Boolean isActive;
     private Boolean isDeleted;
     private Boolean isEditable;

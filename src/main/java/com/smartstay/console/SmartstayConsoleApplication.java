@@ -4,6 +4,7 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.ennum.DemoRequestSource;
 import com.smartstay.console.ennum.DemoRequestStatus;
 import com.smartstay.console.repositories.AgentModulesRepository;
+import com.smartstay.console.repositories.AgentRolesRepository;
 import com.smartstay.console.repositories.DemoRequestRepository;
 import com.smartstay.console.repositories.HostelRelationalAgentRepository;
 import com.smartstay.console.services.HostelService;
@@ -167,6 +168,23 @@ public class SmartstayConsoleApplication {
             }
         };
     }
+
+//    @Bean
+//    CommandLineRunner setAgentRolesDescription(AgentRolesRepository agentRolesRepository) {
+//        return args -> {
+//            List<AgentRoles> agentRolesList = agentRolesRepository.findAll();
+//
+//            for (AgentRoles agentRoles : agentRolesList) {
+//                switch (agentRoles.getRoleName()) {
+//                    case "CONSOLE-ADMIN-LEVEL-1" -> agentRoles.setDescription("Full Access");
+//                    case "CONSOLE-ADMIN-READ-ONLY" -> agentRoles.setDescription("Read only access");
+//                    case "CONSOLE-ADMIN-READ-WRITE-ONLY" -> agentRoles.setDescription("Read and write only access");
+//                }
+//            }
+//
+//            agentRolesRepository.saveAll(agentRolesList);
+//        };
+//    }
 
     // IMPORTANT: This migration should be executed ONLY ONCE in production.
     // Remove/comment this bean after successful deployment.
