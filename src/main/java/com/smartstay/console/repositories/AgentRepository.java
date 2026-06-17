@@ -30,14 +30,23 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
     List<Agent> findByRoleIdAndIsActiveTrueAndIsMockAgentFalse(long roleId);
 
     @Query("""
-       SELECT a.roleId AS roleId, COUNT(a) AS count
-       FROM Agent a
-       WHERE a.roleId IN :roleIds
-         AND a.isActive = true
-         AND a.isMockAgent = false
-       GROUP BY a.roleId
-       """)
+           SELECT a.roleId AS roleId, COUNT(a) AS count
+           FROM Agent a
+           WHERE a.roleId IN :roleIds
+             AND a.isActive = true
+             AND a.isMockAgent = false
+           GROUP BY a.roleId
+           """)
     List<RoleCountProjection> countActiveAgentsByRoleIds(@Param("roleIds") List<Long> roleIds);
+
+    @Query("""
+            select count(a)
+            from Agent a
+            where a.roleId = :roleId
+                and a.isActive = true
+                and a.isMockAgent = false
+            """)
+    long countAgentsByRoleId(long roleId);
 
     List<Agent> findAllByAgentIdInAndIsActiveTrue(Set<String> agentIds);
 

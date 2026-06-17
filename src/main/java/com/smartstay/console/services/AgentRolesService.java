@@ -48,8 +48,8 @@ public class AgentRolesService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        String userId = authentication.getName();
-        Agent agent = agentService.findUserByUserId(userId);
+        String agentId = authentication.getName();
+        Agent agent = agentService.findUserByUserId(agentId);
         if (agent == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
@@ -75,6 +75,7 @@ public class AgentRolesService {
         role.setIsEditable(true);
         role.setIsDeleted(false);
         role.setRoleName(roleData.roleName());
+        role.setDescription(roleData.description());
         role.setPermissions(rolesPermissions);
         role = agentRolesRepository.save(role);
 
@@ -96,18 +97,18 @@ public class AgentRolesService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        String userId = authentication.getName();
-        Agent user = agentService.findUserByUserId(userId);
-        if (user == null) {
+        String agentId = authentication.getName();
+        Agent agent = agentService.findUserByUserId(agentId);
+        if (agent == null) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        AgentRoles rolesV1 = agentRolesRepository.findByRoleId(user.getRoleId());
+        AgentRoles rolesV1 = agentRolesRepository.findByRoleId(agent.getRoleId());
         if (rolesV1 == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        if (!checkPermission(user.getRoleId(), ModuleId.Agents.getId(), Utils.PERMISSION_UPDATE)) {
+        if (!checkPermission(agent.getRoleId(), ModuleId.Agents.getId(), Utils.PERMISSION_UPDATE)) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
@@ -127,6 +128,10 @@ public class AgentRolesService {
                 return new ResponseEntity<>(Utils.ROLE_NAME_EXISTS, HttpStatus.BAD_REQUEST);
             }
             existingRole.setRoleName(updatedRole.roleName());
+        }
+
+        if (updatedRole.description() != null && !updatedRole.description().isBlank()) {
+            existingRole.setDescription(updatedRole.description());
         }
 
         if (updatedRole.isActive() != null) {
@@ -150,7 +155,7 @@ public class AgentRolesService {
 
         AgentRoleSnapshot newRole = SnapshotUtility.toSnapshot(existingRole);
 
-        agentActivitiesService.createAgentActivity(user, ActivityType.UPDATE, Source.AGENT_ROLE,
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.AGENT_ROLE,
                 String.valueOf(existingRole.getRoleId()), oldRole, newRole);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
@@ -250,8 +255,8 @@ public class AgentRolesService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
-        AgentRoles rolesV1 = agentRolesRepository.findByRoleId(user.getRoleId());
-        if (rolesV1 == null) {
+        AgentRoles roles = agentRolesRepository.findByRoleId(user.getRoleId());
+        if (roles == null) {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
@@ -259,9 +264,11 @@ public class AgentRolesService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        AgentRoles v1 = agentRolesRepository.findByRoleId(id);
-        if (v1 != null) {
-            Roles rolesData = new RolesMapper().apply(v1);
+        long userCount = agentService.getCountOfAgentByRoleId(id);
+
+        AgentRoles agentRoles = agentRolesRepository.findByRoleId(id);
+        if (agentRoles != null) {
+            Roles rolesData = new RolesMapper(userCount).apply(agentRoles);
             return new ResponseEntity<>(rolesData, HttpStatus.OK);
         }
 
@@ -376,7 +383,7 @@ public class AgentRolesService {
 
         List<AgentRoleDropdown> response = listRoles.stream()
                 .map(agentRole -> new AgentRoleDropdown(agentRole.getRoleId(),
-                        agentRole.getRoleName()))
+                        agentRole.getRoleName(), agentRole.getDescription()))
                 .toList();
 
         return new ResponseEntity<>(response, HttpStatus.OK);

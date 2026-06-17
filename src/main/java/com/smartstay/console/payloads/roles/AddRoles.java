@@ -6,12 +6,11 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
-public record AddRoles(
-        @NotNull(message = "Role name is required")
-        @NotEmpty(message = "Role name is required")
-        String roleName,
-        @NotNull(message = "Permission list cannot be null")
-        @Size(min = 1, max =14, message = "Permission list must contain between 1 and 25 items")
-        List<Permission> permissionList
-) {
+public record AddRoles(@NotNull(message = "Role name is required")
+                       @NotEmpty(message = "Role name is required")
+                       String roleName,
+                       String description,
+                       @NotNull(message = "Permission list cannot be null")
+                       @Size(min = 1, max =14, message = "Permission list must contain between 1 and 25 items")
+                       List<Permission> permissionList) {
 }

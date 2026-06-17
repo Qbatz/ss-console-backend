@@ -3,6 +3,7 @@ package com.smartstay.console.controller;
 import com.smartstay.console.payloads.billingRules.UpdateBillingRulesPayload;
 import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
+import com.smartstay.console.payloads.hostel.HostelNotesPayload;
 import com.smartstay.console.services.HostelsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -27,25 +28,6 @@ public class HostelsController {
 
     @Autowired
     private HostelsService hostelsService;
-
-    @GetMapping
-    public ResponseEntity<?> getAllHostelsNew(@RequestParam(value = "page", defaultValue = "1") int page,
-                                              @RequestParam(value = "size", defaultValue = "10") int size,
-                                              @RequestParam(value = "hostelName", required = false) String hostelName,
-                                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
-                                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
-                                              @RequestParam(required = false) Boolean subActive) {
-        return hostelsService.getAllHostelsNew(page, size, hostelName, startDate, endDate, subActive);
-    }
-
-    @GetMapping("/export")
-    public void exportHostels(@RequestParam(required = false) String hostelName,
-                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
-                              @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
-                              @RequestParam(required = false) Boolean subActive,
-                              HttpServletResponse response) throws IOException {
-        hostelsService.exportHostels(hostelName, startDate, endDate, subActive, response);
-    }
 
     @GetMapping("/new")
     public ResponseEntity<?> getAllHostels(@RequestParam(value = "page", defaultValue = "1") int page,
@@ -156,5 +138,16 @@ public class HostelsController {
     public ResponseEntity<?> updateBillingRuleConfiguration(@PathVariable("hostelId") String hostelId,
                                                             @RequestBody @Valid UpdateBillingRulesPayload payload){
         return hostelsService.updateBillingRuleConfiguration(hostelId, payload);
+    }
+
+    @PostMapping("/notes/{hostelId}")
+    public ResponseEntity<?> addHostelNotes(@PathVariable("hostelId") String hostelId,
+                                            @Valid @RequestBody HostelNotesPayload payload){
+        return hostelsService.addHostelNotes(hostelId, payload);
+    }
+
+    @GetMapping("/notes/{hostelId}")
+    public ResponseEntity<?> getHostelNotes(@PathVariable("hostelId") String hostelId){
+        return hostelsService.getHostelNotes(hostelId);
     }
 }

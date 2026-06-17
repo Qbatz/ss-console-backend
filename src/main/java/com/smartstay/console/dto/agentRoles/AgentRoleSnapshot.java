@@ -5,6 +5,7 @@ import java.util.List;
 
 public record AgentRoleSnapshot(Long roleId,
                                 String roleName,
+                                String description,
                                 Boolean isActive,
                                 Boolean isDeleted,
                                 Boolean isEditable,

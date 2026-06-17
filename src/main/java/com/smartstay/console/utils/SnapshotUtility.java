@@ -23,6 +23,7 @@ import com.smartstay.console.dto.tableColumns.TableColumnsSnapshot;
 import com.smartstay.console.dto.users.AddressSnapshot;
 import com.smartstay.console.dto.users.UserSnapshot;
 import com.smartstay.console.dto.users.UsersConfigSnapshot;
+import com.smartstay.console.dto.users.UsersNotesSnapshot;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -612,6 +613,7 @@ public class SnapshotUtility {
         return new AgentRoleSnapshot(
                 r.getRoleId(),
                 r.getRoleName(),
+                r.getDescription(),
                 r.getIsActive(),
                 r.getIsDeleted(),
                 r.getIsEditable(),
@@ -709,6 +711,36 @@ public class SnapshotUtility {
                 n.getCreatedBy(),
                 copyDate(n.getCreatedAt()),
                 n.getTicketId()
+        );
+    }
+
+    public static HostelNotesSnapshot toSnapshot(HostelNotes n) {
+
+        if (n == null) return null;
+
+        return new HostelNotesSnapshot(
+                n.getId(),
+                n.getComment(),
+                n.getCreatedByUserType(),
+                n.getCreatedBy(),
+                copyDate(n.getCreatedAt()),
+                n.getHostelId(),
+                n.getParentId()
+        );
+    }
+
+    public static UsersNotesSnapshot toSnapshot(UsersNotes n) {
+
+        if (n == null) return null;
+
+        return new UsersNotesSnapshot(
+                n.getId(),
+                n.getComment(),
+                n.getCreatedByUserType(),
+                n.getCreatedBy(),
+                copyDate(n.getCreatedAt()),
+                n.getUserId(),
+                n.getParentId()
         );
     }
 

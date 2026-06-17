@@ -22,6 +22,7 @@ import com.smartstay.console.events.RecurringEvents;
 import com.smartstay.console.payloads.billingRules.UpdateBillingRulesPayload;
 import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
+import com.smartstay.console.payloads.hostel.HostelNotesPayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerRecTrackerRes;
@@ -183,6 +184,8 @@ public class HostelsService {
     private InvoiceRedemptionService invoiceRedemptionService;
     @Autowired
     private SettlementItemsService settlementItemsService;
+    @Autowired
+    private HostelNotesService hostelNotesService;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -1115,129 +1118,6 @@ public class HostelsService {
         }
     }
 
-    public ResponseEntity<?> getAllHostelsNew(int page, int size, String hostelName,
-                                              Date startDate, Date endDate, Boolean subActive) {
-
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        Agent agent = agentService.findUserByUserId(authentication.getName());
-        if (agent == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        long totalHostels = hostelRepository.findHostelCount();
-
-        long activeHostels = hostelPlansService.findActiveHostels();
-
-        long inactiveHostels = totalHostels - activeHostels;
-
-        if (hostelName == null || hostelName.isBlank()){
-            hostelName = null;
-        }
-
-        if (endDate != null) {
-            endDate = Utils.addDaysToDate(endDate, 1);
-        }
-
-        Pageable pageableRequest = PageRequest.of(page-1, size);
-        Page<HostelV1> pageableHostelV1 = hostelRepository
-                .findAllHostelsNew(hostelName, startDate, endDate, subActive, pageableRequest);
-
-        List<HostelV1> listHostels = pageableHostelV1.stream().toList();
-
-        List<String> hostelIds = new ArrayList<>();
-        List<String> parentIds = new ArrayList<>();
-
-        for (HostelV1 hostel : listHostels) {
-            hostelIds.add(hostel.getHostelId());
-            parentIds.add(hostel.getParentId());
-        }
-
-        List<Users> createdUsers = usersService.getOwners(parentIds);
-        List<OwnerInfo> ownerInfos = createdUsers
-                .stream()
-                .map(i -> new UserOwnerInfoMapper().apply(i))
-                .toList();
-        List<UserActivities> listActivities = userActivitiesService
-                .findLatestActivities(hostelIds);
-        List<LoginHistory> loginHistories = loginHistoryService
-                .getLoginHistoriesByParentIds(parentIds);
-
-        Map<String, OwnerInfo> ownerMap = ownerInfos.stream()
-                .collect(Collectors.toMap(OwnerInfo::parentId, Function.identity(),
-                        (a, b) -> a));
-        Map<String, UserActivities> activityMap = listActivities.stream()
-                .collect(Collectors.toMap(UserActivities::getHostelId, Function.identity(),
-                        (a, b) -> a));
-        Map<String, LoginHistory> loginMap = loginHistories.stream()
-                .collect(Collectors.toMap(LoginHistory::getParentId, Function.identity(),
-                        (a, b) -> a));
-
-        List<Plans> trialPlans = plansService.findTrialPlans();
-        List<Plans> expandableTrialPlans = plansService.findExpandableTrialPlans();
-
-        List<Subscription> subscriptions = subscriptionService
-                .getSubscriptionsByHostelIds(new HashSet<>(hostelIds));
-        Map<String, List<Subscription>> subscriptionHostelMap = subscriptions.stream()
-                .collect(Collectors.groupingBy(Subscription::getHostelId));
-
-        List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
-                .getByParentIds(new HashSet<>(parentIds));
-        Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
-                .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
-
-        Set<String> agentIds = new HashSet<>();
-        for (HostelRelationalAgent relationalAgent : relationalAgents) {
-            if (relationalAgent.getAgentId() != null){
-                agentIds.add(relationalAgent.getAgentId());
-            }
-            if (relationalAgent.getCreatedBy() != null){
-                agentIds.add(relationalAgent.getCreatedBy());
-            }
-        }
-
-        List<Agent> agents = agentService.getAgentsByIds(agentIds);
-        Map<String, Agent> agentMap = agents.stream()
-                .collect(Collectors.toMap(Agent::getAgentId,
-                        a -> a, (a, b) -> a));
-
-        List<HostelList> hostelsList = listHostels
-                .stream()
-                .map(i -> new HostelsListMapper(
-                        ownerMap.getOrDefault(i.getParentId(), null),
-                        activityMap.getOrDefault(i.getHostelId(), null),
-                        loginMap.getOrDefault(i.getParentId(), null),
-                        trialPlans,
-                        expandableTrialPlans,
-                        subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
-                        relationalAgentMap.getOrDefault(i.getParentId(), null),
-                        agentMap
-                ).apply(i))
-                .toList();
-
-        List<HostelFilterOptionsRes> hostelFilterOptionsRes = Collections.emptyList();
-
-        Hostels hostels = new Hostels(totalHostels,
-                activeHostels,
-                inactiveHostels,
-                0,0,0,0,
-                0,0,0,
-                pageableHostelV1.getPageable().getPageNumber()+1,
-                size,
-                pageableHostelV1.getTotalPages(),
-                pageableHostelV1.getTotalElements(),
-                hostelFilterOptionsRes,
-                hostelsList);
-
-        return new ResponseEntity<>(hostels, HttpStatus.OK);
-    }
-
     public ResponseEntity<?> getAllHostels(int page, int size, String name,
                                            Date startDate, Date endDate,
                                            String agentId, String filterOption) {
@@ -1513,198 +1393,6 @@ public class HostelsService {
                 hostelsList);
 
         return new ResponseEntity<>(hostelsResponse, HttpStatus.OK);
-    }
-
-    public List<HostelList> getHostelsDataForExport(String hostelName, Date startDate,
-                                                    Date endDate, Boolean subActive){
-
-        if (hostelName == null || hostelName.isBlank()){
-            hostelName = null;
-        }
-
-        if (endDate != null) {
-            endDate = Utils.addDaysToDate(endDate, 1);
-        }
-
-        List<HostelV1> listHostels = hostelRepository
-                .findAllHostelsByNameAndJoiningDate(hostelName, startDate, endDate, subActive);
-
-        Set<String> hostelIds = new HashSet<>();
-        Set<String> parentIds = new HashSet<>();
-
-        for (HostelV1 hostel : listHostels) {
-            hostelIds.add(hostel.getHostelId());
-            parentIds.add(hostel.getParentId());
-        }
-
-        List<Users> createdUsers = usersService.getOwners(new ArrayList<>(parentIds));
-
-        List<OwnerInfo> ownerInfos = createdUsers
-                .stream()
-                .map(i -> new UserOwnerInfoMapper().apply(i))
-                .toList();
-
-        List<UserActivities> listActivities = userActivitiesService
-                .findLatestActivities(new ArrayList<>(hostelIds));
-
-        List<LoginHistory> loginHistories = loginHistoryService
-                .getLoginHistoriesByParentIds(new ArrayList<>(parentIds));
-
-        Map<String, OwnerInfo> ownerMap = ownerInfos.stream()
-                .collect(Collectors.toMap(OwnerInfo::parentId, Function.identity(),
-                        (a, b) -> a));
-
-        Map<String, UserActivities> activityMap = listActivities.stream()
-                .collect(Collectors.toMap(UserActivities::getHostelId, Function.identity(),
-                        (a, b) -> a));
-
-        Map<String, LoginHistory> loginMap = loginHistories.stream()
-                .collect(Collectors.toMap(LoginHistory::getParentId, Function.identity(),
-                        (a, b) -> a));
-
-        List<Plans> trialPlans = plansService.findTrialPlans();
-        List<Plans> expandableTrialPlans = plansService.findExpandableTrialPlans();
-
-        List<Subscription> subscriptions = subscriptionService
-                .getSubscriptionsByHostelIds(new HashSet<>(hostelIds));
-        Map<String, List<Subscription>> subscriptionHostelMap = subscriptions.stream()
-                .collect(Collectors.groupingBy(Subscription::getHostelId));
-
-        List<HostelRelationalAgent> relationalAgents = hostelRelationalAgentService
-                .getByParentIds(new HashSet<>(parentIds));
-        Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
-                .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
-
-        Set<String> agentIds = new HashSet<>();
-        for (HostelRelationalAgent relationalAgent : relationalAgents) {
-            if (relationalAgent.getAgentId() != null){
-                agentIds.add(relationalAgent.getAgentId());
-            }
-            if (relationalAgent.getCreatedBy() != null){
-                agentIds.add(relationalAgent.getCreatedBy());
-            }
-        }
-
-        List<Agent> agents = agentService.getAgentsByIds(agentIds);
-        Map<String, Agent> agentMap = agents.stream()
-                .collect(Collectors.toMap(Agent::getAgentId,
-                        a -> a, (a, b) -> a));
-
-        return listHostels
-                .stream()
-                .map(i -> new HostelsListMapper(
-                        ownerMap.getOrDefault(i.getParentId(), null),
-                        activityMap.getOrDefault(i.getHostelId(), null),
-                        loginMap.getOrDefault(i.getParentId(), null),
-                        trialPlans,
-                        expandableTrialPlans,
-                        subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
-                        relationalAgentMap.getOrDefault(i.getParentId(), null),
-                        agentMap
-                ).apply(i))
-                .toList();
-    }
-
-    public void exportHostels(String hostelName, Date startDate, Date endDate,
-                              Boolean subActive, HttpServletResponse response) throws IOException {
-
-        if (!authentication.isAuthenticated()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Utils.UN_AUTHORIZED);
-        }
-
-        Agent agent = agentService.findUserByUserId(authentication.getName());
-        if (agent == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, Utils.UN_AUTHORIZED);
-        }
-
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, Utils.ACCESS_RESTRICTED);
-        }
-
-        List<HostelList> hostels = getHostelsDataForExport(hostelName,
-                startDate, endDate, subActive);
-
-        Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("Hostels");
-
-        // Header
-        Row header = sheet.createRow(0);
-        header.createCell(0).setCellValue("Hostel Name");
-        header.createCell(1).setCellValue("Country Code");
-        header.createCell(2).setCellValue("Mobile");
-        header.createCell(3).setCellValue("City");
-        header.createCell(4).setCellValue("State");
-        header.createCell(5).setCellValue("Address");
-        header.createCell(6).setCellValue("Owner Name");
-        header.createCell(7).setCellValue("Owner Country Code");
-        header.createCell(8).setCellValue("Owner Mobile");
-        header.createCell(9).setCellValue("Hostel Plan Name");
-        header.createCell(10).setCellValue("Hostel Plan Code");
-        header.createCell(11).setCellValue("Hostel Plan Amount");
-        header.createCell(12).setCellValue("Hostel Joined On");
-        header.createCell(13).setCellValue("Plan Expired On");
-        header.createCell(14).setCellValue("Plan Expiring At");
-        header.createCell(15).setCellValue("Is Trial");
-        header.createCell(16).setCellValue("Can Add Trial");
-        header.createCell(17).setCellValue("Can Add Expandable Trial");
-        header.createCell(18).setCellValue("Is Subscription Active");
-        header.createCell(19).setCellValue("Days to expire");
-        header.createCell(20).setCellValue("Last Updated Date");
-        header.createCell(21).setCellValue("Last Updated Time");
-        header.createCell(22).setCellValue("Platform");
-        header.createCell(23).setCellValue("Relational Agent Name");
-        header.createCell(24).setCellValue("Relational Agent Reason");
-        header.createCell(25).setCellValue("Relational Agent Comments");
-
-        int rowIdx = 1;
-        for (HostelList h : hostels) {
-            HostelRelationalAgentResponse relationalAgentRes = null;
-            if (h.relationalAgents() != null && !h.relationalAgents().isEmpty()){
-                relationalAgentRes = h.relationalAgents().getFirst();
-            }
-            Row row = sheet.createRow(rowIdx++);
-            row.createCell(0).setCellValue(h.hostelName() != null ? h.hostelName() : "");
-            row.createCell(1).setCellValue(h.countryCode() != null ? h.countryCode() : "");
-            row.createCell(2).setCellValue(h.mobile() != null ? h.mobile() : "");
-            row.createCell(3).setCellValue(h.city() != null ? h.city() : "");
-            row.createCell(4).setCellValue(h.state() != null ? h.state() : "");
-            row.createCell(5).setCellValue(h.fullAddress() != null  ? h.fullAddress() : "");
-            row.createCell(6).setCellValue(h.ownerInfo() != null ? h.ownerInfo().fullName() != null ? h.ownerInfo().fullName() : "" : "");
-            row.createCell(7).setCellValue(h.ownerInfo() != null ? h.ownerInfo().countryCode() != null ? h.ownerInfo().countryCode() : "" : "");
-            row.createCell(8).setCellValue(h.ownerInfo() != null ? h.ownerInfo().mobile() != null ? h.ownerInfo().mobile() : "" : "");
-            row.createCell(9).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlan() != null ? h.hostelPlan().currentPlan() : "" : "");
-            row.createCell(10).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlanCode() != null ? h.hostelPlan().currentPlanCode() : "" : "");
-            row.createCell(11).setCellValue(h.hostelPlan() != null ? h.hostelPlan().currentPlanAmount() != null ? h.hostelPlan().currentPlanAmount() : 0D : 0D);
-            row.createCell(12).setCellValue(h.joinedOn() != null ? h.joinedOn() : "");
-            row.createCell(13).setCellValue(h.expiredOn() != null ? h.expiredOn() : "");
-            row.createCell(14).setCellValue(h.expiringAt() !=  null ? h.expiringAt() : "");
-            row.createCell(15).setCellValue(h.isTrial());
-            row.createCell(16).setCellValue(h.canAddTrial());
-            row.createCell(17).setCellValue(h.canAddExpandableTrial());
-            row.createCell(18).setCellValue(h.subscriptionIsActive());
-            row.createCell(19).setCellValue(h.noOfdaysSubscriptionActive());
-            row.createCell(20).setCellValue(h.lastUpdateDate() != null ? h.lastUpdateDate() : "");
-            row.createCell(21).setCellValue(h.lastUpdateTime() != null ? h.lastUpdateTime() : "");
-            row.createCell(22).setCellValue(h.platform() != null ? h.platform() : "");
-            row.createCell(23).setCellValue(relationalAgentRes != null ? relationalAgentRes.agentName() != null ? relationalAgentRes.agentName() : "" : "");
-            row.createCell(24).setCellValue(relationalAgentRes != null ? relationalAgentRes.reason() != null ? relationalAgentRes.reason() : "" : "");
-            row.createCell(25).setCellValue(relationalAgentRes != null ? relationalAgentRes.comments() != null ? relationalAgentRes.comments() : "" : "");
-        }
-
-        Row headerRow = sheet.getRow(0);
-        int totalColumns = headerRow.getLastCellNum();
-
-        for (int col = 0; col < totalColumns; col++) {
-            sheet.autoSizeColumn(col);
-        }
-
-        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader("Content-Disposition", "attachment; filename=\"hostels.xlsx\"");
-
-        ServletOutputStream out = response.getOutputStream();
-        workbook.write(out);
-        out.flush();
-        workbook.close();
     }
 
     public List<HostelList> getHostelsDataForExport(String name, Date startDate,
@@ -3697,5 +3385,97 @@ public class HostelsService {
                 String.valueOf(newBillingRules.getId()), null, newBillingRulesSnapshot);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> addHostelNotes(String hostelId, HostelNotesPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_WRITE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        HostelNotes hostelNotes = new HostelNotes();
+
+        hostelNotes.setComment(payload.notes());
+        hostelNotes.setCreatedByUserType(UserType.AGENT.name());
+        hostelNotes.setCreatedBy(authentication.getName());
+        hostelNotes.setCreatedAt(today);
+        hostelNotes.setHostelId(hostelId);
+        hostelNotes.setParentId(hostel.getParentId());
+
+        hostelNotes = hostelNotesService.save(hostelNotes);
+
+        HostelNotesSnapshot newNotes = SnapshotUtility.toSnapshot(hostelNotes);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.HOSTEL_NOTES,
+                String.valueOf(hostelNotes.getId()), null, newNotes);
+
+        return new ResponseEntity<>(Utils.CREATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getHostelNotes(String hostelId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelRepository.findByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<HostelNotes> hostelNotes = hostelNotesService
+                .getAllByHostelId(hostelId);
+
+        Set<String> notesCreatedByAgentIds = new HashSet<>();
+        for (HostelNotes note : hostelNotes) {
+            if (UserType.AGENT.name().equals(note.getCreatedByUserType())){
+                notesCreatedByAgentIds.add(note.getCreatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(notesCreatedByAgentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId, a -> a));
+
+        List<HostelNotesResponse> response = hostelNotes.stream()
+                .map(notes -> {
+
+                    String createdBy = null;
+                    Agent createdByAgent = agentMap.getOrDefault(notes.getCreatedBy(), null);
+                    if (createdByAgent != null){
+                        createdBy = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
+                    }
+
+                    return new HostelNotesResponse(notes.getId(), notes.getComment(),
+                            notes.getCreatedByUserType(), notes.getCreatedBy(), createdBy,
+                            Utils.dateToString(notes.getCreatedAt()), Utils.dateToTime(notes.getCreatedAt()));
+                }).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

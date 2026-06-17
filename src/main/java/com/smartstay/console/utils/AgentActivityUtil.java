@@ -93,6 +93,8 @@ public class AgentActivityUtil {
             case HOSTEL_RELATIONAL_AGENT -> "Assigned hostel relational agent";
             case SUPPORT_TICKET -> "Created a support ticket";
             case SUPPORT_TICKET_NOTES -> "Created a new support ticket note";
+            case HOSTEL_NOTES -> "Created a new hostel note";
+            case USERS_NOTES -> "Created a new users note";
             default -> "Created successfully";
         };
     }
