@@ -28,9 +28,27 @@ public class CustomersController {
     }
 
     @DeleteMapping("/{hostelId}/{customerId}")
-    public ResponseEntity<?> deleteTenant(@PathVariable String hostelId,
-                                          @PathVariable String customerId,
+    public ResponseEntity<?> deleteTenant(@PathVariable("hostelId") String hostelId,
+                                          @PathVariable("customerId") String customerId,
                                           @Valid @RequestBody CustomerResetPayload customerResetPayload) {
         return customersService.deleteTenant(hostelId, customerId, customerResetPayload);
+    }
+
+    @GetMapping("/deductions/{hostelId}/{customerId}")
+    public ResponseEntity<?> getCustomerDeductions(@PathVariable("hostelId") String hostelId,
+                                                   @PathVariable("customerId") String customerId){
+        return customersService.getCustomerDeductions(hostelId, customerId);
+    }
+
+    @PutMapping("/deductions/{hostelId}/{customerId}/{invoiceId}")
+    public ResponseEntity<?> updatedDeductions(@PathVariable("hostelId") String hostelId,
+                                               @PathVariable("customerId") String customerId,
+                                               @PathVariable("invoiceId") String invoiceId){
+        return customersService.updateDeductions(hostelId, customerId, invoiceId);
+    }
+
+    @GetMapping("/deductions")
+    public ResponseEntity<?> getCustomersWithPendingAdvanceDeductions(){
+        return customersService.getCustomersWithPendingAdvanceDeductions();
     }
 }

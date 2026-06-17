@@ -6,10 +6,14 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.customers.CustomerResetSnapshot;
 import com.smartstay.console.dto.customers.CustomersCredentialsSnapshot;
 import com.smartstay.console.dto.customers.CustomersSnapshot;
+import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.customers.CustomerResetPayload;
 import com.smartstay.console.repositories.CustomersRepository;
+import com.smartstay.console.responses.customers.CustomerDeductionsRes;
 import com.smartstay.console.responses.customers.CustomerSummaryResponse;
+import com.smartstay.console.responses.customers.DeductionsRes;
+import com.smartstay.console.responses.customers.InvoiceDeductionsRes;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -455,5 +460,239 @@ public class CustomersService {
 
     public void saveAll(List<Customers> customersList) {
         customersRepository.saveAll(customersList);
+    }
+
+    public ResponseEntity<?> getCustomerDeductions(String hostelId, String customerId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Customers customer = customersRepository.findByCustomerIdAndHostelId(customerId, hostelId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_TENANT_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        HostelV1 hostel = hostelService.getHostelByHostelId(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Advance advance = customer.getAdvance();
+
+        List<Deductions> customerAdvanceDeductions = new ArrayList<>();
+
+        if (advance != null) {
+            customerAdvanceDeductions = advance.getDeductions();
+        }
+
+        List<DeductionsRes> customerAdvanceDeductionsRes = new ArrayList<>();
+        if (customerAdvanceDeductions != null && !customerAdvanceDeductions.isEmpty()) {
+            customerAdvanceDeductionsRes = customerAdvanceDeductions.stream()
+                    .map(deduction -> new DeductionsRes(deduction.getType(),
+                            deduction.getAmount(), deduction.getPaidAmount()))
+                    .toList();
+        }
+
+        List<InvoicesV1> invoices = invoiceV1Service.findAllByHostelIdAndCustomerId(hostelId, customerId);
+
+        List<InvoicesV1> advanceInvoices = invoices.stream()
+                .filter(invoice -> InvoiceType.ADVANCE.name().equals(invoice.getInvoiceType()))
+                .toList();
+
+        List<InvoiceDeductionsRes> invoiceDeductionsRes = new ArrayList<>();
+        if (!advanceInvoices.isEmpty()) {
+            invoiceDeductionsRes = advanceInvoices.stream()
+                    .map(advInvoice -> {
+                        List<Deductions> advInvDeductions = advInvoice.getDeductions();
+                        List<DeductionsRes> invoiceAdvanceDeductionsRes = new ArrayList<>();
+                        if (advInvDeductions != null && !advInvDeductions.isEmpty()) {
+                            invoiceAdvanceDeductionsRes = advInvDeductions.stream()
+                                    .map(deduction -> new DeductionsRes(deduction.getType(),
+                                            deduction.getAmount(), deduction.getPaidAmount()))
+                                    .toList();
+                        }
+                        return new InvoiceDeductionsRes(advInvoice.getInvoiceId(), advInvoice.getInvoiceNumber(),
+                                advInvoice.getInvoiceType(), invoiceAdvanceDeductionsRes);
+                    }).toList();
+        }
+
+        CustomerDeductionsRes response = new CustomerDeductionsRes(customerId, hostelId,
+                hostel.getHostelName(), Utils.getFullName(customer.getFirstName(), customer.getLastName()),
+                customer.getCustomerBedStatus(), customer.getCurrentStatus(),
+                customerAdvanceDeductionsRes, invoiceDeductionsRes);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateDeductions(String hostelId, String customerId, String invoiceId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Customers customer = customersRepository.findByCustomerIdAndHostelId(customerId, hostelId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_TENANT_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        HostelV1 hostel = hostelService.getHostelByHostelId(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 invoice = invoiceV1Service.getInvoiceById(invoiceId);
+        if (invoice == null) {
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (!invoice.getCustomerId().equals(customerId) || !invoice.getHostelId().equals(hostelId)) {
+            return new ResponseEntity<>("Invoice does not match customer and hostel", HttpStatus.BAD_REQUEST);
+        }
+
+        Advance advance = customer.getAdvance();
+        if (advance == null || advance.getDeductions() == null || advance.getDeductions().isEmpty()) {
+            return new ResponseEntity<>("No advance deductions found", HttpStatus.BAD_REQUEST);
+        }
+
+        List<Deductions> invDeductions = invoice.getDeductions();
+        if (invDeductions == null) {
+            invDeductions = new ArrayList<>();
+        }
+
+        if (!invDeductions.isEmpty()){
+            return new ResponseEntity<>("Invoice has deductions already", HttpStatus.BAD_REQUEST);
+        }
+
+        invDeductions.addAll(advance.getDeductions()
+                        .stream()
+                        .map(d -> new Deductions(
+                                d.getType(),
+                                d.getAmount(),
+                                d.getPaidAmount()))
+                        .toList()
+        );
+
+        invoice.setDeductions(invDeductions);
+
+        invoiceV1Service.save(invoice);
+
+        return new ResponseEntity<>("Deductions copied successfully" , HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getCustomersWithPendingAdvanceDeductions() {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<Customers> customers = customersRepository.findAll();
+
+        List<InvoicesV1> advanceInvoices = invoiceV1Service
+                .getInvoicesByInvoiceType(InvoiceType.ADVANCE.name());
+
+        Map<String, List<InvoicesV1>> advanceInvoiceMap = advanceInvoices.stream()
+                .filter(invoice -> invoice.getCustomerId() != null)
+                .collect(Collectors.groupingBy(InvoicesV1::getCustomerId));
+
+        Map<String, HostelV1> hostelMap = hostelService.getAllHostels()
+                .stream()
+                .collect(Collectors.toMap(
+                        HostelV1::getHostelId,
+                        Function.identity()
+                ));
+
+        List<CustomerDeductionsRes> response = customers.stream()
+
+                // Customer must have advance deductions
+                .filter(customer -> {
+                    Advance advance = customer.getAdvance();
+
+                    return advance != null
+                            && advance.getDeductions() != null
+                            && !advance.getDeductions().isEmpty();
+                })
+
+                // Customer must have an ADVANCE invoice
+                .filter(customer -> advanceInvoiceMap.containsKey(customer.getCustomerId()))
+
+                // ADVANCE invoice must have no deductions
+                .filter(customer -> {
+                    List<InvoicesV1> invoices = advanceInvoiceMap.get(customer.getCustomerId());
+
+                    return invoices.stream()
+                            .anyMatch(invoice ->
+                                    invoice.getDeductions() == null
+                                            || invoice.getDeductions().isEmpty());
+                })
+
+                .map(customer -> {
+
+                    HostelV1 hostel = hostelMap.get(customer.getHostelId());
+
+                    List<DeductionsRes> deductions = customer.getAdvance()
+                                    .getDeductions()
+                                    .stream()
+                                    .map(d -> new DeductionsRes(
+                                            d.getType(),
+                                            d.getAmount(),
+                                            d.getPaidAmount()))
+                                    .toList();
+
+                    List<InvoiceDeductionsRes> invoiceDeductionsRes =
+                            advanceInvoiceMap
+                                    .getOrDefault(customer.getCustomerId(), Collections.emptyList())
+                                    .stream()
+                                    .map(invoice -> {
+
+                                        List<DeductionsRes> deductionRes =
+                                                Optional.ofNullable(invoice.getDeductions())
+                                                        .orElse(Collections.emptyList())
+                                                        .stream()
+                                                        .map(d -> new DeductionsRes(
+                                                                d.getType(),
+                                                                d.getAmount(),
+                                                                d.getPaidAmount()))
+                                                        .toList();
+
+                                        return new InvoiceDeductionsRes(invoice.getInvoiceId(),
+                                                invoice.getInvoiceNumber(), invoice.getInvoiceType(),
+                                                deductionRes);
+                                    }).toList();
+
+                    return new CustomerDeductionsRes(customer.getCustomerId(), customer.getHostelId(),
+                            hostel.getHostelName(), Utils.getFullName(customer.getFirstName(), customer.getLastName()),
+                            customer.getCustomerBedStatus(), customer.getCurrentStatus(), deductions,
+                            invoiceDeductionsRes
+                    );
+                }).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

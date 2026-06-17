@@ -47,4 +47,6 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
     InvoicesV1 findByInvoiceId(String invoiceId);
 
     Page<InvoicesV1> findAllByHostelIdOrderByCreatedAtDesc(String hostelId, Pageable pageable);
+
+    List<InvoicesV1> findAllByInvoiceType(String invoiceType);
 }

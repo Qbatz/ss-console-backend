@@ -823,4 +823,8 @@ public class InvoiceV1Service {
     public void saveAll(List<InvoicesV1> invoiceList) {
         invoiceV1Repository.saveAll(invoiceList);
     }
+
+    public List<InvoicesV1> getInvoicesByInvoiceType(String invoiceType) {
+        return invoiceV1Repository.findAllByInvoiceType(invoiceType);
+    }
 }
