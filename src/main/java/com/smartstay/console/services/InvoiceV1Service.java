@@ -216,6 +216,10 @@ public class InvoiceV1Service {
                     throw new BadRequestException(Utils.BED_NOT_FOUND);
                 }
 
+                if (BedStatus.OCCUPIED.name().equals(bed.getCurrentStatus())){
+                    throw new BadRequestException(Utils.BED_IS_OCCUPIED);
+                }
+
                 bed.setFreeFrom(booking.getLeavingDate());
                 bed.setStatus(BedStatus.OCCUPIED.name());
                 bed.setCurrentStatus(BedStatus.OCCUPIED.name());
@@ -673,6 +677,10 @@ public class InvoiceV1Service {
                 Beds bed = bedsMap.getOrDefault(bedId, null);
                 if (bed == null){
                     return new ResponseEntity<>(Utils.BED_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                }
+
+                if (BedStatus.OCCUPIED.name().equals(bed.getCurrentStatus())){
+                    return new ResponseEntity<>(Utils.BED_IS_OCCUPIED, HttpStatus.BAD_REQUEST);
                 }
 
                 bed.setFreeFrom(booking.getLeavingDate());
