@@ -10,6 +10,6 @@ public class PlanFeaturesResMapper implements Function<PlanFeatures, PlanFeature
     @Override
     public PlanFeaturesResponse apply(PlanFeatures planFeatures) {
         return new PlanFeaturesResponse(planFeatures.getId(), planFeatures.getFeatureName(),
-                planFeatures.getPrice());
+                planFeatures.getPrice(), planFeatures.isFeatureActive());
     }
 }

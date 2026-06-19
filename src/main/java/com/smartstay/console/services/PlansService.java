@@ -7,7 +7,8 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.PlanFeatures;
 import com.smartstay.console.dao.Plans;
-import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
+import com.smartstay.console.dao.SmartstayFeatures;
+import com.smartstay.console.dto.plans.PlanFeatureDto;
 import com.smartstay.console.dto.plans.PlanSnapshot;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
@@ -30,6 +31,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,6 +49,8 @@ public class PlansService {
     private AgentActivitiesService agentActivitiesService;
     @Autowired
     private PlanFeaturesService planFeaturesService;
+    @Autowired
+    private SmartstayFeatureService smartstayFeatureService;
 
     public Plans findTrialPlan(){
         return plansRepository.findTopByPlanTypeAndIsActiveTrueOrderByPlanIdAsc(PlanType.TRIAL.name());
@@ -88,26 +92,34 @@ public class PlansService {
 
         List<Plans> plans = plansRepository.findPlansExcludingTrial();
 
+        List<SmartstayFeatures> commonFeatures = smartstayFeatureService
+                .getAllCommonFeatures();
+
         Set<Long> inActivePlanIds = plans.stream()
                 .filter(p -> !p.isActive())
                 .map(Plans::getPlanId)
                 .collect(Collectors.toSet());
 
-        List<PlanFeatures> planFeatures = planFeaturesService.findAllByPlanIds(inActivePlanIds);
+        List<PlanFeatures> inactivePlanFeatures = planFeaturesService
+                .findAllByPlanIds(inActivePlanIds);
 
-        Map<Long, List<PlanFeatures>> planFeaturesMap = planFeatures.stream()
+        Map<Long, List<PlanFeatures>> inactivePlanFeaturesMap = inactivePlanFeatures.stream()
                 .collect(Collectors.groupingBy(PlanFeatures::getPlanId));
 
         List<PlansResponse> activePlans = plans.stream()
                 .filter(Plans::isActive)
-                .map(plan -> new PlanResMapper().apply(plan))
+                .map(plan -> new PlanResMapper(commonFeatures).apply(plan))
                 .toList();
 
         List<PlansResponse> inActivePlans = plans.stream()
                 .filter(p -> !p.isActive())
                 .map(plan -> {
-                    List<PlanFeatures> features = planFeaturesMap.getOrDefault(plan.getPlanId(), null);
-                    return new InActivePlanResMapper(features).apply(plan);
+                    List<PlanFeatures> features = inactivePlanFeaturesMap
+                            .getOrDefault(plan.getPlanId(), Collections.emptyList());
+
+                    List<PlanFeatureDto> mergedFeatures = mergeFeatures(commonFeatures, features);
+
+                    return new InActivePlanResMapper(mergedFeatures).apply(plan);
                 }).toList();
 
         PlansResponseWrapper response = new PlansResponseWrapper(activePlans, inActivePlans);
@@ -458,72 +470,72 @@ public class PlansService {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    public ResponseEntity<?> addPlanFeature(Long planId, PlanFeaturesPayload payload) {
-
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        Agent agent = agentService.findUserByUserId(authentication.getName());
-        if (agent == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_WRITE)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        Plans plan = plansRepository.findByPlanIdAndIsActiveTrue(planId);
-        if (plan == null) {
-            return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
-        }
-
-        PlanFeatures planFeature = new PlanFeatures();
-
-        planFeature.setFeatureName(payload.featureName());
-        planFeature.setPrice(payload.price() != null ? payload.price() : 0);
-        planFeature.setActive(true);
-        planFeature.setPlan(plan);
-
-        planFeaturesService.save(planFeature);
-
-        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.PLAN_FEATURES,
-                String.valueOf(planFeature.getId()), null, planFeature);
-
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
-
-    public ResponseEntity<?> deactivatePlanFeature(Long planFeatureId) {
-
-        if (!authentication.isAuthenticated()) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        Agent agent = agentService.findUserByUserId(authentication.getName());
-        if (agent == null) {
-            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-        }
-
-        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_DELETE)) {
-            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-        }
-
-        PlanFeatures planFeature = planFeaturesService.findById(planFeatureId);
-        if (planFeature == null) {
-            return new ResponseEntity<>(Utils.PLAN_FEATURE_NOT_FOUND, HttpStatus.BAD_REQUEST);
-        }
-
-        PlanFeatureSnapshot oldPlanFeature = SnapshotUtility.toSnapshot(planFeature);
-
-        planFeature.setActive(false);
-
-        planFeaturesService.save(planFeature);
-
-        agentActivitiesService.createAgentActivity(agent, ActivityType.DEACTIVATE, Source.PLAN_FEATURES,
-                String.valueOf(planFeatureId), oldPlanFeature, null);
-
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
+//    public ResponseEntity<?> addPlanFeature(Long planId, PlanFeaturesPayload payload) {
+//
+//        if (!authentication.isAuthenticated()) {
+//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+//        }
+//
+//        Agent agent = agentService.findUserByUserId(authentication.getName());
+//        if (agent == null) {
+//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+//        }
+//
+//        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_WRITE)) {
+//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+//        }
+//
+//        Plans plan = plansRepository.findByPlanIdAndIsActiveTrue(planId);
+//        if (plan == null) {
+//            return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
+//        }
+//
+//        PlanFeatures planFeature = new PlanFeatures();
+//
+//        planFeature.setFeatureName(payload.featureName());
+//        planFeature.setPrice(payload.price() != null ? payload.price() : 0);
+//        planFeature.setActive(true);
+//        planFeature.setPlan(plan);
+//
+//        planFeaturesService.save(planFeature);
+//
+//        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.PLAN_FEATURES,
+//                String.valueOf(planFeature.getId()), null, planFeature);
+//
+//        return new ResponseEntity<>(HttpStatus.OK);
+//    }
+//
+//    public ResponseEntity<?> deactivatePlanFeature(Long planFeatureId) {
+//
+//        if (!authentication.isAuthenticated()) {
+//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+//        }
+//
+//        Agent agent = agentService.findUserByUserId(authentication.getName());
+//        if (agent == null) {
+//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+//        }
+//
+//        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_DELETE)) {
+//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+//        }
+//
+//        PlanFeatures planFeature = planFeaturesService.findById(planFeatureId);
+//        if (planFeature == null) {
+//            return new ResponseEntity<>(Utils.PLAN_FEATURE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+//        }
+//
+//        PlanFeatureSnapshot oldPlanFeature = SnapshotUtility.toSnapshot(planFeature);
+//
+//        planFeature.setActive(false);
+//
+//        planFeaturesService.save(planFeature);
+//
+//        agentActivitiesService.createAgentActivity(agent, ActivityType.DEACTIVATE, Source.PLAN_FEATURES,
+//                String.valueOf(planFeatureId), oldPlanFeature, null);
+//
+//        return new ResponseEntity<>(HttpStatus.OK);
+//    }
 
     public List<Plans> getFreePlans() {
         List<String> planTypes = new ArrayList<>();
@@ -600,5 +612,39 @@ public class PlansService {
         return plans.stream()
                 .map(Plans::getPlanCode)
                 .collect(Collectors.toSet());
+    }
+
+    public static List<PlanFeatureDto> mergeFeatures(List<SmartstayFeatures> commonFeatures,
+                                                     List<PlanFeatures> planFeatures) {
+
+        Map<Long, PlanFeatures> featureOverrideMap = planFeatures.stream()
+                .collect(Collectors.toMap(
+                        PlanFeatures::getSmartstayFeatureId,
+                        Function.identity(),
+                        (a, b) -> a
+                ));
+
+        return commonFeatures.stream()
+                .map(commonFeature -> {
+
+                    PlanFeatures override = featureOverrideMap.get(commonFeature.getId());
+
+                    if (override != null) {
+                        return new PlanFeatureDto(
+                                commonFeature.getId(),
+                                commonFeature.getFeatureName(),
+                                override.getPrice(),
+                                override.isFeatureActive()
+                        );
+                    }
+
+                    return new PlanFeatureDto(
+                            commonFeature.getId(),
+                            commonFeature.getFeatureName(),
+                            0d,
+                            true
+                    );
+                })
+                .toList();
     }
 }

@@ -18,6 +18,8 @@ public class PlanFeatures {
     private Long id;
     private String featureName;
     private Double price;
+    private Long smartstayFeatureId;
+    private boolean isFeatureActive;
     private boolean isActive;
 
     @ManyToOne

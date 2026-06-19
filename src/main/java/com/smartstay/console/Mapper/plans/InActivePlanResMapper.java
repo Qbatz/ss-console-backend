@@ -1,7 +1,7 @@
 package com.smartstay.console.Mapper.plans;
 
-import com.smartstay.console.dao.PlanFeatures;
 import com.smartstay.console.dao.Plans;
+import com.smartstay.console.dto.plans.PlanFeatureDto;
 import com.smartstay.console.responses.plans.PlanFeaturesResponse;
 import com.smartstay.console.responses.plans.PlansResponse;
 import com.smartstay.console.utils.Utils;
@@ -12,9 +12,9 @@ import java.util.function.Function;
 
 public class InActivePlanResMapper implements Function<Plans, PlansResponse> {
 
-    List<PlanFeatures> planFeatures;
+    List<PlanFeatureDto> planFeatures;
 
-    public InActivePlanResMapper(List<PlanFeatures> planFeatures) {
+    public InActivePlanResMapper(List<PlanFeatureDto> planFeatures) {
         this.planFeatures = planFeatures;
     }
 
@@ -38,7 +38,8 @@ public class InActivePlanResMapper implements Function<Plans, PlansResponse> {
         List<PlanFeaturesResponse> planFeaturesResponses = new ArrayList<>();
         if (planFeatures != null) {
             planFeaturesResponses = planFeatures.stream()
-                    .map(planFeature -> new PlanFeaturesResMapper().apply(planFeature))
+                    .map(planFeature -> new PlanFeaturesResponse(planFeature.smartStayFeatureId(),
+                            planFeature.featureName(), planFeature.price(), planFeature.isFeatureActive()))
                     .toList();
         }
 

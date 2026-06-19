@@ -53,14 +53,14 @@ public class PlansController {
         return plansService.reactivatePlan(planId);
     }
 
-    @PostMapping("/plan-feature/{planId}")
-    private ResponseEntity<?> addPlanFeature(@PathVariable("planId") Long planId,
-                                             @RequestBody @Valid PlanFeaturesPayload payload){
-        return plansService.addPlanFeature(planId, payload);
-    }
-
-    @PutMapping("/plan-feature/{planFeatureId}")
-    private ResponseEntity<?> deactivatePlanFeature(@PathVariable("planFeatureId") Long planFeatureId){
-        return plansService.deactivatePlanFeature(planFeatureId);
-    }
+//    @PostMapping("/plan-feature/{planId}")
+//    private ResponseEntity<?> addPlanFeature(@PathVariable("planId") Long planId,
+//                                             @RequestBody @Valid PlanFeaturesPayload payload){
+//        return plansService.addPlanFeature(planId, payload);
+//    }
+//
+//    @PutMapping("/plan-feature/{planFeatureId}")
+//    private ResponseEntity<?> deactivatePlanFeature(@PathVariable("planFeatureId") Long planFeatureId){
+//        return plansService.deactivatePlanFeature(planFeatureId);
+//    }
 }
