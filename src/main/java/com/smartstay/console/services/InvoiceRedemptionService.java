@@ -742,6 +742,10 @@ public class InvoiceRedemptionService {
         return invoiceRedemptionRepository.findByInvoiceIds(invoiceIds);
     }
 
+    public List<InvoiceRedemption> getInvoiceRedemptionByInvoiceId(String invoiceId){
+        return invoiceRedemptionRepository.findByInvoiceId(invoiceId);
+    }
+
     public void deleteInvoiceRedemptions(List<InvoiceRedemption> invoiceRedemptions) {
 
         Set<String> invoiceIds = new HashSet<>();

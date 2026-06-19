@@ -121,6 +121,7 @@ public class AgentActivityUtil {
             case RESET_USER_PIN -> "User pin has been reset";
             case INVOICE_REDEMPTION -> "Updated an invoice redemption";
             case SUPPORT_TICKET -> "Updated a support ticket";
+            case INVOICE -> "Updated an invoice";
             default -> "Updated successfully";
         };
     }

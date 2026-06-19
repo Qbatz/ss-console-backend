@@ -29,4 +29,8 @@ public class TransactionV1Service {
     public List<TransactionV1> getByInvoiceIds(Set<String> invoiceIds) {
         return transactionV1Repository.findAllByInvoiceIdIn(invoiceIds);
     }
+
+    public List<TransactionV1> getByInvoiceId(String invoiceId) {
+        return transactionV1Repository.findByInvoiceId(invoiceId);
+    }
 }

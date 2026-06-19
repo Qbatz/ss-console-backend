@@ -60,6 +60,7 @@ public class Utils {
     public static final String FIXED_DATE_PREPAID_TO_POSTPAID_ONLY_ALLOWED = "Only fixed date prepaid to postpaid is allowed";
     public static final String BUY_PLAN_NOT_ALLOWED_IN_DEV = "Buy plan is not allowed for dev environment";
     public static final String BED_IS_OCCUPIED = "Bed is occupied";
+    public static final String INVOICE_IS_NOT_ADVANCE = "Invoice is not an advance invoice";
 
     public static final String NO_ROLES_FOUND = "No roles found";
     public static final String NO_HOSTEL_FOUND = "No hostel found";
@@ -119,6 +120,7 @@ public class Utils {
     public static final String HOSTEL_PARENT_ID_MISMATCH = "Hostel's parentId doesn't match with parentId";
     public static final String USER_HOSTEL_MISMATCH = "User does not match the hostel users";
     public static final String PAYMENT_URL_AND_HOSTEL_MISMATCH = "Payment link and hostel id does not match";
+    public static final String INVOICE_HOSTEL_MISMATCH = "Hostel Id does not match invoice hostel";
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";

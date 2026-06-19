@@ -1,17 +1,21 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.invoice.InvoiceResponseMapper;
+import com.smartstay.console.Mapper.transaction.TransactionResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoice.InvoiceSnapshotWrapper;
 import com.smartstay.console.dto.settlement.EBItems;
 import com.smartstay.console.dto.settlement.WalltetItems;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
+import com.smartstay.console.payloads.invoice.AdvanceBalanceAmountPayload;
 import com.smartstay.console.payloads.invoice.InvoiceIdMobilePayload;
 import com.smartstay.console.repositories.InvoiceV1Repository;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
+import com.smartstay.console.responses.transaction.TransactionResponse;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -834,5 +838,167 @@ public class InvoiceV1Service {
 
     public List<InvoicesV1> getInvoicesByInvoiceType(String invoiceType) {
         return invoiceV1Repository.findAllByInvoiceType(invoiceType);
+    }
+
+    public ResponseEntity<?> getReceiptsByInvoiceId(String hostelId, String invoiceId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Invoices.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Receipt.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelService.getHostelByHostelId(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 invoice = invoiceV1Repository.findByInvoiceId(invoiceId);
+        if (invoice == null) {
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!invoice.getHostelId().equals(hostelId)) {
+            return new ResponseEntity<>(Utils.INVOICE_HOSTEL_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customer = customersService.getCustomerInformation(invoice.getCustomerId());
+        if (customer == null) {
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<TransactionV1> transactions = transactionV1Service.getByInvoiceId(invoiceId);
+
+        Set<String> bankIds = transactions.stream()
+                .map(TransactionV1::getBankId)
+                .collect(Collectors.toSet());
+
+        List<BankingV1> banks = bankingService.findByBankIds(bankIds);
+
+        Map<String, BankingV1> bankMap = banks.stream()
+                .collect(Collectors.toMap(BankingV1::getBankId, bank -> bank));
+
+        Set<String> userIds = new HashSet<>();
+        for (TransactionV1 transaction : transactions) {
+            if (transaction.getCreatedBy() != null){
+                userIds.add(transaction.getCreatedBy());
+            }
+            if (transaction.getUpdatedBy() != null){
+                userIds.add(transaction.getUpdatedBy());
+            }
+        }
+
+        List<Users> users = usersService.getUsersByIds(userIds);
+
+        Map<String, Users> usersMap = users.stream()
+                .collect(Collectors.toMap(Users::getUserId, user -> user));
+
+        List<TransactionResponse> response = transactions.stream()
+                .map(transaction -> {
+
+                    BankingV1 bank = bankMap.getOrDefault(transaction.getBankId(), null);
+                    Users createdByUser = usersMap.getOrDefault(transaction.getCreatedBy(), null);
+                    Users updatedByUser = usersMap.getOrDefault(transaction.getUpdatedBy(), null);
+
+                    return new TransactionResMapper(invoice, hostel, customer,
+                            bank, createdByUser, updatedByUser)
+                            .apply(transaction);
+                }).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateAdvanceInvoiceBalance(String hostelId, String invoiceId,
+                                                         AdvanceBalanceAmountPayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Invoices.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelService.getHostelByHostelId(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 invoice = invoiceV1Repository.findByInvoiceId(invoiceId);
+        if (invoice == null) {
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!invoice.getHostelId().equals(hostelId)) {
+            return new ResponseEntity<>(Utils.INVOICE_HOSTEL_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!InvoiceType.ADVANCE.name().equals(invoice.getInvoiceType())) {
+            return new ResponseEntity<>(Utils.INVOICE_IS_NOT_ADVANCE, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoiceSnapshot oldInvoiceSnapshot = SnapshotUtility.toSnapshot(invoice);
+
+        double payloadBalanceAmount = payload.balanceAmount();
+        payloadBalanceAmount = Utils.roundOfDoubleTo2Digits(payloadBalanceAmount);
+
+        double invoiceBalanceAmount = invoice.getBalanceAmount() != null ? invoice.getBalanceAmount() : 0;
+
+        double invoicePaidAmount = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
+
+        List<Deductions> invoiceDeductions = invoice.getDeductions() != null ? invoice.getDeductions() : Collections.emptyList();
+
+        double invoiceDeductionsAmount = invoiceDeductions.stream()
+                .mapToDouble(Deductions::getAmount)
+                .sum();
+
+        List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
+                .getInvoiceRedemptionByInvoiceId(invoiceId);
+
+        double invoiceRedemptionAmount = invoiceRedemptions.stream()
+                .mapToDouble(InvoiceRedemption::getRedemptionAmount)
+                .sum();
+
+        double expectedBalanceAmount = invoicePaidAmount - invoiceDeductionsAmount - invoiceRedemptionAmount;
+        expectedBalanceAmount = Utils.roundOfDoubleTo2Digits(expectedBalanceAmount);
+
+        if (invoiceBalanceAmount == payloadBalanceAmount) {
+            return new ResponseEntity<>(Utils.NO_CHANGES_DETECTED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (payloadBalanceAmount != expectedBalanceAmount) {
+            return new ResponseEntity<>("Expected balance amount is : " + expectedBalanceAmount +
+                            "\nPaid amount is : " + invoicePaidAmount +
+                            "\nDeductions amount is : " + invoiceDeductionsAmount +
+                            "\nRedemption amount is : " + invoiceRedemptionAmount,
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        invoice.setBalanceAmount(payloadBalanceAmount);
+
+        invoice = invoiceV1Repository.save(invoice);
+
+        InvoiceSnapshot newInvoiceSnapshot = SnapshotUtility.toSnapshot(invoice);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.INVOICE,
+                invoiceId, oldInvoiceSnapshot, newInvoiceSnapshot);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 }
