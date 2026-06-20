@@ -2,6 +2,8 @@ package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.plans.PlansPayload;
 import com.smartstay.console.payloads.plans.PlansUpdatePayload;
+import com.smartstay.console.payloads.plans.SmartstayFeatureAddPayload;
+import com.smartstay.console.payloads.plans.SmartstayFeatureEditPayload;
 import com.smartstay.console.services.PlansService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -55,5 +57,21 @@ public class PlansController {
     @GetMapping("/smartstay-feature")
     private ResponseEntity<?> getSmartstayFeatures(){
         return plansService.getSmartstayFeatures();
+    }
+
+    @PostMapping("/smartstay-feature")
+    private ResponseEntity<?> addSmartstayFeatures(@RequestBody @Valid SmartstayFeatureAddPayload payload){
+        return plansService.addSmartstayFeatures(payload);
+    }
+
+    @PutMapping("/smartstay-feature/{smartstayFeatureId}")
+    private ResponseEntity<?> updateSmartstayFeatures(@PathVariable("smartstayFeatureId") Long smartstayFeatureId,
+                                                      @RequestBody SmartstayFeatureEditPayload payload){
+        return plansService.updateSmartstayFeatures(smartstayFeatureId, payload);
+    }
+
+    @DeleteMapping("/smartstay-feature/{smartstayFeatureId}")
+    private ResponseEntity<?> deleteSmartstayFeatures(@PathVariable("smartstayFeatureId") Long smartstayFeatureId){
+        return plansService.deleteSmartstayFeatures(smartstayFeatureId);
     }
 }

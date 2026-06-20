@@ -29,4 +29,8 @@ public class PlanFeaturesService {
     public List<PlanFeatures> getBySmartstayFeatureIdsAndPlanId(Set<Long> smartstayFeatureIds, Long planId) {
         return planFeaturesRepository.findAllBySmartstayFeatureIdInAndPlan_PlanId(smartstayFeatureIds, planId);
     }
+
+    public List<PlanFeatures> getBySmartstayFeatureId(Long smartstayFeatureId) {
+        return planFeaturesRepository.findAllBySmartstayFeatureIdAndIsActiveTrue(smartstayFeatureId);
+    }
 }

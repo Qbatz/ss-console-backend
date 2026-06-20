@@ -19,4 +19,8 @@ public interface SmartstayFeaturesRepository extends JpaRepository<SmartstayFeat
     SmartstayFeatures findByIdAndIsActiveTrue(Long smartstayFeatureId);
 
     List<SmartstayFeatures> findAllByIdInAndIsActiveTrue(Set<Long> smartstayFeatureIds);
+
+    boolean existsByFeatureNameAndIsActiveTrue(String featureName);
+
+    boolean existsByFeatureNameAndIdNotAndIsActiveTrue(String featureName, Long smartstayFeatureId);
 }

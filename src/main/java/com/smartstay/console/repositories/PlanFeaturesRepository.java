@@ -13,4 +13,6 @@ public interface PlanFeaturesRepository extends JpaRepository<PlanFeatures, Long
     List<PlanFeatures> findAllByPlan_PlanIdInAndIsActiveTrue(Set<Long> planIds);
 
     List<PlanFeatures> findAllBySmartstayFeatureIdInAndPlan_PlanId(Set<Long> smartstayFeatureIds, Long planId);
+
+    List<PlanFeatures> findAllBySmartstayFeatureIdAndIsActiveTrue(Long smartstayFeatureId);
 }

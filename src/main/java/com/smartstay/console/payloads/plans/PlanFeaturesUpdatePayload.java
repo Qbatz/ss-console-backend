@@ -7,7 +7,7 @@ import java.time.LocalDate;
 
 public record PlanFeaturesUpdatePayload(@NotNull(message = "Smartstay feature Id is required")
                                         Long smartstayFeatureId,
-                                        boolean isFeatureActive,
+                                        Boolean isFeatureActive,
                                         String labelText,
                                         String labelDescription,
                                         @JsonFormat(pattern = "dd-MM-yyyy")

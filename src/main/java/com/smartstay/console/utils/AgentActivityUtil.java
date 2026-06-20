@@ -95,6 +95,7 @@ public class AgentActivityUtil {
             case SUPPORT_TICKET_NOTES -> "Created a new support ticket note";
             case HOSTEL_NOTES -> "Created a new hostel note";
             case USERS_NOTES -> "Created a new users note";
+            case SMARTSTAY_FEATURES -> "Created a new smartstay feature";
             default -> "Created successfully";
         };
     }
@@ -121,6 +122,7 @@ public class AgentActivityUtil {
             case RESET_USER_PIN -> "User pin has been reset";
             case INVOICE_REDEMPTION -> "Updated an invoice redemption";
             case SUPPORT_TICKET -> "Updated a support ticket";
+            case SMARTSTAY_FEATURES -> "Updated a smartstay feature";
             default -> "Updated successfully";
         };
     }
@@ -153,6 +155,7 @@ public class AgentActivityUtil {
             case OWNERS -> "Deleted an owner";
             case INVOICE_REDEMPTION -> "Deleted an invoice redemption";
             case DEMO_REQUEST -> "Deleted a demo request";
+            case SMARTSTAY_FEATURES -> "Deleted a smartstay feature";
             default -> "Deleted successfully";
         };
     }
