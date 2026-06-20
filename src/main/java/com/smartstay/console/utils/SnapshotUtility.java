@@ -15,6 +15,7 @@ import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
+import com.smartstay.console.dto.plans.SmartstayFeaturesSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketActivitySnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketNotesSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketSnapshot;
@@ -72,11 +73,25 @@ public class SnapshotUtility {
 
         return new PlanFeatureSnapshot(
                 pf.getId(),
+                pf.getSmartstayFeatureId(),
                 pf.getFeatureName(),
                 pf.getPrice(),
+                pf.isFeatureActive(),
+                pf.getLabelText(),
+                pf.getLabelDescription(),
+                copyDate(pf.getStartsFrom()),
+                copyDate(pf.getEndsAt()),
                 pf.isActive(),
                 pf.getPlan() != null ? pf.getPlan().getPlanId() : null
         );
+    }
+
+    public static SmartstayFeaturesSnapshot toSnapshot(SmartstayFeatures sf) {
+        if (sf == null) return null;
+
+        return new SmartstayFeaturesSnapshot(sf.getId(),
+                sf.getFeatureName(), sf.isCommon(), sf.isActive(),
+                copyDate(sf.getCreatedAt()), copyDate(sf.getUpdatedAt()));
     }
 
     public static HostelPlanSnapshot toSnapshot(HostelPlan p) {

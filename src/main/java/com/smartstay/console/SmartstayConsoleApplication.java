@@ -163,12 +163,16 @@ public class SmartstayConsoleApplication {
 //    CommandLineRunner addSmartstayFeatures(SmartstayFeaturesRepository repository) {
 //        return args -> {
 //
+//            Date today = new Date();
+//
 //            SmartstayFeatures tenant = repository.findByFeatureName("Tenant");
 //            if (tenant == null){
 //                tenant = new SmartstayFeatures();
 //                tenant.setFeatureName("Tenant");
 //                tenant.setCommon(true);
 //                tenant.setActive(true);
+//                tenant.setCreatedAt(today);
+//                tenant.setUpdatedAt(today);
 //                repository.save(tenant);
 //            }
 //            SmartstayFeatures invoice = repository.findByFeatureName("Invoice");
@@ -177,6 +181,8 @@ public class SmartstayConsoleApplication {
 //                invoice.setFeatureName("Invoice");
 //                invoice.setCommon(true);
 //                invoice.setActive(true);
+//                invoice.setCreatedAt(today);
+//                invoice.setUpdatedAt(today);
 //                repository.save(invoice);
 //            }
 //            SmartstayFeatures dashboard = repository.findByFeatureName("Dashboard");
@@ -185,6 +191,8 @@ public class SmartstayConsoleApplication {
 //                dashboard.setFeatureName("Dashboard");
 //                dashboard.setCommon(true);
 //                dashboard.setActive(true);
+//                dashboard.setCreatedAt(today);
+//                dashboard.setUpdatedAt(today);
 //                repository.save(dashboard);
 //            }
 //            SmartstayFeatures kyc = repository.findByFeatureName("KYC");
@@ -193,6 +201,8 @@ public class SmartstayConsoleApplication {
 //                kyc.setFeatureName("KYC");
 //                kyc.setCommon(false);
 //                kyc.setActive(true);
+//                kyc.setCreatedAt(today);
+//                kyc.setUpdatedAt(today);
 //                repository.save(kyc);
 //            }
 //            SmartstayFeatures rentCollection = repository.findByFeatureName("Rent collection");
@@ -201,6 +211,8 @@ public class SmartstayConsoleApplication {
 //                rentCollection.setFeatureName("Rent collection");
 //                rentCollection.setCommon(false);
 //                rentCollection.setActive(true);
+//                rentCollection.setCreatedAt(today);
+//                rentCollection.setUpdatedAt(today);
 //                repository.save(rentCollection);
 //            }
 //            SmartstayFeatures electricity = repository.findByFeatureName("Electricity");
@@ -209,6 +221,8 @@ public class SmartstayConsoleApplication {
 //                electricity.setFeatureName("Electricity");
 //                electricity.setCommon(true);
 //                electricity.setActive(true);
+//                electricity.setCreatedAt(today);
+//                electricity.setUpdatedAt(today);
 //                repository.save(electricity);
 //            }
 //        };

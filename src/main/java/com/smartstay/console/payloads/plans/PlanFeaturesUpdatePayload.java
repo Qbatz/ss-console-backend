@@ -1,9 +1,17 @@
 package com.smartstay.console.payloads.plans;
 
-import jakarta.validation.constraints.NotBlank;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.constraints.NotNull;
 
-public record PlanFeaturesUpdatePayload(@NotBlank(message = "PlanFeature Id is required")
-                                        Long planFeatureId,
-                                        String featureName,
-                                        Double price) {
+import java.time.LocalDate;
+
+public record PlanFeaturesUpdatePayload(@NotNull(message = "Smartstay feature Id is required")
+                                        Long smartstayFeatureId,
+                                        boolean isFeatureActive,
+                                        String labelText,
+                                        String labelDescription,
+                                        @JsonFormat(pattern = "dd-MM-yyyy")
+                                        LocalDate startsFrom,
+                                        @JsonFormat(pattern = "dd-MM-yyyy")
+                                        LocalDate endsAt) {
 }

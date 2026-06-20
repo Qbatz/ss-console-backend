@@ -1,6 +1,5 @@
 package com.smartstay.console.services;
 
-import com.smartstay.console.Mapper.plans.InActivePlanResMapper;
 import com.smartstay.console.Mapper.plans.PlanResMapper;
 import com.smartstay.console.Mapper.plans.PlansDropdownResMapper;
 import com.smartstay.console.config.Authentication;
@@ -19,10 +18,7 @@ import com.smartstay.console.payloads.plans.PlanFeaturesUpdatePayload;
 import com.smartstay.console.payloads.plans.PlansPayload;
 import com.smartstay.console.payloads.plans.PlansUpdatePayload;
 import com.smartstay.console.repositories.PlansRepository;
-import com.smartstay.console.responses.plans.PlansDropdownRes;
-import com.smartstay.console.responses.plans.PlansDropdownWrapper;
-import com.smartstay.console.responses.plans.PlansResponse;
-import com.smartstay.console.responses.plans.PlansResponseWrapper;
+import com.smartstay.console.responses.plans.*;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -95,31 +91,35 @@ public class PlansService {
         List<SmartstayFeatures> commonFeatures = smartstayFeatureService
                 .getAllCommonFeatures();
 
-        Set<Long> inActivePlanIds = plans.stream()
-                .filter(p -> !p.isActive())
+        Set<Long> planIds = plans.stream()
                 .map(Plans::getPlanId)
                 .collect(Collectors.toSet());
 
-        List<PlanFeatures> inactivePlanFeatures = planFeaturesService
-                .findAllByPlanIds(inActivePlanIds);
+        List<PlanFeatures> planFeaturesList = planFeaturesService
+                .findAllByPlanIds(planIds);
 
-        Map<Long, List<PlanFeatures>> inactivePlanFeaturesMap = inactivePlanFeatures.stream()
+        Map<Long, List<PlanFeatures>> planFeaturesMap = planFeaturesList.stream()
                 .collect(Collectors.groupingBy(PlanFeatures::getPlanId));
 
         List<PlansResponse> activePlans = plans.stream()
                 .filter(Plans::isActive)
-                .map(plan -> new PlanResMapper(commonFeatures).apply(plan))
+                .map(plan -> {
+                    List<PlanFeatures> planFeatures = planFeaturesMap
+                            .getOrDefault(plan.getPlanId(), Collections.emptyList());
+
+                    return new PlanResMapper(commonFeatures, planFeatures)
+                            .apply(plan);
+                })
                 .toList();
 
         List<PlansResponse> inActivePlans = plans.stream()
                 .filter(p -> !p.isActive())
                 .map(plan -> {
-                    List<PlanFeatures> features = inactivePlanFeaturesMap
+                    List<PlanFeatures> planFeatures = planFeaturesMap
                             .getOrDefault(plan.getPlanId(), Collections.emptyList());
 
-                    List<PlanFeatureDto> mergedFeatures = mergeFeatures(commonFeatures, features);
-
-                    return new InActivePlanResMapper(mergedFeatures).apply(plan);
+                    return new PlanResMapper(commonFeatures, planFeatures)
+                            .apply(plan);
                 }).toList();
 
         PlansResponseWrapper response = new PlansResponseWrapper(activePlans, inActivePlans);
@@ -240,34 +240,93 @@ public class PlansService {
 
         if (payload.planFeatures() != null && !payload.planFeatures().isEmpty()) {
 
-            Set<Long> planFeatureIds = payload.planFeatures().stream()
-                    .map(PlanFeaturesUpdatePayload::planFeatureId)
+            Set<Long> smartstayFeatureIds = payload.planFeatures().stream()
+                    .map(PlanFeaturesUpdatePayload::smartstayFeatureId)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
 
-            List<PlanFeatures> planFeatures = planFeaturesService.findAllByIds(planFeatureIds);
+            List<SmartstayFeatures> smartstayFeatures = smartstayFeatureService
+                    .getSmartStayFeaturesByIds(smartstayFeatureIds);
+
+            Map<Long, SmartstayFeatures> smartstayFeaturesMap = smartstayFeatures.stream()
+                    .collect(Collectors.toMap(SmartstayFeatures::getId, Function.identity()));
+
+            List<PlanFeatures> planFeatures = planFeaturesService
+                    .getBySmartstayFeatureIdsAndPlanId(smartstayFeatureIds, planId);
 
             Map<Long, PlanFeatures> planFeaturesMap = planFeatures.stream()
-                    .collect(Collectors.toMap(PlanFeatures::getId, p -> p));
+                    .collect(Collectors.toMap(PlanFeatures::getSmartstayFeatureId, p -> p));
 
             List<PlanFeatures> updatedPlanFeatures = new ArrayList<>();
+            Set<Long> processedFeatureIds = new HashSet<>();
 
             for (PlanFeaturesUpdatePayload pfPayload : payload.planFeatures()) {
-                PlanFeatures planFeature = planFeaturesMap.get(pfPayload.planFeatureId());
+
+                SmartstayFeatures smartstayFeature = smartstayFeaturesMap.get(pfPayload.smartstayFeatureId());
+                if (smartstayFeature == null) {
+                    return new ResponseEntity<>(Utils.SMARTSTAY_FEATURE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                }
+
+                if (!processedFeatureIds.add(pfPayload.smartstayFeatureId())) {
+                    return new ResponseEntity<>(Utils.DUPLICATE_SMARTSTAY_FEATURE, HttpStatus.BAD_REQUEST);
+                }
+
+                PlanFeatures planFeature = planFeaturesMap.get(pfPayload.smartstayFeatureId());
 
                 if (planFeature != null) {
-                    if (!planFeature.getPlan().equals(plan)) {
-                        return new ResponseEntity<>(Utils.PLAN_FEATURE_MISMATCH, HttpStatus.BAD_REQUEST);
+
+                    Date startsFrom = planFeature.getStartsFrom();
+                    Date endsAt = planFeature.getEndsAt();
+
+                    if (pfPayload.startsFrom() != null){
+                        startsFrom = Utils.localDateToDate(pfPayload.startsFrom());
                     }
-                    if (pfPayload.featureName() != null && !pfPayload.featureName().isBlank()) {
-                        planFeature.setFeatureName(pfPayload.featureName());
+                    if (pfPayload.endsAt() != null){
+                        endsAt = Utils.localDateToDate(pfPayload.endsAt());
+                        endsAt = Utils.getEndOfDay(endsAt);
                     }
-                    if (pfPayload.price() != null){
-                        if (pfPayload.price() < 0){
-                            return new ResponseEntity<>(Utils.INVALID_PLAN_FEATURE_PRICE, HttpStatus.BAD_REQUEST);
-                        }
-                        planFeature.setPrice(pfPayload.price());
+
+                    if (startsFrom != null && endsAt != null && startsFrom.after(endsAt)) {
+                        return new ResponseEntity<>(Utils.INVALID_FEATURE_DATE_RANGE, HttpStatus.BAD_REQUEST);
                     }
+
+                    planFeature.setLabelText(pfPayload.labelText());
+                    planFeature.setLabelDescription(pfPayload.labelDescription());
+                    planFeature.setStartsFrom(startsFrom);
+                    planFeature.setEndsAt(endsAt);
+                    planFeature.setFeatureActive(pfPayload.isFeatureActive());
+                    planFeature.setActive(true);
+
+                    updatedPlanFeatures.add(planFeature);
+                } else {
+                    planFeature = new PlanFeatures();
+
+                    Date startsFrom = null;
+                    Date endsAt = null;
+
+                    if (pfPayload.startsFrom() != null){
+                        startsFrom = Utils.localDateToDate(pfPayload.startsFrom());
+                    }
+                    if (pfPayload.endsAt() != null){
+                        endsAt = Utils.localDateToDate(pfPayload.endsAt());
+                        endsAt = Utils.getEndOfDay(endsAt);
+                    }
+
+                    if (startsFrom != null && endsAt != null && startsFrom.after(endsAt)) {
+                        return new ResponseEntity<>(Utils.INVALID_FEATURE_DATE_RANGE, HttpStatus.BAD_REQUEST);
+                    }
+
+                    planFeature.setFeatureName(smartstayFeature.getFeatureName());
+                    planFeature.setPrice(0d);
+                    planFeature.setSmartstayFeatureId(smartstayFeature.getId());
+                    planFeature.setLabelText(pfPayload.labelText());
+                    planFeature.setLabelDescription(pfPayload.labelDescription());
+                    planFeature.setStartsFrom(startsFrom);
+                    planFeature.setEndsAt(endsAt);
+                    planFeature.setFeatureActive(pfPayload.isFeatureActive());
+                    planFeature.setActive(true);
+                    planFeature.setPlan(plan);
+
                     updatedPlanFeatures.add(planFeature);
                 }
             }
@@ -306,13 +365,14 @@ public class PlansService {
         if (plansRepository.existsByPlanTypeIgnoreCase(payload.planType())){
             return new ResponseEntity<>(Utils.PLAN_TYPE_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
         }
+
         plan.setPlanName(payload.planName());
         plan.setPrice(payload.price());
         plan.setDuration(payload.duration());
         plan.setDiscounts(payload.discountPercentage());
         plan.setPlanType(payload.planType());
 
-        String planCode = null;
+        String planCode;
         if (payload.planCode() != null && !payload.planCode().isBlank()) {
             if (plansRepository.existsByPlanCodeIgnoreCase(payload.planCode())){
                 return new ResponseEntity<>(Utils.PLAN_CODE_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
@@ -367,15 +427,61 @@ public class PlansService {
 
         List<PlanFeatures> planFeatures = new ArrayList<>();
         if (payload.planFeatures() != null && !payload.planFeatures().isEmpty()) {
+
+            Set<Long> featureIds = payload.planFeatures().stream()
+                    .map(PlanFeaturesPayload::smartstayFeatureId)
+                    .collect(Collectors.toSet());
+
+            Map<Long, SmartstayFeatures> featureMap = smartstayFeatureService
+                            .getSmartStayFeaturesByIds(featureIds)
+                            .stream()
+                            .collect(Collectors.toMap(
+                                    SmartstayFeatures::getId,
+                                    Function.identity()
+                            ));
+
+            Set<Long> processedFeatureIds = new HashSet<>();
+
             for (PlanFeaturesPayload pfPayload : payload.planFeatures()) {
 
-                if (pfPayload.featureName() == null || pfPayload.featureName().isBlank()) {
-                    return new ResponseEntity<>(Utils.PLAN_FEATURE_NAME_REQUIRED, HttpStatus.BAD_REQUEST);
+                if (pfPayload.smartstayFeatureId() == null) {
+                    return new ResponseEntity<>(Utils.SMARTSTAY_FEATURE_ID_REQUIRED, HttpStatus.BAD_REQUEST);
                 }
+
+                SmartstayFeatures smartstayFeatures = featureMap.get(pfPayload.smartstayFeatureId());
+                if (smartstayFeatures == null){
+                    return new ResponseEntity<>(Utils.SMARTSTAY_FEATURE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                }
+
+                if (!processedFeatureIds.add(pfPayload.smartstayFeatureId())) {
+                    return new ResponseEntity<>(Utils.DUPLICATE_SMARTSTAY_FEATURE, HttpStatus.BAD_REQUEST);
+                }
+
                 PlanFeatures planFeature = new PlanFeatures();
 
-                planFeature.setFeatureName(pfPayload.featureName());
-                planFeature.setPrice(pfPayload.price() != null ? pfPayload.price() : 0);
+                Date startsFrom = null;
+                Date endsAt = null;
+
+                if (pfPayload.startsFrom() != null){
+                    startsFrom = Utils.localDateToDate(pfPayload.startsFrom());
+                }
+                if (pfPayload.endsAt() != null){
+                    endsAt = Utils.localDateToDate(pfPayload.endsAt());
+                    endsAt = Utils.getEndOfDay(endsAt);
+                }
+
+                if (startsFrom != null && endsAt != null && startsFrom.after(endsAt)) {
+                    return new ResponseEntity<>(Utils.INVALID_FEATURE_DATE_RANGE, HttpStatus.BAD_REQUEST);
+                }
+
+                planFeature.setFeatureName(smartstayFeatures.getFeatureName());
+                planFeature.setPrice(0d);
+                planFeature.setSmartstayFeatureId(smartstayFeatures.getId());
+                planFeature.setLabelText(pfPayload.labelText());
+                planFeature.setLabelDescription(pfPayload.labelDescription());
+                planFeature.setStartsFrom(startsFrom);
+                planFeature.setEndsAt(endsAt);
+                planFeature.setFeatureActive(pfPayload.isFeatureActive());
                 planFeature.setActive(true);
                 planFeature.setPlan(plan);
 
@@ -418,10 +524,6 @@ public class PlansService {
         plan.setActive(false);
         plan.setUpdatedAt(new Date());
 
-        for (PlanFeatures feature : plan.getFeaturesList()) {
-            feature.setActive(false);
-        }
-
         plansRepository.save(plan);
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.DEACTIVATE, Source.PLANS,
@@ -453,13 +555,6 @@ public class PlansService {
         plan.setActive(true);
         plan.setUpdatedAt(new Date());
 
-        List<PlanFeatures> planFeatures = planFeaturesService.findAllByPlanId(planId);
-
-        for (PlanFeatures feature : planFeatures) {
-            feature.setActive(true);
-        }
-
-        planFeaturesService.saveAll(planFeatures);
         plan = plansRepository.save(plan);
 
         PlanSnapshot newPlan = SnapshotUtility.toSnapshot(plan);
@@ -469,73 +564,6 @@ public class PlansService {
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
-
-//    public ResponseEntity<?> addPlanFeature(Long planId, PlanFeaturesPayload payload) {
-//
-//        if (!authentication.isAuthenticated()) {
-//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-//        }
-//
-//        Agent agent = agentService.findUserByUserId(authentication.getName());
-//        if (agent == null) {
-//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-//        }
-//
-//        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_WRITE)) {
-//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-//        }
-//
-//        Plans plan = plansRepository.findByPlanIdAndIsActiveTrue(planId);
-//        if (plan == null) {
-//            return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
-//        }
-//
-//        PlanFeatures planFeature = new PlanFeatures();
-//
-//        planFeature.setFeatureName(payload.featureName());
-//        planFeature.setPrice(payload.price() != null ? payload.price() : 0);
-//        planFeature.setActive(true);
-//        planFeature.setPlan(plan);
-//
-//        planFeaturesService.save(planFeature);
-//
-//        agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.PLAN_FEATURES,
-//                String.valueOf(planFeature.getId()), null, planFeature);
-//
-//        return new ResponseEntity<>(HttpStatus.OK);
-//    }
-//
-//    public ResponseEntity<?> deactivatePlanFeature(Long planFeatureId) {
-//
-//        if (!authentication.isAuthenticated()) {
-//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-//        }
-//
-//        Agent agent = agentService.findUserByUserId(authentication.getName());
-//        if (agent == null) {
-//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-//        }
-//
-//        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_DELETE)) {
-//            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
-//        }
-//
-//        PlanFeatures planFeature = planFeaturesService.findById(planFeatureId);
-//        if (planFeature == null) {
-//            return new ResponseEntity<>(Utils.PLAN_FEATURE_NOT_FOUND, HttpStatus.BAD_REQUEST);
-//        }
-//
-//        PlanFeatureSnapshot oldPlanFeature = SnapshotUtility.toSnapshot(planFeature);
-//
-//        planFeature.setActive(false);
-//
-//        planFeaturesService.save(planFeature);
-//
-//        agentActivitiesService.createAgentActivity(agent, ActivityType.DEACTIVATE, Source.PLAN_FEATURES,
-//                String.valueOf(planFeatureId), oldPlanFeature, null);
-//
-//        return new ResponseEntity<>(HttpStatus.OK);
-//    }
 
     public List<Plans> getFreePlans() {
         List<String> planTypes = new ArrayList<>();
@@ -624,27 +652,127 @@ public class PlansService {
                         (a, b) -> a
                 ));
 
-        return commonFeatures.stream()
-                .map(commonFeature -> {
+        Set<Long> commonFeatureIds = commonFeatures.stream()
+                .map(SmartstayFeatures::getId)
+                .collect(Collectors.toSet());
 
-                    PlanFeatures override = featureOverrideMap.get(commonFeature.getId());
+        List<PlanFeatureDto> mergedFeatures = new ArrayList<>();
 
-                    if (override != null) {
-                        return new PlanFeatureDto(
+        // Merge common features
+        for (SmartstayFeatures commonFeature : commonFeatures) {
+
+            PlanFeatures override =
+                    featureOverrideMap.get(commonFeature.getId());
+
+            if (override != null) {
+
+                if (!override.isFeatureActive()) {
+                    continue;
+                }
+
+                mergedFeatures.add(
+                        new PlanFeatureDto(
+                                override.getId(),
                                 commonFeature.getId(),
                                 commonFeature.getFeatureName(),
                                 override.getPrice(),
-                                override.isFeatureActive()
-                        );
-                    }
+                                true,
+                                override.getLabelText(),
+                                override.getLabelDescription(),
+                                override.getStartsFrom() != null
+                                        ? Utils.dateToString(override.getStartsFrom())
+                                        : null,
+                                override.getEndsAt() != null
+                                        ? Utils.dateToString(override.getEndsAt())
+                                        : null
+                        )
+                );
 
-                    return new PlanFeatureDto(
-                            commonFeature.getId(),
-                            commonFeature.getFeatureName(),
-                            0d,
-                            true
-                    );
-                })
-                .toList();
+            } else {
+
+                mergedFeatures.add(
+                        new PlanFeatureDto(
+                                null,
+                                commonFeature.getId(),
+                                commonFeature.getFeatureName(),
+                                0d,
+                                true,
+                                null,
+                                null,
+                                null,
+                                null
+                        )
+                );
+            }
+        }
+
+        // Add non-common plan features
+        for (PlanFeatures planFeature : planFeatures) {
+
+            if (!planFeature.isFeatureActive()) {
+                continue;
+            }
+
+            if (commonFeatureIds.contains(planFeature.getSmartstayFeatureId())) {
+                continue;
+            }
+
+            mergedFeatures.add(
+                    new PlanFeatureDto(
+                            planFeature.getId(),
+                            planFeature.getSmartstayFeatureId(),
+                            planFeature.getFeatureName(),
+                            planFeature.getPrice(),
+                            true,
+                            planFeature.getLabelText(),
+                            planFeature.getLabelDescription(),
+                            planFeature.getStartsFrom() != null
+                                    ? Utils.dateToString(planFeature.getStartsFrom())
+                                    : null,
+                            planFeature.getEndsAt() != null
+                                    ? Utils.dateToString(planFeature.getEndsAt())
+                                    : null
+                    )
+            );
+        }
+
+        mergedFeatures.sort(
+                Comparator.comparing(
+                        PlanFeatureDto::smartStayFeatureId,
+                        Comparator.nullsLast(Long::compareTo)
+                )
+        );
+
+        return mergedFeatures;
+    }
+
+    public ResponseEntity<?> getSmartstayFeatures() {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        List<SmartstayFeatures> smartstayFeatures = smartstayFeatureService
+                .getAllSmartstayFeatures();
+
+        List<SmartstayFeaturesResponse> response = smartstayFeatures.stream()
+                .map(feature -> new SmartstayFeaturesResponse(feature.getId(),
+                        feature.getFeatureName(), feature.isCommon(), feature.getCreatedAt() != null ?
+                        Utils.dateToString(feature.getCreatedAt()) : null, feature.getCreatedAt() != null ?
+                        Utils.dateToTime(feature.getCreatedAt()) : null, feature.getUpdatedAt() != null ?
+                        Utils.dateToString(feature.getUpdatedAt()) : null, feature.getUpdatedAt() != null ?
+                        Utils.dateToTime(feature.getUpdatedAt()) : null))
+                .collect(Collectors.toList());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

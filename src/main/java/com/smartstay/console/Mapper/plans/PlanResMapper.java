@@ -10,16 +10,18 @@ import com.smartstay.console.services.PlansService;
 import com.smartstay.console.utils.Utils;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 
 public class PlanResMapper implements Function<Plans, PlansResponse> {
 
     List<SmartstayFeatures> commonFeatures;
+    List<PlanFeatures> planFeatures;
 
-    public PlanResMapper(List<SmartstayFeatures> commonFeatures) {
+    public PlanResMapper(List<SmartstayFeatures> commonFeatures,
+                         List<PlanFeatures> planFeatures) {
         this.commonFeatures = commonFeatures;
+        this.planFeatures = planFeatures;
     }
 
     @Override
@@ -40,20 +42,21 @@ public class PlanResMapper implements Function<Plans, PlansResponse> {
         }
 
         List<PlanFeaturesResponse> planFeaturesRes = new ArrayList<>();
-        if (commonFeatures != null) {
-            List<PlanFeatures> planFeatures = plans.getFeaturesList() != null
-                    ? plans.getFeaturesList()
-                    : Collections.emptyList();
+        if (commonFeatures != null && planFeatures != null) {
 
             List<PlanFeatureDto> mergedFeatures = PlansService.mergeFeatures(commonFeatures, planFeatures);
 
             planFeaturesRes = mergedFeatures.stream()
-                    .map(planFeature -> new PlanFeaturesResponse(planFeature.smartStayFeatureId(),
-                            planFeature.featureName(), planFeature.price(), planFeature.isFeatureActive()))
+                    .map(planFeature -> new PlanFeaturesResponse(planFeature.planFeatureId(),
+                            planFeature.smartStayFeatureId(), planFeature.featureName(), planFeature.price(),
+                            planFeature.isFeatureActive(), planFeature.labelText(), planFeature.labelDescription(),
+                            planFeature.startsFrom(), planFeature.endsAt()))
                     .toList();
         }
 
-        Double yearlyPrice = Utils.roundOfDoubleTo2Digits(plans.getFinalPrice() * 12);
+        double yearlyPrice = plans.getFinalPrice() * 12;
+        yearlyPrice = yearlyPrice - (yearlyPrice * 20 / 100);
+        yearlyPrice = Utils.roundOfDoubleTo2Digits(yearlyPrice);
 
         return new PlansResponse(plans.getPlanId(), plans.getPlanName(), plans.getPlanCode(),
                 plans.getPlanType(), plans.getDuration(), plans.getPrice(), plans.getDiscounts(),

@@ -11,7 +11,9 @@ public class PlansDropdownResMapper implements Function<Plans, PlansDropdownRes>
     @Override
     public PlansDropdownRes apply(Plans plans) {
 
-        Double yearlyPrice = Utils.roundOfDoubleTo2Digits(plans.getFinalPrice() * 12);
+        double yearlyPrice = plans.getFinalPrice() * 12;
+        yearlyPrice = yearlyPrice - (yearlyPrice * 20 / 100);
+        yearlyPrice = Utils.roundOfDoubleTo2Digits(yearlyPrice);
 
         return new PlansDropdownRes(plans.getPlanId(), plans.getPlanName(), plans.getPlanCode(), plans.getPlanType(),
                 plans.getDuration(), plans.getPrice(), plans.getDiscounts(), plans.getGst(), plans.getCgst(),

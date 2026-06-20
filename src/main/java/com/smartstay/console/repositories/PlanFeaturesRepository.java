@@ -10,11 +10,7 @@ import java.util.Set;
 @Repository
 public interface PlanFeaturesRepository extends JpaRepository<PlanFeatures, Long> {
 
-    List<PlanFeatures> findAllByIdInAndIsActiveTrue(Set<Long> ids);
+    List<PlanFeatures> findAllByPlan_PlanIdInAndIsActiveTrue(Set<Long> planIds);
 
-    PlanFeatures findByIdAndIsActiveTrue(Long id);
-
-    List<PlanFeatures> findAllByPlan_PlanIdIn(Set<Long> planIds);
-
-    List<PlanFeatures> findAllByPlan_PlanId(Long planId);
+    List<PlanFeatures> findAllBySmartstayFeatureIdInAndPlan_PlanId(Set<Long> smartstayFeatureIds, Long planId);
 }
