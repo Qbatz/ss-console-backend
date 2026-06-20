@@ -845,6 +845,8 @@ public class PlansService {
                 return new ResponseEntity<>(Utils.FEATURE_NAME_ALREADY_EXISTS, HttpStatus.BAD_REQUEST);
             }
             smartstayFeatures.setFeatureName(payload.featureName());
+            planFeaturesService.updatePlanFeatureNameBySmartstayFeatureId(
+                    smartstayFeatureId, payload.featureName());
         }
         if (payload.isCommon() != null) {
             smartstayFeatures.setCommon(payload.isCommon());

@@ -33,4 +33,19 @@ public class PlanFeaturesService {
     public List<PlanFeatures> getBySmartstayFeatureId(Long smartstayFeatureId) {
         return planFeaturesRepository.findAllBySmartstayFeatureIdAndIsActiveTrue(smartstayFeatureId);
     }
+
+    public void updatePlanFeatureNameBySmartstayFeatureId(Long smartstayFeatureId,
+                                                          String featureName) {
+
+        List<PlanFeatures> planFeatures = planFeaturesRepository
+                .findAllBySmartstayFeatureId(smartstayFeatureId);
+
+        if (planFeatures.isEmpty()) {
+            return;
+        }
+
+        planFeatures.forEach(pf -> pf.setFeatureName(featureName));
+
+        planFeaturesRepository.saveAll(planFeatures);
+    }
 }
