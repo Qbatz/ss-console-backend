@@ -1,8 +1,12 @@
 package com.smartstay.console.responses.customers;
 
+import com.smartstay.console.responses.invoice.InvoiceResponse;
+import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
+import com.smartstay.console.responses.transaction.TransactionResponse;
+
+import java.util.List;
+
 public record CustomerDetailsRes(String customerId,
-                                 String hostelId,
-                                 String hostelName,
                                  String firstName,
                                  String lastName,
                                  String fullName,
@@ -31,5 +35,9 @@ public record CustomerDetailsRes(String customerId,
                                  String createdAtDate,
                                  String createdAtTime,
                                  String updatedAtDate,
-                                 String updatedAtTime) {
+                                 String updatedAtTime,
+                                 TenantHostelDetailsRes hostelDetails,
+                                 List<InvoiceResponse> invoices,
+                                 List<TransactionResponse> transactions,
+                                 List<InvoiceRedemptionRes> invoiceRedemptions) {
 }

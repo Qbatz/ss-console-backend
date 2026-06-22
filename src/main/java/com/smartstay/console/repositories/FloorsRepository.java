@@ -12,4 +12,6 @@ public interface FloorsRepository extends JpaRepository<Floors, Integer> {
     int countByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
 
     List<Floors> findAllByHostelId(String hostelId);
+
+    Floors findByFloorIdAndIsActiveTrueAndIsDeletedFalse(int floorId);
 }

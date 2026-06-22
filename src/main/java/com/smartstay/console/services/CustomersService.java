@@ -1,6 +1,9 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.customers.CustomerSumMapper;
+import com.smartstay.console.Mapper.invoice.InvoiceResponseMapper;
+import com.smartstay.console.Mapper.invoiceRedemption.InvoiceRedemptionResMapper;
+import com.smartstay.console.Mapper.transaction.TransactionResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.customers.CustomerResetSnapshot;
@@ -11,6 +14,9 @@ import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.customers.CustomerResetPayload;
 import com.smartstay.console.repositories.CustomersRepository;
 import com.smartstay.console.responses.customers.*;
+import com.smartstay.console.responses.invoice.InvoiceResponse;
+import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
+import com.smartstay.console.responses.transaction.TransactionResponse;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,6 +104,12 @@ public class CustomersService {
     private InvoiceRedemptionService invoiceRedemptionService;
     @Autowired
     private UsersService usersService;
+    @Autowired
+    private FloorsService floorsService;
+    @Autowired
+    private RoomsService roomsService;
+    @Autowired
+    private BedsService bedService;
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
@@ -736,13 +748,69 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        BookingsV1 booking = bookingsService.getBookingInfoByCustomerId(customerId);
+        if (booking == null){
+            return new ResponseEntity<>(Utils.BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Floors floor = floorsService.getByFloorId(booking.getFloorId());
+        Rooms room = roomsService.getRoomById(booking.getRoomId());
+        Beds bed = bedService.getBedById(booking.getBedId());
+
+        List<InvoicesV1> invoices = invoiceV1Service
+                .findAllByHostelIdAndCustomerId(customer.getHostelId(), customerId);
+
+        Map<String, InvoicesV1> invoiceMap = invoices.stream()
+                .collect(Collectors.toMap(InvoicesV1::getInvoiceId, Function.identity()));
+
+        Set<String> invoiceIds = invoices.stream()
+                .map(InvoicesV1::getInvoiceId)
+                .collect(Collectors.toSet());
+
+        List<TransactionV1> transactions = transactionV1Service
+                .getByInvoiceIds(invoiceIds);
+
+        List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
+                .getInvoiceRedemptionByInvoiceIds(invoiceIds);
+
         Set<String> userIds = new HashSet<>();
+        Set<String> bankIds = new HashSet<>();
+        Set<String> agentIds = new HashSet<>();
+
         userIds.add(customer.getCreatedBy());
         userIds.add(customer.getUpdatedBy());
+
+        for (InvoicesV1 invoice : invoices) {
+            userIds.add(invoice.getCreatedBy());
+            userIds.add(invoice.getUpdatedBy());
+        }
+
+        for (TransactionV1 transaction : transactions) {
+            bankIds.add(transaction.getBankId());
+            userIds.add(transaction.getCreatedBy());
+            userIds.add(transaction.getUpdatedBy());
+        }
+
+        for (InvoiceRedemption redemption : invoiceRedemptions) {
+            userIds.add(redemption.getCreatedBy());
+            if (UserType.OWNER.name().equals(redemption.getUserType())) {
+                userIds.add(redemption.getUpdatedBy());
+            } else if (UserType.AGENT.name().equals(redemption.getUserType())) {
+                agentIds.add(redemption.getUpdatedBy());
+            }
+        }
 
         List<Users> users = usersService.getUsersByIds(userIds);
         Map<String, Users> usersMap = users.stream()
                 .collect(Collectors.toMap(Users::getUserId, user -> user));
+
+        List<BankingV1> banks = bankingService.findByBankIds(bankIds);
+        Map<String, BankingV1> bankMap = banks.stream()
+                .collect(Collectors.toMap(BankingV1::getBankId, Function.identity()));
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId, Function.identity()));
 
         String createdBy = null;
         String updatedBy = null;
@@ -773,16 +841,61 @@ public class CustomersService {
             updatedAtTime = Utils.dateToTime(customer.getLastUpdatedAt());
         }
 
-        CustomerDetailsRes response = new CustomerDetailsRes(customer.getCustomerId(), customer.getHostelId(),
-                hostel.getHostelName(), customer.getFirstName(), customer.getLastName(), Utils.getFullName(customer.getFirstName(),
-                customer.getLastName()), Utils.getInitials(customer.getFirstName(), customer.getLastName()),
-                customer.getMobSerialNo(), customer.getMobile(), customer.getEmailId(), customer.getHouseNo(),
-                customer.getStreet(), customer.getLandmark(), customer.getPincode(), customer.getCity(),
-                customer.getState(), customer.getCountry(), Utils.buildFullAddress(customer), customer.getProfilePic(),
-                customer.getCurrentStatus(), customer.getCustomerBedStatus(), customer.getKycStatus(),
-                Utils.dateToString(customer.getJoiningDate()), Utils.dateToString(customer.getExpJoiningDate()),
-                Utils.dateToString(customer.getDateOfBirth()), customer.getGender(), createdBy, updatedBy,
-                createdAtDate, createdAtTime, updatedAtDate, updatedAtTime);
+        TenantHostelDetailsRes hostelDetails = new TenantHostelDetailsRes(hostel.getHostelId(), hostel.getHostelName(),
+                booking.getFloorId(), floor != null ? floor.getFloorName() : null, booking.getRoomId(),
+                room != null ? room.getRoomName() : null, booking.getBedId(), bed != null ? bed.getBedName() : null);
+
+        List<InvoiceResponse> invoiceResponses = invoices.stream()
+                .map(invoice -> {
+                    Users createdByUser = usersMap.getOrDefault(invoice.getCreatedBy(), null);
+                    Users updatedByUser = usersMap.getOrDefault(invoice.getUpdatedBy(), null);
+                    return new InvoiceResponseMapper(customer, createdByUser, updatedByUser)
+                            .apply(invoice);
+                }).toList();
+
+        List<TransactionResponse> transactionResponses = transactions.stream()
+                .map(transaction -> {
+                    InvoicesV1 invoice = invoiceMap.getOrDefault(transaction.getInvoiceId(), null);
+                    BankingV1 bank = bankMap.getOrDefault(transaction.getBankId(), null);
+                    Users createdByUser = usersMap.getOrDefault(transaction.getCreatedBy(), null);
+                    Users updatedByUser = usersMap.getOrDefault(transaction.getUpdatedBy(), null);
+                    return new TransactionResMapper(invoice, hostel, customer, bank,
+                            createdByUser, updatedByUser)
+                            .apply(transaction);
+                }).toList();
+
+        List<InvoiceRedemptionRes> invoiceRedemptionRes = invoiceRedemptions.stream()
+                .map(redemption -> {
+                    InvoicesV1 sourceInvoice = invoiceMap.getOrDefault(redemption.getSourceInvoiceId(), null);
+                    InvoicesV1 targetInvoice = invoiceMap.getOrDefault(redemption.getTargetInvoiceId(), null);
+                    Users redemptionCreatedByUser = usersMap.getOrDefault(redemption.getCreatedBy(), null);
+                    String redemptionUpdatedBy = null;
+                    if (UserType.OWNER.name().equals(redemption.getUserType())) {
+                        Users updatedByUser = usersMap.getOrDefault(redemption.getUpdatedBy(), null);
+                        if (updatedByUser != null){
+                            redemptionUpdatedBy = Utils.getFullName(updatedByUser.getFirstName(), updatedByUser.getLastName());
+                        }
+                    } else if (UserType.AGENT.name().equals(redemption.getUserType())) {
+                        Agent updatedByAgent = agentMap.getOrDefault(redemption.getUpdatedBy(), null);
+                        if (updatedByAgent != null){
+                            redemptionUpdatedBy = Utils.getFullName(updatedByAgent.getFirstName(), updatedByAgent.getLastName());
+                        }
+                    }
+                    return new InvoiceRedemptionResMapper(hostel, targetInvoice, sourceInvoice,
+                            redemptionCreatedByUser, redemptionUpdatedBy, customer)
+                            .apply(redemption);
+                }).toList();
+
+        CustomerDetailsRes response = new CustomerDetailsRes(customer.getCustomerId(), customer.getFirstName(),
+                customer.getLastName(), Utils.getFullName(customer.getFirstName(), customer.getLastName()),
+                Utils.getInitials(customer.getFirstName(), customer.getLastName()), customer.getMobSerialNo(),
+                Utils.maskMobileNo(customer.getMobile()), customer.getEmailId(), customer.getHouseNo(), customer.getStreet(),
+                customer.getLandmark(), customer.getPincode(), customer.getCity(), customer.getState(), customer.getCountry(),
+                Utils.buildFullAddress(customer), customer.getProfilePic(), customer.getCurrentStatus(),
+                customer.getCustomerBedStatus(), customer.getKycStatus(), Utils.dateToString(customer.getJoiningDate()),
+                Utils.dateToString(customer.getExpJoiningDate()), Utils.dateToString(customer.getDateOfBirth()),
+                customer.getGender(), createdBy, updatedBy, createdAtDate, createdAtTime, updatedAtDate, updatedAtTime,
+                hostelDetails, invoiceResponses, transactionResponses, invoiceRedemptionRes);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

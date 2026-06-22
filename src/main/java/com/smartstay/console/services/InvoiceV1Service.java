@@ -512,7 +512,7 @@ public class InvoiceV1Service {
                 .map(invoice -> {
                     Customers tenant = invoiceCustomerMap.getOrDefault(invoice.getCustomerId(), null);
                     Users createdByUser = userMap.getOrDefault(invoice.getCreatedBy(), null);
-                    Users updatedByUser = userMap.getOrDefault(invoice.getCreatedBy(), null);
+                    Users updatedByUser = userMap.getOrDefault(invoice.getUpdatedBy(), null);
                     return new InvoiceResponseMapper(tenant, createdByUser, updatedByUser).apply(invoice);
                 }).toList();
 

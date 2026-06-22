@@ -26,5 +26,4 @@ public class Floors {
     private Date updatedAt;
     private String hostelId;
     private String parentId;
-
 }
