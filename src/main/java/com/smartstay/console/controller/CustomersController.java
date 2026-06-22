@@ -20,6 +20,11 @@ public class CustomersController {
     @Autowired
     CustomersService customersService;
 
+    @GetMapping("/{customerId}")
+    public ResponseEntity<?> getTenantDetails(@PathVariable("customerId") String customerId) {
+        return customersService.getTenantDetails(customerId);
+    }
+
     @GetMapping("/tenant-summary")
     public ResponseEntity<?> getTenantsWithPaymentSummary(@RequestParam(value = "page", defaultValue = "0") int page,
                                                           @RequestParam(value = "size", defaultValue = "10") int size,

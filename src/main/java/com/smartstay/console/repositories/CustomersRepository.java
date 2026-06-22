@@ -49,4 +49,6 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
                 AND c.customerId NOT IN :customerIds
             """)
     Set<String> findConflictingXuids(List<String> xuids, List<String> customerIds);
+
+    Customers findByCustomerId(String customerId);
 }

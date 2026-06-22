@@ -10,10 +10,7 @@ import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.customers.CustomerResetPayload;
 import com.smartstay.console.repositories.CustomersRepository;
-import com.smartstay.console.responses.customers.CustomerDeductionsRes;
-import com.smartstay.console.responses.customers.CustomerSummaryResponse;
-import com.smartstay.console.responses.customers.DeductionsRes;
-import com.smartstay.console.responses.customers.InvoiceDeductionsRes;
+import com.smartstay.console.responses.customers.*;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,6 +96,8 @@ public class CustomersService {
     private SettlementItemsService settlementItemsService;
     @Autowired
     private InvoiceRedemptionService invoiceRedemptionService;
+    @Autowired
+    private UsersService usersService;
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
@@ -708,6 +707,82 @@ public class CustomersService {
                             invoiceDeductionsRes
                     );
                 }).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getTenantDetails(String customerId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Customers customer = customersRepository.findByCustomerId(customerId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        HostelV1 hostel = hostelService.getHostelByHostelId(customer.getHostelId());
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Set<String> userIds = new HashSet<>();
+        userIds.add(customer.getCreatedBy());
+        userIds.add(customer.getUpdatedBy());
+
+        List<Users> users = usersService.getUsersByIds(userIds);
+        Map<String, Users> usersMap = users.stream()
+                .collect(Collectors.toMap(Users::getUserId, user -> user));
+
+        String createdBy = null;
+        String updatedBy = null;
+        if (customer.getCreatedBy() != null) {
+            if (usersMap.get(customer.getCreatedBy()) != null) {
+                Users user = usersMap.get(customer.getCreatedBy());
+                createdBy = Utils.getFullName(user.getFirstName(), user.getLastName());
+            }
+        }
+        if (customer.getUpdatedBy() != null) {
+            if (usersMap.get(customer.getUpdatedBy()) != null) {
+                Users user = usersMap.get(customer.getUpdatedBy());
+                updatedBy = Utils.getFullName(user.getFirstName(), user.getLastName());
+            }
+        }
+
+        String createdAtDate = null;
+        String createdAtTime = null;
+        String updatedAtDate = null;
+        String updatedAtTime = null;
+
+        if (customer.getCreatedAt() != null) {
+            createdAtDate = Utils.dateToString(customer.getCreatedAt());
+            createdAtTime = Utils.dateToTime(customer.getCreatedAt());
+        }
+        if (customer.getLastUpdatedAt() != null) {
+            updatedAtDate = Utils.dateToString(customer.getLastUpdatedAt());
+            updatedAtTime = Utils.dateToTime(customer.getLastUpdatedAt());
+        }
+
+        CustomerDetailsRes response = new CustomerDetailsRes(customer.getCustomerId(), customer.getHostelId(),
+                hostel.getHostelName(), customer.getFirstName(), customer.getLastName(), Utils.getFullName(customer.getFirstName(),
+                customer.getLastName()), Utils.getInitials(customer.getFirstName(), customer.getLastName()),
+                customer.getMobSerialNo(), customer.getMobile(), customer.getEmailId(), customer.getHouseNo(),
+                customer.getStreet(), customer.getLandmark(), customer.getPincode(), customer.getCity(),
+                customer.getState(), customer.getCountry(), Utils.buildFullAddress(customer), customer.getProfilePic(),
+                customer.getCurrentStatus(), customer.getCustomerBedStatus(), customer.getKycStatus(),
+                Utils.dateToString(customer.getJoiningDate()), Utils.dateToString(customer.getExpJoiningDate()),
+                Utils.dateToString(customer.getDateOfBirth()), customer.getGender(), createdBy, updatedBy,
+                createdAtDate, createdAtTime, updatedAtDate, updatedAtTime);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
