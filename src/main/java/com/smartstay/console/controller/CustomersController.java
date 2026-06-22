@@ -41,9 +41,9 @@ public class CustomersController {
     }
 
     @PutMapping("/deductions/{hostelId}/{customerId}/{invoiceId}")
-    public ResponseEntity<?> updatedDeductions(@PathVariable("hostelId") String hostelId,
-                                               @PathVariable("customerId") String customerId,
-                                               @PathVariable("invoiceId") String invoiceId){
+    public ResponseEntity<?> updateDeductions(@PathVariable("hostelId") String hostelId,
+                                              @PathVariable("customerId") String customerId,
+                                              @PathVariable("invoiceId") String invoiceId){
         return customersService.updateDeductions(hostelId, customerId, invoiceId);
     }
 

@@ -564,12 +564,12 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
         if (!invoice.getCustomerId().equals(customerId) || !invoice.getHostelId().equals(hostelId)) {
-            return new ResponseEntity<>("Invoice does not match customer and hostel", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Utils.INVOICE_HOSTEL_CUSTOMER_MISMATCH, HttpStatus.BAD_REQUEST);
         }
 
         Advance advance = customer.getAdvance();
         if (advance == null || advance.getDeductions() == null || advance.getDeductions().isEmpty()) {
-            return new ResponseEntity<>("No advance deductions found", HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Utils.NO_ADVANCE_DEDUCTIONS_FOUND, HttpStatus.BAD_REQUEST);
         }
 
         List<Deductions> invDeductions = invoice.getDeductions();
@@ -577,24 +577,40 @@ public class CustomersService {
             invDeductions = new ArrayList<>();
         }
 
-        if (!invDeductions.isEmpty()){
-            return new ResponseEntity<>("Invoice has deductions already", HttpStatus.BAD_REQUEST);
+        if (!invDeductions.isEmpty()) {
+            return new ResponseEntity<>(Utils.INVOICE_HAS_DEDUCTIONS_ALREADY, HttpStatus.BAD_REQUEST);
         }
 
-        invDeductions.addAll(advance.getDeductions()
-                        .stream()
-                        .map(d -> new Deductions(
-                                d.getType(),
-                                d.getAmount(),
-                                d.getPaidAmount()))
-                        .toList()
-        );
+        double remainingPaidAmount = invoice.getPaidAmount() == null
+                ? 0
+                : invoice.getPaidAmount();
 
-        invoice.setDeductions(invDeductions);
+        List<Deductions> copiedDeductions = new ArrayList<>();
+
+        for (Deductions deduction : advance.getDeductions()) {
+
+            double deductionAmount = deduction.getAmount();
+            double paidAmountForDeduction = 0;
+
+            if (remainingPaidAmount > 0) {
+                paidAmountForDeduction = Math.min(remainingPaidAmount, deductionAmount);
+                remainingPaidAmount -= paidAmountForDeduction;
+            }
+
+            copiedDeductions.add(
+                    new Deductions(
+                            deduction.getType(),
+                            deductionAmount,
+                            paidAmountForDeduction
+                    )
+            );
+        }
+
+        invoice.setDeductions(copiedDeductions);
 
         invoiceV1Service.save(invoice);
 
-        return new ResponseEntity<>("Deductions copied successfully" , HttpStatus.OK);
+        return new ResponseEntity<>(Utils.DEDUCTIONS_COPIED_SUCCESSFULLY , HttpStatus.OK);
     }
 
     public ResponseEntity<?> getCustomersWithPendingAdvanceDeductions() {
