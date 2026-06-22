@@ -86,6 +86,9 @@ public class PlansService {
 
         List<Plans> plans = plansRepository.findPlansExcludingTrial();
 
+        List<SmartstayFeatures> allSmartstayFeatures = smartstayFeatureService
+                .getAllSmartstayFeatures();
+
         List<SmartstayFeatures> commonFeatures = smartstayFeatureService
                 .getAllCommonFeatures();
 
@@ -105,7 +108,7 @@ public class PlansService {
                     List<PlanFeatures> planFeatures = planFeaturesMap
                             .getOrDefault(plan.getPlanId(), Collections.emptyList());
 
-                    return new PlanResMapper(commonFeatures, planFeatures)
+                    return new PlanResMapper(allSmartstayFeatures, commonFeatures, planFeatures)
                             .apply(plan);
                 })
                 .toList();
@@ -116,7 +119,7 @@ public class PlansService {
                     List<PlanFeatures> planFeatures = planFeaturesMap
                             .getOrDefault(plan.getPlanId(), Collections.emptyList());
 
-                    return new PlanResMapper(commonFeatures, planFeatures)
+                    return new PlanResMapper(allSmartstayFeatures, commonFeatures, planFeatures)
                             .apply(plan);
                 }).toList();
 
@@ -641,8 +644,15 @@ public class PlansService {
                 .collect(Collectors.toSet());
     }
 
-    public static List<PlanFeatureDto> mergeFeatures(List<SmartstayFeatures> commonFeatures,
+    public static List<PlanFeatureDto> mergeFeatures(List<SmartstayFeatures> allSmartstayFeatures,
+                                                     List<SmartstayFeatures> commonFeatures,
                                                      List<PlanFeatures> planFeatures) {
+
+        Map<Long, SmartstayFeatures> smartstayFeatureMap = allSmartstayFeatures.stream()
+                .collect(Collectors.toMap(
+                        SmartstayFeatures::getId,
+                        Function.identity()
+                ));
 
         Map<Long, PlanFeatures> featureOverrideMap = planFeatures.stream()
                 .collect(Collectors.toMap(
@@ -674,6 +684,7 @@ public class PlansService {
                                 override.getId(),
                                 commonFeature.getId(),
                                 commonFeature.getFeatureName(),
+                                commonFeature.isCommon(),
                                 override.getPrice(),
                                 true,
                                 override.getLabelText(),
@@ -694,6 +705,7 @@ public class PlansService {
                                 null,
                                 commonFeature.getId(),
                                 commonFeature.getFeatureName(),
+                                commonFeature.isCommon(),
                                 0d,
                                 true,
                                 null,
@@ -716,11 +728,15 @@ public class PlansService {
                 continue;
             }
 
+            SmartstayFeatures smartstayFeature =
+                    smartstayFeatureMap.get(planFeature.getSmartstayFeatureId());
+
             mergedFeatures.add(
                     new PlanFeatureDto(
                             planFeature.getId(),
                             planFeature.getSmartstayFeatureId(),
                             planFeature.getFeatureName(),
+                            smartstayFeature != null && smartstayFeature.isCommon(),
                             planFeature.getPrice(),
                             true,
                             planFeature.getLabelText(),

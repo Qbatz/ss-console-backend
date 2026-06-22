@@ -15,11 +15,14 @@ import java.util.function.Function;
 
 public class PlanResMapper implements Function<Plans, PlansResponse> {
 
+    List<SmartstayFeatures> allSmartstayFeatures;
     List<SmartstayFeatures> commonFeatures;
     List<PlanFeatures> planFeatures;
 
-    public PlanResMapper(List<SmartstayFeatures> commonFeatures,
+    public PlanResMapper(List<SmartstayFeatures> allSmartstayFeatures,
+                         List<SmartstayFeatures> commonFeatures,
                          List<PlanFeatures> planFeatures) {
+        this.allSmartstayFeatures = allSmartstayFeatures;
         this.commonFeatures = commonFeatures;
         this.planFeatures = planFeatures;
     }
@@ -42,15 +45,16 @@ public class PlanResMapper implements Function<Plans, PlansResponse> {
         }
 
         List<PlanFeaturesResponse> planFeaturesRes = new ArrayList<>();
-        if (commonFeatures != null && planFeatures != null) {
+        if (commonFeatures != null && planFeatures != null && allSmartstayFeatures != null) {
 
-            List<PlanFeatureDto> mergedFeatures = PlansService.mergeFeatures(commonFeatures, planFeatures);
+            List<PlanFeatureDto> mergedFeatures = PlansService
+                    .mergeFeatures(allSmartstayFeatures, commonFeatures, planFeatures);
 
             planFeaturesRes = mergedFeatures.stream()
                     .map(planFeature -> new PlanFeaturesResponse(planFeature.planFeatureId(),
-                            planFeature.smartStayFeatureId(), planFeature.featureName(), planFeature.price(),
-                            planFeature.isFeatureActive(), planFeature.labelText(), planFeature.labelDescription(),
-                            planFeature.startsFrom(), planFeature.endsAt()))
+                            planFeature.smartStayFeatureId(), planFeature.featureName(), planFeature.isCommon(),
+                            planFeature.price(), planFeature.isFeatureActive(), planFeature.labelText(),
+                            planFeature.labelDescription(), planFeature.startsFrom(), planFeature.endsAt()))
                     .toList();
         }
 
