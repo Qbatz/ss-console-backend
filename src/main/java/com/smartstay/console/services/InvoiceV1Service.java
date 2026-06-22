@@ -983,7 +983,8 @@ public class InvoiceV1Service {
         }
 
         if (payloadBalanceAmount != expectedBalanceAmount) {
-            return new ResponseEntity<>("Expected balance amount is : " + expectedBalanceAmount +
+            return new ResponseEntity<>("Invoice balance amount is : " + invoiceBalanceAmount +
+                            "\nExpected balance amount is : " + expectedBalanceAmount +
                             "\nPaid amount is : " + invoicePaidAmount +
                             "\nDeductions amount is : " + invoiceDeductionsAmount +
                             "\nRedemption amount is : " + invoiceRedemptionAmount,
