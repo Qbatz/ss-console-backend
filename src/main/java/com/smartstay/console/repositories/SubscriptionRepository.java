@@ -106,4 +106,13 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     Page<Subscription> findLatestByHostelIdInAndPlanCodeIn(Set<String> hostelIds,
                                                            Set<String> planCodes,
                                                            Pageable pageable);
+
+    @Query("""
+           SELECT s
+           FROM Subscription s
+           WHERE s.hostelId IN :hostelIds
+               AND CURRENT_DATE BETWEEN s.planStartsAt AND s.planEndsAt
+           ORDER BY s.createdAt DESC
+           """)
+    List<Subscription> findCurrentSubscriptionsPerHostel(Set<String> hostelIds);
 }
