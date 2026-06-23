@@ -59,6 +59,8 @@ public class Utils {
     public static final String BILLING_MODEL_DOES_NOT_EXIST = "Billing model does not exist";
     public static final String FIXED_DATE_PREPAID_TO_POSTPAID_ONLY_ALLOWED = "Only fixed date prepaid to postpaid is allowed";
     public static final String BUY_PLAN_NOT_ALLOWED_IN_DEV = "Buy plan is not allowed for dev environment";
+    public static final String FEATURE_NAME_ALREADY_EXISTS = "Feature name already exists";
+    public static final String PLAN_FEATURE_EXISTS = "Plan exists with this feature";
 
     public static final String NO_ROLES_FOUND = "No roles found";
     public static final String NO_HOSTEL_FOUND = "No hostel found";
@@ -90,6 +92,7 @@ public class Utils {
     public static final String PRIORITY_NOT_FOUND = "Priority not found";
     public static final String RESET_DONE_NO_RECORDS_FOUND = "Reset completed, no records found";
     public static final String TRIAL_DAYS_REASON_NOT_FOUND = "Trial days reason not found";
+    public static final String SMARTSTAY_FEATURE_NOT_FOUND = "Smartstay feature not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -110,10 +113,10 @@ public class Utils {
     public static final String INVALID_REDEMPTION_AMOUNT = "Invalid redemption amount";
     public static final String INVALID_PLAN_FEATURE_PRICE = "Invalid plan feature price";
     public static final String INVALID_STATUS_TRANSITION = "Invalid status transition";
+    public static final String INVALID_FEATURE_DATE_RANGE = "Invalid plan feature date range";
 
     public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";
-    public static final String PLAN_FEATURE_MISMATCH = "Plan of plan feature does not match plan";
     public static final String PAID_BY_HOSTEL_MISMATCH = "Paid by does not match with hostel users";
     public static final String HOSTEL_PARENT_ID_MISMATCH = "Hostel's parentId doesn't match with parentId";
     public static final String USER_HOSTEL_MISMATCH = "User does not match the hostel users";
@@ -129,7 +132,7 @@ public class Utils {
     public static final String PRESENTED_BY_REQUIRED = "Presented by can't be null or empty when status is completed";
     public static final String PRESENTED_AT_REQUIRED = "Presented at can't be null when status is completed";
     public static final String HOSTEL_ID_REQUIRED = "HostelId is required";
-    public static final String PLAN_FEATURE_NAME_REQUIRED = "Plan feature name is required";
+    public static final String SMARTSTAY_FEATURE_ID_REQUIRED = "Smartstay feature Id is required";
     public static final String PAYLOAD_REQUIRED = "Payload is required";
     public static final String PAID_AMOUNT_REQUIRED = "Paid amount is required";
     public static final String PAYMENT_ATTACHMENT_REQUIRES = "Payment attachment is required";
@@ -165,6 +168,8 @@ public class Utils {
     public static final String AT_LEAST_ONE_COLUMN_NEEDS_TO_BE_SELECTED = "At least one column must be selected";
     public static final String CUSTOMER_INACTIVE_VACATED_SETTLEMENT_GENERATED = "Can not edit/delete redemption because customer is either vacated or settlement generated";
     public static final String TICKET_NUMBER_GENERATION_FAILED = "Failed to generate ticket number, retry";
+    public static final String DUPLICATE_SMARTSTAY_FEATURE = "Duplicate smartstay feature Id";
+    public static final String COMMON_FEATURE_CAN_NOT_BE_DELETED = "Common feature can not be deleted";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
@@ -681,6 +686,23 @@ public class Utils {
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
         return cal.getTime();
+    }
+
+    public static Date getEndOfDay(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MILLISECOND, 999);
+
+        return calendar.getTime();
     }
 
     public static int calculateEndDay(int startDay, Date date) {

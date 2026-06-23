@@ -1,15 +1,8 @@
 package com.smartstay.console;
 
 import com.smartstay.console.dao.*;
-import com.smartstay.console.ennum.DemoRequestSource;
-import com.smartstay.console.ennum.DemoRequestStatus;
 import com.smartstay.console.repositories.AgentModulesRepository;
-import com.smartstay.console.repositories.AgentRolesRepository;
-import com.smartstay.console.repositories.DemoRequestRepository;
-import com.smartstay.console.repositories.HostelRelationalAgentRepository;
-import com.smartstay.console.services.HostelService;
-import com.smartstay.console.services.UsersService;
-import com.smartstay.console.utils.Utils;
+import com.smartstay.console.repositories.SmartstayFeaturesRepository;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.boot.CommandLineRunner;
@@ -18,10 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @SpringBootApplication
 @EnableScheduling
@@ -170,196 +160,71 @@ public class SmartstayConsoleApplication {
     }
 
 //    @Bean
-//    CommandLineRunner setAgentRolesDescription(AgentRolesRepository agentRolesRepository) {
-//        return args -> {
-//            List<AgentRoles> agentRolesList = agentRolesRepository.findAll();
-//
-//            for (AgentRoles agentRoles : agentRolesList) {
-//                switch (agentRoles.getRoleName()) {
-//                    case "CONSOLE-ADMIN-LEVEL-1" -> agentRoles.setDescription("Full Access");
-//                    case "CONSOLE-ADMIN-READ-ONLY" -> agentRoles.setDescription("Read only access");
-//                    case "CONSOLE-ADMIN-READ-WRITE-ONLY" -> agentRoles.setDescription("Read and write only access");
-//                }
-//            }
-//
-//            agentRolesRepository.saveAll(agentRolesList);
-//        };
-//    }
-
-    // IMPORTANT: This migration should be executed ONLY ONCE in production.
-    // Remove/comment this bean after successful deployment.
-//    @Bean
-//    CommandLineRunner updateDemoRequestStatus(DemoRequestRepository demoRequestRepository,
-//                                              UsersService usersService) {
-//
+//    CommandLineRunner addSmartstayFeatures(SmartstayFeaturesRepository repository) {
 //        return args -> {
 //
-//            Set<String> oldStatuses = Set.of(
-//                    "REQUESTED", "PENDING", "OPEN",
-//                    "ONHOLD", "IN_PROGRESS", "COMPLETED",
-//                    "ONBOARDED", "REJECTED", "CLOSED"
-//            );
+//            Date today = new Date();
 //
-//            List<DemoRequest> demoRequests = demoRequestRepository.findAll();
-//
-//            boolean hasUpdates = false;
-//
-//            for (DemoRequest demoRequest : demoRequests) {
-//
-//                //source migration
-//                if (demoRequest.getSource() == null) {
-//
-//                    demoRequest.setSource(DemoRequestSource.CONSOLE.name());
-//
-//                    hasUpdates = true;
-//                }
-//
-//                //parentId migration
-//                if (DemoRequestStatus.TRIAL_STARTED.name().equals(demoRequest.getDemoRequestStatus()) ||
-//                        DemoRequestStatus.CONVERTED.name().equals(demoRequest.getDemoRequestStatus())) {
-//                    String ownerMobile = demoRequest.getContactNo();
-//                    if (ownerMobile != null) {
-//                        List<Users> owners = usersService.getOwnersByMobileNo(ownerMobile);
-//                        if (owners != null && !owners.isEmpty()) {
-//                            String parentId = owners.getFirst().getParentId();
-//
-//                            if (!Objects.equals(demoRequest.getParentId(), parentId)) {
-//                                demoRequest.setParentId(parentId);
-//                                hasUpdates = true;
-//                            }
-//                        }
-//                    }
-//                }
-//
-//                // createdAt migration
-//                if (demoRequest.getCreatedAt() == null) {
-//
-//                    Date createdAt = new Date();
-//
-//                    if (demoRequest.getBookedFor() != null) {
-//
-//                        Calendar cal = Calendar.getInstance();
-//                        cal.setTime(demoRequest.getBookedFor());
-//
-//                        if (demoRequest.getRequestedTime() != null &&
-//                                !demoRequest.getRequestedTime().isBlank()) {
-//                            LocalTime time = LocalTime.parse(
-//                                    demoRequest.getRequestedTime(),
-//                                    DateTimeFormatter.ofPattern("HH:mm")
-//                            );
-//
-//                            cal.set(Calendar.HOUR_OF_DAY, time.getHour());
-//                            cal.set(Calendar.MINUTE, time.getMinute());
-//                            cal.set(Calendar.SECOND, 0);
-//                            cal.set(Calendar.MILLISECOND, 0);
-//                        }
-//
-//                        createdAt = cal.getTime();
-//
-//                    } else if (demoRequest.getRequestedDate() != null) {
-//
-//                        createdAt = Utils.stringDateTimeToDate(
-//                                demoRequest.getRequestedDate(),
-//                                demoRequest.getRequestedTime()
-//                        );
-//                    }
-//
-//                    demoRequest.setCreatedAt(createdAt);
-//
-//                    hasUpdates = true;
-//                }
-//
-//                // status migration
-//                String demoRequestStatus = demoRequest.getDemoRequestStatus();
-//
-//                if (demoRequestStatus == null) {
-//                    continue;
-//                }
-//
-//                if (!oldStatuses.contains(demoRequestStatus)) {
-//                    continue;
-//                }
-//
-//                String status = switch (demoRequestStatus) {
-//
-//                    case "REQUESTED", "PENDING", "OPEN", "ONHOLD" ->
-//                            DemoRequestStatus.NEW.name();
-//
-//                    case "IN_PROGRESS" ->
-//                            DemoRequestStatus.CONTACTED.name();
-//
-//                    case "COMPLETED" ->
-//                            DemoRequestStatus.DEMO_COMPLETED.name();
-//
-//                    case "ONBOARDED" ->
-//                            DemoRequestStatus.TRIAL_STARTED.name();
-//
-//                    case "REJECTED", "CLOSED" ->
-//                            DemoRequestStatus.DROPPED.name();
-//
-//                    default -> demoRequestStatus;
-//                };
-//
-//                if (DemoRequestStatus.TRIAL_STARTED.name().equals(status) ||
-//                        DemoRequestStatus.CONVERTED.name().equals(status)) {
-//                    String ownerMobile = demoRequest.getContactNo();
-//                    if (ownerMobile != null) {
-//                        List<Users> owners = usersService.getOwnersByMobileNo(ownerMobile);
-//                        if (owners != null && !owners.isEmpty()) {
-//                            demoRequest.setParentId(owners.getFirst().getParentId());
-//                        }
-//                    }
-//                }
-//
-//                demoRequest.setDemoRequestStatus(status);
-//
-//                hasUpdates = true;
+//            SmartstayFeatures tenant = repository.findByFeatureName("Tenant");
+//            if (tenant == null){
+//                tenant = new SmartstayFeatures();
+//                tenant.setFeatureName("Tenant");
+//                tenant.setCommon(true);
+//                tenant.setActive(true);
+//                tenant.setCreatedAt(today);
+//                tenant.setUpdatedAt(today);
+//                repository.save(tenant);
 //            }
-//
-//            if (!hasUpdates) {
-//                return;
+//            SmartstayFeatures invoice = repository.findByFeatureName("Invoice");
+//            if (invoice == null){
+//                invoice = new SmartstayFeatures();
+//                invoice.setFeatureName("Invoice");
+//                invoice.setCommon(true);
+//                invoice.setActive(true);
+//                invoice.setCreatedAt(today);
+//                invoice.setUpdatedAt(today);
+//                repository.save(invoice);
 //            }
-//
-//            demoRequestRepository.saveAll(demoRequests);
-//        };
-//    }
-
-    // IMPORTANT: This migration should be executed ONLY ONCE in production.
-    // Remove/comment this bean after successful deployment.
-//    @Bean
-//    CommandLineRunner HostelRelationalAgentSetParentId(HostelRelationalAgentRepository repository,
-//                                                       HostelService hostelService){
-//        return (args) -> {
-//            List<HostelRelationalAgent> hostelRelationalAgents = repository.findAll();
-//
-//            Set<String> hostelIds = new HashSet<>();
-//
-//            for (HostelRelationalAgent hostelRelationalAgent : hostelRelationalAgents) {
-//                if (hostelRelationalAgent.getParentId() == null){
-//                    hostelIds.add(hostelRelationalAgent.getHostelId());
-//                }
+//            SmartstayFeatures dashboard = repository.findByFeatureName("Dashboard");
+//            if (dashboard == null){
+//                dashboard = new SmartstayFeatures();
+//                dashboard.setFeatureName("Dashboard");
+//                dashboard.setCommon(true);
+//                dashboard.setActive(true);
+//                dashboard.setCreatedAt(today);
+//                dashboard.setUpdatedAt(today);
+//                repository.save(dashboard);
 //            }
-//
-//            List<HostelV1> hostels = hostelService.getHostelsByHostelIds(hostelIds);
-//
-//            Map<String, HostelV1> hostelMap = hostels.stream()
-//                    .collect(Collectors.toMap(HostelV1::getHostelId, hostel -> hostel));
-//
-//            List<HostelRelationalAgent> changed = new ArrayList<>();
-//            for (HostelRelationalAgent hostelRelationalAgent : hostelRelationalAgents) {
-//                if (hostelRelationalAgent.getParentId() == null){
-//
-//                    HostelV1 hostel = hostelMap.getOrDefault(hostelRelationalAgent.getHostelId(), null);
-//
-//                    if (hostel != null){
-//                        hostelRelationalAgent.setParentId(hostel.getParentId());
-//
-//                        changed.add(hostelRelationalAgent);
-//                    }
-//                }
+//            SmartstayFeatures kyc = repository.findByFeatureName("KYC");
+//            if (kyc == null){
+//                kyc = new SmartstayFeatures();
+//                kyc.setFeatureName("KYC");
+//                kyc.setCommon(false);
+//                kyc.setActive(true);
+//                kyc.setCreatedAt(today);
+//                kyc.setUpdatedAt(today);
+//                repository.save(kyc);
 //            }
-//
-//            repository.saveAll(changed);
+//            SmartstayFeatures rentCollection = repository.findByFeatureName("Rent collection");
+//            if (rentCollection == null){
+//                rentCollection = new SmartstayFeatures();
+//                rentCollection.setFeatureName("Rent collection");
+//                rentCollection.setCommon(false);
+//                rentCollection.setActive(true);
+//                rentCollection.setCreatedAt(today);
+//                rentCollection.setUpdatedAt(today);
+//                repository.save(rentCollection);
+//            }
+//            SmartstayFeatures electricity = repository.findByFeatureName("Electricity");
+//            if (electricity == null){
+//                electricity = new SmartstayFeatures();
+//                electricity.setFeatureName("Electricity");
+//                electricity.setCommon(true);
+//                electricity.setActive(true);
+//                electricity.setCreatedAt(today);
+//                electricity.setUpdatedAt(today);
+//                repository.save(electricity);
+//            }
 //        };
 //    }
 }
