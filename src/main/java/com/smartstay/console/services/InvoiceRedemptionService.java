@@ -742,8 +742,8 @@ public class InvoiceRedemptionService {
         return invoiceRedemptionRepository.findByInvoiceIds(invoiceIds);
     }
 
-    public List<InvoiceRedemption> getInvoiceRedemptionByInvoiceId(String invoiceId){
-        return invoiceRedemptionRepository.findByInvoiceId(invoiceId);
+    public List<InvoiceRedemption> getInvoiceRedemptionBySourceInvoiceId(String invoiceId){
+        return invoiceRedemptionRepository.findBySourceInvoiceId(invoiceId);
     }
 
     public void deleteInvoiceRedemptions(List<InvoiceRedemption> invoiceRedemptions) {

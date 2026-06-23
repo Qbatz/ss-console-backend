@@ -969,7 +969,7 @@ public class InvoiceV1Service {
                 .sum();
 
         List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
-                .getInvoiceRedemptionByInvoiceId(invoiceId);
+                .getInvoiceRedemptionBySourceInvoiceId(invoiceId);
 
         double invoiceRedemptionAmount = invoiceRedemptions.stream()
                 .mapToDouble(InvoiceRedemption::getRedemptionAmount)
