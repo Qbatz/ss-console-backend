@@ -128,6 +128,41 @@ public class PlansService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    public ResponseEntity<?> getPlanById(Long planId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Plans.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Plans plan = plansRepository.findByPlanId(planId);
+        if (plan == null) {
+            return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<SmartstayFeatures> allSmartstayFeatures = smartstayFeatureService
+                .getAllSmartstayFeatures();
+
+        List<SmartstayFeatures> commonFeatures = smartstayFeatureService
+                .getAllCommonFeatures();
+
+        List<PlanFeatures> planFeatures = planFeaturesService
+                .findAllByPlanId(planId);
+
+        PlansResponse response = new PlanResMapper(allSmartstayFeatures, commonFeatures, planFeatures)
+                .apply(plan);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
     public ResponseEntity<?> updatePlanByPlanId(Long planId, PlansUpdatePayload payload) {
 
         if (!authentication.isAuthenticated()) {
@@ -143,7 +178,7 @@ public class PlansService {
             return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
         }
 
-        Plans plan = plansRepository.findByPlanIdAndIsActiveTrue(planId);
+        Plans plan = plansRepository.findByPlanId(planId);
         if (plan == null) {
             return new ResponseEntity<>(Utils.PLAN_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }

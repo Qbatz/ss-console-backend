@@ -26,6 +26,10 @@ public class PlanFeaturesService {
         return planFeaturesRepository.findAllByPlan_PlanIdInAndIsActiveTrue(planIds);
     }
 
+    public List<PlanFeatures> findAllByPlanId(Long planId){
+        return planFeaturesRepository.findAllByPlan_PlanIdAndIsActiveTrue(planId);
+    }
+
     public List<PlanFeatures> getBySmartstayFeatureIdsAndPlanId(Set<Long> smartstayFeatureIds, Long planId) {
         return planFeaturesRepository.findAllBySmartstayFeatureIdInAndPlan_PlanId(smartstayFeatureIds, planId);
     }

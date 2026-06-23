@@ -28,6 +28,11 @@ public class PlansController {
         return plansService.getAllPlans();
     }
 
+    @GetMapping("/{planId}")
+    private ResponseEntity<?> getPlanById(@PathVariable("planId") Long planId){
+        return plansService.getPlanById(planId);
+    }
+
     @GetMapping("/dropdown")
     private ResponseEntity<?> getPlansDropdown(){
         return plansService.getPlansDropdown();
