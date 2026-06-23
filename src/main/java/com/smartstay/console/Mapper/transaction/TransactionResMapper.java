@@ -38,6 +38,7 @@ public class TransactionResMapper implements Function<TransactionV1, Transaction
         String createdAtTime = null;
         String invoiceNumber = null;
         String invoiceType = null;
+        String invoicePaymentStatus = null;
         String hostelName = null;
         String customerName = null;
         String accountHolderName = null;
@@ -57,6 +58,7 @@ public class TransactionResMapper implements Function<TransactionV1, Transaction
         if (invoice != null) {
             invoiceNumber = invoice.getInvoiceNumber();
             invoiceType = invoice.getInvoiceType();
+            invoicePaymentStatus = invoice.getPaymentStatus();
         }
 
         if (hostel != null){
@@ -81,8 +83,8 @@ public class TransactionResMapper implements Function<TransactionV1, Transaction
 
         return new TransactionResponse(transaction.getTransactionId(), transaction.getType(),
                 transaction.getPaidAmount(), transaction.getStatus(), transaction.getInvoiceId(),
-                invoiceNumber, invoiceType, transaction.getHostelId(), hostelName, transaction.getCustomerId(),
-                customerName, paymentDate, paymentTime, transaction.getTransactionMode(),
+                invoiceNumber, invoiceType, invoicePaymentStatus, transaction.getHostelId(), hostelName,
+                transaction.getCustomerId(), customerName, paymentDate, paymentTime, transaction.getTransactionMode(),
                 transaction.getTransactionReferenceId(), transaction.getReceiptUrl(), transaction.getBankId(),
                 accountHolderName, transaction.getReferenceNumber(), transaction.getCreatedBy(), createdByUserName,
                 transaction.getUpdatedBy(), updatedByUserName, createdAtDate, createdAtTime);
