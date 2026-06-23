@@ -94,6 +94,9 @@ public class Utils {
     public static final String RESET_DONE_NO_RECORDS_FOUND = "Reset completed, no records found";
     public static final String TRIAL_DAYS_REASON_NOT_FOUND = "Trial days reason not found";
     public static final String NO_ADVANCE_DEDUCTIONS_FOUND = "No advance deductions found";
+    public static final String TRANSACTION_NOT_FOUND = "Transaction not found";
+    public static final String BANK_TRANSACTION_NOT_FOUND = "Bank transaction not found";
+    public static final String BANK_NOT_FOUND = "Bank not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";

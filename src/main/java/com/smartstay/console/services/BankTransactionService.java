@@ -30,6 +30,10 @@ public class BankTransactionService {
         return bankTransactionRepositories.findByTransactionNumberIn(transactionIds);
     }
 
+    public BankTransactionsV1 getTransactionByTransactionId(String transactionId) {
+        return bankTransactionRepositories.findByTransactionNumber(transactionId);
+    }
+
     public void updateBankTransactions(List<String> expensesId) {
         List<BankTransactionsV1> listBankTransactions = bankTransactionRepositories.findBySourceIdIn(expensesId);
         bankTransactionRepositories.deleteAll(listBankTransactions);
@@ -37,5 +41,9 @@ public class BankTransactionService {
 
     public void deleteAll(List<BankTransactionsV1> bankTransactions) {
         bankTransactionRepositories.deleteAll(bankTransactions);
+    }
+
+    public void delete(BankTransactionsV1 bankTransaction) {
+        bankTransactionRepositories.delete(bankTransaction);
     }
 }

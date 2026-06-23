@@ -958,8 +958,8 @@ public class InvoiceV1Service {
         double payloadBalanceAmount = payload.balanceAmount();
         payloadBalanceAmount = Utils.roundOfDoubleTo2Digits(payloadBalanceAmount);
 
+        double invoiceTotalAmount = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : 0;
         double invoiceBalanceAmount = invoice.getBalanceAmount() != null ? invoice.getBalanceAmount() : 0;
-
         double invoicePaidAmount = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
 
         List<Deductions> invoiceDeductions = invoice.getDeductions() != null ? invoice.getDeductions() : Collections.emptyList();
@@ -985,6 +985,7 @@ public class InvoiceV1Service {
         if (payloadBalanceAmount != expectedBalanceAmount) {
             return new ResponseEntity<>("Invoice balance amount is : " + invoiceBalanceAmount +
                             "\nExpected balance amount is : " + expectedBalanceAmount +
+                            "\nTotal amount is : " + invoiceTotalAmount +
                             "\nPaid amount is : " + invoicePaidAmount +
                             "\nDeductions amount is : " + invoiceDeductionsAmount +
                             "\nRedemption amount is : " + invoiceRedemptionAmount,

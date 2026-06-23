@@ -617,6 +617,11 @@ public class CustomersService {
             );
         }
 
+        double deductionAmount = copiedDeductions.stream()
+                        .mapToDouble(Deductions::getAmount)
+                        .sum();
+
+        invoice.setDeductionAmount(deductionAmount);
         invoice.setDeductions(copiedDeductions);
 
         invoiceV1Service.save(invoice);

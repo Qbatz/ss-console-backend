@@ -20,6 +20,7 @@ import com.smartstay.console.dto.supportTicket.SupportTicketNotesSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketSnapshot;
 import com.smartstay.console.dto.tableColumns.ColumnFiltersSnapshot;
 import com.smartstay.console.dto.tableColumns.TableColumnsSnapshot;
+import com.smartstay.console.dto.transaction.TransactionSnapshot;
 import com.smartstay.console.dto.users.AddressSnapshot;
 import com.smartstay.console.dto.users.UserSnapshot;
 import com.smartstay.console.dto.users.UsersConfigSnapshot;
@@ -741,6 +742,32 @@ public class SnapshotUtility {
                 copyDate(n.getCreatedAt()),
                 n.getUserId(),
                 n.getParentId()
+        );
+    }
+
+    public static TransactionSnapshot toSnapshot(TransactionV1 t) {
+
+        if (t == null) return null;
+
+        return new TransactionSnapshot(
+                t.getTransactionId(),
+                t.getType(),
+                t.getPaidAmount(),
+                t.getCreatedBy(),
+                copyDate(t.getCreatedAt()),
+                t.getStatus(),
+                t.getInvoiceId(),
+                t.getHostelId(),
+                t.getIsInvoice(),
+                t.getCustomerId(),
+                copyDate(t.getPaymentDate()),
+                t.getTransactionMode(),
+                t.getTransactionReferenceId(),
+                t.getReceiptUrl(),
+                t.getBankId(),
+                t.getReferenceNumber(),
+                copyDate(t.getPaidAt()),
+                t.getUpdatedBy()
         );
     }
 

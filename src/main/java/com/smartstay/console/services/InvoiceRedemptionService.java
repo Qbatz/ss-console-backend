@@ -431,17 +431,7 @@ public class InvoiceRedemptionService {
 
         if (InvoiceType.ADVANCE.name().equals(targetInvoice.getInvoiceType())) {
 
-            double deductionAmount = 0;
-
-            Advance advance = customer.getAdvance();
-            if (advance != null) {
-                List<Deductions> deductions = advance.getDeductions();
-                if (deductions != null && !deductions.isEmpty()) {
-                    deductionAmount = deductions.stream()
-                            .mapToDouble(Deductions::getAmount)
-                            .sum();
-                }
-            }
+            double deductionAmount = targetInvoice.getDeductionAmount();
 
             if (deductionAmount > 0 && targetInvoiceNewPaidAmount < deductionAmount) {
 
@@ -538,6 +528,17 @@ public class InvoiceRedemptionService {
 
                         targetInvoice.setDeductions(updated);
                     }
+
+                    double updatedDeductionAmount = targetInvoice.getDeductions()
+                            .stream()
+                            .mapToDouble(d ->
+                                    d.getAmount() != null
+                                            ? d.getAmount()
+                                            : 0
+                            )
+                            .sum();
+
+                    targetInvoice.setDeductionAmount(updatedDeductionAmount);
                 }
             }
         }
@@ -656,16 +657,8 @@ public class InvoiceRedemptionService {
         }
 
         if (InvoiceType.ADVANCE.name().equals(targetInvoice.getInvoiceType())){
-            double deductionAmount = 0;
-            Advance advance = customer.getAdvance();
-            if (advance != null){
-                List<Deductions> deductions = advance.getDeductions();
-                if (deductions != null && !deductions.isEmpty()){
-                    deductionAmount = deductions.stream()
-                            .mapToDouble(Deductions::getAmount)
-                            .sum();
-                }
-            }
+            double deductionAmount = targetInvoice.getDeductionAmount();
+
             if (deductionAmount > 0 && targetInvoiceNewPaidAmount < deductionAmount) {
 
                 List<Deductions> invoiceDeductions = targetInvoice.getDeductions();
@@ -704,6 +697,16 @@ public class InvoiceRedemptionService {
                         }
                     }
 
+                    double updatedDeductionAmount = targetInvoice.getDeductions()
+                            .stream()
+                            .mapToDouble(d ->
+                                    d.getAmount() != null
+                                            ? d.getAmount()
+                                            : 0
+                            )
+                            .sum();
+
+                    targetInvoice.setDeductionAmount(updatedDeductionAmount);
                     targetInvoice.setDeductions(reversed);
                 }
             }

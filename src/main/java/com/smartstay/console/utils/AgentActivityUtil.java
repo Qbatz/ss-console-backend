@@ -154,6 +154,7 @@ public class AgentActivityUtil {
             case OWNERS -> "Deleted an owner";
             case INVOICE_REDEMPTION -> "Deleted an invoice redemption";
             case DEMO_REQUEST -> "Deleted a demo request";
+            case TRANSACTION -> "Deleted a transaction";
             default -> "Deleted successfully";
         };
     }
