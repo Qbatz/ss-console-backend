@@ -276,8 +276,10 @@ public class PlansService {
 
                 if (planFeature != null) {
 
-                    Date startsFrom = planFeature.getStartsFrom();
-                    Date endsAt = planFeature.getEndsAt();
+                    Date startsFrom = null;
+                    Date endsAt = null;
+                    String labelText = null;
+                    String labelDescription = null;
 
                     if (pfPayload.startsFrom() != null){
                         startsFrom = Utils.localDateToDate(pfPayload.startsFrom());
@@ -291,8 +293,15 @@ public class PlansService {
                         return new ResponseEntity<>(Utils.INVALID_FEATURE_DATE_RANGE, HttpStatus.BAD_REQUEST);
                     }
 
-                    planFeature.setLabelText(pfPayload.labelText());
-                    planFeature.setLabelDescription(pfPayload.labelDescription());
+                    if (pfPayload.labelText() != null && !pfPayload.labelText().isBlank()){
+                        labelText = pfPayload.labelText();
+                    }
+                    if (pfPayload.labelDescription() != null && !pfPayload.labelDescription().isBlank()){
+                        labelDescription = pfPayload.labelDescription();
+                    }
+
+                    planFeature.setLabelText(labelText);
+                    planFeature.setLabelDescription(labelDescription);
                     planFeature.setStartsFrom(startsFrom);
                     planFeature.setEndsAt(endsAt);
                     planFeature.setFeatureActive(pfPayload.isFeatureActive() != null
