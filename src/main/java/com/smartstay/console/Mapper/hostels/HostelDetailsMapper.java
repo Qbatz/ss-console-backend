@@ -12,7 +12,6 @@ import com.smartstay.console.responses.bills.BillingTypeResponse;
 import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.responses.hostelRelationalAgent.HostelRelationalAgentResponse;
-import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
 import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
@@ -41,7 +40,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
     List<Subscription> subscriptions;
     List<UsersResponse> masters;
     List<UsersResponse> staffs;
-    List<UserActivities> activities;
+    List<UserActivitiesResponse> activitiesRes;
     Map<String, Users> userLookup;
     List<Plans> trialPlans;
     List<Plans> expandableTrialPlans;
@@ -71,7 +70,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                                List<Subscription> subscriptions,
                                List<UsersResponse> masters,
                                List<UsersResponse> staffs,
-                               List<UserActivities> activities,
+                               List<UserActivitiesResponse> activitiesRes,
                                Map<String, Users> userLookup,
                                List<Plans> trialPlans,
                                List<Plans> expandableTrialPlans,
@@ -100,7 +99,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
         this.subscriptions = subscriptions;
         this.masters = masters;
         this.staffs = staffs;
-        this.activities = activities;
+        this.activitiesRes = activitiesRes;
         this.userLookup = userLookup;
         this.trialPlans = trialPlans;
         this.expandableTrialPlans = expandableTrialPlans;
@@ -308,20 +307,6 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                         Utils.dateToString(subscription.getCreatedAt()),
                         Utils.dateToTime(subscription.getCreatedAt())
                 )).toList();
-
-        List<UserActivitiesResponse> activitiesRes = activities.stream()
-                .map(activity -> {
-                    Users user = userLookup.get(activity.getUserId());
-                    String userName = null;
-                    if (user != null){
-                        userName = Utils.getFullName(user.getFirstName(), user.getLastName());
-                    }
-                    return new UserActivitiesResponse(
-                            activity.getActivityId(), activity.getDescription(), activity.getUserId(), userName,
-                            Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
-                            activity.getSource(), activity.getActivityType(), activity.getPlatform()
-                    );
-                }).toList();
 
         List<AmenitiesResponse> amenitiesRes = amenities.stream()
                 .map(amenity -> new AmenitiesResponse(amenity.getAmenityId(), amenity.getAmenityName(),

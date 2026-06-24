@@ -18,17 +18,20 @@ public class OwnerDetailsMapper implements Function<Users, OwnerDetailsResponse>
 
     List<HostelV1> hostels;
     List<UserActivities> userActivities;
+    List<UserActivitiesResponse> activitiesRes;
     Map<Integer, HotelType> hotelTypeMap;
     List<HostelRelationalAgent> relationalAgents;
     Map<String, Agent> agentMap;
 
     public OwnerDetailsMapper(List<HostelV1> hostels,
                               List<UserActivities> userActivities,
+                              List<UserActivitiesResponse> activitiesRes,
                               Map<Integer, HotelType> hotelTypeMap,
                               List<HostelRelationalAgent> relationalAgents,
                               Map<String, Agent> agentMap) {
         this.hostels = hostels;
         this.userActivities = userActivities;
+        this.activitiesRes = activitiesRes;
         this.hotelTypeMap = hotelTypeMap;
         this.relationalAgents = relationalAgents;
         this.agentMap = agentMap;
@@ -59,13 +62,6 @@ public class OwnerDetailsMapper implements Function<Users, OwnerDetailsResponse>
                 .map(UserActivities::getCreatedAt)
                 .max(Date::compareTo)
                 .orElse(null);
-
-        List<UserActivitiesResponse> activitiesRes = userActivities.stream()
-                .map(activity -> new UserActivitiesResponse(
-                        activity.getActivityId(), activity.getDescription(), activity.getUserId(), fullName,
-                        Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
-                        activity.getSource(), activity.getActivityType(), activity.getPlatform()
-                )).toList();
 
         List<HostelRelationalAgentResponse> relationalAgentResponses = relationalAgents.stream()
                 .sorted(Comparator.comparing(HostelRelationalAgent::getId).reversed())
