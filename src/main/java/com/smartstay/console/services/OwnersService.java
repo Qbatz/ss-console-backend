@@ -22,8 +22,10 @@ import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.responses.users.OwnerDetailsResponse;
 import com.smartstay.console.responses.users.OwnerHostelListResponse;
 import com.smartstay.console.responses.users.OwnerResponse;
+import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.utils.Constants;
 import com.smartstay.console.utils.SnapshotUtility;
+import com.smartstay.console.utils.UserActivityUtil;
 import com.smartstay.console.utils.Utils;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
@@ -69,6 +71,8 @@ public class OwnersService {
     private HostelRelationalAgentService hostelRelationalAgentService;
     @Autowired
     private HostelService hostelService;
+    @Autowired
+    private UserActivityUtil userActivityUtil;
 
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
 
@@ -645,8 +649,10 @@ public class OwnersService {
                 .collect(Collectors.toMap(Agent::getAgentId,
                         agent1 -> agent1));
 
+        List<UserActivitiesResponse> activitiesRes = userActivityUtil.buildResponses(userActivities);
+
         OwnerDetailsResponse response = new OwnerDetailsMapper(hostels, userActivities,
-                hotelTypeMap, relationalAgents, agentMap).apply(owner);
+                activitiesRes, hotelTypeMap, relationalAgents, agentMap).apply(owner);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
