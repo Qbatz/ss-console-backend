@@ -97,6 +97,7 @@ public class Utils {
     public static final String TRANSACTION_NOT_FOUND = "Transaction not found";
     public static final String BANK_TRANSACTION_NOT_FOUND = "Bank transaction not found";
     public static final String BANK_NOT_FOUND = "Bank not found";
+    public static final String ADVANCE_NOT_FOUND = "Advance not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";

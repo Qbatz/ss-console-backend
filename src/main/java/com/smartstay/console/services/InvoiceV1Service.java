@@ -1003,4 +1003,88 @@ public class InvoiceV1Service {
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
+
+    public ResponseEntity<?> updateAdvanceInvoiceAmount(String hostelId, String invoiceId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Invoices.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelV1 hostel = hostelService.getHostelByHostelId(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoicesV1 invoice = invoiceV1Repository.findByInvoiceId(invoiceId);
+        if (invoice == null) {
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!invoice.getHostelId().equals(hostelId)) {
+            return new ResponseEntity<>(Utils.INVOICE_HOSTEL_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!InvoiceType.ADVANCE.name().equals(invoice.getInvoiceType())) {
+            return new ResponseEntity<>(Utils.INVOICE_IS_NOT_ADVANCE, HttpStatus.BAD_REQUEST);
+        }
+
+        Customers customer = customersService.getCustomerInformation(invoice.getCustomerId());
+        if (customer == null) {
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoiceSnapshot oldInvoiceSnapshot = SnapshotUtility.toSnapshot(invoice);
+
+        Advance advance = customer.getAdvance();
+        if (advance == null) {
+            return new ResponseEntity<>(Utils.ADVANCE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        double advanceAmount = advance.getAdvanceAmount();
+        double paidAmount = advance.getPaidAmount();
+
+        double invoiceDeductionsAmount = invoice.getDeductionAmount();
+
+        double invoiceBasePrice = advanceAmount;
+        double invoiceTotalAmount = advanceAmount + invoiceDeductionsAmount;
+        double invoiceSubTotal = advanceAmount + invoiceDeductionsAmount;
+        double invoicePaidAmount = paidAmount;
+
+        List<InvoiceRedemption> invoiceRedemptions = invoiceRedemptionService
+                .getInvoiceRedemptionBySourceInvoiceId(invoiceId);
+
+        double invoiceRedemptionAmount = invoiceRedemptions.stream()
+                .mapToDouble(InvoiceRedemption::getRedemptionAmount)
+                .sum();
+
+        double expectedBalanceAmount = invoicePaidAmount - invoiceDeductionsAmount - invoiceRedemptionAmount;
+        expectedBalanceAmount = Utils.roundOfDoubleTo2Digits(expectedBalanceAmount);
+
+        if (expectedBalanceAmount < 0){
+            expectedBalanceAmount = 0;
+        }
+
+        invoice.setTotalAmount(invoiceTotalAmount);
+        invoice.setBasePrice(invoiceBasePrice);
+        invoice.setSubTotal(invoiceSubTotal);
+        invoice.setBalanceAmount(expectedBalanceAmount);
+
+        invoice = invoiceV1Repository.save(invoice);
+
+        InvoiceSnapshot newInvoiceSnapshot = SnapshotUtility.toSnapshot(invoice);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.INVOICE,
+                invoiceId, oldInvoiceSnapshot, newInvoiceSnapshot);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
 }

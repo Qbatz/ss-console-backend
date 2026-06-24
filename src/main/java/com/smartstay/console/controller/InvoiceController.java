@@ -47,4 +47,10 @@ public class InvoiceController {
                                                          @Valid @RequestBody AdvanceBalanceAmountPayload payload) {
         return invoiceService.updateAdvanceInvoiceBalance(hostelId, invoiceId, payload);
     }
+
+    @PutMapping("/advance/amount/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> updateAdvanceInvoiceAmount(@PathVariable("hostelId") String hostelId,
+                                                        @PathVariable("invoiceId") String invoiceId) {
+        return invoiceService.updateAdvanceInvoiceAmount(hostelId, invoiceId);
+    }
 }
