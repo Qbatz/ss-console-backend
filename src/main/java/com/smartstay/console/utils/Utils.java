@@ -62,6 +62,7 @@ public class Utils {
     public static final String BUY_PLAN_NOT_ALLOWED_IN_DEV = "Buy plan is not allowed for dev environment";
     public static final String BED_IS_OCCUPIED = "Bed is occupied";
     public static final String INVOICE_IS_NOT_ADVANCE = "Invoice is not an advance invoice";
+    public static final String INVOICE_NOT_PAID = "Invoice is not paid";
 
     public static final String NO_ROLES_FOUND = "No roles found";
     public static final String NO_HOSTEL_FOUND = "No hostel found";

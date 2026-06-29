@@ -15,6 +15,7 @@ import com.smartstay.console.payloads.invoice.AdvanceBalanceAmountPayload;
 import com.smartstay.console.payloads.invoice.InvoiceIdMobilePayload;
 import com.smartstay.console.repositories.InvoiceV1Repository;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
+import com.smartstay.console.responses.transaction.TransactionResWrapper;
 import com.smartstay.console.responses.transaction.TransactionResponse;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
@@ -873,6 +874,14 @@ public class InvoiceV1Service {
             return new ResponseEntity<>(Utils.INVOICE_HOSTEL_MISMATCH, HttpStatus.BAD_REQUEST);
         }
 
+        if (!InvoiceType.ADVANCE.name().equals(invoice.getInvoiceType())) {
+            return new ResponseEntity<>(Utils.INVOICE_IS_NOT_ADVANCE, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!PaymentStatus.PAID.name().equals(invoice.getPaymentStatus())) {
+            return new ResponseEntity<>(Utils.INVOICE_NOT_PAID, HttpStatus.BAD_REQUEST);
+        }
+
         Customers customer = customersService.getCustomerInformation(invoice.getCustomerId());
         if (customer == null) {
             return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
@@ -916,7 +925,15 @@ public class InvoiceV1Service {
                             .apply(transaction);
                 }).toList();
 
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        boolean canUpdateInvoiceBalance = false;
+        if (InvoiceType.ADVANCE.name().equals(invoice.getInvoiceType()) &&
+                PaymentStatus.PAID.name().equals(invoice.getPaymentStatus())){
+            canUpdateInvoiceBalance = true;
+        }
+
+        TransactionResWrapper resWrapper = new TransactionResWrapper(canUpdateInvoiceBalance, response);
+
+        return new ResponseEntity<>(resWrapper, HttpStatus.OK);
     }
 
     public ResponseEntity<?> updateAdvanceInvoiceBalance(String hostelId, String invoiceId,
@@ -951,6 +968,10 @@ public class InvoiceV1Service {
 
         if (!InvoiceType.ADVANCE.name().equals(invoice.getInvoiceType())) {
             return new ResponseEntity<>(Utils.INVOICE_IS_NOT_ADVANCE, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!PaymentStatus.PAID.name().equals(invoice.getPaymentStatus())) {
+            return new ResponseEntity<>(Utils.INVOICE_NOT_PAID, HttpStatus.BAD_REQUEST);
         }
 
         InvoiceSnapshot oldInvoiceSnapshot = SnapshotUtility.toSnapshot(invoice);
@@ -1071,6 +1092,14 @@ public class InvoiceV1Service {
 
         if (expectedBalanceAmount < 0){
             expectedBalanceAmount = 0;
+        }
+
+        if (Objects.equals(invoicePaidAmount, invoiceTotalAmount)){
+            invoice.setPaymentStatus(PaymentStatus.PAID.name());
+        } else if (invoicePaidAmount <= 0) {
+            invoice.setPaymentStatus(PaymentStatus.PENDING.name());
+        } else if (invoicePaidAmount > 0 && invoicePaidAmount < invoiceTotalAmount) {
+            invoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
         }
 
         invoice.setTotalAmount(invoiceTotalAmount);
