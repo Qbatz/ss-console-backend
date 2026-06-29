@@ -344,6 +344,12 @@ public class DemoRequestService {
             return new ResponseEntity<>(Utils.INVALID_STATUS_TRANSITION, HttpStatus.BAD_REQUEST);
         }
 
+        if (demoRequest.getAssignedTo() != null){
+            if (payload.comments() == null || payload.comments().isBlank()){
+                return new ResponseEntity<>(Utils.COMMENTS_REQUIRED_FOR_REASSIGN_STAFF, HttpStatus.BAD_REQUEST);
+            }
+        }
+
         DemoRequestSnapshot oldRequest = SnapshotUtility.toSnapshot(demoRequest);
 
         Agent assignedTo = agentService.findUserByUserId(payload.agentId());
@@ -484,14 +490,16 @@ public class DemoRequestService {
 
         demoRequest.setDemoRequestStatus(requestStatus.name());
 
-        if (demoRequestStatusPayload.comments() != null && !demoRequestStatusPayload.comments().isBlank()){
-            demoRequest.setComments(demoRequestStatusPayload.comments());
-        }
-
         if (requestStatus.name().equals(DemoRequestStatus.ASSIGNED.name())){
 
             if (demoRequestStatusPayload.agentId() == null || demoRequestStatusPayload.agentId().isBlank()){
                 return new ResponseEntity<>(Utils.AGENT_ID_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            if (demoRequest.getAssignedTo() != null){
+                if (demoRequestStatusPayload.comments() == null || demoRequestStatusPayload.comments().isBlank()){
+                    return new ResponseEntity<>(Utils.COMMENTS_REQUIRED_FOR_REASSIGN_STAFF, HttpStatus.BAD_REQUEST);
+                }
             }
 
             Agent assignedTo = agentService.findUserByUserId(demoRequestStatusPayload.agentId());
@@ -580,6 +588,10 @@ public class DemoRequestService {
             }
 
             demoRequest.setDropReason(dropReason.name());
+        }
+
+        if (demoRequestStatusPayload.comments() != null && !demoRequestStatusPayload.comments().isBlank()){
+            demoRequest.setComments(demoRequestStatusPayload.comments());
         }
 
         demoRequest = demoRequestRepository.save(demoRequest);
@@ -734,11 +746,14 @@ public class DemoRequestService {
                 .map(requestStatus -> new DemoRequestStatusFlowResponse(
                         requestStatus.name(),
                         requestStatus.getAllowedStatuses().stream()
+                                .filter(allowedStatus ->
+                                        !(requestStatus == DemoRequestStatus.ASSIGNED
+                                                && allowedStatus == DemoRequestStatus.ASSIGNED))
                                 .map(allowedStatus -> new DemoRequestStatusResponse(
                                         allowedStatus.name(),
                                         allowedStatus.getValue()
-                                )).toList())
-                ).toList();
+                                )).toList()
+                )).toList();
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
