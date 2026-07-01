@@ -152,6 +152,7 @@ public class Utils {
     public static final String PAID_AMOUNT_EXCEEDS_TOTAL_AMOUNT = "Target invoice paid amount exceeds total amount";
     public static final String PAID_AMOUNT_GOES_NEGATIVE = "Target paid amount goes negative";
     public static final String DATE_IS_NOT_FROM_FUTURE_OR_PRESENT = "Date is not from future or present";
+    public static final String MINIMUM_1_PERMISSION_ENABLED = "At least one module must have read permission enabled";
 
     public static final String ROLE_NAME_CANNOT_EDIT = "This role cannot be edited";
     public static final String CANNOT_USE_BILLING_CYCLE_FILTER_WITH_DATE_FILTER = "Cannot use billingCycleStartDay with filterBy";
