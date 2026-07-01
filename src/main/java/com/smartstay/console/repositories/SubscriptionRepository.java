@@ -107,6 +107,15 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
                                                            Pageable pageable);
 
     @Query("""
+           SELECT s
+           FROM Subscription s
+           WHERE s.hostelId IN :hostelIds
+               AND CURRENT_DATE BETWEEN s.planStartsAt AND s.planEndsAt
+           ORDER BY s.createdAt DESC
+           """)
+    List<Subscription> findCurrentSubscriptionsPerHostel(Set<String> hostelIds);
+
+    @Query("""
                 SELECT DISTINCT s.hostelId
                 FROM Subscription s
                 WHERE s.hostelId IN :hostelIds

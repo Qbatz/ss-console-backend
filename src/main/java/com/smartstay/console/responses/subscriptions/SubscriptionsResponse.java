@@ -16,6 +16,8 @@ public record SubscriptionsResponse(Long subscriptionId,
                                     Double discount,
                                     Double discountAmount,
                                     String paymentProof,
+                                    String invoiceUrl,
+                                    String createdByUserType,
                                     String createdBy,
                                     String createdAtDate,
                                     String createdAtTime) {
