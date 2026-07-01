@@ -28,6 +28,10 @@ public class BankingService {
         return bankingRepository.findByBankIdIn(bankIds);
     }
 
+    public BankingV1 getByBankId(String bankId) {
+        return bankingRepository.findByBankId(bankId);
+    }
+
     public void removeExpenses(List<String> bankIds, HashMap<String, Double> expensePerBankIds) {
         List<BankingV1> bankingsList = bankingRepository.findByBankIdIn(new HashSet<>(bankIds));
         if (bankingsList != null) {
@@ -57,5 +61,9 @@ public class BankingService {
 
     public List<BankingV1> getByUserIds(Set<String> userIds) {
         return bankingRepository.findAllByUserIdIn(userIds);
+    }
+
+    public BankingV1 save(BankingV1 bank) {
+        return bankingRepository.save(bank);
     }
 }

@@ -10,4 +10,6 @@ import java.util.List;
 public interface RoomsRepository extends JpaRepository<Rooms, Integer> {
 
     List<Rooms> findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
+
+    Rooms findByRoomIdAndIsActiveTrueAndIsDeletedFalse(int roomId);
 }

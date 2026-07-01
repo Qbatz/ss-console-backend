@@ -11,7 +11,7 @@ import java.util.List;
 public class RoomsService {
 
     @Autowired
-    RoomsRepository roomsRepository;
+    private RoomsRepository roomsRepository;
 
     public List<Rooms> getRoomsByHostelId(String hostelId) {
         return roomsRepository.findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
@@ -19,5 +19,9 @@ public class RoomsService {
 
     public void deleteAll(List<Rooms> listRooms) {
         roomsRepository.deleteAll(listRooms);
+    }
+
+    public Rooms getRoomById(int roomId) {
+        return roomsRepository.findByRoomIdAndIsActiveTrueAndIsDeletedFalse(roomId);
     }
 }
