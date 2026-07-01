@@ -58,10 +58,10 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
         String requestedTime = null;
         if (demoRequest.getBookedFor() != null) {
             requestedDate = Utils.dateToString(demoRequest.getBookedFor());
-            requestedTime = demoRequest.getRequestedTime();
+            requestedTime = Utils.dateToTime(demoRequest.getBookedFor());
         } else if (demoRequest.getRequestedDate() != null) {
             requestedDate = Utils.formatDateString(demoRequest.getRequestedDate());
-            requestedTime = demoRequest.getRequestedTime();
+            requestedTime = Utils.formatStringTimeToAmPm(demoRequest.getRequestedTime());
         }
 
         List<DemoRequestCommentsResponse> demoRequestComments = new ArrayList<>();
@@ -110,9 +110,13 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
 
         boolean canAssignStaff = false;
         boolean canMarkDropped = false;
+        boolean isReAssignStaff = false;
         if (currentStatus != null) {
             if (currentStatus.canMoveTo(DemoRequestStatus.ASSIGNED)){
                 canAssignStaff = true;
+                if (assignedTo != null) {
+                    isReAssignStaff = true;
+                }
             }
             if (currentStatus.canMoveTo(DemoRequestStatus.DROPPED)){
                 canMarkDropped = true;
@@ -135,7 +139,7 @@ public class DemoRequestMapper implements Function<DemoRequest, DemoRequestRespo
                 demoRequest.getEmailId(), demoRequest.getContactNo(), demoRequest.getCountryCode(),
                 demoRequest.getOrganization(), demoRequest.getNoOfHostels(), demoRequest.getNoOfTenant(),
                 demoRequest.getCity(), demoRequest.getState(), demoRequest.getCountry(), demoRequest.getDemoRequestStatus(),
-                canAssignStaff, canMarkDropped, demoRequest.getIsDemoCompleted(), demoRequest.getIsAssigned(),
+                canAssignStaff, canMarkDropped, isReAssignStaff, demoRequest.getIsDemoCompleted(), demoRequest.getIsAssigned(),
                 demoRequest.getAssignedTo(), assignedTo, demoRequest.getAssignedBy(), assignedBy,
                 demoRequest.getPresentedBy(), presentedBy, demoRequest.getComments(), requestedDate, requestedTime,
                 demoRequest.getPresentedAt() != null ? Utils.dateToString(demoRequest.getPresentedAt()) :  null,

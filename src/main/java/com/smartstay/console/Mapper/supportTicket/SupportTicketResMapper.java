@@ -123,9 +123,13 @@ public class SupportTicketResMapper implements Function<SupportTicket, SupportTi
         }
 
         boolean canAssignStaff = false;
+        boolean isReAssignStaff = false;
         if (currentStatus != null) {
             if (currentStatus.canMoveTo(TicketStatus.ASSIGNED)){
                 canAssignStaff = true;
+                if (assignedTo != null){
+                    isReAssignStaff = true;
+                }
             }
         }
 
@@ -162,7 +166,7 @@ public class SupportTicketResMapper implements Function<SupportTicket, SupportTi
         }
 
         return new SupportTicketResponse(supportTicket.getTicketId(), supportTicket.getTicketNumber(),
-                canAssignStaff, isOwnerDeleted, isHostelDeleted, isRaisedByDeleted,
+                canAssignStaff, isReAssignStaff, isOwnerDeleted, isHostelDeleted, isRaisedByDeleted,
                 supportTicket.getParentId(), ownerInfo, supportTicket.getHostelId(), hostelName,
                 hostelMobile, hostelHouseNo, hostelStreet, hostelLandmark, hostelCity, hostelState,
                 hostelCountry, hostelPincode, fullAddress, supportTicket.getRaisedBy(), raisedBy,

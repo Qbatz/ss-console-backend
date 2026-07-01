@@ -190,6 +190,7 @@ public class InvoiceV1Service {
                             throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
                         }
 
+                        cancelledInvoice.setCancelledDate(null);
                         cancelledInvoice.setCancelled(false);
                         cancelledInvoice.setUpdatedAt(today);
 
@@ -208,6 +209,7 @@ public class InvoiceV1Service {
 
                 int bedId = booking.getBedId();
 
+                booking.setSettlementGeneratedDate(null);
                 booking.setCurrentStatus(BookingsStatus.NOTICE.name());
                 booking.setUpdatedAt(today);
 
@@ -649,6 +651,7 @@ public class InvoiceV1Service {
                             return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
                         }
 
+                        cancelledInvoice.setCancelledDate(null);
                         cancelledInvoice.setCancelled(false);
                         cancelledInvoice.setUpdatedAt(today);
 
@@ -667,6 +670,7 @@ public class InvoiceV1Service {
 
                 int bedId = booking.getBedId();
 
+                booking.setSettlementGeneratedDate(null);
                 booking.setCurrentStatus(BookingsStatus.NOTICE.name());
                 booking.setUpdatedAt(today);
 
