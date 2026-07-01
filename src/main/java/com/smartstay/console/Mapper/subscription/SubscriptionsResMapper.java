@@ -61,9 +61,6 @@ public class SubscriptionsResMapper implements Function<Subscription, Subscripti
                 hostelName, hostelInitials, subscription.getPlanCode(), subscription.getPlanName(),
                 Utils.dateToString(subscription.getPlanStartsAt()), Utils.dateToString(subscription.getPlanEndsAt()),
                 expired, subscription.getPlanAmount(), subscription.getPaidAmount(), subscription.getDiscount(),
-                subscription.getDiscountAmount(), subscription.getPaymentProof(), createdBy,
-                Utils.dateToString(subscription.getCreatedAt()), Utils.dateToTime(subscription.getCreatedAt()));
-                subscription.getPlanAmount(), subscription.getPaidAmount(), subscription.getDiscount(),
                 subscription.getDiscountAmount(), subscription.getPaymentProof(), subscription.getInvoiceUrl(),
                 subscription.getCreatedByUserType(), createdBy, Utils.dateToString(subscription.getCreatedAt()),
                 Utils.dateToTime(subscription.getCreatedAt()));

@@ -769,22 +769,35 @@ public class SubscriptionService {
                         Function.identity()
                 ));
 
-        Set<String> createdByIds = subscriptions.stream()
-                .filter(s -> UserType.AGENT.name().equalsIgnoreCase(s.getCreatedByUserType()))
-                .map(com.smartstay.console.dao.Subscription::getCreatedBy)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+        Set<String> agentIds = new HashSet<>();
+        Set<String> userIds = new HashSet<>();
 
-        List<Agent> agents = agentService.getAgentsByIds(createdByIds);
+        for (com.smartstay.console.dao.Subscription subscription : subscriptions) {
+            if (subscription.getCreatedBy() != null){
+                if (subscription.getCreatedByUserType() != null &&
+                        subscription.getCreatedByUserType().equals(UserType.AGENT.name())) {
+                    agentIds.add(subscription.getCreatedBy());
+                } else {
+                    userIds.add(subscription.getCreatedBy());
+                }
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
         Map<String, Agent> agentMap = agents.stream()
                 .collect(Collectors.toMap(Agent::getAgentId,
                         Function.identity(), (a, b) -> a));
 
+        List<Users> users = usersService
+                .getUsersByIds(userIds);
+        Map<String, Users> usersMap = users.stream()
+                .collect(Collectors.toMap(Users::getUserId, u -> u));
+
         List<SubscriptionsResponse> responseList = subscriptions.stream()
                 .map(subscription -> {
                     HostelV1 hostel = hostelMap.getOrDefault(subscription.getHostelId(), null);
-                    Agent createdByAgent = agentMap.getOrDefault(subscription.getCreatedBy(), null);
-                    return new SubscriptionsResMapper(hostel, createdByAgent).apply(subscription);
+                    return new SubscriptionsResMapper(hostel, agentMap, usersMap)
+                            .apply(subscription);
                 }).toList();
 
         Map<String, Object> response = new HashMap<>();
