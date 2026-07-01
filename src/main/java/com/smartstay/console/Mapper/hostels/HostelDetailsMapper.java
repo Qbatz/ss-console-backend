@@ -286,6 +286,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                     currentSubscription.getDiscount(),
                     currentSubscription.getDiscountAmount(),
                     currentSubscription.getPaymentProof(),
+                    currentSubscription.getInvoiceUrl(),
                     Utils.dateToString(currentSubscription.getCreatedAt()),
                     Utils.dateToTime(currentSubscription.getCreatedAt())
             );
@@ -305,6 +306,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                         subscription.getDiscount(),
                         subscription.getDiscountAmount(),
                         subscription.getPaymentProof(),
+                        subscription.getInvoiceUrl(),
                         Utils.dateToString(subscription.getCreatedAt()),
                         Utils.dateToTime(subscription.getCreatedAt())
                 )).toList();

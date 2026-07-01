@@ -581,13 +581,6 @@ public class PlansService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    public Set<String> getAllPlanCodes() {
-        List<Plans> plans = plansRepository.findAll();
-        return plans.stream()
-                .map(Plans::getPlanCode)
-                .collect(Collectors.toSet());
-    }
-
     public Set<String> getAllPlanCodesAndPlanTypesNotIn(Set<String> planTypes) {
         List<Plans> plans = plansRepository.findAllByPlanTypeNotIn(planTypes);
         return plans.stream()
