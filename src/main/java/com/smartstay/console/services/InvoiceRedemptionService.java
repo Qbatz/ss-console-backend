@@ -431,7 +431,7 @@ public class InvoiceRedemptionService {
 
         if (InvoiceType.ADVANCE.name().equals(targetInvoice.getInvoiceType())) {
 
-            double deductionAmount = targetInvoice.getDeductionAmount();
+            double deductionAmount = targetInvoice.getDeductionAmount() != null ? targetInvoice.getDeductionAmount() : 0;
 
             if (deductionAmount > 0 && targetInvoiceNewPaidAmount < deductionAmount) {
 
@@ -657,7 +657,8 @@ public class InvoiceRedemptionService {
         }
 
         if (InvoiceType.ADVANCE.name().equals(targetInvoice.getInvoiceType())){
-            double deductionAmount = targetInvoice.getDeductionAmount();
+
+            double deductionAmount = targetInvoice.getDeductionAmount() != null ? targetInvoice.getDeductionAmount() : 0;
 
             if (deductionAmount > 0 && targetInvoiceNewPaidAmount < deductionAmount) {
 

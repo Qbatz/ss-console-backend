@@ -1073,7 +1073,7 @@ public class InvoiceV1Service {
         double advanceAmount = advance.getAdvanceAmount();
         double paidAmount = advance.getPaidAmount();
 
-        double invoiceDeductionsAmount = invoice.getDeductionAmount();
+        double invoiceDeductionsAmount = invoice.getDeductionAmount() != null ? invoice.getDeductionAmount() : 0;
 
         double invoiceBasePrice = advanceAmount;
         double invoiceTotalAmount = advanceAmount + invoiceDeductionsAmount;
@@ -1084,7 +1084,7 @@ public class InvoiceV1Service {
                 .getInvoiceRedemptionBySourceInvoiceId(invoiceId);
 
         double invoiceRedemptionAmount = invoiceRedemptions.stream()
-                .mapToDouble(InvoiceRedemption::getRedemptionAmount)
+                .mapToDouble(r -> r.getRedemptionAmount() != null ? r.getRedemptionAmount() : 0)
                 .sum();
 
         double expectedBalanceAmount = invoicePaidAmount - invoiceDeductionsAmount - invoiceRedemptionAmount;

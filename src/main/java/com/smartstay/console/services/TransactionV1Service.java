@@ -117,28 +117,33 @@ public class TransactionV1Service {
 
         TransactionSnapshot oldSnapshot = SnapshotUtility.toSnapshot(transaction);
 
-        double transactionPaidAmount;
+        double transactionPaidAmount = transaction.getPaidAmount() != null ? transaction.getPaidAmount() : 0;
+
+        double transactionNewPaidAmount;
         if (transaction.getType() == null) {
-            transactionPaidAmount = transaction.getPaidAmount();
+            transactionNewPaidAmount = transactionPaidAmount;
         }
         else {
-            transactionPaidAmount = (-1 * transaction.getPaidAmount());
+            transactionNewPaidAmount = (-1 * transactionPaidAmount);
         }
 
-        double invoiceNewPaidAmount = invoice.getPaidAmount() - transactionPaidAmount;
+        double invoicePaidAmount = invoice.getPaidAmount() != null ? invoice.getPaidAmount() : 0;
+        double invoiceTotalAmount = invoice.getTotalAmount() != null ? invoice.getTotalAmount() : 0;
+
+        double invoiceNewPaidAmount = invoicePaidAmount - transactionNewPaidAmount;
         invoice.setPaidAmount(invoiceNewPaidAmount);
 
-        if (Objects.equals(invoiceNewPaidAmount, invoice.getTotalAmount())){
+        if (Objects.equals(invoiceNewPaidAmount, invoiceTotalAmount)){
             invoice.setPaymentStatus(PaymentStatus.PAID.name());
         } else if (invoiceNewPaidAmount <= 0) {
             invoice.setPaymentStatus(PaymentStatus.PENDING.name());
-        } else if (invoiceNewPaidAmount > 0 && invoiceNewPaidAmount < invoice.getTotalAmount()) {
+        } else if (invoiceNewPaidAmount > 0 && invoiceNewPaidAmount < invoiceTotalAmount) {
             invoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
         }
 
-        if (InvoiceType.ADVANCE.name().equals(invoice.getInvoiceType())) {
+        double deductionAmount = invoice.getDeductionAmount() != null ? invoice.getDeductionAmount() : 0;
 
-            double deductionAmount = invoice.getDeductionAmount();
+        if (InvoiceType.ADVANCE.name().equals(invoice.getInvoiceType())) {
 
             if (deductionAmount > 0 && invoiceNewPaidAmount < deductionAmount) {
 
@@ -147,9 +152,9 @@ public class TransactionV1Service {
                 if (invoiceDeductions != null && !invoiceDeductions.isEmpty()) {
 
                     // amount decreased
-                    if (transactionPaidAmount > 0) {
+                    if (transactionNewPaidAmount > 0) {
 
-                        double remainingToRollback = transactionPaidAmount;
+                        double remainingToRollback = transactionNewPaidAmount;
 
                         List<Deductions> reversed = new ArrayList<>(invoiceDeductions);
 
@@ -187,9 +192,9 @@ public class TransactionV1Service {
                     }
 
                     // amount increased
-                    else if (transactionPaidAmount < 0) {
+                    else if (transactionNewPaidAmount < 0) {
 
-                        double allocationAmount = Math.abs(transactionPaidAmount);
+                        double allocationAmount = Math.abs(transactionNewPaidAmount);
 
                         final double[] tempAmount = {allocationAmount};
 
@@ -257,20 +262,20 @@ public class TransactionV1Service {
                 .mapToDouble(r -> r.getRedemptionAmount() != null ? r.getRedemptionAmount() : 0)
                 .sum();
 
-        double invoiceBalanceAmount = invoice.getPaidAmount() - invoice.getDeductionAmount() - redemptionAmount;
+        double invoiceBalanceAmount = invoiceNewPaidAmount - deductionAmount - redemptionAmount;
         if (invoiceBalanceAmount < 0){
             invoiceBalanceAmount = 0;
         }
 
         invoice.setBalanceAmount(invoiceBalanceAmount);
 
-        bank.setBalance(bank.getBalance() - transactionPaidAmount);
+        bank.setBalance(bank.getBalance() - transactionNewPaidAmount);
 
         double creditAmount = paymentSummary.getCreditAmount() != null ? paymentSummary.getCreditAmount() : 0;
         double balance = paymentSummary.getBalance() != null ? paymentSummary.getBalance() : 0;
 
-        paymentSummary.setCreditAmount(creditAmount - transactionPaidAmount);
-        paymentSummary.setBalance(balance + transactionPaidAmount);
+        paymentSummary.setCreditAmount(creditAmount - transactionNewPaidAmount);
+        paymentSummary.setBalance(balance + transactionNewPaidAmount);
 
         invoiceService.save(invoice);
         bankingService.save(bank);
