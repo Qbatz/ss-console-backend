@@ -37,6 +37,14 @@ public class SubscriptionController {
         return subscriptionService.getSubscriptions(page, size, hostelName, filterBy);
     }
 
+    @GetMapping("/trial")
+    public ResponseEntity<?> getTrials(@RequestParam(value = "page", defaultValue = "0") int page,
+                                       @RequestParam(value = "size", defaultValue = "10") int size,
+                                       @RequestParam(value = "hostelName", required = false) String hostelName,
+                                       @RequestParam(defaultValue = "ALL") String filterBy){
+        return subscriptionService.getTrials(page, size, hostelName, filterBy);
+    }
+
     @GetMapping("/trialDaysExtReason")
     public ResponseEntity<?> getTrialDaysExtReason(){
         return subscriptionService.getTrialDaysExtReason();

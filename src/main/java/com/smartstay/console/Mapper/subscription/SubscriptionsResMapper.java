@@ -6,6 +6,7 @@ import com.smartstay.console.dao.Subscription;
 import com.smartstay.console.responses.subscriptions.SubscriptionsResponse;
 import com.smartstay.console.utils.Utils;
 
+import java.util.Date;
 import java.util.function.Function;
 
 public class SubscriptionsResMapper implements Function<Subscription, SubscriptionsResponse> {
@@ -35,11 +36,14 @@ public class SubscriptionsResMapper implements Function<Subscription, Subscripti
             createdBy = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
         }
 
+        Date today = new Date();
+        boolean expired = Utils.compareWithTwoDates(subscription.getPlanEndsAt(), today) < 0;
+
         return new SubscriptionsResponse(subscription.getSubscriptionId(),
                 subscription.getSubscriptionNumber(), subscription.getOrderId(), subscription.getHostelId(),
                 hostelName, hostelInitials, subscription.getPlanCode(), subscription.getPlanName(),
                 Utils.dateToString(subscription.getPlanStartsAt()), Utils.dateToString(subscription.getPlanEndsAt()),
-                subscription.getPlanAmount(), subscription.getPaidAmount(), subscription.getDiscount(),
+                expired, subscription.getPlanAmount(), subscription.getPaidAmount(), subscription.getDiscount(),
                 subscription.getDiscountAmount(), subscription.getPaymentProof(), createdBy,
                 Utils.dateToString(subscription.getCreatedAt()), Utils.dateToTime(subscription.getCreatedAt()));
     }
