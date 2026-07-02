@@ -26,12 +26,14 @@ public class KycDetailsResMapper implements Function<KycDetails, KycDetailsRes> 
         String customerLastName = null;
         String customerMobile = null;
         String customerFullName = null;
+        String kycStatus = null;
         if (customer != null) {
             customerId = customer.getCustomerId();
             customerFirstName = customer.getFirstName();
             customerLastName = customer.getLastName();
             customerMobile = customer.getMobile();
             customerFullName = Utils.getFullName(customer.getFirstName(), customer.getLastName());
+            kycStatus = customer.getKycStatus();
         }
 
         String hostelId = null;
@@ -69,7 +71,7 @@ public class KycDetailsResMapper implements Function<KycDetails, KycDetailsRes> 
         }
 
         return new KycDetailsRes(kycDetails.getId(), customerId, customerFirstName, customerLastName,
-                customerFullName, customerMobile, hostelId, hostelName, hostelMobile, hostelInitials,
+                customerFullName, customerMobile, kycStatus, hostelId, hostelName, hostelMobile, hostelInitials,
                 hostelMainImage, kycDetails.getCurrentStatus(), expiringAtDate, expiringAtTime,
                 createdAtDate, createdAtTime, updatedAtDate, updatedAtTime);
     }
