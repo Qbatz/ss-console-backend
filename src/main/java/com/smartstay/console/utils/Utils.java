@@ -32,6 +32,7 @@ public class Utils {
     public static final String CREATED = "Created Successfully";
     public static final String UPDATED = "Updated Successfully";
     public static final String DELETED = "Deleted Successfully";
+    public static final String APPROVED = "Approved successfully";
 
     public static final String NO_CHANGES_DETECTED = "No changes detected";
     public static final String CANNOT_EDIT_YOURSELF = "Cannot edit yourself";
@@ -90,6 +91,7 @@ public class Utils {
     public static final String PRIORITY_NOT_FOUND = "Priority not found";
     public static final String RESET_DONE_NO_RECORDS_FOUND = "Reset completed, no records found";
     public static final String TRIAL_DAYS_REASON_NOT_FOUND = "Trial days reason not found";
+    public static final String KYC_DETAILS_NOT_FOUND = "Kyc details not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";

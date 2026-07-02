@@ -17,6 +17,7 @@ public interface KycDetailsRepository extends JpaRepository<KycDetails, Long> {
             from KycDetails kd
             where (:customerIds is null or kd.customers.customerId in :customerIds)
                 and kd.currentStatus = :status
+            order by kd.id desc
             """)
     Page<KycDetails> findPaginatedKycDetailsAndKycStatusIn(Set<String> customerIds,
                                                            String status,

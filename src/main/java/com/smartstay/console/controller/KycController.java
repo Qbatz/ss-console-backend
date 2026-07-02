@@ -24,4 +24,9 @@ public class KycController {
                                                           @RequestParam(value = "name", required = false) String name) {
         return kycDetailsService.getWaitingApprovalKycDetails(page, size, name);
     }
+
+    @PostMapping("/{customerId}")
+    public ResponseEntity<?> approveKycRequest(@PathVariable("customerId") String customerId){
+        return kycDetailsService.approveKycRequest(customerId);
+    }
 }

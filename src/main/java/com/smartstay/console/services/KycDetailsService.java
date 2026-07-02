@@ -6,23 +6,42 @@ import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.Customers;
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dao.KycDetails;
+import com.smartstay.console.dto.kycDetails.DigioKycResponse;
 import com.smartstay.console.ennum.KycStatus;
 import com.smartstay.console.repositories.KycDetailsRepository;
 import com.smartstay.console.responses.kycDetails.KycDetailsRes;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class KycDetailsService {
+
+    @Value("${DIGIO_URL}")
+    private String digioUrl;
+    @Value("${DIGIO_REQUEST_URL}")
+    private String digioRequestUrl;
+    @Value("${DIGIO_USERNAME}")
+    private String digioUserName;
+    @Value("${DIGIO_PASSWORD}")
+    private String digioPassword;
+
+    private final RestTemplate restTemplate;
+
+    public KycDetailsService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     @Autowired
     private KycDetailsRepository kycDetailsRepository;
@@ -110,5 +129,97 @@ public class KycDetailsService {
         response.put("totalPages", pagedKycDetails.getTotalPages());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> approveKycRequest(String customerId) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Customers customer = customersService.getCustomerInformation(customerId);
+        if (customer == null) {
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        KycDetails kycDetails = customer.getKycDetails();
+        if (kycDetails == null) {
+            return new ResponseEntity<>(Utils.KYC_DETAILS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!KycStatus.WAITING_FOR_APPROVAL.name().equalsIgnoreCase(kycDetails.getCurrentStatus())){
+            return new ResponseEntity<>("This tenant does not have an approval in waiting", HttpStatus.BAD_REQUEST);
+        }
+
+        String digioVerifyUrl = digioUrl + kycDetails.getEntityId() + "/response";
+        String digioApprovalRequestUrl = digioRequestUrl + kycDetails.getEntityId() + "/manage_approval";
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBasicAuth(digioUserName, digioPassword);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<String> request = new HttpEntity<>("{}", headers);
+
+            ResponseEntity<DigioKycResponse> response = restTemplate.exchange(
+                    digioVerifyUrl,
+                    HttpMethod.POST,
+                    request,
+                    DigioKycResponse.class
+            );
+
+            DigioKycResponse digioKycResponse = response.getBody();
+            if (digioKycResponse == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No response body found");
+            }
+
+            String status = digioKycResponse.status();
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                if (status != null){
+                    if (KycStatus.APPROVED.name().equalsIgnoreCase(status)) {
+                        kycDetails.setCurrentStatus(KycStatus.VERIFIED.name());
+                    } else {
+                        HttpHeaders approvalRequestHeaders = new HttpHeaders();
+                        approvalRequestHeaders.setBasicAuth(digioUserName, digioPassword);
+                        approvalRequestHeaders.setContentType(MediaType.APPLICATION_JSON);
+
+                        Map<String, String> approvalBody = new HashMap<>();
+                        approvalBody.put("status", "approved");
+
+                        HttpEntity<Map<String, String>> approvalRequest = new HttpEntity<>(approvalBody, headers);
+
+                        ResponseEntity<DigioKycResponse> approvalResponse = restTemplate.exchange(
+                                digioApprovalRequestUrl,
+                                HttpMethod.POST,
+                                approvalRequest,
+                                DigioKycResponse.class
+                        );
+
+                        DigioKycResponse approvalDigioKycResponse = approvalResponse.getBody();
+                        if (approvalDigioKycResponse == null) {
+                            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No response body found");
+                        }
+
+                        String approvalStatus = approvalDigioKycResponse.status();
+
+                        System.out.println(approvalStatus);
+                    }
+                } else {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No status found");
+                }
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid request");
+            }
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Server error");
+        }
+
+        return new ResponseEntity<>(Utils.APPROVED, HttpStatus.OK);
     }
 }
