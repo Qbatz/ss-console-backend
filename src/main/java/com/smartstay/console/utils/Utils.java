@@ -28,6 +28,7 @@ public class Utils {
 
     public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
     public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";
+    public static final String INPUT_DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
     public static final String CREATED = "Created Successfully";
     public static final String UPDATED = "Updated Successfully";
@@ -998,5 +999,17 @@ public class Utils {
         return Date.from(
                 localDateTime.atZone(ZoneId.systemDefault()).toInstant()
         );
+    }
+
+    public static Date stringDateToDate(String date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(INPUT_DATE_TIME_FORMAT);
+        LocalDateTime localDateTime = LocalDateTime.parse(date, formatter);
+
+        return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 }

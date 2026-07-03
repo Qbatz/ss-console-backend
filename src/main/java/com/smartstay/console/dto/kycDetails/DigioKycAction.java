@@ -16,6 +16,9 @@ public record DigioKycAction(String id,
                              @JsonProperty("execution_request_id")
                              String executionRequestId,
 
+                             @JsonProperty("completed_at")
+                             String completedAt,
+
                              DigioKycDetails details,
 
                              @JsonProperty("validation_result")
