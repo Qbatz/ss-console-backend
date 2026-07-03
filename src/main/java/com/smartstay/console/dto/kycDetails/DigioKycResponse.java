@@ -2,6 +2,8 @@ package com.smartstay.console.dto.kycDetails;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
+
 public record DigioKycResponse(String id,
 
                                @JsonProperty("updated_at")
@@ -14,6 +16,8 @@ public record DigioKycResponse(String id,
 
                                @JsonProperty("customer_identifier")
                                String customerIdentifier,
+
+                               List<DigioKycAction> actions,
 
                                @JsonProperty("reference_id")
                                String referenceId,

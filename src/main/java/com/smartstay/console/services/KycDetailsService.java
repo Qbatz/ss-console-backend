@@ -2,11 +2,8 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.kycDetails.KycDetailsResMapper;
 import com.smartstay.console.config.Authentication;
-import com.smartstay.console.dao.Agent;
-import com.smartstay.console.dao.Customers;
-import com.smartstay.console.dao.HostelV1;
-import com.smartstay.console.dao.KycDetails;
-import com.smartstay.console.dto.kycDetails.DigioKycResponse;
+import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.kycDetails.*;
 import com.smartstay.console.ennum.KycStatus;
 import com.smartstay.console.repositories.KycDetailsRepository;
 import com.smartstay.console.responses.kycDetails.KycDetailsRes;
@@ -184,6 +181,59 @@ public class KycDetailsService {
                 if (status != null){
                     if (KycStatus.APPROVED.name().equalsIgnoreCase(status)) {
                         kycDetails.setCurrentStatus(KycStatus.VERIFIED.name());
+//                        kycDetails.setAadhaarNumber();
+//                        kycDetails.setCompletedAt();
+//                        kycDetails.setDateOfBirth();
+//                        kycDetails.setDocumentType();
+//                        kycDetails.setGender();
+//                        kycDetails.setIdPic();
+//                        kycDetails.setNameInDocument();
+//                        kycDetails.setPermanentAddress();
+//                        kycDetails.setKycDocument();
+//                        kycDetails.setKycDocumentType();
+
+                        List<DigioKycAction> actions = digioKycResponse.actions() != null
+                                ? digioKycResponse.actions() : new ArrayList<>();
+
+                        if (!actions.isEmpty()) {
+                            DigioKycAction action = actions.getFirst();
+
+                            DigioKycDetails digioKycDetails = action != null ? action.details() : null;
+
+                            if (digioKycDetails != null) {
+                                DigioKycAadhaarDetails aadhaarDetails = digioKycDetails.aadhaarDetails();
+
+                                if (aadhaarDetails != null) {
+                                    DigioKycAddressDetails currentAddress = aadhaarDetails.currentAddressDetails();
+                                    DigioKycAddressDetails permanentAddress = aadhaarDetails.permanentAddress();
+
+                                    KycAddressDetails kycAddressDetails = kycDetails.getAddressDetails();
+                                    if (kycAddressDetails == null) {
+                                        kycAddressDetails = new KycAddressDetails();
+                                    }
+
+                                    if (currentAddress != null) {
+                                        kycAddressDetails.setCurrentCity(currentAddress.districtOrCity());
+                                        kycAddressDetails.setCurrentAddress(currentAddress.address());
+                                        kycAddressDetails.setCurrentLocality(currentAddress.localityOrPostOffice());
+                                        kycAddressDetails.setCurrentPincode(currentAddress.pincode());
+                                        kycAddressDetails.setCurrentState(currentAddress.state());
+                                    }
+
+                                    if (permanentAddress != null) {
+                                        kycAddressDetails.setPermanentCity(permanentAddress.districtOrCity());
+                                        kycAddressDetails.setPermanentAddress(permanentAddress.address());
+                                        kycAddressDetails.setPermanentLocality(permanentAddress.localityOrPostOffice());
+                                        kycAddressDetails.setPermanentPincode(permanentAddress.pincode());
+                                        kycAddressDetails.setPermanentState(permanentAddress.state());
+                                    }
+
+                                    kycAddressDetails.setKycDetails(kycDetails);
+                                }
+                            }
+                        }
+
+                        kycDetailsRepository.save(kycDetails);
                     } else {
                         HttpHeaders approvalRequestHeaders = new HttpHeaders();
                         approvalRequestHeaders.setBasicAuth(digioUserName, digioPassword);

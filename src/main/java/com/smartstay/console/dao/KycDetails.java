@@ -25,6 +25,8 @@ public class KycDetails {
     private Date createdAt;
     private Date completedAt;
     private String aadhaarNumber;
+    private String kycDocument;
+    private String kycDocumentType;
     private String documentType;
     private String gender;
     private String idPic;
