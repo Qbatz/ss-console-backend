@@ -5,6 +5,7 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.dto.transaction.TransactionSnapshot;
 import com.smartstay.console.ennum.*;
+import com.smartstay.console.payloads.customers.CustomerMobilePayload;
 import com.smartstay.console.repositories.TransactionV1Repository;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
@@ -67,7 +68,7 @@ public class TransactionV1Service {
         return transactionV1Repository.findByInvoiceId(invoiceId);
     }
 
-    public ResponseEntity<?> deleteTransactionById(String transactionId) {
+    public ResponseEntity<?> deleteTransactionById(String transactionId, CustomerMobilePayload payload) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -108,6 +109,10 @@ public class TransactionV1Service {
         Customers customer = customersService.getCustomerInformation(transaction.getCustomerId());
         if (customer == null){
             return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!customer.getMobile().equals(payload.tenantMobile())){
+            return new ResponseEntity<>(Utils.TENANT_MOBILE_MISMATCH, HttpStatus.BAD_REQUEST);
         }
 
         PaymentSummary paymentSummary = paymentSummaryService.getSummaryByCustomerId(transaction.getCustomerId());
