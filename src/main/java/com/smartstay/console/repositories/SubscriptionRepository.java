@@ -100,10 +100,31 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
                  WHERE s3.hostelId = s.hostelId
                    AND s3.planStartsAt = s.planStartsAt
              )
-           ORDER BY s.createdAt DESC
+             AND (
+                 :isActive IS NULL
+                 OR (
+                     :isActive = TRUE
+                     AND s.planEndsAt IS NOT NULL
+                     AND s.planEndsAt >= CURRENT_DATE
+                 )
+                 OR (
+                     :isActive = FALSE
+                     AND (
+                         s.planEndsAt IS NULL
+                         OR s.planEndsAt < CURRENT_DATE
+                     )
+                 )
+             )
+           ORDER BY
+             CASE
+                 WHEN s.planEndsAt IS NOT NULL AND s.planEndsAt >= CURRENT_DATE THEN 0
+                 ELSE 1
+             END,
+             s.createdAt DESC
            """)
     Page<Subscription> findLatestByHostelIdInAndPlanCodeIn(Set<String> hostelIds,
                                                            Set<String> planCodes,
+                                                           Boolean isActive,
                                                            Pageable pageable);
 
     @Query("""

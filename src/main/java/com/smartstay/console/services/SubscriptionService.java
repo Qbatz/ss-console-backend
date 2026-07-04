@@ -400,7 +400,8 @@ public class SubscriptionService {
         return subscriptionRepository.findAllByHostelIdIn(hostelIds);
     }
 
-    public ResponseEntity<?> getSubscriptions(int page, int size, String hostelName, String filterBy) {
+    public ResponseEntity<?> getSubscriptions(int page, int size, String hostelName,
+                                              String filterBy, Boolean isActive) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -546,7 +547,7 @@ public class SubscriptionService {
         }
 
         pagedSubscriptions = subscriptionRepository
-                .findLatestByHostelIdInAndPlanCodeIn(targetHostelIds, planCodes, pageable);
+                .findLatestByHostelIdInAndPlanCodeIn(targetHostelIds, planCodes, isActive, pageable);
 
         subscriptions = pagedSubscriptions.getContent();
 
@@ -611,7 +612,8 @@ public class SubscriptionService {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    public ResponseEntity<?> getTrials(int page, int size, String hostelName, String filterBy) {
+    public ResponseEntity<?> getTrials(int page, int size, String hostelName,
+                                       String filterBy, Boolean isActive) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Constants.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -752,7 +754,7 @@ public class SubscriptionService {
         }
 
         pagedSubscriptions = subscriptionRepository
-                .findLatestByHostelIdInAndPlanCodeIn(targetHostelIds, planCodes, pageable);
+                .findLatestByHostelIdInAndPlanCodeIn(targetHostelIds, planCodes, isActive, pageable);
 
         subscriptions = pagedSubscriptions.getContent();
 
