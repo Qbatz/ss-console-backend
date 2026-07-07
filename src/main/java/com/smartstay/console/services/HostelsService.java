@@ -580,7 +580,7 @@ public class HostelsService {
                 .map(invoice -> {
                     Customers tenant = customersMap.getOrDefault(invoice.getCustomerId(), null);
                     Users createdByUser = userLookup.getOrDefault(invoice.getCreatedBy(), null);
-                    Users updatedByUser = userLookup.getOrDefault(invoice.getCreatedBy(), null);
+                    Users updatedByUser = userLookup.getOrDefault(invoice.getUpdatedBy(), null);
                     return new InvoiceResponseMapper(tenant, createdByUser, updatedByUser).apply(invoice);
                 }).toList();
 

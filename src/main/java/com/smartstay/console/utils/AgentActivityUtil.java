@@ -121,6 +121,7 @@ public class AgentActivityUtil {
             case RESET_USER_PIN -> "User pin has been reset";
             case INVOICE_REDEMPTION -> "Updated an invoice redemption";
             case SUPPORT_TICKET -> "Updated a support ticket";
+            case INVOICE -> "Updated an invoice";
             default -> "Updated successfully";
         };
     }
@@ -153,6 +154,7 @@ public class AgentActivityUtil {
             case OWNERS -> "Deleted an owner";
             case INVOICE_REDEMPTION -> "Deleted an invoice redemption";
             case DEMO_REQUEST -> "Deleted a demo request";
+            case TRANSACTION -> "Deleted a transaction";
             default -> "Deleted successfully";
         };
     }

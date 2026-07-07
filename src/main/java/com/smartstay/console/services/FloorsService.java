@@ -11,7 +11,7 @@ import java.util.List;
 public class FloorsService {
 
     @Autowired
-    FloorsRepository floorsRepository;
+    private FloorsRepository floorsRepository;
 
     public int getCountByHostelId(String hostelId){
         return floorsRepository.countByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
@@ -23,5 +23,9 @@ public class FloorsService {
 
     public List<Floors> findByHostelId(String hostelId) {
         return floorsRepository.findAllByHostelId(hostelId);
+    }
+
+    public Floors getByFloorId(int floorId) {
+        return floorsRepository.findByFloorIdAndIsActiveTrueAndIsDeletedFalse(floorId);
     }
 }

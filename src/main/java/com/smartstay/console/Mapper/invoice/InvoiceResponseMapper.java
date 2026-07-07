@@ -4,6 +4,8 @@ import com.smartstay.console.dao.Customers;
 import com.smartstay.console.dao.InvoiceItems;
 import com.smartstay.console.dao.InvoicesV1;
 import com.smartstay.console.dao.Users;
+import com.smartstay.console.ennum.InvoiceType;
+import com.smartstay.console.ennum.PaymentStatus;
 import com.smartstay.console.responses.invoice.InvoiceItemsResponse;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
 import com.smartstay.console.utils.Utils;
@@ -50,6 +52,17 @@ public class InvoiceResponseMapper implements Function<InvoicesV1, InvoiceRespon
                         invoiceItem.getInvoiceItem(), invoiceItem.getOtherItem()))
                 .toList();
 
+        boolean canShowReceipts = false;
+        if (InvoiceType.ADVANCE.name().equals(invoice.getInvoiceType()) &&
+                PaymentStatus.PAID.name().equals(invoice.getPaymentStatus())){
+            canShowReceipts = true;
+        }
+
+        boolean canUpdateAmount = false;
+        if (InvoiceType.ADVANCE.name().equals(invoice.getInvoiceType())){
+            canUpdateAmount = true;
+        }
+
         return new InvoiceResponse(invoice.getInvoiceId(), invoice.getCustomerId(), tenantName,
                 invoice.getInvoiceNumber(), invoice.getCustomerMobile(), invoice.getCustomerMailId(),
                 invoice.getInvoiceType(), invoice.getPaymentStatus(), invoice.getOthersDescription(),
@@ -57,6 +70,10 @@ public class InvoiceResponseMapper implements Function<InvoicesV1, InvoiceRespon
                 invoice.isDiscounted(), Utils.dateToString(invoice.getInvoiceGeneratedDate()),
                 Utils.dateToTime(invoice.getInvoiceGeneratedDate()), Utils.dateToString(invoice.getCancelledDate()),
                 Utils.dateToTime(invoice.getCancelledDate()), Utils.dateToString(invoice.getInvoiceDueDate()),
+                invoice.getInvoiceType(), invoice.getPaymentStatus(), canShowReceipts, canUpdateAmount,
+                invoice.getOthersDescription(), invoice.getInvoiceMode(), invoice.getInvoiceUrl(),
+                invoice.isCancelled(), invoice.isDiscounted(), Utils.dateToString(invoice.getInvoiceGeneratedDate()),
+                Utils.dateToTime(invoice.getInvoiceGeneratedDate()), Utils.dateToString(invoice.getInvoiceDueDate()),
                 Utils.dateToTime(invoice.getInvoiceDueDate()), Utils.dateToString(invoice.getInvoiceStartDate()),
                 Utils.dateToTime(invoice.getInvoiceStartDate()), Utils.dateToString(invoice.getInvoiceEndDate()),
                 Utils.dateToTime(invoice.getInvoiceEndDate()), createdBy, updatedBy,
