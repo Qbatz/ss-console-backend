@@ -15,6 +15,7 @@ import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
+import com.smartstay.console.dto.settlementDetails.SettlementDetailsSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketActivitySnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketNotesSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketSnapshot;
@@ -768,6 +769,21 @@ public class SnapshotUtility {
                 t.getReferenceNumber(),
                 copyDate(t.getPaidAt()),
                 t.getUpdatedBy()
+        );
+    }
+
+    public static SettlementDetailsSnapshot toSnapshot(SettlementDetails s) {
+
+        if (s == null) return null;
+
+        return new SettlementDetailsSnapshot(
+                s.getId(),
+                s.getCustomerId(),
+                copyDate(s.getLeavingDate()),
+                copyDate(s.getCreatedAt()),
+                copyDate(s.getUpdatedAt()),
+                s.getCreatedBy(),
+                s.getUpdatedBy()
         );
     }
 

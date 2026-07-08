@@ -1,5 +1,6 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.customers.CustomerDatePayload;
 import com.smartstay.console.payloads.customers.CustomerResetPayload;
 import com.smartstay.console.services.CustomersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -55,5 +56,11 @@ public class CustomersController {
     @GetMapping("/deductions")
     public ResponseEntity<?> getCustomersWithPendingAdvanceDeductions(){
         return customersService.getCustomersWithPendingAdvanceDeductions();
+    }
+
+    @GetMapping("/settlement-info/{customerId}")
+    public ResponseEntity<?> getCustomerSettlementInfo(@PathVariable("customerId") String customerId,
+                                                       @Valid @RequestBody CustomerDatePayload payload){
+        return customersService.getCustomerSettlementInfo(customerId, payload);
     }
 }

@@ -1120,4 +1120,8 @@ public class InvoiceV1Service {
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
+
+    public List<InvoicesV1> getInvoicesByCustomerIdAndInvoiceType(String customerId, String invoiceType){
+        return invoiceV1Repository.findByCustomerIdAndInvoiceType(customerId, invoiceType);
+    }
 }

@@ -10,7 +10,10 @@ import com.smartstay.console.dto.customers.CustomerResetSnapshot;
 import com.smartstay.console.dto.customers.CustomersCredentialsSnapshot;
 import com.smartstay.console.dto.customers.CustomersSnapshot;
 import com.smartstay.console.dto.customers.Deductions;
+import com.smartstay.console.dto.hostel.BillingDates;
+import com.smartstay.console.dto.settlementDetails.SettlementDetailsSnapshot;
 import com.smartstay.console.ennum.*;
+import com.smartstay.console.payloads.customers.CustomerDatePayload;
 import com.smartstay.console.payloads.customers.CustomerResetPayload;
 import com.smartstay.console.repositories.CustomersRepository;
 import com.smartstay.console.responses.customers.*;
@@ -110,6 +113,10 @@ public class CustomersService {
     private RoomsService roomsService;
     @Autowired
     private BedsService bedService;
+    @Autowired
+    private BillingRulesService billingRulesService;
+    @Autowired
+    private ElectricityReadingsService electricityReadingsService;
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
@@ -903,5 +910,598 @@ public class CustomersService {
                 hostelDetails, invoiceResponses, transactionResponses, invoiceRedemptionRes);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getCustomerSettlementInfo(String customerId, CustomerDatePayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Customers customer = customersRepository.findByCustomerId(customerId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        HostelV1 hostel = hostelService.getHostelByHostelId(customer.getHostelId());
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        BookingsV1 booking = bookingsService.getBookingInfoByCustomerId(customerId);
+        if (booking == null){
+            return new ResponseEntity<>(Utils.BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (CustomerStatus.NOTICE.name().equals(customer.getCurrentStatus())){
+            return new ResponseEntity<>("Customer is not in notice", HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        Date leavingDate = today;
+        if (payload.date() != null){
+            leavingDate = Utils.localDateToDate(payload.date());
+        }
+
+        if (Utils.compareWithTwoDates(leavingDate, today) > 0) {
+            return new ResponseEntity<>("Future leaving date is not allowed", HttpStatus.BAD_REQUEST);
+        }
+
+        if (booking.getNoticeDate() != null) {
+            if (Utils.compareWithTwoDates(booking.getNoticeDate(), leavingDate) > 0) {
+                return new ResponseEntity<>("Leaving date must be after notice date", HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        BillingRules billingRule = billingRulesService.getCurrentMonthTemplate(customer.getHostelId());
+
+        BillingDates billingDates = null;
+        if (BillingType.FIXED_DATE.name().equals(billingRule.getTypeOfBilling())){
+            billingDates = billingRulesService.computeBillingDatesWithBillingModel(billingRule, today);
+        } else if (BillingType.JOINING_DATE_BASED.name().equals(billingRule.getTypeOfBilling())) {
+            if (customer.getJoiningDate() == null){
+                return new ResponseEntity<>("Joining date not found", HttpStatus.BAD_REQUEST);
+            }
+            billingDates = billingRulesService
+                    .computeJoiningBillingDatesWithBillingModel(billingRule, customer.getJoiningDate(), today);
+        }
+
+        if (billingDates == null){
+            return new ResponseEntity<>("Billing dates not found", HttpStatus.BAD_REQUEST);
+        }
+
+        if (Utils.compareWithTwoDates(leavingDate, billingDates.currentBillStartDate()) < 0) {
+            return new ResponseEntity<>("Settlement can not be generated for older billing cycles", HttpStatus.BAD_REQUEST);
+        }
+
+        CustomersBedHistory latestBedHistory = customerBedHistoryService
+                .getLatestBedHistoryByCustomerId(customerId);
+        if (latestBedHistory == null){
+            return new ResponseEntity<>("Customer bed history not found", HttpStatus.BAD_REQUEST);
+        } else {
+            if (Utils.compareWithTwoDates(latestBedHistory.getStartDate(), leavingDate) > 0) {
+                return new ResponseEntity<>("Leaving date must be after joining date", HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        CustomerSettlementInfoRes response = null;
+
+        if (BillingType.FIXED_DATE.name().equals(billingRule.getTypeOfBilling())){
+            if (BillingModel.PREPAID.name().equals(billingRule.getBillingModel())){
+                if (Utils.compareWithTwoDates(latestBedHistory.getStartDate(), billingDates.currentBillStartDate()) > 0) {
+                    response = buildFixedDateBasedPrepaidBedChangeSettlementInfo();
+                } else {
+                    response = buildFixedDateBasedPrepaidSettlementInfo();
+                }
+            } else if (BillingModel.POSTPAID.name().equals(billingRule.getBillingModel())) {
+                response = buildFixedDateBasedPostpaidSettlementInfo();
+            }
+        } else if (BillingType.JOINING_DATE_BASED.name().equals(billingRule.getTypeOfBilling())) {
+            if (BillingModel.PREPAID.name().equals(billingRule.getBillingModel())){
+                response = buildJoiningBasedPrepaidSettlementInfo(customer, booking,
+                        leavingDate, hostel);
+            } else if (BillingModel.POSTPAID.name().equals(billingRule.getBillingModel())) {
+                //Joining based does not have postpaid yet
+            }
+        }
+
+        if (response != null){
+            SettlementDetails settlementDetails = settlementDetailsService
+                    .addSettlementForCustomer(customerId, leavingDate);
+
+            SettlementDetailsSnapshot snapshot = SnapshotUtility.toSnapshot(settlementDetails);
+
+            agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.SETTLEMENT_DETAILS,
+                    String.valueOf(settlementDetails.getId()), null, snapshot);
+        }
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private CustomerSettlementInfoRes buildJoiningBasedPrepaidSettlementInfo(Customers customer,
+                                                                             BookingsV1 booking,
+                                                                             Date leavingDate,
+                                                                             HostelV1 hostel) {
+
+        String customerId = customer.getCustomerId();
+        String hostelId = customer.getHostelId();
+        boolean isBookingOrAdvancePaid = false;
+        double totalBookingAndAdvancePaidAmount = 0.0;
+        double bookingInvoicePaidAmount = 0.0;
+        double totalDeductionAmount = 0.0;
+        double paidDeductionAmount = 0.0;
+        double pendingDeductionAmount = 0.0;
+        double availableBookingAmountToRedeem = 0.0;
+        double availableAdvanceAmountToRedeem = 0.0;
+        double availableAmountToRedeem = 0.0;
+        double advanceAmountRedeemedFromBookingInvoice = 0.0;
+
+        InvoicesV1 bookingInvoice = invoiceV1Service
+                .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.BOOKING.name())
+                .getFirst();
+
+        InvoicesV1 advanceInvoice = invoiceV1Service
+                .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.ADVANCE.name())
+                .getFirst();
+
+        CustomerDeductionsInfoRes deductionsInfoRes = null;
+
+        if (bookingInvoice != null) {
+            if (bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
+                    bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                if (bookingInvoice.getPaidAmount() != null) {
+                    isBookingOrAdvancePaid = true;
+                    bookingInvoicePaidAmount = bookingInvoice.getPaidAmount();
+                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount + bookingInvoice.getPaidAmount();
+                }
+                if (bookingInvoice.getBalanceAmount() != null) {
+                    availableBookingAmountToRedeem = bookingInvoice.getBalanceAmount();
+                    availableAmountToRedeem = availableAmountToRedeem + bookingInvoice.getBalanceAmount();
+                }
+            }
+        }
+
+        if (advanceInvoice != null) {
+            advanceAmountRedeemedFromBookingInvoice = invoiceRedemptionService
+                    .getInvoiceRedemptionByTargetInvoiceId(advanceInvoice.getInvoiceId())
+                    .stream()
+                    .mapToDouble(redemption ->
+                            redemption.getRedemptionAmount() != null
+                                    ? redemption.getRedemptionAmount() : 0)
+                    .sum();
+
+            if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
+                    advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                if (advanceInvoice.getPaidAmount() != null) {
+                    isBookingOrAdvancePaid = true;
+                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount + advanceInvoice.getPaidAmount();
+                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount - advanceAmountRedeemedFromBookingInvoice;
+                }
+                if (advanceInvoice.getBalanceAmount() != null) {
+                    availableAdvanceAmountToRedeem = advanceInvoice.getBalanceAmount();
+                    availableAmountToRedeem = availableAmountToRedeem + advanceInvoice.getBalanceAmount();
+                }
+            }
+
+            if (advanceInvoice.getDeductions() != null &&
+                    advanceInvoice.getDeductionAmount() != null &&
+                    advanceInvoice.getDeductionAmount() > 0) {
+
+                List<Deductions> deductions = advanceInvoice.getDeductions();
+
+                if (!deductions.isEmpty()) {
+
+                    List<DeductionsInfoRes> deductionsInfo = deductions.stream()
+                            .filter(i -> i.getPaidAmount() == null ||
+                                    i.getPaidAmount() < i.getAmount())
+                            .map(i -> {
+                                double pendingAmount = 0.0;
+                                if (i.getPaidAmount() != null) {
+                                    pendingAmount = i.getAmount() - i.getPaidAmount();
+                                }
+                                return new DeductionsInfoRes(i.getType(), i.getAmount(),
+                                        i.getPaidAmount(), pendingAmount);
+                            }).toList();
+
+                    totalDeductionAmount = deductions.stream().mapToDouble(Deductions::getAmount).sum();
+                    paidDeductionAmount = deductions.stream().mapToDouble(Deductions::getPaidAmount).sum();
+                    pendingDeductionAmount = totalDeductionAmount - paidDeductionAmount;
+
+                    deductionsInfoRes = new CustomerDeductionsInfoRes(totalDeductionAmount, paidDeductionAmount,
+                            pendingDeductionAmount, deductionsInfo);
+                }
+            }
+        }
+
+        double customerAdvanceAmount = 0;
+        Advance advance = customer.getAdvance();
+        if (advance != null) {
+            customerAdvanceAmount = advance.getAdvanceAmount();
+        }
+
+        String joiningDate = null;
+        double bookingRentAmount = 0.0;
+        if (booking != null){
+            if (booking.getJoiningDate() != null){
+                joiningDate = Utils.dateToString(booking.getJoiningDate());
+            }
+            if (booking.getRentAmount() != null){
+                bookingRentAmount = booking.getRentAmount();
+            }
+        }
+
+        AvailableRedemptionAmountRes availableRedemptionAmountRes = new AvailableRedemptionAmountRes(
+                availableBookingAmountToRedeem, availableAdvanceAmountToRedeem, availableAmountToRedeem);
+
+        CustomerInfoRes customerInfoRes = new CustomerInfoRes(customerId, customer.getFirstName(), customer.getLastName(),
+                Utils.getFullName(customer.getFirstName(), customer.getLastName()), customer.getProfilePic(),
+                Utils.getInitials(customer.getFirstName(), customer.getLastName()), "91", customer.getMobile(),
+                joiningDate, customerAdvanceAmount, bookingRentAmount, isBookingOrAdvancePaid, totalBookingAndAdvancePaidAmount,
+                bookingInvoicePaidAmount, availableRedemptionAmountRes);
+
+        String bookedDate = null;
+        String noticeDate = null;
+        String requestedLeavingDate = null;
+        String actualLeavingDate = Utils.dateToString(leavingDate);
+
+        if (booking != null){
+            bookedDate = Utils.dateToString(booking.getBookingDate());
+            noticeDate = Utils.dateToString(booking.getNoticeDate());
+            requestedLeavingDate = Utils.dateToString(booking.getLeavingDate());
+        }
+
+        CustomerStayInfoRes customerStayInfoRes = new CustomerStayInfoRes(bookedDate, noticeDate,
+                requestedLeavingDate, actualLeavingDate);
+
+        ElectricityConfig ebConfig;
+        if (hostel != null){
+            ebConfig = hostel.getElectricityConfig();
+        } else {
+            ebConfig = null;
+        }
+
+        CustomerEbInfoRes customerEbInfoRes = null;
+        if (ebConfig != null){
+
+            List<MissedEbRoomsRes> allMissedEbRoomsRes = new ArrayList<>();
+            List<PendingEbRes> allPendingEbRes = new ArrayList<>();
+
+            if (EBReadingType.ROOM_READING.name().equals(ebConfig.getTypeOfReading())){
+
+                List<ElectricityReadings> allPendingEbReadings = new ArrayList<>();
+
+                List<CustomersBedHistory> customersBedHistories = customerBedHistoryService
+                        .findByHostelIdAndCustomerId(hostelId, customerId);
+
+                Set<Integer> floorIds = customersBedHistories
+                        .stream()
+                        .map(CustomersBedHistory::getFloorId)
+                        .collect(Collectors.toSet());
+
+                List<Floors> floors = floorsService.getByFloorIds(floorIds);
+
+                Map<Integer, Floors> floorsMap = floors.stream()
+                        .collect(Collectors.toMap(Floors::getFloorId,
+                                floor -> floor));
+
+                Set<Integer> roomIds = customersBedHistories
+                        .stream()
+                        .map(CustomersBedHistory::getRoomId)
+                        .collect(Collectors.toSet());
+
+                List<Rooms> rooms = roomsService
+                        .getRoomsByRoomIds(roomIds);
+
+                Map<Integer, Rooms> roomsMap = rooms.stream()
+                        .collect(Collectors.toMap(Rooms::getRoomId,
+                                Function.identity()));
+
+                Set<Integer> bedIds = customersBedHistories
+                        .stream()
+                        .map(CustomersBedHistory::getBedId)
+                        .collect(Collectors.toSet());
+
+                List<Beds> beds = bedsService
+                        .getBedsByBedIds(bedIds);
+
+                Map<Integer, Beds> bedsMap = beds.stream()
+                        .collect(Collectors.toMap(Beds::getBedId,
+                                Function.identity()));
+
+                List<ElectricityReadings> latestReadingOfRooms = electricityReadingsService
+                        .getLatestEntriesByHostelIdAndRoomIds(hostelId, roomIds);
+
+                customersBedHistories.forEach(item -> {
+
+                    Date endDate = item.getEndDate();
+                    if (item.getEndDate() == null) {
+                        endDate = leavingDate;
+                    }
+
+                    List<ElectricityReadings> pendingEbReadings = electricityReadingsService
+                            .getPendingReadingsBetweenDates(hostelId, item.getRoomId(),
+                                    item.getStartDate(), endDate);
+
+                    if (pendingEbReadings != null && !pendingEbReadings.isEmpty()) {
+                        allPendingEbReadings.addAll(pendingEbReadings);
+                    }
+                });
+
+                if (!allPendingEbReadings.isEmpty()){
+                    Set<Integer> allPendingEbReadingsIds = allPendingEbReadings.stream()
+                            .map(ElectricityReadings::getId)
+                            .collect(Collectors.toSet());
+
+                    List<CustomersEbHistory> pendingCustomersEbHistories = customerEbHistoryService
+                            .getAllByCustomerIdAndReadingId(customerId, new ArrayList<>(allPendingEbReadingsIds));
+
+                    if (!pendingCustomersEbHistories.isEmpty()){
+                        // Already calculated entries from CustomerEbHistory
+                        List<PendingEbRes> ebHistoryResponses = buildPendingEbResponseByEbHistory(pendingCustomersEbHistories,
+                                customersBedHistories, floorsMap, roomsMap, leavingDate);
+
+                        allPendingEbRes.addAll(ebHistoryResponses);
+
+                        // Find pending readings which are NOT present in CustomerEbHistory
+                        Set<Integer> processedReadingIds = pendingCustomersEbHistories.stream()
+                                .map(CustomersEbHistory::getReadingId)
+                                .collect(Collectors.toSet());
+
+                        List<ElectricityReadings> readingsToCalculate = allPendingEbReadings.stream()
+                                .filter(reading -> !processedReadingIds.contains(reading.getId()))
+                                .toList();
+
+                        if (!readingsToCalculate.isEmpty()) {
+                           buildPendingEbResponse(readingsToCalculate, allPendingEbRes,
+                                    floorsMap, roomsMap, customerId, leavingDate, ebConfig);
+                        }
+
+                        buildMissedEbRoomResponse(customersBedHistories, allMissedEbRoomsRes,
+                                latestReadingOfRooms, floorsMap, roomsMap, bedsMap, leavingDate);
+                    } else {
+                        buildPendingEbResponse(allPendingEbReadings, allPendingEbRes,
+                                floorsMap, roomsMap, customerId, leavingDate, ebConfig);
+
+                        buildMissedEbRoomResponse(customersBedHistories, allMissedEbRoomsRes,
+                                latestReadingOfRooms, floorsMap, roomsMap, bedsMap, leavingDate);
+                    }
+                } else {
+                    buildMissedEbRoomResponse(customersBedHistories, allMissedEbRoomsRes,
+                            latestReadingOfRooms, floorsMap, roomsMap, bedsMap, leavingDate);
+                }
+
+            } else if (EBReadingType.FLAT_RATE.name().equals(ebConfig.getTypeOfReading())) {
+                return null;
+            } else if (EBReadingType.HOSTEL_READING.name().equals(ebConfig.getTypeOfReading())) {
+                return null;
+            } else {
+                return null;
+            }
+
+            double pendingEbAmount = 0.0;
+            if (!allPendingEbRes.isEmpty()) {
+                pendingEbAmount = allPendingEbRes.stream()
+                        .mapToDouble(PendingEbRes::amount)
+                        .sum();
+            }
+
+            customerEbInfoRes = new CustomerEbInfoRes(0.0, ebConfig.getCharge(), "NA",
+                    ebConfig.getTypeOfReading(), pendingEbAmount, false, true,
+                    allMissedEbRoomsRes, allPendingEbRes);
+        }
+
+        List<UnpaidInvoicesInfoRes> unpaidInvoicesInfoRes = new ArrayList<>();
+
+        CustomerRentInfoRes customerRentInfoRes = new CustomerRentInfoRes();
+
+        CustomerWalletInfoRes customerWalletInfoRes = new CustomerWalletInfoRes();
+
+        CustomerBookingInfoRes customerBookingInfoRes = new CustomerBookingInfoRes();
+
+        CustomerAdvanceInfoRes customerAdvanceInfoRes = new CustomerAdvanceInfoRes();
+
+        double totalRefundableAdvance = 0.0;
+        if (isBookingOrAdvancePaid) {
+            totalRefundableAdvance = availableAmountToRedeem;
+        }
+
+        CustomerFinalSettlementInfoRes finalSettlementInfoRes = new CustomerFinalSettlementInfoRes(0.0,
+                pendingDeductionAmount, 0.0, 0.0, totalRefundableAdvance, 0.0,
+                0.0, false, "", 0.0);
+
+        return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
+                unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
+                customerAdvanceInfoRes, deductionsInfoRes, finalSettlementInfoRes);
+    }
+
+    private List<PendingEbRes> buildPendingEbResponseByEbHistory(List<CustomersEbHistory> pendingCustomersEbHistories,
+                                                                 List<CustomersBedHistory> customersBedHistories,
+                                                                 Map<Integer, Floors> floorsMap, Map<Integer, Rooms> roomsMap,
+                                                                 Date leavingDate) {
+
+        if (pendingCustomersEbHistories == null || pendingCustomersEbHistories.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return pendingCustomersEbHistories.stream()
+                .map(ebHistory -> {
+
+                    String floorName = null;
+                    String roomName = null;
+
+                    Floors floor = floorsMap.getOrDefault(ebHistory.getFloorId(), null);
+                    Rooms room = roomsMap.getOrDefault(ebHistory.getRoomId(), null);
+
+                    floorName = floor != null ? floor.getFloorName() : null;
+                    roomName = room != null ? room.getRoomName() : null;
+
+                    Date startDate = ebHistory.getStartDate();
+                    Date endDate = ebHistory.getEndDate();
+
+                    if (customersBedHistories != null && !customersBedHistories.isEmpty()) {
+                        CustomersBedHistory cbh = customersBedHistories
+                                .stream()
+                                .filter(i -> ebHistory.getRoomId().equals(i.getRoomId()))
+                                .findFirst()
+                                .orElse(null);
+                        if (cbh != null) {
+                            if (leavingDate != null) {
+                                if (Utils.compareWithTwoDates(leavingDate, ebHistory.getEndDate()) < 0) {
+                                    endDate = leavingDate;
+                                }
+                            }
+                        }
+
+                    }
+
+                    return new PendingEbRes(ebHistory.getFloorId(),
+                            floorName, ebHistory.getRoomId(), roomName, Utils.roundOfDoubleTo2Digits(ebHistory.getUnits()),
+                            Utils.roundOfDoubleTo2Digits(ebHistory.getAmount()), Utils.dateToString(startDate),
+                            Utils.dateToString(endDate));
+                }).toList();
+    }
+
+    private void buildPendingEbResponse(List<ElectricityReadings> allPendingEbReadings,
+                                        List<PendingEbRes> allPendingEbRes,
+                                        Map<Integer, Floors> floorsMap, Map<Integer, Rooms> roomsMap,
+                                        String customerId, Date leavingDate, ElectricityConfig ebConfig) {
+
+        allPendingEbReadings.forEach(item -> {
+
+            String floorName = null;
+            String roomName = null;
+
+            Floors floor = floorsMap.getOrDefault(item.getFloorId(), null);
+            Rooms room = roomsMap.getOrDefault(item.getRoomId(), null);
+
+            floorName = floor != null ? floor.getFloorName() : null;
+            roomName = room != null ? room.getRoomName() : null;
+
+            Date finalBillStartDate = item.getBillStartDate();
+            Date finalBillEndDate = item.getBillEndDate();
+            long totalPersonDays = 0;
+
+            List<CustomersBedHistory> customersInRoomBedHistoryBetweenDates = customerBedHistoryService
+                    .getBedHistoryByRoomIdAndBetweenDates(item.getRoomId(), item.getBillStartDate(),
+                            item.getBillEndDate());
+
+            if (!customersInRoomBedHistoryBetweenDates.isEmpty()) {
+                for (CustomersBedHistory history : customersInRoomBedHistoryBetweenDates) {
+
+                    // Customer occupied period for this room
+                    Date historyStart = history.getStartDate();
+                    Date historyEnd = history.getEndDate() == null ? leavingDate : history.getEndDate();
+
+                    // Overlap with bill period
+                    Date overlapStart = Utils.compareWithTwoDates(historyStart, item.getBillStartDate()) > 0
+                            ? historyStart
+                            : item.getBillStartDate();
+
+                    Date overlapEnd = Utils.compareWithTwoDates(historyEnd, item.getBillEndDate()) < 0
+                            ? historyEnd
+                            : item.getBillEndDate();
+
+                    if (Utils.compareWithTwoDates(overlapStart, overlapEnd) <= 0) {
+
+                        totalPersonDays += Utils.findNumberOfDays(overlapStart, overlapEnd);
+
+                        if (history.getCustomerId().equals(customerId)) {
+                            // Update final output period
+                            if (Utils.compareWithTwoDates(overlapStart, finalBillStartDate) > 0) {
+                                finalBillStartDate = overlapStart;
+                            }
+
+                            if (Utils.compareWithTwoDates(overlapEnd, finalBillEndDate) < 0) {
+                                finalBillEndDate = overlapEnd;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (totalPersonDays <= 0){
+                totalPersonDays = 1;
+            }
+            double unitsPerPersonPerDay = item.getConsumption() / totalPersonDays;
+            long noOfDaysStayed = Utils.findNumberOfDays(finalBillStartDate, finalBillEndDate);
+            double totalUnitsPerPerson = unitsPerPersonPerDay * noOfDaysStayed;
+            double unitPrice = ebConfig.getCharge();
+            double price = totalUnitsPerPerson * unitPrice;
+
+            PendingEbRes pendingEbForSettlementRes = new PendingEbRes(item.getFloorId(),
+                    floorName, item.getRoomId(), roomName, Utils.roundOfDoubleTo2Digits(totalUnitsPerPerson),
+                    Utils.roundOfDoubleTo2Digits(price), Utils.dateToString(finalBillStartDate),
+                    Utils.dateToString(finalBillEndDate));
+
+            allPendingEbRes.add(pendingEbForSettlementRes);
+        });
+    }
+
+    private void buildMissedEbRoomResponse(List<CustomersBedHistory> customersBedHistories,
+                                           List<MissedEbRoomsRes> allMissedEbRoomsRes,
+                                           List<ElectricityReadings> latestReadingOfRooms,
+                                           Map<Integer, Floors> floorsMap, Map<Integer, Rooms> roomsMap,
+                                           Map<Integer, Beds> bedsMap, Date leavingDate) {
+
+        customersBedHistories.forEach(item -> {
+            ElectricityReadings latestReadingOfIndividualRoom = latestReadingOfRooms.stream()
+                    .filter(i -> i.getRoomId().equals(item.getRoomId()))
+                    .findFirst()
+                    .orElse(null);
+
+            Date endDate = item.getEndDate();
+            if (item.getEndDate() == null) {
+                endDate = leavingDate;
+            }
+
+            String floorName = null;
+            String roomName = null;
+            String bedName = null;
+            String fromDate = null;
+            String toDate = null;
+            String lastEntryDate = null;
+            Double lastReading = 0.0;
+
+            Floors floor = floorsMap.getOrDefault(item.getFloorId(), null);
+            Rooms room = roomsMap.getOrDefault(item.getRoomId(), null);
+            Beds bed = bedsMap.getOrDefault(item.getBedId(), null);
+
+            floorName = floor != null ? floor.getFloorName() : null;
+            roomName = room != null ? room.getRoomName() : null;
+            bedName = bed != null ? bed.getBedName() : null;
+
+            fromDate = Utils.dateToString(item.getStartDate());
+            if (item.getEndDate() == null) {
+                toDate = Utils.dateToString(leavingDate);
+            } else {
+                toDate = Utils.dateToString(item.getEndDate());
+            }
+
+            if (latestReadingOfIndividualRoom != null &&
+                    Utils.compareWithTwoDates(latestReadingOfIndividualRoom.getEntryDate(), endDate) < 0) {
+
+                lastEntryDate = Utils.dateToString(latestReadingOfIndividualRoom.getEntryDate());
+                lastReading = latestReadingOfIndividualRoom.getCurrentReading();
+                if (Utils.compareWithTwoDates(latestReadingOfIndividualRoom.getEntryDate(), item.getStartDate()) > 0) {
+                    fromDate = Utils.dateToString(Utils.addDaysToDate(latestReadingOfIndividualRoom.getEntryDate(), 1));
+                }
+            }
+
+            MissedEbRoomsRes missedEbRoomsRes = new MissedEbRoomsRes(item.getFloorId(), floorName,
+                    item.getRoomId(), roomName, item.getBedId(), bedName, fromDate, toDate,
+                    lastReading, lastEntryDate);
+
+            allMissedEbRoomsRes.add(missedEbRoomsRes);
+        });
     }
 }
