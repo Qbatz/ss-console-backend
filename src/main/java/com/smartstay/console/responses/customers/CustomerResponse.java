@@ -8,5 +8,8 @@ public record CustomerResponse(String customerId,
                                String mobile,
                                String emailId,
                                String currentStatus,
-                               String joiningDate) {
+                               String joiningDate,
+                               String kycStatus,
+                               String kycDetailsStatus,
+                               boolean canApproveKyc) {
 }

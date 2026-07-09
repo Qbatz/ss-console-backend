@@ -294,4 +294,8 @@ public class TransactionV1Service {
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
+
+    public List<TransactionV1> getByTransactionIds(Set<String> transactionIds) {
+        return transactionV1Repository.findAllByTransactionIdIn(transactionIds);
+    }
 }

@@ -28,5 +28,6 @@ public enum Source {
     SUPPORT_TICKET_NOTES,
     HOSTEL_NOTES,
     USERS_NOTES,
-    TRANSACTION
+    TRANSACTION,
+    KYC_DETAILS
 }
