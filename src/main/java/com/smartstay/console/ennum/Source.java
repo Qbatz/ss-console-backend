@@ -29,5 +29,6 @@ public enum Source {
     HOSTEL_NOTES,
     USERS_NOTES,
     TRANSACTION,
+    KYC_DETAILS,
     SETTLEMENT_DETAILS
 }

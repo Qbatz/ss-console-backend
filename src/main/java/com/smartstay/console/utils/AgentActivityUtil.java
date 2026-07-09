@@ -6,7 +6,6 @@ import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.Source;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -123,6 +122,7 @@ public class AgentActivityUtil {
             case INVOICE_REDEMPTION -> "Updated an invoice redemption";
             case SUPPORT_TICKET -> "Updated a support ticket";
             case INVOICE -> "Updated an invoice";
+            case KYC_DETAILS -> "Approved a kyc request";
             default -> "Updated successfully";
         };
     }
