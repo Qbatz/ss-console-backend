@@ -275,7 +275,7 @@ public class SubscriptionService {
 
             newOrder = new OrderHistory();
             newOrder.setHostelId(hostelId);
-            newOrder.setDiscountAmount(newSubscription.getDiscountAmount());
+            newOrder.setDiscountAmount(discountAmount);
             newOrder.setPlanAmount(plans.getFinalPrice());
             newOrder.setPlanCode(plans.getPlanCode());
             newOrder.setPlanName(plans.getPlanName());
@@ -283,7 +283,7 @@ public class SubscriptionService {
             newOrder.setOrderStatus(OrderStatus.PAID.name());
             newOrder.setPaymentType(PaymentType.MANUAL.name());
             newOrder.setUserType(UserType.AGENT.name());
-            newOrder.setPaymentProof(newSubscription.getPaymentProof());
+            newOrder.setPaymentProof(paymentProofUrl);
             newOrder.setPaidBy(payload.paidBy());
             newOrder.setCollectedBy(agent.getAgentId());
             newOrder.setActive(true);
