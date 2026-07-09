@@ -35,6 +35,7 @@ import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
 import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.responses.users.UsersResponse;
 import com.smartstay.console.utils.SnapshotUtility;
+import com.smartstay.console.utils.UserActivityUtil;
 import com.smartstay.console.utils.Utils;
 import jakarta.servlet.ServletOutputStream;
 import jakarta.servlet.http.HttpServletResponse;
@@ -186,6 +187,8 @@ public class HostelsService {
     private SettlementItemsService settlementItemsService;
     @Autowired
     private HostelNotesService hostelNotesService;
+    @Autowired
+    private UserActivityUtil userActivityUtil;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -584,11 +587,14 @@ public class HostelsService {
                     return new InvoiceResponseMapper(tenant, createdByUser, updatedByUser).apply(invoice);
                 }).toList();
 
+        List<UserActivitiesResponse> activitiesRes = userActivityUtil
+                .buildResponses(activities);
+
         HostelResponse hostelDetails = new HostelDetailsMapper(
                 ownerRes, noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants,
                 noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
                 sharingTypeList, amenities, customerResponses, subscriptions, mastersRes, staffsRes,
-                activities, userLookup, trialPlans, expandableTrialPlans, billingDatesMap, recurringHistory,
+                activitiesRes, userLookup, trialPlans, expandableTrialPlans, billingDatesMap, recurringHistory,
                 customerRecurringHistory, recurringStatus, currentBillLastRecDate, currentBillingRules,
                 relationalAgentResponses, invoiceRedemptionResList, invoiceResponses
         ).apply(hostel);
@@ -664,18 +670,7 @@ public class HostelsService {
         usersMap = users.stream()
                 .collect(Collectors.toMap(Users::getUserId, user -> user));
 
-        List<UserActivitiesResponse> responseList = userActivities.stream()
-                .map(activity -> {
-                    Users user = usersMap.get(activity.getUserId());
-                    String userName = null;
-                    if (user != null){
-                        userName = Utils.getFullName(user.getFirstName(), user.getLastName());
-                    }
-                    return new UserActivitiesResponse(
-                            activity.getActivityId(), activity.getDescription(), activity.getUserId(), userName,
-                            Utils.dateToString(activity.getCreatedAt()), Utils.dateToTime(activity.getCreatedAt()),
-                            activity.getSource(), activity.getActivityType(), activity.getPlatform());
-                }).toList();
+        List<UserActivitiesResponse> responseList = userActivityUtil.buildResponses(userActivities);
 
         Map<String, Object> response = new HashMap<>();
         response.put("content", responseList);
