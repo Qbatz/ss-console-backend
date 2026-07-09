@@ -2282,7 +2282,7 @@ public class HostelsService {
                             hostelId, billingDay, billingDates));
                 }
             } catch (Exception e){
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Server error", HttpStatus.BAD_REQUEST);
             }
         }
 
@@ -3056,7 +3056,7 @@ public class HostelsService {
                            HttpStatus.BAD_REQUEST);
                 }
             } catch (Exception e){
-                return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Server error", HttpStatus.BAD_REQUEST);
             }
         }
 

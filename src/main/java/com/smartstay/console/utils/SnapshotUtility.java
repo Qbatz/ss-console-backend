@@ -316,14 +316,53 @@ public class SnapshotUtility {
         );
     }
 
+    public static KycAddressDetailsSnapshot toSnapshot(KycAddressDetails a) {
+
+        if (a == null) return null;
+
+        return new KycAddressDetailsSnapshot(
+                a.getId(),
+                a.getCurrentAddress(),
+                a.getCurrentLocality(),
+                a.getCurrentCity(),
+                a.getCurrentState(),
+                a.getCurrentPincode(),
+                a.getPermanentAddress(),
+                a.getPermanentLocality(),
+                a.getPermanentCity(),
+                a.getPermanentState(),
+                a.getPermanentPincode(),
+                a.getKycDetails() != null ? a.getKycDetails().getId() : null
+        );
+    }
+
     public static KycDetailsSnapshot toSnapshot(KycDetails k) {
+
         if (k == null) return null;
 
         return new KycDetailsSnapshot(
                 k.getId(),
                 k.getCurrentStatus(),
                 k.getTransactionId(),
+                k.getEntityId(),
+                k.getTemplateId(),
+                k.getAccessTokenId(),
                 k.getReferenceId(),
+                copyDate(k.getCreatedAt()),
+                copyDate(k.getCompletedAt()),
+                k.getAadhaarNumber(),
+                k.getKycDocument(),
+                k.getKycDocumentType(),
+                k.getDocumentType(),
+                k.getGender(),
+                k.getIdPic(),
+                k.getNameInDocument(),
+                k.getDateOfBirth(),
+                k.getPermanentAddress(),
+                k.getCreatedBy(),
+                copyDate(k.getUpdatedAt()),
+                copyDate(k.getExpireAt()),
+                toSnapshot(k.getAddressDetails()),
                 k.getCustomers() != null ? k.getCustomers().getCustomerId() : null
         );
     }

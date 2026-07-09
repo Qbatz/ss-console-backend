@@ -28,10 +28,12 @@ public class Utils {
 
     public static final String OUTPUT_DATE_FORMAT = "dd/MM/yyyy";
     public static final String OUTPUT_TIME_FORMAT = "hh:mm:ss a";
+    public static final String INPUT_DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
     public static final String CREATED = "Created Successfully";
     public static final String UPDATED = "Updated Successfully";
     public static final String DELETED = "Deleted Successfully";
+    public static final String APPROVED = "Approved successfully";
 
     public static final String NO_CHANGES_DETECTED = "No changes detected";
     public static final String CANNOT_EDIT_YOURSELF = "Cannot edit yourself";
@@ -90,6 +92,7 @@ public class Utils {
     public static final String PRIORITY_NOT_FOUND = "Priority not found";
     public static final String RESET_DONE_NO_RECORDS_FOUND = "Reset completed, no records found";
     public static final String TRIAL_DAYS_REASON_NOT_FOUND = "Trial days reason not found";
+    public static final String KYC_DETAILS_NOT_FOUND = "Kyc details not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -996,5 +999,17 @@ public class Utils {
         return Date.from(
                 localDateTime.atZone(ZoneId.systemDefault()).toInstant()
         );
+    }
+
+    public static Date stringDateToDate(String date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(INPUT_DATE_TIME_FORMAT);
+        LocalDateTime localDateTime = LocalDateTime.parse(date, formatter);
+
+        return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
 }
