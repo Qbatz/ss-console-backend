@@ -41,10 +41,4 @@ public class CustomerBedHistoryService {
         return customerBedHistoryRepository
                 .findTopByCustomerIdOrderByCreatedAtDesc(customerId);
     }
-
-    public List<CustomersBedHistory> getBedHistoryByRoomIdAndBetweenDates(Integer roomId, Date startDate,
-                                                                          Date endDate) {
-        return customerBedHistoryRepository
-                .findByRoomIdAndDatesBetween(roomId, startDate, endDate);
-    }
 }
