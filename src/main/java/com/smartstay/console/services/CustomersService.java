@@ -999,12 +999,12 @@ public class CustomersService {
         if (BillingType.FIXED_DATE.name().equals(billingRule.getTypeOfBilling())){
             if (BillingModel.PREPAID.name().equals(billingRule.getBillingModel())){
                 if (Utils.compareWithTwoDates(latestBedHistory.getStartDate(), billingDates.currentBillStartDate()) > 0) {
-                    response = buildFixedDateBasedPrepaidBedChangeSettlementInfo();
+                   // response = buildFixedDateBasedPrepaidBedChangeSettlementInfo();
                 } else {
-                    response = buildFixedDateBasedPrepaidSettlementInfo();
+                   // response = buildFixedDateBasedPrepaidSettlementInfo();
                 }
             } else if (BillingModel.POSTPAID.name().equals(billingRule.getBillingModel())) {
-                response = buildFixedDateBasedPostpaidSettlementInfo();
+                //response = buildFixedDateBasedPostpaidSettlementInfo();
             }
         } else if (BillingType.JOINING_DATE_BASED.name().equals(billingRule.getTypeOfBilling())) {
             if (BillingModel.PREPAID.name().equals(billingRule.getBillingModel())){
@@ -1324,13 +1324,21 @@ public class CustomersService {
 
         List<UnpaidInvoicesInfoRes> unpaidInvoicesInfoRes = new ArrayList<>();
 
-        CustomerRentInfoRes customerRentInfoRes = new CustomerRentInfoRes();
+        CustomerRentInfoRes customerRentInfoRes = null;
 
-        CustomerWalletInfoRes customerWalletInfoRes = new CustomerWalletInfoRes();
+        CustomerWalletInfoRes customerWalletInfoRes = null;
 
-        CustomerBookingInfoRes customerBookingInfoRes = new CustomerBookingInfoRes();
+        CustomerBookingInfoRes customerBookingInfoRes = null;
 
-        CustomerAdvanceInfoRes customerAdvanceInfoRes = new CustomerAdvanceInfoRes();
+        CustomerAdvanceInfoRes customerAdvanceInfoRes = null;
+
+//        CustomerRentInfoRes customerRentInfoRes = new CustomerRentInfoRes();
+//
+//        CustomerWalletInfoRes customerWalletInfoRes = new CustomerWalletInfoRes();
+//
+//        CustomerBookingInfoRes customerBookingInfoRes = new CustomerBookingInfoRes();
+//
+//        CustomerAdvanceInfoRes customerAdvanceInfoRes = new CustomerAdvanceInfoRes();
 
         double totalRefundableAdvance = 0.0;
         if (isBookingOrAdvancePaid) {
