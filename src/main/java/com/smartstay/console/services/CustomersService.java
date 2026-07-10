@@ -1237,13 +1237,19 @@ public class CustomersService {
         double availableAmountToRedeem = 0.0;
         double advanceAmountRedeemedFromBookingInvoice = 0.0;
 
-        InvoicesV1 bookingInvoice = invoiceV1Service
-                .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.BOOKING.name())
-                .getFirst();
+        List<InvoicesV1> bookingInvoices = invoiceV1Service
+                .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.BOOKING.name());
 
-        InvoicesV1 advanceInvoice = invoiceV1Service
-                .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.ADVANCE.name())
-                .getFirst();
+        InvoicesV1 bookingInvoice = bookingInvoices.isEmpty()
+                ? null
+                : bookingInvoices.getFirst();
+
+        List<InvoicesV1> advanceInvoices = invoiceV1Service
+                .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.ADVANCE.name());
+
+        InvoicesV1 advanceInvoice = advanceInvoices.isEmpty()
+                ? null
+                : advanceInvoices.getFirst();
 
         CustomerDeductionsInfoRes deductionsInfoRes = null;
 

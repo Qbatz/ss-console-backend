@@ -58,7 +58,7 @@ public class CustomersController {
         return customersService.getCustomersWithPendingAdvanceDeductions();
     }
 
-    @GetMapping("/settlement/{customerId}")
+    @PostMapping("/settlement/{customerId}")
     public ResponseEntity<?> getCustomerSettlementInfo(@PathVariable("customerId") String customerId,
                                                        @Valid @RequestBody CustomerDatePayload payload){
         return customersService.getCustomerSettlementInfo(customerId, payload);
