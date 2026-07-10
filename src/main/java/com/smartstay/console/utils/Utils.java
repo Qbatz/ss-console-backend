@@ -132,6 +132,7 @@ public class Utils {
     public static final String PAYMENT_URL_AND_HOSTEL_MISMATCH = "Payment link and hostel id does not match";
     public static final String INVOICE_HOSTEL_MISMATCH = "Hostel Id does not match invoice hostel";
     public static final String INVOICE_HOSTEL_CUSTOMER_MISMATCH = "Invoice does not match customer and hostel";
+    public static final String BED_MISMATCH_BED_HISTORY = "Bed does not match with bed history";
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";

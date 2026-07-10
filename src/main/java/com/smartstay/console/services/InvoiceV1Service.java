@@ -77,6 +77,8 @@ public class InvoiceV1Service {
     private SettlementItemsService settlementItemsService;
     @Autowired
     private CustomerWalletService customerWalletService;
+    @Autowired
+    private CustomerBedHistoryService customerBedHistoryService;
 
     public List<InvoicesV1> findByListOfCustomers(String hostelId, List<String> customerIds) {
         return invoiceV1Repository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
@@ -164,10 +166,17 @@ public class InvoiceV1Service {
         Map<Long, CustomerWalletHistory> customerWalletHistoryMap = customerWalletHistories.stream()
                 .collect(Collectors.toMap(CustomerWalletHistory::getHistoryId, cwh -> cwh));
 
+        List<CustomersBedHistory> customersBedHistories = customerBedHistoryService
+                .getLatestBedHistoriesByCustomerIds(customerIds);
+
+        Map<String, CustomersBedHistory> customersBedHistoryMap = customersBedHistories.stream()
+                .collect(Collectors.toMap(CustomersBedHistory::getCustomerId, cbh -> cbh));
+
         List<InvoicesV1> cancelledInvoicesList = new ArrayList<>();
         List<Customers> customersList = new ArrayList<>();
         List<BookingsV1> bookingsList = new ArrayList<>();
         List<Beds> bedsList = new ArrayList<>();
+        List<CustomersBedHistory> customersBedHistoryList = new ArrayList<>();
         List<SettlementDetails> settlementDetailsList = new ArrayList<>();
         List<CustomerWalletHistory> cwhList = new ArrayList<>();
         List<SettlementItems> settlementItemsList = new ArrayList<>();
@@ -232,6 +241,15 @@ public class InvoiceV1Service {
                 bed.setCurrentStatus(BedStatus.OCCUPIED.name());
                 bed.setUpdatedAt(today);
 
+                CustomersBedHistory customersBedHistory = customersBedHistoryMap
+                        .getOrDefault(customer.getCustomerId(), null);
+
+                if (bedId != customersBedHistory.getBedId()){
+                    throw new BadRequestException(Utils.BED_MISMATCH_BED_HISTORY);
+                }
+
+                customersBedHistory.setEndDate(null);
+
                 SettlementDetails settlementDetail = settlementDetailsMap
                         .getOrDefault(invoice.getCustomerId(), null);
 
@@ -241,6 +259,7 @@ public class InvoiceV1Service {
 
                 bookingsList.add(booking);
                 bedsList.add(bed);
+                customersBedHistoryList.add(customersBedHistory);
                 customersList.add(customer);
 
                 SettlementItems settlementItem = settlementItemsMap
@@ -300,6 +319,7 @@ public class InvoiceV1Service {
 
         bookingsService.saveAll(bookingsList);
         bedsService.saveAll(bedsList);
+        customerBedHistoryService.saveAll(customersBedHistoryList);
         customersService.saveAll(customersList);
         invoiceV1Repository.saveAll(cancelledInvoicesList);
         customerWalletHistoryService.saveAll(cwhList);
@@ -614,10 +634,17 @@ public class InvoiceV1Service {
         Map<Long, CustomerWalletHistory> customerWalletHistoryMap = customerWalletHistories.stream()
                 .collect(Collectors.toMap(CustomerWalletHistory::getHistoryId, cwh -> cwh));
 
+        List<CustomersBedHistory> customersBedHistories = customerBedHistoryService
+                .getLatestBedHistoriesByCustomerIds(customerIds);
+
+        Map<String, CustomersBedHistory> customersBedHistoryMap = customersBedHistories.stream()
+                .collect(Collectors.toMap(CustomersBedHistory::getCustomerId, cbh -> cbh));
+
         List<InvoicesV1> cancelledInvoicesList = new ArrayList<>();
         List<Customers> customersList = new ArrayList<>();
         List<BookingsV1> bookingsList = new ArrayList<>();
         List<Beds> bedsList = new ArrayList<>();
+        List<CustomersBedHistory> customersBedHistoryList = new ArrayList<>();
         List<SettlementDetails> settlementDetailsList = new ArrayList<>();
         List<CustomerWalletHistory> cwhList = new ArrayList<>();
         List<SettlementItems> settlementItemsList = new ArrayList<>();
@@ -697,6 +724,15 @@ public class InvoiceV1Service {
                 bed.setCurrentStatus(BedStatus.OCCUPIED.name());
                 bed.setUpdatedAt(today);
 
+                CustomersBedHistory customersBedHistory = customersBedHistoryMap
+                        .getOrDefault(customer.getCustomerId(), null);
+
+                if (bedId != customersBedHistory.getBedId()){
+                    return new ResponseEntity<>(Utils.BED_MISMATCH_BED_HISTORY, HttpStatus.BAD_REQUEST);
+                }
+
+                customersBedHistory.setEndDate(null);
+
                 SettlementDetails settlementDetail = settlementDetailsMap
                         .getOrDefault(invoice.getCustomerId(), null);
 
@@ -706,6 +742,7 @@ public class InvoiceV1Service {
 
                 bookingsList.add(booking);
                 bedsList.add(bed);
+                customersBedHistoryList.add(customersBedHistory);
                 customersList.add(customer);
 
                 SettlementItems settlementItem = settlementItemsMap
@@ -765,6 +802,7 @@ public class InvoiceV1Service {
 
         bookingsService.saveAll(bookingsList);
         bedsService.saveAll(bedsList);
+        customerBedHistoryService.saveAll(customersBedHistoryList);
         customersService.saveAll(customersList);
         invoiceV1Repository.saveAll(cancelledInvoicesList);
         customerWalletHistoryService.saveAll(cwhList);

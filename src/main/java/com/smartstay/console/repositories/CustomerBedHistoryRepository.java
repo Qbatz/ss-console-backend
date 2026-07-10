@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface CustomerBedHistoryRepository extends JpaRepository<CustomersBedHistory, Long> {
@@ -42,4 +43,16 @@ public interface CustomerBedHistoryRepository extends JpaRepository<CustomersBed
                                                                  @Param("endDate") Date endDate);
 
     CustomersBedHistory findTopByCustomerIdOrderByCreatedAtDesc(String customerId);
+
+    @Query("""
+            SELECT cbh
+            FROM CustomersBedHistory cbh
+            WHERE cbh.id = (
+                SELECT MAX(cbh2.id)
+                FROM CustomersBedHistory cbh2
+                WHERE cbh2.customerId = cbh.customerId
+            )
+            AND cbh.customerId IN :customerIds
+            """)
+    List<CustomersBedHistory> findLatestByCustomerIds(@Param("customerIds") Set<String> customerIds);
 }
