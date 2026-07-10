@@ -899,15 +899,32 @@ public class CustomersService {
                             .apply(redemption);
                 }).toList();
 
+        KycDetails kycDetails = customer.getKycDetails();
+
+        String kycDetailsStatus = null;
+        boolean canApproveKyc = false;
+        if (kycDetails != null) {
+            kycDetailsStatus = kycDetails.getCurrentStatus();
+            if (KycStatus.WAITING_FOR_APPROVAL.name().equalsIgnoreCase(kycDetailsStatus)) {
+                canApproveKyc = true;
+            }
+        }
+
+        boolean canGenerateSettlement = false;
+        if (CustomerStatus.NOTICE.name().equals(customer.getCurrentStatus())){
+            canGenerateSettlement = true;
+        }
+
         CustomerDetailsRes response = new CustomerDetailsRes(customer.getCustomerId(), customer.getFirstName(),
                 customer.getLastName(), Utils.getFullName(customer.getFirstName(), customer.getLastName()),
                 Utils.getInitials(customer.getFirstName(), customer.getLastName()), customer.getMobSerialNo(),
                 Utils.maskMobileNo(customer.getMobile()), customer.getEmailId(), customer.getHouseNo(), customer.getStreet(),
                 customer.getLandmark(), customer.getPincode(), customer.getCity(), customer.getState(), customer.getCountry(),
                 Utils.buildFullAddress(customer), customer.getProfilePic(), customer.getCurrentStatus(),
-                customer.getCustomerBedStatus(), customer.getKycStatus(), Utils.dateToString(customer.getJoiningDate()),
-                Utils.dateToString(customer.getExpJoiningDate()), Utils.dateToString(customer.getDateOfBirth()),
-                customer.getGender(), createdBy, updatedBy, createdAtDate, createdAtTime, updatedAtDate, updatedAtTime,
+                customer.getCustomerBedStatus(), customer.getKycStatus(), kycDetailsStatus,
+                Utils.dateToString(customer.getJoiningDate()), Utils.dateToString(customer.getExpJoiningDate()),
+                Utils.dateToString(customer.getDateOfBirth()), customer.getGender(), createdBy, updatedBy,
+                createdAtDate, createdAtTime, updatedAtDate, updatedAtTime, canApproveKyc, canGenerateSettlement,
                 hostelDetails, invoiceResponses, transactionResponses, invoiceRedemptionRes);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -943,7 +960,7 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        if (CustomerStatus.NOTICE.name().equals(customer.getCurrentStatus())){
+        if (!CustomerStatus.NOTICE.name().equals(customer.getCurrentStatus())){
             return new ResponseEntity<>("Customer is not in notice", HttpStatus.BAD_REQUEST);
         }
 

@@ -2,6 +2,7 @@ package com.smartstay.console.Mapper.customers;
 
 import com.smartstay.console.dao.Customers;
 import com.smartstay.console.dao.KycDetails;
+import com.smartstay.console.ennum.CustomerStatus;
 import com.smartstay.console.ennum.KycStatus;
 import com.smartstay.console.responses.customers.CustomerResponse;
 import com.smartstay.console.utils.Utils;
@@ -29,10 +30,15 @@ public class CustomerResMapper implements Function<Customers, CustomerResponse> 
             }
         }
 
+        boolean canGenerateSettlement = false;
+        if (CustomerStatus.NOTICE.name().equals(customers.getCurrentStatus())){
+            canGenerateSettlement = true;
+        }
+
         return new CustomerResponse(customers.getCustomerId(), customers.getFirstName(),
                 customers.getLastName(), Utils.getFullName(customers.getFirstName(), customers.getLastName()),
                 Utils.getInitials(customers.getFirstName(), customers.getLastName()), Utils.maskMobileNo(customers.getMobile()),
                 customers.getEmailId(), customers.getCurrentStatus(), joiningDate, customers.getKycStatus(),
-                kycDetailsStatus, canApproveKyc);
+                kycDetailsStatus, canApproveKyc, canGenerateSettlement);
     }
 }
