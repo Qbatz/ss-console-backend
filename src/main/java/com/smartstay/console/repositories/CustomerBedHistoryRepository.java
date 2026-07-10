@@ -24,12 +24,22 @@ public interface CustomerBedHistoryRepository extends JpaRepository<CustomersBed
     @Query(value = """
             SELECT * FROM customers_bed_history cbh
             WHERE cbh.customer_id IN (:customerId)
-                AND DATE(cbh.start_date) <=DATE(:endDate)
+                AND DATE(cbh.start_date) <= DATE(:endDate)
                 AND (cbh.end_date IS NULL OR DATE(cbh.end_date) >= DATE(:startDate))
             """, nativeQuery = true)
     List<CustomersBedHistory> findByListCustomerIdsAndStartAndEndDate(@Param("customerId") List<String> customerId,
                                                                       @Param("startDate") Date startDate,
                                                                       @Param("endDate") Date endDate);
+
+    @Query(value = """
+            SELECT * FROM customers_bed_history cbh
+            WHERE cbh.customer_id = :customerId
+                AND DATE(cbh.start_date) <= DATE(:endDate)
+                AND (cbh.end_date IS NULL OR DATE(cbh.end_date) >= DATE(:startDate))
+            """, nativeQuery = true)
+    List<CustomersBedHistory> findByCustomerIdAndStartAndEndDate(@Param("customerId") String customerId,
+                                                                 @Param("startDate") Date startDate,
+                                                                 @Param("endDate") Date endDate);
 
     CustomersBedHistory findTopByCustomerIdOrderByCreatedAtDesc(String customerId);
 }

@@ -2,9 +2,10 @@ package com.smartstay.console.responses.customers;
 
 public record RedemptionInfoRes(String invoiceId,
                                 String invoiceNumber,
-                                String date,
+                                Double invoiceAmount,
+                                String invoiceDate,
                                 String invoiceType,
+                                String defaultInvoiceType,
                                 String redeemedDate,
-                                Double redeemedAmount,
-                                Double invoiceAmount) {
+                                Double redeemedAmount) {
 }

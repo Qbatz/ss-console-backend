@@ -1124,4 +1124,16 @@ public class InvoiceV1Service {
     public List<InvoicesV1> getInvoicesByCustomerIdAndInvoiceType(String customerId, String invoiceType){
         return invoiceV1Repository.findByCustomerIdAndInvoiceType(customerId, invoiceType);
     }
+
+    public List<InvoicesV1> getOlderUnpaidInvoicesByInvoiceTypes(String customerId, Set<String> invoiceTypes,
+                                                                 Date beforeDate){
+        String paidName = PaymentStatus.PAID.name();
+
+        return invoiceV1Repository.findOlderUnpaidInvoicesByInvoiceTypes(customerId, invoiceTypes,
+                beforeDate, paidName);
+    }
+
+    public List<InvoicesV1> getCurrentMonthInvoices(String customerId, String hostelId, Date startDate) {
+        return invoiceV1Repository.findAllCurrentMonthInvoices(customerId, hostelId, startDate);
+    }
 }

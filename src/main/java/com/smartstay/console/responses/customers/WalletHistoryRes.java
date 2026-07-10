@@ -1,9 +1,10 @@
 package com.smartstay.console.responses.customers;
 
-public record WalletHistoryRes(Long walletId,
+public record WalletHistoryRes(Long walletHistoryId,
                                double amount,
-                               String source,
                                String sourceId,
+                               String source,
+                               String defaultSourceType,
                                String billStartDate,
                                String billEndDate) {
 }

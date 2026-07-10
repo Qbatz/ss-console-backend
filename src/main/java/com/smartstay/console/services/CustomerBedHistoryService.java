@@ -37,6 +37,16 @@ public class CustomerBedHistoryService {
         return listCustomerBedHistories;
     }
 
+    public List<CustomersBedHistory> findBedHistoriesByCustomerIdAndDates(String customerId,
+                                                                        Date startDate, Date endDate) {
+        List<CustomersBedHistory> listCustomerBedHistories = customerBedHistoryRepository
+                .findByCustomerIdAndStartAndEndDate(customerId, startDate, endDate);
+        if (listCustomerBedHistories == null) {
+            listCustomerBedHistories = new ArrayList<>();
+        }
+        return listCustomerBedHistories;
+    }
+
     public CustomersBedHistory getLatestBedHistoryByCustomerId(String customerId) {
         return customerBedHistoryRepository
                 .findTopByCustomerIdOrderByCreatedAtDesc(customerId);
