@@ -55,4 +55,14 @@ public interface CustomerBedHistoryRepository extends JpaRepository<CustomersBed
             AND cbh.customerId IN :customerIds
             """)
     List<CustomersBedHistory> findLatestByCustomerIds(@Param("customerIds") Set<String> customerIds);
+
+    @Query("""
+            SELECT cbh FROM CustomersBedHistory cbh
+            WHERE cbh.customerId = :customerId
+                AND cbh.type IN ('CHECK_IN', 'REASSIGNED', 'RENT_REVISION')
+                AND (cbh.endDate IS NULL OR DATE(cbh.endDate) >= DATE(:beforeDate))
+            """)
+    List<CustomersBedHistory> findAllByCustomerIdAndEndDateBefore(String customerId, Date beforeDate);
+
+    List<CustomersBedHistory> findAllByCustomerIdAndTypeNot(String customerId, String type);
 }

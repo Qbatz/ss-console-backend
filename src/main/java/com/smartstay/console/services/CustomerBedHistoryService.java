@@ -39,7 +39,7 @@ public class CustomerBedHistoryService {
     }
 
     public List<CustomersBedHistory> findBedHistoriesByCustomerIdAndDates(String customerId,
-                                                                        Date startDate, Date endDate) {
+                                                                          Date startDate, Date endDate) {
         List<CustomersBedHistory> listCustomerBedHistories = customerBedHistoryRepository
                 .findByCustomerIdAndStartAndEndDate(customerId, startDate, endDate);
         if (listCustomerBedHistories == null) {
@@ -59,5 +59,17 @@ public class CustomerBedHistoryService {
 
     public void saveAll(List<CustomersBedHistory> customersBedHistoryList) {
         customerBedHistoryRepository.saveAll(customersBedHistoryList);
+    }
+
+    public List<CustomersBedHistory> getCustomerHistoriesByCustomerIdAndEndDateBefore(String customerId,
+                                                                                      Date beforeDate){
+        return customerBedHistoryRepository
+                .findAllByCustomerIdAndEndDateBefore(customerId, beforeDate);
+    }
+
+    public List<CustomersBedHistory> getBedHistoriesByCustomerIdAndTypeNotIn(String customerId,
+                                                                             String type){
+        return customerBedHistoryRepository
+                .findAllByCustomerIdAndTypeNot(customerId, type);
     }
 }

@@ -183,6 +183,7 @@ public class Utils {
     public static final String CUSTOMER_INACTIVE_VACATED_SETTLEMENT_GENERATED = "Can not edit/delete redemption because customer is either vacated or settlement generated";
     public static final String TICKET_NUMBER_GENERATION_FAILED = "Failed to generate ticket number, retry";
     public static final String INVOICE_HAS_DEDUCTIONS_ALREADY = "Invoice has deductions already";
+    public static final String DATE_IS_NULL = "Date is null";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {

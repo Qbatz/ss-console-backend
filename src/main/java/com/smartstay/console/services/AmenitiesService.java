@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class AmenitiesService {
@@ -20,5 +21,10 @@ public class AmenitiesService {
 
     public void deleteAll(List<AmenitiesV1> listAmenities) {
         amenitiesRepository.deleteAll(listAmenities);
+    }
+
+    public List<AmenitiesV1> getAmenitiesByIds(Set<String> amenityIds){
+        return amenitiesRepository
+                .findAllByAmenityIdInAndIsActiveTrueAndIsDeletedFalse(amenityIds);
     }
 }
