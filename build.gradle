@@ -56,6 +56,9 @@ dependencies {
 	implementation 'com.amazonaws:aws-java-sdk-s3'
 
 	implementation 'com.auth0:java-jwt:4.5.0'
+	implementation("org.springframework.boot:spring-boot-starter-websocket")
+	implementation("org.springframework:spring-messaging")
+	implementation("org.springframework.boot:spring-boot-starter-websocket")
 }
 
 tasks.named('test') {
