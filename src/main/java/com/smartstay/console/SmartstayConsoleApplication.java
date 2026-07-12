@@ -1,15 +1,8 @@
 package com.smartstay.console;
 
 import com.smartstay.console.dao.*;
-import com.smartstay.console.ennum.DemoRequestSource;
-import com.smartstay.console.ennum.DemoRequestStatus;
 import com.smartstay.console.repositories.AgentModulesRepository;
 import com.smartstay.console.repositories.AgentRolesRepository;
-import com.smartstay.console.repositories.DemoRequestRepository;
-import com.smartstay.console.repositories.HostelRelationalAgentRepository;
-import com.smartstay.console.services.HostelService;
-import com.smartstay.console.services.UsersService;
-import com.smartstay.console.utils.Utils;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.boot.CommandLineRunner;
@@ -18,10 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @SpringBootApplication
 @EnableScheduling
@@ -166,200 +156,76 @@ public class SmartstayConsoleApplication {
                 module20.setModuleName("Payments");
                 repository.save(module20);
             }
+
+            AgentModules module21 = repository.findByModuleName("Receipt");
+            if (module21 == null) {
+                module21 = new AgentModules();
+                module21.setModuleName("Receipt");
+                repository.save(module21);
+            }
         };
     }
 
 //    @Bean
-//    CommandLineRunner setAgentRolesDescription(AgentRolesRepository agentRolesRepository) {
-//        return args -> {
-//            List<AgentRoles> agentRolesList = agentRolesRepository.findAll();
-//
-//            for (AgentRoles agentRoles : agentRolesList) {
-//                switch (agentRoles.getRoleName()) {
-//                    case "CONSOLE-ADMIN-LEVEL-1" -> agentRoles.setDescription("Full Access");
-//                    case "CONSOLE-ADMIN-READ-ONLY" -> agentRoles.setDescription("Read only access");
-//                    case "CONSOLE-ADMIN-READ-WRITE-ONLY" -> agentRoles.setDescription("Read and write only access");
-//                }
-//            }
-//
-//            agentRolesRepository.saveAll(agentRolesList);
-//        };
-//    }
-
-    // IMPORTANT: This migration should be executed ONLY ONCE in production.
-    // Remove/comment this bean after successful deployment.
-//    @Bean
-//    CommandLineRunner updateDemoRequestStatus(DemoRequestRepository demoRequestRepository,
-//                                              UsersService usersService) {
-//
+//    CommandLineRunner addNewModuleToExistingRoles(AgentRolesRepository rolesRepository) {
 //        return args -> {
 //
-//            Set<String> oldStatuses = Set.of(
-//                    "REQUESTED", "PENDING", "OPEN",
-//                    "ONHOLD", "IN_PROGRESS", "COMPLETED",
-//                    "ONBOARDED", "REJECTED", "CLOSED"
-//            );
+//            final int NEW_MODULE_ID = 21;
 //
-//            List<DemoRequest> demoRequests = demoRequestRepository.findAll();
+//            List<AgentRoles> updatedRoles = rolesRepository.findAll()
+//                    .stream()
+//                    .map(role -> {
 //
-//            boolean hasUpdates = false;
+//                        // check if permission for module already exists
+//                        boolean alreadyExists = role.getPermissions()
+//                                .stream()
+//                                .anyMatch(p -> p.getModuleId() == NEW_MODULE_ID);
 //
-//            for (DemoRequest demoRequest : demoRequests) {
+//                        if (alreadyExists) {
+//                            return role; // skip if already present
+//                        }
 //
-//                //source migration
-//                if (demoRequest.getSource() == null) {
+//                        RolesPermission newPermission = new RolesPermission();
+//                        newPermission.setModuleId(NEW_MODULE_ID);
 //
-//                    demoRequest.setSource(DemoRequestSource.CONSOLE.name());
+//                        String roleName = role.getRoleName();
 //
-//                    hasUpdates = true;
-//                }
-//
-//                //parentId migration
-//                if (DemoRequestStatus.TRIAL_STARTED.name().equals(demoRequest.getDemoRequestStatus()) ||
-//                        DemoRequestStatus.CONVERTED.name().equals(demoRequest.getDemoRequestStatus())) {
-//                    String ownerMobile = demoRequest.getContactNo();
-//                    if (ownerMobile != null) {
-//                        List<Users> owners = usersService.getOwnersByMobileNo(ownerMobile);
-//                        if (owners != null && !owners.isEmpty()) {
-//                            String parentId = owners.getFirst().getParentId();
-//
-//                            if (!Objects.equals(demoRequest.getParentId(), parentId)) {
-//                                demoRequest.setParentId(parentId);
-//                                hasUpdates = true;
+//                        switch (roleName) {
+//                            case "CONSOLE-ADMIN-LEVEL-1" -> {
+//                                newPermission.setCanRead(true);
+//                                newPermission.setCanWrite(true);
+//                                newPermission.setCanUpdate(true);
+//                                newPermission.setCanDelete(true);
+//                            }
+//                            case "CONSOLE-ADMIN-READ-ONLY" -> {
+//                                newPermission.setCanRead(true);
+//                                newPermission.setCanWrite(false);
+//                                newPermission.setCanUpdate(false);
+//                                newPermission.setCanDelete(false);
+//                            }
+//                            case "CONSOLE-ADMIN-READ-WRITE-ONLY" -> {
+//                                newPermission.setCanRead(true);
+//                                newPermission.setCanWrite(true);
+//                                newPermission.setCanUpdate(false);
+//                                newPermission.setCanDelete(false);
+//                            }
+//                            case null, default -> {
+//                                // default for all other roles
+//                                newPermission.setCanRead(false);
+//                                newPermission.setCanWrite(false);
+//                                newPermission.setCanUpdate(false);
+//                                newPermission.setCanDelete(false);
 //                            }
 //                        }
-//                    }
-//                }
 //
-//                // createdAt migration
-//                if (demoRequest.getCreatedAt() == null) {
+//                        List<RolesPermission> permissions = new ArrayList<>(role.getPermissions());
+//                        permissions.add(newPermission);
+//                        role.setPermissions(permissions);
 //
-//                    Date createdAt = new Date();
+//                        return role;
+//                    }).toList();
 //
-//                    if (demoRequest.getBookedFor() != null) {
-//
-//                        Calendar cal = Calendar.getInstance();
-//                        cal.setTime(demoRequest.getBookedFor());
-//
-//                        if (demoRequest.getRequestedTime() != null &&
-//                                !demoRequest.getRequestedTime().isBlank()) {
-//                            LocalTime time = LocalTime.parse(
-//                                    demoRequest.getRequestedTime(),
-//                                    DateTimeFormatter.ofPattern("HH:mm")
-//                            );
-//
-//                            cal.set(Calendar.HOUR_OF_DAY, time.getHour());
-//                            cal.set(Calendar.MINUTE, time.getMinute());
-//                            cal.set(Calendar.SECOND, 0);
-//                            cal.set(Calendar.MILLISECOND, 0);
-//                        }
-//
-//                        createdAt = cal.getTime();
-//
-//                    } else if (demoRequest.getRequestedDate() != null) {
-//
-//                        createdAt = Utils.stringDateTimeToDate(
-//                                demoRequest.getRequestedDate(),
-//                                demoRequest.getRequestedTime()
-//                        );
-//                    }
-//
-//                    demoRequest.setCreatedAt(createdAt);
-//
-//                    hasUpdates = true;
-//                }
-//
-//                // status migration
-//                String demoRequestStatus = demoRequest.getDemoRequestStatus();
-//
-//                if (demoRequestStatus == null) {
-//                    continue;
-//                }
-//
-//                if (!oldStatuses.contains(demoRequestStatus)) {
-//                    continue;
-//                }
-//
-//                String status = switch (demoRequestStatus) {
-//
-//                    case "REQUESTED", "PENDING", "OPEN", "ONHOLD" ->
-//                            DemoRequestStatus.NEW.name();
-//
-//                    case "IN_PROGRESS" ->
-//                            DemoRequestStatus.CONTACTED.name();
-//
-//                    case "COMPLETED" ->
-//                            DemoRequestStatus.DEMO_COMPLETED.name();
-//
-//                    case "ONBOARDED" ->
-//                            DemoRequestStatus.TRIAL_STARTED.name();
-//
-//                    case "REJECTED", "CLOSED" ->
-//                            DemoRequestStatus.DROPPED.name();
-//
-//                    default -> demoRequestStatus;
-//                };
-//
-//                if (DemoRequestStatus.TRIAL_STARTED.name().equals(status) ||
-//                        DemoRequestStatus.CONVERTED.name().equals(status)) {
-//                    String ownerMobile = demoRequest.getContactNo();
-//                    if (ownerMobile != null) {
-//                        List<Users> owners = usersService.getOwnersByMobileNo(ownerMobile);
-//                        if (owners != null && !owners.isEmpty()) {
-//                            demoRequest.setParentId(owners.getFirst().getParentId());
-//                        }
-//                    }
-//                }
-//
-//                demoRequest.setDemoRequestStatus(status);
-//
-//                hasUpdates = true;
-//            }
-//
-//            if (!hasUpdates) {
-//                return;
-//            }
-//
-//            demoRequestRepository.saveAll(demoRequests);
-//        };
-//    }
-
-    // IMPORTANT: This migration should be executed ONLY ONCE in production.
-    // Remove/comment this bean after successful deployment.
-//    @Bean
-//    CommandLineRunner HostelRelationalAgentSetParentId(HostelRelationalAgentRepository repository,
-//                                                       HostelService hostelService){
-//        return (args) -> {
-//            List<HostelRelationalAgent> hostelRelationalAgents = repository.findAll();
-//
-//            Set<String> hostelIds = new HashSet<>();
-//
-//            for (HostelRelationalAgent hostelRelationalAgent : hostelRelationalAgents) {
-//                if (hostelRelationalAgent.getParentId() == null){
-//                    hostelIds.add(hostelRelationalAgent.getHostelId());
-//                }
-//            }
-//
-//            List<HostelV1> hostels = hostelService.getHostelsByHostelIds(hostelIds);
-//
-//            Map<String, HostelV1> hostelMap = hostels.stream()
-//                    .collect(Collectors.toMap(HostelV1::getHostelId, hostel -> hostel));
-//
-//            List<HostelRelationalAgent> changed = new ArrayList<>();
-//            for (HostelRelationalAgent hostelRelationalAgent : hostelRelationalAgents) {
-//                if (hostelRelationalAgent.getParentId() == null){
-//
-//                    HostelV1 hostel = hostelMap.getOrDefault(hostelRelationalAgent.getHostelId(), null);
-//
-//                    if (hostel != null){
-//                        hostelRelationalAgent.setParentId(hostel.getParentId());
-//
-//                        changed.add(hostelRelationalAgent);
-//                    }
-//                }
-//            }
-//
-//            repository.saveAll(changed);
+//            rolesRepository.saveAll(updatedRoles);
 //        };
 //    }
 }

@@ -33,6 +33,7 @@ public class Utils {
     public static final String CREATED = "Created Successfully";
     public static final String UPDATED = "Updated Successfully";
     public static final String DELETED = "Deleted Successfully";
+    public static final String DEDUCTIONS_COPIED_SUCCESSFULLY = "Deductions copied successfully";
     public static final String APPROVED = "Approved successfully";
 
     public static final String NO_CHANGES_DETECTED = "No changes detected";
@@ -61,6 +62,9 @@ public class Utils {
     public static final String BILLING_MODEL_DOES_NOT_EXIST = "Billing model does not exist";
     public static final String FIXED_DATE_PREPAID_TO_POSTPAID_ONLY_ALLOWED = "Only fixed date prepaid to postpaid is allowed";
     public static final String BUY_PLAN_NOT_ALLOWED_IN_DEV = "Buy plan is not allowed for dev environment";
+    public static final String BED_IS_OCCUPIED = "Bed is occupied";
+    public static final String INVOICE_IS_NOT_ADVANCE = "Invoice is not an advance invoice";
+    public static final String INVOICE_NOT_PAID = "Invoice is not paid";
 
     public static final String NO_ROLES_FOUND = "No roles found";
     public static final String NO_HOSTEL_FOUND = "No hostel found";
@@ -92,6 +96,11 @@ public class Utils {
     public static final String PRIORITY_NOT_FOUND = "Priority not found";
     public static final String RESET_DONE_NO_RECORDS_FOUND = "Reset completed, no records found";
     public static final String TRIAL_DAYS_REASON_NOT_FOUND = "Trial days reason not found";
+    public static final String NO_ADVANCE_DEDUCTIONS_FOUND = "No advance deductions found";
+    public static final String TRANSACTION_NOT_FOUND = "Transaction not found";
+    public static final String BANK_TRANSACTION_NOT_FOUND = "Bank transaction not found";
+    public static final String BANK_NOT_FOUND = "Bank not found";
+    public static final String ADVANCE_NOT_FOUND = "Advance not found";
     public static final String KYC_DETAILS_NOT_FOUND = "Kyc details not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
@@ -121,6 +130,9 @@ public class Utils {
     public static final String HOSTEL_PARENT_ID_MISMATCH = "Hostel's parentId doesn't match with parentId";
     public static final String USER_HOSTEL_MISMATCH = "User does not match the hostel users";
     public static final String PAYMENT_URL_AND_HOSTEL_MISMATCH = "Payment link and hostel id does not match";
+    public static final String INVOICE_HOSTEL_MISMATCH = "Hostel Id does not match invoice hostel";
+    public static final String INVOICE_HOSTEL_CUSTOMER_MISMATCH = "Invoice does not match customer and hostel";
+    public static final String BED_MISMATCH_BED_HISTORY = "Bed does not match with bed history";
 
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";
@@ -147,6 +159,7 @@ public class Utils {
     public static final String PARENT_ID_REQUIRED = "ParentId is required";
     public static final String PRIORITY_REQUIRED = "Priority is required";
     public static final String TRIAL_DAYS_REASON_REQUIRED = "Trial days reason is required";
+    public static final String COMMENTS_REQUIRED_FOR_REASSIGN_STAFF = "Comments is required for reassigning staff";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
@@ -154,6 +167,7 @@ public class Utils {
     public static final String PAID_AMOUNT_EXCEEDS_TOTAL_AMOUNT = "Target invoice paid amount exceeds total amount";
     public static final String PAID_AMOUNT_GOES_NEGATIVE = "Target paid amount goes negative";
     public static final String DATE_IS_NOT_FROM_FUTURE_OR_PRESENT = "Date is not from future or present";
+    public static final String MINIMUM_1_PERMISSION_ENABLED = "At least one module must have read permission enabled";
 
     public static final String ROLE_NAME_CANNOT_EDIT = "This role cannot be edited";
     public static final String CANNOT_USE_BILLING_CYCLE_FILTER_WITH_DATE_FILTER = "Cannot use billingCycleStartDay with filterBy";
@@ -168,6 +182,8 @@ public class Utils {
     public static final String AT_LEAST_ONE_COLUMN_NEEDS_TO_BE_SELECTED = "At least one column must be selected";
     public static final String CUSTOMER_INACTIVE_VACATED_SETTLEMENT_GENERATED = "Can not edit/delete redemption because customer is either vacated or settlement generated";
     public static final String TICKET_NUMBER_GENERATION_FAILED = "Failed to generate ticket number, retry";
+    public static final String INVOICE_HAS_DEDUCTIONS_ALREADY = "Invoice has deductions already";
+    public static final String DATE_IS_NULL = "Date is null";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
@@ -221,6 +237,16 @@ public class Utils {
             return "";
         }
         return new SimpleDateFormat(OUTPUT_TIME_FORMAT).format(date);
+    }
+
+    public static String formatStringTimeToAmPm(String time24Hour) {
+        if (time24Hour == null || time24Hour.isBlank()) {
+            return null;
+        }
+
+        LocalTime localTime = LocalTime.parse(time24Hour, DateTimeFormatter.ofPattern("HH:mm"));
+
+        return localTime.format(DateTimeFormatter.ofPattern("hh:mm:ss a"));
     }
 
     public static String formatDateString(String inputDate) {

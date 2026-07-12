@@ -35,4 +35,10 @@ public class CustomersAmenityService {
         }
         return customersAmenities;
     }
+
+    public List<CustomersAmenity> getAllByCustomerIdAndDatesBetween(String customerId, Date startDate,
+                                                                    Date endDate) {
+        return customersAmenityRepository
+                .findAllByCustomerIdAndDatesBetween(customerId, startDate, endDate);
+    }
 }

@@ -11,5 +11,6 @@ public record CustomerResponse(String customerId,
                                String joiningDate,
                                String kycStatus,
                                String kycDetailsStatus,
-                               boolean canApproveKyc) {
+                               boolean canApproveKyc,
+                               boolean canGenerateSettlement) {
 }
