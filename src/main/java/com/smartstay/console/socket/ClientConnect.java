@@ -51,12 +51,12 @@ public class ClientConnect {
         session.subscribe("admin/online/users", new StompFrameHandler() {
             @Override
             public Type getPayloadType(StompHeaders headers) {
-                return null;
+                return String.class;
             }
 
             @Override
             public void handleFrame(StompHeaders headers, @Nullable Object payload) {
-
+                System.out.println("handling frames");
             }
         });
     }
