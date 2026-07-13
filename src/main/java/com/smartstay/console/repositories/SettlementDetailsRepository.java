@@ -12,4 +12,6 @@ public interface SettlementDetailsRepository extends JpaRepository<SettlementDet
     List<SettlementDetails> findAllByCustomerId(String customerId);
 
     List<SettlementDetails> findAllByCustomerIdIn(List<String> customerIds);
+
+    SettlementDetails findByCustomerId(String customerId);
 }

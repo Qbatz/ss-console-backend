@@ -29,4 +29,8 @@ public class InvoiceDiscountsService {
     public List<InvoiceDiscounts> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
         return invoiceDiscountsRepository.findAllByHostelIdAndCustomerIdIn(hostelId, customerIds);
     }
+
+    public List<InvoiceDiscounts> getByHostelIdAndInvoiceIds(String hostelId, Set<String> invoiceIds) {
+        return invoiceDiscountsRepository.findAllByHostelIdAndInvoiceIdIn(hostelId, invoiceIds);
+    }
 }

@@ -32,5 +32,4 @@ public class CustomersBedHistory {
     //this is from CustomerBedType enum
     private String type;
     private double rentAmount;
-
 }

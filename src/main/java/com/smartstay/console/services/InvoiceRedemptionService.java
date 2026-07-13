@@ -750,6 +750,10 @@ public class InvoiceRedemptionService {
         return invoiceRedemptionRepository.findBySourceInvoiceId(invoiceId);
     }
 
+    public List<InvoiceRedemption> getInvoiceRedemptionByTargetInvoiceId(String invoiceId){
+        return invoiceRedemptionRepository.findByTargetInvoiceId(invoiceId);
+    }
+
     public void deleteInvoiceRedemptions(List<InvoiceRedemption> invoiceRedemptions) {
 
         Set<String> invoiceIds = new HashSet<>();

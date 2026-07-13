@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class RoomsService {
@@ -23,5 +24,9 @@ public class RoomsService {
 
     public Rooms getRoomById(int roomId) {
         return roomsRepository.findByRoomIdAndIsActiveTrueAndIsDeletedFalse(roomId);
+    }
+
+    public List<Rooms> getRoomsByRoomIds(Set<Integer> roomIds) {
+        return roomsRepository.findAllByRoomIdInAndIsActiveTrueAndIsDeletedFalse(roomIds);
     }
 }

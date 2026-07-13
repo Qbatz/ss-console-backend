@@ -49,4 +49,29 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
     Page<InvoicesV1> findAllByHostelIdOrderByCreatedAtDesc(String hostelId, Pageable pageable);
 
     List<InvoicesV1> findAllByInvoiceType(String invoiceType);
+
+    List<InvoicesV1> findByCustomerIdAndInvoiceType(String customerId, String invoiceType);
+
+    @Query("""
+            SELECT i FROM invoicesv1 i
+            WHERE i.customerId = :customerId
+                AND i.invoiceType IN :invoiceTypes
+                AND DATE(i.invoiceStartDate) < DATE(:beforeDate)
+                AND i.isCancelled = false
+                AND i.paymentStatus != :paidName
+            """)
+    List<InvoicesV1> findOlderUnpaidInvoicesByInvoiceTypes(String customerId, Set<String> invoiceTypes,
+                                                           Date beforeDate, String paidName);
+
+    @Query(value = """
+            SELECT * FROM invoicesv1
+            WHERE customer_id = :customerId
+                AND hostel_id = :hostelId
+                AND DATE(invoice_start_date) >= DATE(:startDate)
+                AND (invoice_type = 'RENT' OR invoice_type = 'REASSIGN_RENT')
+                AND is_cancelled = false
+            """, nativeQuery = true)
+    List<InvoicesV1> findAllCurrentMonthInvoices(@Param("customerId") String customerId,
+                                                 @Param("hostelId") String hostelId,
+                                                 @Param("startDate") Date startDate);
 }

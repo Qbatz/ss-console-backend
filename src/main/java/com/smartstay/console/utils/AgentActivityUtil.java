@@ -94,6 +94,7 @@ public class AgentActivityUtil {
             case SUPPORT_TICKET_NOTES -> "Created a new support ticket note";
             case HOSTEL_NOTES -> "Created a new hostel note";
             case USERS_NOTES -> "Created a new users note";
+            case SETTLEMENT_DETAILS -> "Generated settlement details";
             default -> "Created successfully";
         };
     }

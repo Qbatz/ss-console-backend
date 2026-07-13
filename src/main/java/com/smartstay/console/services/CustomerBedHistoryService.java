@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class CustomerBedHistoryService {
@@ -35,5 +36,40 @@ public class CustomerBedHistoryService {
             listCustomerBedHistories = new ArrayList<>();
         }
         return listCustomerBedHistories;
+    }
+
+    public List<CustomersBedHistory> findBedHistoriesByCustomerIdAndDates(String customerId,
+                                                                          Date startDate, Date endDate) {
+        List<CustomersBedHistory> listCustomerBedHistories = customerBedHistoryRepository
+                .findByCustomerIdAndStartAndEndDate(customerId, startDate, endDate);
+        if (listCustomerBedHistories == null) {
+            listCustomerBedHistories = new ArrayList<>();
+        }
+        return listCustomerBedHistories;
+    }
+
+    public CustomersBedHistory getLatestBedHistoryByCustomerId(String customerId) {
+        return customerBedHistoryRepository
+                .findTopByCustomerIdOrderByCreatedAtDesc(customerId);
+    }
+
+    public List<CustomersBedHistory> getLatestBedHistoriesByCustomerIds(Set<String> customerIds) {
+        return customerBedHistoryRepository.findLatestByCustomerIds(customerIds);
+    }
+
+    public void saveAll(List<CustomersBedHistory> customersBedHistoryList) {
+        customerBedHistoryRepository.saveAll(customersBedHistoryList);
+    }
+
+    public List<CustomersBedHistory> getCustomerHistoriesByCustomerIdAndEndDateBefore(String customerId,
+                                                                                      Date beforeDate){
+        return customerBedHistoryRepository
+                .findAllByCustomerIdAndEndDateBefore(customerId, beforeDate);
+    }
+
+    public List<CustomersBedHistory> getBedHistoriesByCustomerIdAndTypeNotIn(String customerId,
+                                                                             String type){
+        return customerBedHistoryRepository
+                .findAllByCustomerIdAndTypeNot(customerId, type);
     }
 }

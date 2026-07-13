@@ -48,4 +48,15 @@ public interface InvoiceRedemptionRepository extends JpaRepository<InvoiceRedemp
                 ORDER BY ir.id DESC
             """)
     List<InvoiceRedemption> findBySourceInvoiceId(@Param("invoiceId") String invoiceId);
+
+    @Query("""
+                SELECT ir
+                FROM InvoiceRedemption ir
+                WHERE (
+                    ir.targetInvoiceId = :invoiceId
+                )
+                AND ir.isActive = true
+                ORDER BY ir.id DESC
+            """)
+    List<InvoiceRedemption> findByTargetInvoiceId(@Param("invoiceId") String invoiceId);
 }
