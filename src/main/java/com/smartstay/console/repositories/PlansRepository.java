@@ -50,4 +50,6 @@ public interface PlansRepository extends JpaRepository<Plans, Long> {
     Plans findTopByPlanTypeAndIsActiveTrueOrderByPlanIdAsc(String planType);
 
     List<Plans> findAllByPlanTypeNotIn(Set<String> planTypes);
+
+    Plans findByPlanId(Long planId);
 }

@@ -1,8 +1,9 @@
 package com.smartstay.console.controller;
 
-import com.smartstay.console.payloads.plans.PlanFeaturesPayload;
 import com.smartstay.console.payloads.plans.PlansPayload;
 import com.smartstay.console.payloads.plans.PlansUpdatePayload;
+import com.smartstay.console.payloads.plans.SmartstayFeatureAddPayload;
+import com.smartstay.console.payloads.plans.SmartstayFeatureEditPayload;
 import com.smartstay.console.services.PlansService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -25,6 +26,11 @@ public class PlansController {
     @GetMapping
     private ResponseEntity<?> getAllPlans(){
         return plansService.getAllPlans();
+    }
+
+    @GetMapping("/{planId}")
+    private ResponseEntity<?> getPlanById(@PathVariable("planId") Long planId){
+        return plansService.getPlanById(planId);
     }
 
     @GetMapping("/dropdown")
@@ -53,14 +59,24 @@ public class PlansController {
         return plansService.reactivatePlan(planId);
     }
 
-    @PostMapping("/plan-feature/{planId}")
-    private ResponseEntity<?> addPlanFeature(@PathVariable("planId") Long planId,
-                                             @RequestBody @Valid PlanFeaturesPayload payload){
-        return plansService.addPlanFeature(planId, payload);
+    @GetMapping("/smartstay-feature")
+    private ResponseEntity<?> getSmartstayFeatures(){
+        return plansService.getSmartstayFeatures();
     }
 
-    @PutMapping("/plan-feature/{planFeatureId}")
-    private ResponseEntity<?> deactivatePlanFeature(@PathVariable("planFeatureId") Long planFeatureId){
-        return plansService.deactivatePlanFeature(planFeatureId);
+    @PostMapping("/smartstay-feature")
+    private ResponseEntity<?> addSmartstayFeatures(@RequestBody @Valid SmartstayFeatureAddPayload payload){
+        return plansService.addSmartstayFeatures(payload);
+    }
+
+    @PutMapping("/smartstay-feature/{smartstayFeatureId}")
+    private ResponseEntity<?> updateSmartstayFeatures(@PathVariable("smartstayFeatureId") Long smartstayFeatureId,
+                                                      @RequestBody SmartstayFeatureEditPayload payload){
+        return plansService.updateSmartstayFeatures(smartstayFeatureId, payload);
+    }
+
+    @DeleteMapping("/smartstay-feature/{smartstayFeatureId}")
+    private ResponseEntity<?> deleteSmartstayFeatures(@PathVariable("smartstayFeatureId") Long smartstayFeatureId){
+        return plansService.deleteSmartstayFeatures(smartstayFeatureId);
     }
 }

@@ -14,10 +14,6 @@ public class PlanFeaturesService {
     @Autowired
     private PlanFeaturesRepository planFeaturesRepository;
 
-    public List<PlanFeatures> findAllByIds(Set<Long> ids){
-        return planFeaturesRepository.findAllByIdInAndIsActiveTrue(ids);
-    }
-
     public List<PlanFeatures> saveAll(List<PlanFeatures> updatedPlanFeatures) {
         return planFeaturesRepository.saveAll(updatedPlanFeatures);
     }
@@ -26,15 +22,34 @@ public class PlanFeaturesService {
         return planFeaturesRepository.save(planFeatures);
     }
 
-    public PlanFeatures findById(Long id){
-        return planFeaturesRepository.findByIdAndIsActiveTrue(id);
-    }
-
     public List<PlanFeatures> findAllByPlanIds(Set<Long> planIds){
-        return planFeaturesRepository.findAllByPlan_PlanIdIn(planIds);
+        return planFeaturesRepository.findAllByPlan_PlanIdInAndIsActiveTrue(planIds);
     }
 
-    public List<PlanFeatures> findAllByPlanId(Long planId) {
-        return planFeaturesRepository.findAllByPlan_PlanId(planId);
+    public List<PlanFeatures> findAllByPlanId(Long planId){
+        return planFeaturesRepository.findAllByPlan_PlanIdAndIsActiveTrue(planId);
+    }
+
+    public List<PlanFeatures> getBySmartstayFeatureIdsAndPlanId(Set<Long> smartstayFeatureIds, Long planId) {
+        return planFeaturesRepository.findAllBySmartstayFeatureIdInAndPlan_PlanId(smartstayFeatureIds, planId);
+    }
+
+    public List<PlanFeatures> getBySmartstayFeatureId(Long smartstayFeatureId) {
+        return planFeaturesRepository.findAllBySmartstayFeatureIdAndIsActiveTrue(smartstayFeatureId);
+    }
+
+    public void updatePlanFeatureNameBySmartstayFeatureId(Long smartstayFeatureId,
+                                                          String featureName) {
+
+        List<PlanFeatures> planFeatures = planFeaturesRepository
+                .findAllBySmartstayFeatureId(smartstayFeatureId);
+
+        if (planFeatures.isEmpty()) {
+            return;
+        }
+
+        planFeatures.forEach(pf -> pf.setFeatureName(featureName));
+
+        planFeaturesRepository.saveAll(planFeatures);
     }
 }

@@ -2,6 +2,7 @@ package com.smartstay.console;
 
 import com.smartstay.console.dao.*;
 import com.smartstay.console.repositories.AgentModulesRepository;
+import com.smartstay.console.repositories.SmartstayFeaturesRepository;
 import com.smartstay.console.repositories.AgentRolesRepository;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
@@ -167,6 +168,75 @@ public class SmartstayConsoleApplication {
     }
 
 //    @Bean
+//    CommandLineRunner addSmartstayFeatures(SmartstayFeaturesRepository repository) {
+//        return args -> {
+//
+//            Date today = new Date();
+//
+//            SmartstayFeatures tenant = repository.findByFeatureName("Tenant");
+//            if (tenant == null){
+//                tenant = new SmartstayFeatures();
+//                tenant.setFeatureName("Tenant");
+//                tenant.setCommon(true);
+//                tenant.setActive(true);
+//                tenant.setCreatedAt(today);
+//                tenant.setUpdatedAt(today);
+//                repository.save(tenant);
+//            }
+//            SmartstayFeatures invoice = repository.findByFeatureName("Invoice");
+//            if (invoice == null){
+//                invoice = new SmartstayFeatures();
+//                invoice.setFeatureName("Invoice");
+//                invoice.setCommon(true);
+//                invoice.setActive(true);
+//                invoice.setCreatedAt(today);
+//                invoice.setUpdatedAt(today);
+//                repository.save(invoice);
+//            }
+//            SmartstayFeatures dashboard = repository.findByFeatureName("Dashboard");
+//            if (dashboard == null){
+//                dashboard = new SmartstayFeatures();
+//                dashboard.setFeatureName("Dashboard");
+//                dashboard.setCommon(true);
+//                dashboard.setActive(true);
+//                dashboard.setCreatedAt(today);
+//                dashboard.setUpdatedAt(today);
+//                repository.save(dashboard);
+//            }
+//            SmartstayFeatures kyc = repository.findByFeatureName("KYC");
+//            if (kyc == null){
+//                kyc = new SmartstayFeatures();
+//                kyc.setFeatureName("KYC");
+//                kyc.setCommon(false);
+//                kyc.setActive(true);
+//                kyc.setCreatedAt(today);
+//                kyc.setUpdatedAt(today);
+//                repository.save(kyc);
+//            }
+//            SmartstayFeatures rentCollection = repository.findByFeatureName("Rent collection");
+//            if (rentCollection == null){
+//                rentCollection = new SmartstayFeatures();
+//                rentCollection.setFeatureName("Rent collection");
+//                rentCollection.setCommon(false);
+//                rentCollection.setActive(true);
+//                rentCollection.setCreatedAt(today);
+//                rentCollection.setUpdatedAt(today);
+//                repository.save(rentCollection);
+//            }
+//            SmartstayFeatures electricity = repository.findByFeatureName("Electricity");
+//            if (electricity == null){
+//                electricity = new SmartstayFeatures();
+//                electricity.setFeatureName("Electricity");
+//                electricity.setCommon(true);
+//                electricity.setActive(true);
+//                electricity.setCreatedAt(today);
+//                electricity.setUpdatedAt(today);
+//                repository.save(electricity);
+//            }
+//        };
+//    }
+
+    //    @Bean
 //    CommandLineRunner addNewModuleToExistingRoles(AgentRolesRepository rolesRepository) {
 //        return args -> {
 //
