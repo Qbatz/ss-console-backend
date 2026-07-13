@@ -1061,17 +1061,6 @@ public class CustomersService {
         }
 
         String customerId = customer.getCustomerId();
-        String hostelId = customer.getHostelId();
-        boolean isBookingOrAdvancePaid = false;
-        double totalBookingAndAdvancePaidAmount = 0.0;
-        double bookingInvoicePaidAmount = 0.0;
-        double totalDeductionAmount = 0.0;
-        double paidDeductionAmount = 0.0;
-        double pendingDeductionAmount = 0.0;
-        double availableBookingAmountToRedeem = 0.0;
-        double availableAdvanceAmountToRedeem = 0.0;
-        double availableAmountToRedeem = 0.0;
-        double advanceAmountRedeemedFromBookingInvoice = 0.0;
 
         List<InvoicesV1> bookingInvoices = invoiceV1Service
                 .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.BOOKING.name());
@@ -1087,123 +1076,14 @@ public class CustomersService {
                 ? null
                 : advanceInvoices.getFirst();
 
-        CustomerDeductionsInfoRes deductionsInfoRes = null;
+        CustomerDeductionsInfoRes customerDeductionsInfoRes = buildDeductionsInfoRes(advanceInvoice);
 
-        if (bookingInvoice != null) {
-            if (bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
-                    bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                if (bookingInvoice.getPaidAmount() != null) {
-                    isBookingOrAdvancePaid = true;
-                    bookingInvoicePaidAmount = bookingInvoice.getPaidAmount();
-                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount + bookingInvoice.getPaidAmount();
-                }
-                if (bookingInvoice.getBalanceAmount() != null) {
-                    availableBookingAmountToRedeem = bookingInvoice.getBalanceAmount();
-                    availableAmountToRedeem = availableAmountToRedeem + bookingInvoice.getBalanceAmount();
-                }
-            }
-        }
+        CustomerInfoRes customerInfoRes = buildCustomerInfoRes(bookingInvoice, advanceInvoice, booking,
+                customer);
 
-        if (advanceInvoice != null) {
-            advanceAmountRedeemedFromBookingInvoice = invoiceRedemptionService
-                    .getInvoiceRedemptionByTargetInvoiceId(advanceInvoice.getInvoiceId())
-                    .stream()
-                    .mapToDouble(redemption ->
-                            redemption.getRedemptionAmount() != null
-                                    ? redemption.getRedemptionAmount() : 0)
-                    .sum();
+        CustomerStayInfoRes customerStayInfoRes = buildCustomerStayInfoRes(booking, leavingDate);
 
-            if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
-                    advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                if (advanceInvoice.getPaidAmount() != null) {
-                    isBookingOrAdvancePaid = true;
-                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount + advanceInvoice.getPaidAmount();
-                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount - advanceAmountRedeemedFromBookingInvoice;
-                }
-                if (advanceInvoice.getBalanceAmount() != null) {
-                    availableAdvanceAmountToRedeem = advanceInvoice.getBalanceAmount();
-                    availableAmountToRedeem = availableAmountToRedeem + advanceInvoice.getBalanceAmount();
-                }
-            }
-
-            if (advanceInvoice.getDeductions() != null &&
-                    advanceInvoice.getDeductionAmount() != null &&
-                    advanceInvoice.getDeductionAmount() > 0) {
-
-                List<Deductions> deductions = advanceInvoice.getDeductions();
-
-                if (!deductions.isEmpty()) {
-
-                    List<DeductionsInfoRes> deductionsInfo = deductions.stream()
-                            .filter(i -> i.getPaidAmount() == null ||
-                                    i.getPaidAmount() < i.getAmount())
-                            .map(i -> {
-                                double pendingAmount = 0.0;
-                                if (i.getPaidAmount() != null) {
-                                    pendingAmount = i.getAmount() - i.getPaidAmount();
-                                }
-                                return new DeductionsInfoRes(i.getType(), i.getAmount(),
-                                        i.getPaidAmount(), pendingAmount);
-                            }).toList();
-
-                    totalDeductionAmount = deductions.stream().mapToDouble(Deductions::getAmount).sum();
-                    paidDeductionAmount = deductions.stream().mapToDouble(Deductions::getPaidAmount).sum();
-                    pendingDeductionAmount = totalDeductionAmount - paidDeductionAmount;
-
-                    deductionsInfoRes = new CustomerDeductionsInfoRes(totalDeductionAmount, paidDeductionAmount,
-                            pendingDeductionAmount, deductionsInfo);
-                }
-            }
-        }
-
-        double customerAdvanceAmount = 0;
-        Advance advance = customer.getAdvance();
-        if (advance != null) {
-            customerAdvanceAmount = advance.getAdvanceAmount();
-        }
-
-        String joiningDate = null;
-        double bookingRentAmount = 0.0;
-        if (booking != null){
-            if (booking.getJoiningDate() != null){
-                joiningDate = Utils.dateToString(booking.getJoiningDate());
-            }
-            if (booking.getRentAmount() != null){
-                bookingRentAmount = booking.getRentAmount();
-            }
-        }
-
-        AvailableRedemptionAmountRes availableRedemptionAmountRes = new AvailableRedemptionAmountRes(
-                availableBookingAmountToRedeem, availableAdvanceAmountToRedeem, availableAmountToRedeem);
-
-        CustomerInfoRes customerInfoRes = new CustomerInfoRes(customerId, customer.getFirstName(), customer.getLastName(),
-                Utils.getFullName(customer.getFirstName(), customer.getLastName()), customer.getProfilePic(),
-                Utils.getInitials(customer.getFirstName(), customer.getLastName()), "91", customer.getMobile(),
-                joiningDate, customerAdvanceAmount, bookingRentAmount, isBookingOrAdvancePaid, totalBookingAndAdvancePaidAmount,
-                bookingInvoicePaidAmount, availableRedemptionAmountRes);
-
-        String bookedDate = null;
-        String noticeDate = null;
-        String requestedLeavingDate = null;
-        String actualLeavingDate = Utils.dateToString(leavingDate);
-
-        if (booking != null){
-            bookedDate = Utils.dateToString(booking.getBookingDate());
-            noticeDate = Utils.dateToString(booking.getNoticeDate());
-            requestedLeavingDate = Utils.dateToString(booking.getLeavingDate());
-        }
-
-        CustomerStayInfoRes customerStayInfoRes = new CustomerStayInfoRes(bookedDate, noticeDate,
-                requestedLeavingDate, actualLeavingDate);
-
-        ElectricityConfig ebConfig;
-        if (hostel != null){
-            ebConfig = hostel.getElectricityConfig();
-        } else {
-            ebConfig = null;
-        }
-
-        CustomerEbInfoRes customerEbInfoRes = buildEbInfoRes(ebConfig, customerId, hostelId, leavingDate);
+        CustomerEbInfoRes customerEbInfoRes = buildEbInfoRes(hostel, customer, leavingDate);
 
         UnpaidInvoicesInfoRes unpaidInvoicesInfoRes = buildUnpaidInvoiceInfoRes(billingDates, customer);
 
@@ -1217,12 +1097,12 @@ public class CustomersService {
         CustomerAdvanceInfoRes customerAdvanceInfoRes = buildAdvanceInfoRes(advanceInvoice);
 
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
-                customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, isBookingOrAdvancePaid,
-                pendingDeductionAmount, availableAmountToRedeem);
+                customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
+                customerInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
-                customerAdvanceInfoRes, deductionsInfoRes, finalSettlementInfoRes);
+                customerAdvanceInfoRes, customerDeductionsInfoRes, finalSettlementInfoRes);
     }
 
     private CustomerSettlementInfoRes buildFixedDateBasedPrepaidSettlementInfo(Customers customer, BookingsV1 booking,
@@ -1234,17 +1114,6 @@ public class CustomersService {
         }
 
         String customerId = customer.getCustomerId();
-        String hostelId = customer.getHostelId();
-        boolean isBookingOrAdvancePaid = false;
-        double totalBookingAndAdvancePaidAmount = 0.0;
-        double bookingInvoicePaidAmount = 0.0;
-        double totalDeductionAmount = 0.0;
-        double paidDeductionAmount = 0.0;
-        double pendingDeductionAmount = 0.0;
-        double availableBookingAmountToRedeem = 0.0;
-        double availableAdvanceAmountToRedeem = 0.0;
-        double availableAmountToRedeem = 0.0;
-        double advanceAmountRedeemedFromBookingInvoice = 0.0;
 
         List<InvoicesV1> bookingInvoices = invoiceV1Service
                 .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.BOOKING.name());
@@ -1260,123 +1129,14 @@ public class CustomersService {
                 ? null
                 : advanceInvoices.getFirst();
 
-        CustomerDeductionsInfoRes deductionsInfoRes = null;
+        CustomerDeductionsInfoRes customerDeductionsInfoRes = buildDeductionsInfoRes(advanceInvoice);
 
-        if (bookingInvoice != null) {
-            if (bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
-                    bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                if (bookingInvoice.getPaidAmount() != null) {
-                    isBookingOrAdvancePaid = true;
-                    bookingInvoicePaidAmount = bookingInvoice.getPaidAmount();
-                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount + bookingInvoice.getPaidAmount();
-                }
-                if (bookingInvoice.getBalanceAmount() != null) {
-                    availableBookingAmountToRedeem = bookingInvoice.getBalanceAmount();
-                    availableAmountToRedeem = availableAmountToRedeem + bookingInvoice.getBalanceAmount();
-                }
-            }
-        }
+        CustomerInfoRes customerInfoRes = buildCustomerInfoRes(bookingInvoice, advanceInvoice, booking,
+                customer);
 
-        if (advanceInvoice != null) {
-            advanceAmountRedeemedFromBookingInvoice = invoiceRedemptionService
-                    .getInvoiceRedemptionByTargetInvoiceId(advanceInvoice.getInvoiceId())
-                    .stream()
-                    .mapToDouble(redemption ->
-                            redemption.getRedemptionAmount() != null
-                                    ? redemption.getRedemptionAmount() : 0)
-                    .sum();
+        CustomerStayInfoRes customerStayInfoRes = buildCustomerStayInfoRes(booking, leavingDate);
 
-            if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
-                    advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                if (advanceInvoice.getPaidAmount() != null) {
-                    isBookingOrAdvancePaid = true;
-                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount + advanceInvoice.getPaidAmount();
-                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount - advanceAmountRedeemedFromBookingInvoice;
-                }
-                if (advanceInvoice.getBalanceAmount() != null) {
-                    availableAdvanceAmountToRedeem = advanceInvoice.getBalanceAmount();
-                    availableAmountToRedeem = availableAmountToRedeem + advanceInvoice.getBalanceAmount();
-                }
-            }
-
-            if (advanceInvoice.getDeductions() != null &&
-                    advanceInvoice.getDeductionAmount() != null &&
-                    advanceInvoice.getDeductionAmount() > 0) {
-
-                List<Deductions> deductions = advanceInvoice.getDeductions();
-
-                if (!deductions.isEmpty()) {
-
-                    List<DeductionsInfoRes> deductionsInfo = deductions.stream()
-                            .filter(i -> i.getPaidAmount() == null ||
-                                    i.getPaidAmount() < i.getAmount())
-                            .map(i -> {
-                                double pendingAmount = 0.0;
-                                if (i.getPaidAmount() != null) {
-                                    pendingAmount = i.getAmount() - i.getPaidAmount();
-                                }
-                                return new DeductionsInfoRes(i.getType(), i.getAmount(),
-                                        i.getPaidAmount(), pendingAmount);
-                            }).toList();
-
-                    totalDeductionAmount = deductions.stream().mapToDouble(Deductions::getAmount).sum();
-                    paidDeductionAmount = deductions.stream().mapToDouble(Deductions::getPaidAmount).sum();
-                    pendingDeductionAmount = totalDeductionAmount - paidDeductionAmount;
-
-                    deductionsInfoRes = new CustomerDeductionsInfoRes(totalDeductionAmount, paidDeductionAmount,
-                            pendingDeductionAmount, deductionsInfo);
-                }
-            }
-        }
-
-        double customerAdvanceAmount = 0;
-        Advance advance = customer.getAdvance();
-        if (advance != null) {
-            customerAdvanceAmount = advance.getAdvanceAmount();
-        }
-
-        String joiningDate = null;
-        double bookingRentAmount = 0.0;
-        if (booking != null){
-            if (booking.getJoiningDate() != null){
-                joiningDate = Utils.dateToString(booking.getJoiningDate());
-            }
-            if (booking.getRentAmount() != null){
-                bookingRentAmount = booking.getRentAmount();
-            }
-        }
-
-        AvailableRedemptionAmountRes availableRedemptionAmountRes = new AvailableRedemptionAmountRes(
-                availableBookingAmountToRedeem, availableAdvanceAmountToRedeem, availableAmountToRedeem);
-
-        CustomerInfoRes customerInfoRes = new CustomerInfoRes(customerId, customer.getFirstName(), customer.getLastName(),
-                Utils.getFullName(customer.getFirstName(), customer.getLastName()), customer.getProfilePic(),
-                Utils.getInitials(customer.getFirstName(), customer.getLastName()), "91", customer.getMobile(),
-                joiningDate, customerAdvanceAmount, bookingRentAmount, isBookingOrAdvancePaid, totalBookingAndAdvancePaidAmount,
-                bookingInvoicePaidAmount, availableRedemptionAmountRes);
-
-        String bookedDate = null;
-        String noticeDate = null;
-        String requestedLeavingDate = null;
-        String actualLeavingDate = Utils.dateToString(leavingDate);
-
-        if (booking != null){
-            bookedDate = Utils.dateToString(booking.getBookingDate());
-            noticeDate = Utils.dateToString(booking.getNoticeDate());
-            requestedLeavingDate = Utils.dateToString(booking.getLeavingDate());
-        }
-
-        CustomerStayInfoRes customerStayInfoRes = new CustomerStayInfoRes(bookedDate, noticeDate,
-                requestedLeavingDate, actualLeavingDate);
-
-        ElectricityConfig ebConfig;
-        if (hostel != null){
-            ebConfig = hostel.getElectricityConfig();
-        } else {
-            ebConfig = null;
-        }
-
-        CustomerEbInfoRes customerEbInfoRes = buildEbInfoRes(ebConfig, customerId, hostelId, leavingDate);
+        CustomerEbInfoRes customerEbInfoRes = buildEbInfoRes(hostel, customer, leavingDate);
 
         UnpaidInvoicesInfoRes unpaidInvoicesInfoRes = buildUnpaidInvoiceInfoRes(billingDates, customer);
 
@@ -1390,12 +1150,12 @@ public class CustomersService {
         CustomerAdvanceInfoRes customerAdvanceInfoRes = buildAdvanceInfoRes(advanceInvoice);
 
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
-                customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, isBookingOrAdvancePaid,
-                pendingDeductionAmount, availableAmountToRedeem);
+                customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
+                customerInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
-                customerAdvanceInfoRes, deductionsInfoRes, finalSettlementInfoRes);
+                customerAdvanceInfoRes, customerDeductionsInfoRes, finalSettlementInfoRes);
     }
 
     private CustomerSettlementInfoRes buildFixedDateBasedPostpaidSettlementInfo(Customers customer, BookingsV1 booking,
@@ -1407,17 +1167,6 @@ public class CustomersService {
         }
 
         String customerId = customer.getCustomerId();
-        String hostelId = customer.getHostelId();
-        boolean isBookingOrAdvancePaid = false;
-        double totalBookingAndAdvancePaidAmount = 0.0;
-        double bookingInvoicePaidAmount = 0.0;
-        double totalDeductionAmount = 0.0;
-        double paidDeductionAmount = 0.0;
-        double pendingDeductionAmount = 0.0;
-        double availableBookingAmountToRedeem = 0.0;
-        double availableAdvanceAmountToRedeem = 0.0;
-        double availableAmountToRedeem = 0.0;
-        double advanceAmountRedeemedFromBookingInvoice = 0.0;
 
         List<InvoicesV1> bookingInvoices = invoiceV1Service
                 .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.BOOKING.name());
@@ -1433,123 +1182,14 @@ public class CustomersService {
                 ? null
                 : advanceInvoices.getFirst();
 
-        CustomerDeductionsInfoRes deductionsInfoRes = null;
+        CustomerDeductionsInfoRes customerDeductionsInfoRes = buildDeductionsInfoRes(advanceInvoice);
 
-        if (bookingInvoice != null) {
-            if (bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
-                    bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                if (bookingInvoice.getPaidAmount() != null) {
-                    isBookingOrAdvancePaid = true;
-                    bookingInvoicePaidAmount = bookingInvoice.getPaidAmount();
-                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount + bookingInvoice.getPaidAmount();
-                }
-                if (bookingInvoice.getBalanceAmount() != null) {
-                    availableBookingAmountToRedeem = bookingInvoice.getBalanceAmount();
-                    availableAmountToRedeem = availableAmountToRedeem + bookingInvoice.getBalanceAmount();
-                }
-            }
-        }
+        CustomerInfoRes customerInfoRes = buildCustomerInfoRes(bookingInvoice, advanceInvoice, booking,
+                customer);
 
-        if (advanceInvoice != null) {
-            advanceAmountRedeemedFromBookingInvoice = invoiceRedemptionService
-                    .getInvoiceRedemptionByTargetInvoiceId(advanceInvoice.getInvoiceId())
-                    .stream()
-                    .mapToDouble(redemption ->
-                            redemption.getRedemptionAmount() != null
-                                    ? redemption.getRedemptionAmount() : 0)
-                    .sum();
+        CustomerStayInfoRes customerStayInfoRes = buildCustomerStayInfoRes(booking, leavingDate);
 
-            if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
-                    advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                if (advanceInvoice.getPaidAmount() != null) {
-                    isBookingOrAdvancePaid = true;
-                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount + advanceInvoice.getPaidAmount();
-                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount - advanceAmountRedeemedFromBookingInvoice;
-                }
-                if (advanceInvoice.getBalanceAmount() != null) {
-                    availableAdvanceAmountToRedeem = advanceInvoice.getBalanceAmount();
-                    availableAmountToRedeem = availableAmountToRedeem + advanceInvoice.getBalanceAmount();
-                }
-            }
-
-            if (advanceInvoice.getDeductions() != null &&
-                    advanceInvoice.getDeductionAmount() != null &&
-                    advanceInvoice.getDeductionAmount() > 0) {
-
-                List<Deductions> deductions = advanceInvoice.getDeductions();
-
-                if (!deductions.isEmpty()) {
-
-                    List<DeductionsInfoRes> deductionsInfo = deductions.stream()
-                            .filter(i -> i.getPaidAmount() == null ||
-                                    i.getPaidAmount() < i.getAmount())
-                            .map(i -> {
-                                double pendingAmount = 0.0;
-                                if (i.getPaidAmount() != null) {
-                                    pendingAmount = i.getAmount() - i.getPaidAmount();
-                                }
-                                return new DeductionsInfoRes(i.getType(), i.getAmount(),
-                                        i.getPaidAmount(), pendingAmount);
-                            }).toList();
-
-                    totalDeductionAmount = deductions.stream().mapToDouble(Deductions::getAmount).sum();
-                    paidDeductionAmount = deductions.stream().mapToDouble(Deductions::getPaidAmount).sum();
-                    pendingDeductionAmount = totalDeductionAmount - paidDeductionAmount;
-
-                    deductionsInfoRes = new CustomerDeductionsInfoRes(totalDeductionAmount, paidDeductionAmount,
-                            pendingDeductionAmount, deductionsInfo);
-                }
-            }
-        }
-
-        double customerAdvanceAmount = 0;
-        Advance advance = customer.getAdvance();
-        if (advance != null) {
-            customerAdvanceAmount = advance.getAdvanceAmount();
-        }
-
-        String joiningDate = null;
-        double bookingRentAmount = 0.0;
-        if (booking != null){
-            if (booking.getJoiningDate() != null){
-                joiningDate = Utils.dateToString(booking.getJoiningDate());
-            }
-            if (booking.getRentAmount() != null){
-                bookingRentAmount = booking.getRentAmount();
-            }
-        }
-
-        AvailableRedemptionAmountRes availableRedemptionAmountRes = new AvailableRedemptionAmountRes(
-                availableBookingAmountToRedeem, availableAdvanceAmountToRedeem, availableAmountToRedeem);
-
-        CustomerInfoRes customerInfoRes = new CustomerInfoRes(customerId, customer.getFirstName(), customer.getLastName(),
-                Utils.getFullName(customer.getFirstName(), customer.getLastName()), customer.getProfilePic(),
-                Utils.getInitials(customer.getFirstName(), customer.getLastName()), "91", customer.getMobile(),
-                joiningDate, customerAdvanceAmount, bookingRentAmount, isBookingOrAdvancePaid, totalBookingAndAdvancePaidAmount,
-                bookingInvoicePaidAmount, availableRedemptionAmountRes);
-
-        String bookedDate = null;
-        String noticeDate = null;
-        String requestedLeavingDate = null;
-        String actualLeavingDate = Utils.dateToString(leavingDate);
-
-        if (booking != null){
-            bookedDate = Utils.dateToString(booking.getBookingDate());
-            noticeDate = Utils.dateToString(booking.getNoticeDate());
-            requestedLeavingDate = Utils.dateToString(booking.getLeavingDate());
-        }
-
-        CustomerStayInfoRes customerStayInfoRes = new CustomerStayInfoRes(bookedDate, noticeDate,
-                requestedLeavingDate, actualLeavingDate);
-
-        ElectricityConfig ebConfig;
-        if (hostel != null){
-            ebConfig = hostel.getElectricityConfig();
-        } else {
-            ebConfig = null;
-        }
-
-        CustomerEbInfoRes customerEbInfoRes = buildEbInfoRes(ebConfig, customerId, hostelId, leavingDate);
+        CustomerEbInfoRes customerEbInfoRes = buildEbInfoRes(hostel, customer, leavingDate);
 
         UnpaidInvoicesInfoRes unpaidInvoicesInfoRes = buildUnpaidInvoiceInfoRes(billingDates, customer);
 
@@ -1563,12 +1203,12 @@ public class CustomersService {
         CustomerAdvanceInfoRes customerAdvanceInfoRes = buildAdvanceInfoRes(advanceInvoice);
 
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
-                customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, isBookingOrAdvancePaid,
-                pendingDeductionAmount, availableAmountToRedeem);
+                customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
+                customerInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
-                customerAdvanceInfoRes, deductionsInfoRes, finalSettlementInfoRes);
+                customerAdvanceInfoRes, customerDeductionsInfoRes, finalSettlementInfoRes);
     }
 
     private CustomerSettlementInfoRes buildJoiningBasedPrepaidSettlementInfo(Customers customer,
@@ -1582,17 +1222,6 @@ public class CustomersService {
         }
 
         String customerId = customer.getCustomerId();
-        String hostelId = customer.getHostelId();
-        boolean isBookingOrAdvancePaid = false;
-        double totalBookingAndAdvancePaidAmount = 0.0;
-        double bookingInvoicePaidAmount = 0.0;
-        double totalDeductionAmount = 0.0;
-        double paidDeductionAmount = 0.0;
-        double pendingDeductionAmount = 0.0;
-        double availableBookingAmountToRedeem = 0.0;
-        double availableAdvanceAmountToRedeem = 0.0;
-        double availableAmountToRedeem = 0.0;
-        double advanceAmountRedeemedFromBookingInvoice = 0.0;
 
         List<InvoicesV1> bookingInvoices = invoiceV1Service
                 .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.BOOKING.name());
@@ -1608,123 +1237,14 @@ public class CustomersService {
                 ? null
                 : advanceInvoices.getFirst();
 
-        CustomerDeductionsInfoRes deductionsInfoRes = null;
+        CustomerDeductionsInfoRes customerDeductionsInfoRes = buildDeductionsInfoRes(advanceInvoice);
 
-        if (bookingInvoice != null) {
-            if (bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
-                    bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                if (bookingInvoice.getPaidAmount() != null) {
-                    isBookingOrAdvancePaid = true;
-                    bookingInvoicePaidAmount = bookingInvoice.getPaidAmount();
-                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount + bookingInvoice.getPaidAmount();
-                }
-                if (bookingInvoice.getBalanceAmount() != null) {
-                    availableBookingAmountToRedeem = bookingInvoice.getBalanceAmount();
-                    availableAmountToRedeem = availableAmountToRedeem + bookingInvoice.getBalanceAmount();
-                }
-            }
-        }
+        CustomerInfoRes customerInfoRes = buildCustomerInfoRes(bookingInvoice, advanceInvoice, booking,
+                customer);
 
-        if (advanceInvoice != null) {
-            advanceAmountRedeemedFromBookingInvoice = invoiceRedemptionService
-                    .getInvoiceRedemptionByTargetInvoiceId(advanceInvoice.getInvoiceId())
-                    .stream()
-                    .mapToDouble(redemption ->
-                            redemption.getRedemptionAmount() != null
-                                    ? redemption.getRedemptionAmount() : 0)
-                    .sum();
+        CustomerStayInfoRes customerStayInfoRes = buildCustomerStayInfoRes(booking, leavingDate);
 
-            if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
-                    advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
-                if (advanceInvoice.getPaidAmount() != null) {
-                    isBookingOrAdvancePaid = true;
-                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount + advanceInvoice.getPaidAmount();
-                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount - advanceAmountRedeemedFromBookingInvoice;
-                }
-                if (advanceInvoice.getBalanceAmount() != null) {
-                    availableAdvanceAmountToRedeem = advanceInvoice.getBalanceAmount();
-                    availableAmountToRedeem = availableAmountToRedeem + advanceInvoice.getBalanceAmount();
-                }
-            }
-
-            if (advanceInvoice.getDeductions() != null &&
-                    advanceInvoice.getDeductionAmount() != null &&
-                    advanceInvoice.getDeductionAmount() > 0) {
-
-                List<Deductions> deductions = advanceInvoice.getDeductions();
-
-                if (!deductions.isEmpty()) {
-
-                    List<DeductionsInfoRes> deductionsInfo = deductions.stream()
-                            .filter(i -> i.getPaidAmount() == null ||
-                                    i.getPaidAmount() < i.getAmount())
-                            .map(i -> {
-                                double pendingAmount = 0.0;
-                                if (i.getPaidAmount() != null) {
-                                    pendingAmount = i.getAmount() - i.getPaidAmount();
-                                }
-                                return new DeductionsInfoRes(i.getType(), i.getAmount(),
-                                        i.getPaidAmount(), pendingAmount);
-                            }).toList();
-
-                    totalDeductionAmount = deductions.stream().mapToDouble(Deductions::getAmount).sum();
-                    paidDeductionAmount = deductions.stream().mapToDouble(Deductions::getPaidAmount).sum();
-                    pendingDeductionAmount = totalDeductionAmount - paidDeductionAmount;
-
-                    deductionsInfoRes = new CustomerDeductionsInfoRes(totalDeductionAmount, paidDeductionAmount,
-                            pendingDeductionAmount, deductionsInfo);
-                }
-            }
-        }
-
-        double customerAdvanceAmount = 0;
-        Advance advance = customer.getAdvance();
-        if (advance != null) {
-            customerAdvanceAmount = advance.getAdvanceAmount();
-        }
-
-        String joiningDate = null;
-        double bookingRentAmount = 0.0;
-        if (booking != null){
-            if (booking.getJoiningDate() != null){
-                joiningDate = Utils.dateToString(booking.getJoiningDate());
-            }
-            if (booking.getRentAmount() != null){
-                bookingRentAmount = booking.getRentAmount();
-            }
-        }
-
-        AvailableRedemptionAmountRes availableRedemptionAmountRes = new AvailableRedemptionAmountRes(
-                availableBookingAmountToRedeem, availableAdvanceAmountToRedeem, availableAmountToRedeem);
-
-        CustomerInfoRes customerInfoRes = new CustomerInfoRes(customerId, customer.getFirstName(), customer.getLastName(),
-                Utils.getFullName(customer.getFirstName(), customer.getLastName()), customer.getProfilePic(),
-                Utils.getInitials(customer.getFirstName(), customer.getLastName()), "91", customer.getMobile(),
-                joiningDate, customerAdvanceAmount, bookingRentAmount, isBookingOrAdvancePaid, totalBookingAndAdvancePaidAmount,
-                bookingInvoicePaidAmount, availableRedemptionAmountRes);
-
-        String bookedDate = null;
-        String noticeDate = null;
-        String requestedLeavingDate = null;
-        String actualLeavingDate = Utils.dateToString(leavingDate);
-
-        if (booking != null){
-            bookedDate = Utils.dateToString(booking.getBookingDate());
-            noticeDate = Utils.dateToString(booking.getNoticeDate());
-            requestedLeavingDate = Utils.dateToString(booking.getLeavingDate());
-        }
-
-        CustomerStayInfoRes customerStayInfoRes = new CustomerStayInfoRes(bookedDate, noticeDate,
-                requestedLeavingDate, actualLeavingDate);
-
-        ElectricityConfig ebConfig;
-        if (hostel != null){
-            ebConfig = hostel.getElectricityConfig();
-        } else {
-            ebConfig = null;
-        }
-
-        CustomerEbInfoRes customerEbInfoRes = buildEbInfoRes(ebConfig, customerId, hostelId, leavingDate);
+        CustomerEbInfoRes customerEbInfoRes = buildEbInfoRes(hostel, customer, leavingDate);
 
         UnpaidInvoicesInfoRes unpaidInvoicesInfoRes = buildUnpaidInvoiceInfoRes(billingDates, customer);
 
@@ -1738,21 +1258,40 @@ public class CustomersService {
         CustomerAdvanceInfoRes customerAdvanceInfoRes = buildAdvanceInfoRes(advanceInvoice);
 
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
-                customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, isBookingOrAdvancePaid,
-                pendingDeductionAmount, availableAmountToRedeem);
+                customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
+                customerInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
-                customerAdvanceInfoRes, deductionsInfoRes, finalSettlementInfoRes);
+                customerAdvanceInfoRes, customerDeductionsInfoRes, finalSettlementInfoRes);
     }
 
     private CustomerFinalSettlementInfoRes buildFinalSettlementInfoRes(CustomerEbInfoRes customerEbInfoRes,
                                                                        CustomerWalletInfoRes customerWalletInfoRes,
                                                                        UnpaidInvoicesInfoRes unpaidInvoicesInfoRes,
                                                                        CustomerRentInfoRes customerRentInfoRes,
-                                                                       boolean isBookingOrAdvancePaid,
-                                                                       double pendingDeductionAmount,
-                                                                       double availableAmountToRedeem) {
+                                                                       CustomerDeductionsInfoRes customerDeductionsInfoRes,
+                                                                       CustomerInfoRes customerInfoRes) {
+
+        boolean isBookingOrAdvancePaid = false;
+        double availableAmountToRedeem = 0;
+
+        if (customerInfoRes != null){
+            isBookingOrAdvancePaid = customerInfoRes.isBookingOrAdvancePaid();
+            if (customerInfoRes.availableRedemptionAmount() != null) {
+                AvailableRedemptionAmountRes availableRedemptionAmountRes = customerInfoRes.availableRedemptionAmount();
+                if (availableRedemptionAmountRes.totalAvailableAmountToRedeem() != null){
+                    availableAmountToRedeem = availableRedemptionAmountRes.totalAvailableAmountToRedeem();
+                }
+            }
+        }
+
+        double pendingDeductionAmount = 0.0;
+        if (customerDeductionsInfoRes != null){
+            if (customerDeductionsInfoRes.pendingAmount() != null){
+                pendingDeductionAmount = customerDeductionsInfoRes.pendingAmount();
+            }
+        }
 
         double ebAmount = 0.0;
         if (customerEbInfoRes != null) {
@@ -1814,6 +1353,152 @@ public class CustomersService {
                 Utils.roundOfDoubleTo2Digits(totalRefundableAdvance), Utils.roundOfDoubleTo2Digits(ebAmount),
                 Utils.roundOfDoubleTo2Digits(unpaidInvoicesUnPaidAmount), isRefundable, label,
                 Utils.roundOfDoubleTo2Digits(pendingAmount));
+    }
+
+    private CustomerInfoRes buildCustomerInfoRes(InvoicesV1 bookingInvoice, InvoicesV1 advanceInvoice,
+                                                 BookingsV1 booking, Customers customer) {
+
+        if (customer == null){
+            return null;
+        }
+
+        String customerId = customer.getCustomerId();
+        boolean isBookingOrAdvancePaid = false;
+        double totalBookingAndAdvancePaidAmount = 0.0;
+        double bookingInvoicePaidAmount = 0.0;
+        double availableBookingAmountToRedeem = 0.0;
+        double availableAdvanceAmountToRedeem = 0.0;
+        double availableAmountToRedeem = 0.0;
+        double advanceAmountRedeemedFromBookingInvoice = 0.0;
+
+        if (bookingInvoice != null) {
+            if (bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
+                    bookingInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                if (bookingInvoice.getPaidAmount() != null) {
+                    isBookingOrAdvancePaid = true;
+                    bookingInvoicePaidAmount = bookingInvoice.getPaidAmount();
+                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount + bookingInvoice.getPaidAmount();
+                }
+                if (bookingInvoice.getBalanceAmount() != null) {
+                    availableBookingAmountToRedeem = bookingInvoice.getBalanceAmount();
+                    availableAmountToRedeem = availableAmountToRedeem + bookingInvoice.getBalanceAmount();
+                }
+            }
+        }
+
+        if (advanceInvoice != null) {
+            advanceAmountRedeemedFromBookingInvoice = invoiceRedemptionService
+                    .getInvoiceRedemptionByTargetInvoiceId(advanceInvoice.getInvoiceId())
+                    .stream()
+                    .mapToDouble(redemption ->
+                            redemption.getRedemptionAmount() != null
+                                    ? redemption.getRedemptionAmount() : 0)
+                    .sum();
+
+            if (advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PAID.name()) ||
+                    advanceInvoice.getPaymentStatus().equalsIgnoreCase(PaymentStatus.PARTIAL_PAYMENT.name())) {
+                if (advanceInvoice.getPaidAmount() != null) {
+                    isBookingOrAdvancePaid = true;
+                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount + advanceInvoice.getPaidAmount();
+                    totalBookingAndAdvancePaidAmount = totalBookingAndAdvancePaidAmount - advanceAmountRedeemedFromBookingInvoice;
+                }
+                if (advanceInvoice.getBalanceAmount() != null) {
+                    availableAdvanceAmountToRedeem = advanceInvoice.getBalanceAmount();
+                    availableAmountToRedeem = availableAmountToRedeem + advanceInvoice.getBalanceAmount();
+                }
+            }
+        }
+
+        double customerAdvanceAmount = 0;
+        Advance advance = customer.getAdvance();
+        if (advance != null) {
+            customerAdvanceAmount = advance.getAdvanceAmount();
+        }
+
+        String joiningDate = null;
+        double bookingRentAmount = 0.0;
+        if (booking != null){
+            if (booking.getJoiningDate() != null){
+                joiningDate = Utils.dateToString(booking.getJoiningDate());
+            }
+            if (booking.getRentAmount() != null){
+                bookingRentAmount = booking.getRentAmount();
+            }
+        }
+
+        AvailableRedemptionAmountRes availableRedemptionAmountRes = new AvailableRedemptionAmountRes(
+                availableBookingAmountToRedeem, availableAdvanceAmountToRedeem, availableAmountToRedeem);
+
+        return new CustomerInfoRes(customerId, customer.getFirstName(), customer.getLastName(),
+                Utils.getFullName(customer.getFirstName(), customer.getLastName()), customer.getProfilePic(),
+                Utils.getInitials(customer.getFirstName(), customer.getLastName()), "91", customer.getMobile(),
+                joiningDate, customerAdvanceAmount, bookingRentAmount, isBookingOrAdvancePaid, totalBookingAndAdvancePaidAmount,
+                bookingInvoicePaidAmount, availableRedemptionAmountRes);
+    }
+
+    private CustomerDeductionsInfoRes buildDeductionsInfoRes(InvoicesV1 advanceInvoice) {
+
+        CustomerDeductionsInfoRes customerDeductionsInfoRes = null;
+
+        if (advanceInvoice == null){
+            return null;
+        }
+
+        if (advanceInvoice.getDeductions() != null &&
+                advanceInvoice.getDeductionAmount() != null &&
+                advanceInvoice.getDeductionAmount() > 0) {
+
+            double totalDeductionAmount = 0.0;
+            double paidDeductionAmount = 0.0;
+            double pendingDeductionAmount = 0.0;
+
+            List<Deductions> deductions = advanceInvoice.getDeductions();
+
+            if (!deductions.isEmpty()) {
+
+                List<DeductionsInfoRes> deductionsInfo = deductions.stream()
+                        .filter(i -> i.getPaidAmount() == null ||
+                                i.getPaidAmount() < i.getAmount())
+                        .map(i -> {
+                            double pendingAmount = 0.0;
+                            if (i.getPaidAmount() != null) {
+                                pendingAmount = i.getAmount() - i.getPaidAmount();
+                            }
+                            return new DeductionsInfoRes(i.getType(), i.getAmount(),
+                                    i.getPaidAmount(), pendingAmount);
+                        }).toList();
+
+                totalDeductionAmount = deductions.stream().mapToDouble(Deductions::getAmount).sum();
+                paidDeductionAmount = deductions.stream().mapToDouble(Deductions::getPaidAmount).sum();
+                pendingDeductionAmount = totalDeductionAmount - paidDeductionAmount;
+
+                customerDeductionsInfoRes = new CustomerDeductionsInfoRes(totalDeductionAmount,
+                        paidDeductionAmount, pendingDeductionAmount, deductionsInfo);
+            }
+        }
+
+        return customerDeductionsInfoRes;
+    }
+
+    private CustomerStayInfoRes buildCustomerStayInfoRes(BookingsV1 booking, Date leavingDate) {
+
+        String bookedDate = null;
+        String noticeDate = null;
+        String requestedLeavingDate = null;
+        String actualLeavingDate = null;
+
+        if (leavingDate != null){
+            actualLeavingDate = Utils.dateToString(leavingDate);
+        }
+
+        if (booking != null){
+            bookedDate = Utils.dateToString(booking.getBookingDate());
+            noticeDate = Utils.dateToString(booking.getNoticeDate());
+            requestedLeavingDate = Utils.dateToString(booking.getLeavingDate());
+        }
+
+        return new CustomerStayInfoRes(bookedDate, noticeDate,
+                requestedLeavingDate, actualLeavingDate);
     }
 
     private CustomerRentInfoRes buildRentInfoRes(BillingDates billingDates, Customers customer,
@@ -2262,10 +1947,25 @@ public class CustomersService {
                 }).toList();
     }
 
-    private CustomerEbInfoRes buildEbInfoRes(ElectricityConfig ebConfig, String customerId,
-                                             String hostelId, Date leavingDate) {
+    private CustomerEbInfoRes buildEbInfoRes(HostelV1 hostel, Customers customer, Date leavingDate) {
 
         CustomerEbInfoRes customerEbInfoRes = null;
+
+        if (customer == null) {
+            return null;
+        }
+
+        String customerId = customer.getCustomerId();
+
+        String hostelId;
+        ElectricityConfig ebConfig;
+        if (hostel != null){
+            ebConfig = hostel.getElectricityConfig();
+            hostelId = hostel.getHostelId();
+        } else {
+            ebConfig = null;
+            hostelId = null;
+        }
 
         if (ebConfig != null && leavingDate != null){
 
