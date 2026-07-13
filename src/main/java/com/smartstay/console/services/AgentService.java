@@ -10,10 +10,7 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.agent.AgentSnapshot;
 import com.smartstay.console.dto.agent.RoleCountProjection;
 import com.smartstay.console.dto.zoho.ZohoUserDetails;
-import com.smartstay.console.ennum.ActivityType;
-import com.smartstay.console.ennum.ModuleId;
-import com.smartstay.console.ennum.Source;
-import com.smartstay.console.ennum.UserType;
+import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.AddAdmin;
 import com.smartstay.console.payloads.agent.AddMockAgent;
 import com.smartstay.console.payloads.roles.RoleIdPayload;
@@ -543,13 +540,24 @@ public class AgentService {
                 ).apply(agentActivity))
                 .toList();
 
-       List<AgentSubscriptionRes> subscriptionRes = subscriptions.stream()
+        List<AgentSubscriptionRes> subscriptionRes = subscriptions.stream()
                .map(subscription -> {
                    HostelV1 hostel = hostelByHostelIdMap.getOrDefault(subscription.getHostelId(), null);
                    Plans plan = plansMap.getOrDefault(subscription.getPlanCode(), null);
                    return new AgentSubscriptionResMapper(hostel, agentMap, usersMap, plan)
                            .apply(subscription);
                }).toList();
+
+        Set<String> trialPlanTypes = new HashSet<>();
+        trialPlanTypes.add(PlanType.TRIAL.name());
+        trialPlanTypes.add(PlanType.EXPANDABLE_TRIAL.name());
+
+        List<AgentSubscriptionRes> paidSubscriptionRes = subscriptionRes.stream()
+                .filter(s -> !trialPlanTypes.contains(s.planType()))
+                .toList();
+        List<AgentSubscriptionRes> trialSubscriptionRes = subscriptionRes.stream()
+                .filter(s -> trialPlanTypes.contains(s.planType()))
+                .toList();
 
         List<RelationalAgentResponse> hostelRelationsRes = hostelRelations.stream()
                 .map(hostelRelationalAgent -> {
@@ -571,9 +579,9 @@ public class AgentService {
             updatedBy = agentMap.getOrDefault(inputAgent.getUpdatedBy(), null);
         }
 
-        AgentDetailsRes response = new AgentDetailsResMapper(
-                agentActivitiesRes, agentRole, createdBy, updatedBy, hostelRelationsRes, subscriptionRes
-        ).apply(inputAgent);
+        AgentDetailsRes response = new AgentDetailsResMapper(agentActivitiesRes, agentRole,
+                createdBy, updatedBy, hostelRelationsRes, paidSubscriptionRes, trialSubscriptionRes)
+                .apply(inputAgent);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
