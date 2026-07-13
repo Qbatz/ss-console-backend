@@ -2078,21 +2078,21 @@ public class CustomersService {
 
                         if (!readingsToCalculate.isEmpty()) {
                             allPendingEbRes.addAll(
-                                    buildPendingEbResponse(readingsToCalculate, allPendingEbRes, roomHistoryMap,
+                                    buildPendingEbResponse(readingsToCalculate, roomHistoryMap,
                                             floorsMap, roomsMap, customerId, leavingDate, ebConfig)
                             );
                         }
                     } else {
                         allPendingEbRes.addAll(
-                                buildPendingEbResponse(uniquePendingReadings, allPendingEbRes, roomHistoryMap,
+                                buildPendingEbResponse(uniquePendingReadings, roomHistoryMap,
                                         floorsMap, roomsMap, customerId, leavingDate, ebConfig)
                         );
                     }
                 }
 
                 allMissedEbRoomsRes.addAll(
-                        buildMissedEbRoomResponse(customersBedHistories, allMissedEbRoomsRes,
-                                latestReadingOfRooms, floorsMap, roomsMap, bedsMap, leavingDate)
+                        buildMissedEbRoomResponse(customersBedHistories, latestReadingOfRooms,
+                                floorsMap, roomsMap, bedsMap, leavingDate)
                 );
 
             } else if (EBReadingType.FLAT_RATE.name().equals(ebConfig.getTypeOfReading())) {
@@ -2435,10 +2435,11 @@ public class CustomersService {
     }
 
     private List<PendingEbRes> buildPendingEbResponse(List<ElectricityReadings> allPendingEbReadings,
-                                                      List<PendingEbRes> allPendingEbRes,
                                                       Map<Integer, List<CustomersBedHistory>> roomHistoryMap,
                                                       Map<Integer, Floors> floorsMap, Map<Integer, Rooms> roomsMap,
                                                       String customerId, Date leavingDate, ElectricityConfig ebConfig) {
+
+        List<PendingEbRes> allPendingEbRes = new ArrayList<>();
 
         double unitPrice;
         if (ebConfig != null){
@@ -2525,10 +2526,11 @@ public class CustomersService {
     }
 
     private List<MissedEbRoomsRes> buildMissedEbRoomResponse(List<CustomersBedHistory> customersBedHistories,
-                                                             List<MissedEbRoomsRes> allMissedEbRoomsRes,
                                                              List<ElectricityReadings> latestReadingOfRooms,
                                                              Map<Integer, Floors> floorsMap, Map<Integer, Rooms> roomsMap,
                                                              Map<Integer, Beds> bedsMap, Date leavingDate) {
+
+        List<MissedEbRoomsRes> allMissedEbRoomsRes = new ArrayList<>();
 
         Map<Integer, ElectricityReadings> latestReadingMap = latestReadingOfRooms.stream()
                         .collect(Collectors.toMap(
