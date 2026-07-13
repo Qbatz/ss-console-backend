@@ -15,4 +15,6 @@ public interface BankTransactionRepositories extends JpaRepository<BankTransacti
     List<BankTransactionsV1> findByTransactionNumberIn(Set<String> transactionIds);
 
     List<BankTransactionsV1> findBySourceIdIn(List<String> expenseIds);
+
+    BankTransactionsV1 findByTransactionNumber(String transactionId);
 }

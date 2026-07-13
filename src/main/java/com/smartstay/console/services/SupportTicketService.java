@@ -206,6 +206,9 @@ public class SupportTicketService {
                 .map(currentStatus -> {
                     List<TicketAllowedStatusResponse> allowedStatusResponses = currentStatus
                             .getAllowedStatuses().stream()
+                            .filter(allowedStatus ->
+                                    !(currentStatus == TicketStatus.ASSIGNED
+                                            && allowedStatus == TicketStatus.ASSIGNED))
                             .map(allowedStatus -> new TicketAllowedStatusResponse(
                                     allowedStatus.name(), allowedStatus.getLabel()))
                             .toList();
@@ -535,6 +538,12 @@ public class SupportTicketService {
             return new ResponseEntity<>(Utils.PRIORITY_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        if (supportTicket.getAssignedTo() != null){
+            if (payload.comments() == null || payload.comments().isBlank()){
+                return new ResponseEntity<>(Utils.COMMENTS_REQUIRED_FOR_REASSIGN_STAFF, HttpStatus.BAD_REQUEST);
+            }
+        }
+
         Date today = new Date();
 
         supportTicket.setPriority(priority.name());
@@ -611,6 +620,12 @@ public class SupportTicketService {
 
             if (payload.priority() == null || payload.priority().isBlank()){
                 return new ResponseEntity<>(Utils.PRIORITY_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            if (supportTicket.getAssignedTo() != null){
+                if (payload.comments() == null || payload.comments().isBlank()){
+                    return new ResponseEntity<>(Utils.COMMENTS_REQUIRED_FOR_REASSIGN_STAFF, HttpStatus.BAD_REQUEST);
+                }
             }
 
             Agent assignedTo = agentService.findUserByUserId(payload.agentId());

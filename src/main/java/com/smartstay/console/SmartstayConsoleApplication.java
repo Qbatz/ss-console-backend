@@ -3,6 +3,7 @@ package com.smartstay.console;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.repositories.AgentModulesRepository;
 import com.smartstay.console.repositories.SmartstayFeaturesRepository;
+import com.smartstay.console.repositories.AgentRolesRepository;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.boot.CommandLineRunner;
@@ -156,6 +157,13 @@ public class SmartstayConsoleApplication {
                 module20.setModuleName("Payments");
                 repository.save(module20);
             }
+
+            AgentModules module21 = repository.findByModuleName("Receipt");
+            if (module21 == null) {
+                module21 = new AgentModules();
+                module21.setModuleName("Receipt");
+                repository.save(module21);
+            }
         };
     }
 
@@ -225,6 +233,69 @@ public class SmartstayConsoleApplication {
 //                electricity.setUpdatedAt(today);
 //                repository.save(electricity);
 //            }
+//        };
+//    }
+
+    //    @Bean
+//    CommandLineRunner addNewModuleToExistingRoles(AgentRolesRepository rolesRepository) {
+//        return args -> {
+//
+//            final int NEW_MODULE_ID = 21;
+//
+//            List<AgentRoles> updatedRoles = rolesRepository.findAll()
+//                    .stream()
+//                    .map(role -> {
+//
+//                        // check if permission for module already exists
+//                        boolean alreadyExists = role.getPermissions()
+//                                .stream()
+//                                .anyMatch(p -> p.getModuleId() == NEW_MODULE_ID);
+//
+//                        if (alreadyExists) {
+//                            return role; // skip if already present
+//                        }
+//
+//                        RolesPermission newPermission = new RolesPermission();
+//                        newPermission.setModuleId(NEW_MODULE_ID);
+//
+//                        String roleName = role.getRoleName();
+//
+//                        switch (roleName) {
+//                            case "CONSOLE-ADMIN-LEVEL-1" -> {
+//                                newPermission.setCanRead(true);
+//                                newPermission.setCanWrite(true);
+//                                newPermission.setCanUpdate(true);
+//                                newPermission.setCanDelete(true);
+//                            }
+//                            case "CONSOLE-ADMIN-READ-ONLY" -> {
+//                                newPermission.setCanRead(true);
+//                                newPermission.setCanWrite(false);
+//                                newPermission.setCanUpdate(false);
+//                                newPermission.setCanDelete(false);
+//                            }
+//                            case "CONSOLE-ADMIN-READ-WRITE-ONLY" -> {
+//                                newPermission.setCanRead(true);
+//                                newPermission.setCanWrite(true);
+//                                newPermission.setCanUpdate(false);
+//                                newPermission.setCanDelete(false);
+//                            }
+//                            case null, default -> {
+//                                // default for all other roles
+//                                newPermission.setCanRead(false);
+//                                newPermission.setCanWrite(false);
+//                                newPermission.setCanUpdate(false);
+//                                newPermission.setCanDelete(false);
+//                            }
+//                        }
+//
+//                        List<RolesPermission> permissions = new ArrayList<>(role.getPermissions());
+//                        permissions.add(newPermission);
+//                        role.setPermissions(permissions);
+//
+//                        return role;
+//                    }).toList();
+//
+//            rolesRepository.saveAll(updatedRoles);
 //        };
 //    }
 }

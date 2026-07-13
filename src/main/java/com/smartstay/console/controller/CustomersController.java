@@ -1,5 +1,6 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.customers.CustomerDatePayload;
 import com.smartstay.console.payloads.customers.CustomerResetPayload;
 import com.smartstay.console.services.CustomersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -20,6 +21,11 @@ public class CustomersController {
     @Autowired
     CustomersService customersService;
 
+    @GetMapping("/{customerId}")
+    public ResponseEntity<?> getTenantDetails(@PathVariable("customerId") String customerId) {
+        return customersService.getTenantDetails(customerId);
+    }
+
     @GetMapping("/tenant-summary")
     public ResponseEntity<?> getTenantsWithPaymentSummary(@RequestParam(value = "page", defaultValue = "0") int page,
                                                           @RequestParam(value = "size", defaultValue = "10") int size,
@@ -28,9 +34,33 @@ public class CustomersController {
     }
 
     @DeleteMapping("/{hostelId}/{customerId}")
-    public ResponseEntity<?> deleteTenant(@PathVariable String hostelId,
-                                          @PathVariable String customerId,
+    public ResponseEntity<?> deleteTenant(@PathVariable("hostelId") String hostelId,
+                                          @PathVariable("customerId") String customerId,
                                           @Valid @RequestBody CustomerResetPayload customerResetPayload) {
         return customersService.deleteTenant(hostelId, customerId, customerResetPayload);
+    }
+
+    @GetMapping("/deductions/{hostelId}/{customerId}")
+    public ResponseEntity<?> getCustomerDeductions(@PathVariable("hostelId") String hostelId,
+                                                   @PathVariable("customerId") String customerId){
+        return customersService.getCustomerDeductions(hostelId, customerId);
+    }
+
+    @PutMapping("/deductions/{hostelId}/{customerId}/{invoiceId}")
+    public ResponseEntity<?> updateDeductions(@PathVariable("hostelId") String hostelId,
+                                              @PathVariable("customerId") String customerId,
+                                              @PathVariable("invoiceId") String invoiceId){
+        return customersService.updateDeductions(hostelId, customerId, invoiceId);
+    }
+
+    @GetMapping("/deductions")
+    public ResponseEntity<?> getCustomersWithPendingAdvanceDeductions(){
+        return customersService.getCustomersWithPendingAdvanceDeductions();
+    }
+
+    @PostMapping("/settlement/{customerId}")
+    public ResponseEntity<?> getCustomerSettlementInfo(@PathVariable("customerId") String customerId,
+                                                       @Valid @RequestBody CustomerDatePayload payload){
+        return customersService.getCustomerSettlementInfo(customerId, payload);
     }
 }
