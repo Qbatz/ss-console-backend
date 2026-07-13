@@ -1348,7 +1348,7 @@ public class CustomersService {
         boolean isRefundable = totalAmountToBePaid < 0;
 
         return new CustomerFinalSettlementInfoRes(
-                Utils.roundOfDouble(totalAmountToBePaid), pendingDeductionAmount, pendingRent,
+                Utils.roundOfDoubleTo2Digits(totalAmountToBePaid), pendingDeductionAmount, pendingRent,
                 Utils.roundOfDoubleTo2Digits(0.0),
                 Utils.roundOfDoubleTo2Digits(totalRefundableAdvance), Utils.roundOfDoubleTo2Digits(ebAmount),
                 Utils.roundOfDoubleTo2Digits(unpaidInvoicesUnPaidAmount), isRefundable, label,
