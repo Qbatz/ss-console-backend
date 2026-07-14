@@ -57,6 +57,7 @@ public class InvoicesV1 {
     Date invoiceGeneratedDate;
     Date cancelledDate;
     Date invoiceDueDate;
+    Date invoiceDate;
     Date invoiceStartDate;
     Date invoiceEndDate;
     Date createdAt;
