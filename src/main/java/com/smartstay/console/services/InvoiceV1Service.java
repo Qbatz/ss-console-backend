@@ -1174,4 +1174,8 @@ public class InvoiceV1Service {
     public List<InvoicesV1> getCurrentMonthInvoices(String customerId, String hostelId, Date startDate) {
         return invoiceV1Repository.findAllCurrentMonthInvoices(customerId, hostelId, startDate);
     }
+
+    public List<InvoicesV1> getInvoicesByCustomerIdAndStartDateAfter(String customerId, Date afterDate) {
+        return invoiceV1Repository.findInvoicesByCustomerIdAndStartDateAfter(customerId, afterDate);
+    }
 }

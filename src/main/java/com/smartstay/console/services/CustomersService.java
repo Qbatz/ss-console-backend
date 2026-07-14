@@ -1001,8 +1001,15 @@ public class CustomersService {
             return new ResponseEntity<>("Billing dates not found", HttpStatus.BAD_REQUEST);
         }
 
-        if (Utils.compareWithTwoDates(leavingDate, billingDates.currentBillStartDate()) < 0) {
-            return new ResponseEntity<>("Settlement can not be generated for older billing cycles", HttpStatus.BAD_REQUEST);
+//        if (Utils.compareWithTwoDates(leavingDate, billingDates.currentBillStartDate()) < 0) {
+//            return new ResponseEntity<>("Settlement can not be generated for older billing cycles", HttpStatus.BAD_REQUEST);
+//        }
+
+        List<InvoicesV1> invoicesAfterLeavingDate = invoiceV1Service
+                .getInvoicesByCustomerIdAndStartDateAfter(customerId, leavingDate);
+        if (!invoicesAfterLeavingDate.isEmpty()){
+            return new ResponseEntity<>(invoicesAfterLeavingDate.size() +
+                    " invoices exist after checkout date, delete them to generate settlement", HttpStatus.BAD_REQUEST);
         }
 
         CustomersBedHistory latestBedHistory = customerBedHistoryService
