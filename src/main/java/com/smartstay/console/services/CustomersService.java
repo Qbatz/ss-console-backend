@@ -1313,6 +1313,7 @@ public class CustomersService {
         double currentMonthPendingAmount = 0;
         String label = null;
         double pendingAmount = 0.0;
+        double totalRefundableRent = 0.0;
 
         if (customerRentInfoRes != null) {
             currentMonthTotalAmount = customerRentInfoRes.currentMonthTotalAmount();
@@ -1322,6 +1323,7 @@ public class CustomersService {
             if (customerRentInfoRes.currentRentPaid() > customerRentInfoRes.currentPayableRent()) {
                 label = "Refundable rent";
                 pendingAmount = customerRentInfoRes.currentMonthPendingAmount();
+                totalRefundableRent = customerRentInfoRes.currentMonthPendingAmount();
             } else {
                 label = "Payable rent";
                 pendingAmount = customerRentInfoRes.currentMonthPendingAmount();
@@ -1349,7 +1351,7 @@ public class CustomersService {
 
         return new CustomerFinalSettlementInfoRes(
                 Utils.roundOfDoubleTo2Digits(totalAmountToBePaid), pendingDeductionAmount, pendingRent,
-                Utils.roundOfDoubleTo2Digits(0.0),
+                Utils.roundOfDoubleTo2Digits(totalRefundableRent),
                 Utils.roundOfDoubleTo2Digits(totalRefundableAdvance), Utils.roundOfDoubleTo2Digits(ebAmount),
                 Utils.roundOfDoubleTo2Digits(unpaidInvoicesUnPaidAmount), isRefundable, label,
                 Utils.roundOfDoubleTo2Digits(pendingAmount));
