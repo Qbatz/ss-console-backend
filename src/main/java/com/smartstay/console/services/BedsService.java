@@ -21,7 +21,7 @@ public class BedsService {
 
     public List<Beds> findOccupiedBeds(String hostelId) {
         return bedsRepository
-                .findAllByHostelIdAndStatusAndIsActiveTrueAndIsDeletedFalse(hostelId, BedStatus.OCCUPIED.name());
+                .findAllByHostelIdAndCurrentStatusAndIsActiveTrueAndIsDeletedFalse(hostelId, BedStatus.OCCUPIED.name());
     }
 
     public void makeAllBedAvailable(List<Beds> listBeds) {

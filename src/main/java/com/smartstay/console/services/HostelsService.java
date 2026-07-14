@@ -922,8 +922,9 @@ public class HostelsService {
             });
         }
         if (bankingList != null && !bankingList.isEmpty()) {
-            recordsFound = bankingList.stream()
-                    .anyMatch(i -> bankBalances.containsKey(i.getBankId()));
+            if (bankingList.stream().anyMatch(i -> bankBalances.containsKey(i.getBankId()))) {
+                recordsFound = true;
+            }
             bankingList.forEach(i -> {
                 Double amount = bankBalances.get(i.getBankId());
                 if (amount != null) {
