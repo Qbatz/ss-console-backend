@@ -988,13 +988,13 @@ public class CustomersService {
 
         BillingDates billingDates = null;
         if (BillingType.FIXED_DATE.name().equals(billingRule.getTypeOfBilling())){
-            billingDates = billingRulesService.computeBillingDatesWithBillingModel(billingRule, today);
+            billingDates = billingRulesService.computeBillingDatesWithBillingModel(billingRule, leavingDate);
         } else if (BillingType.JOINING_DATE_BASED.name().equals(billingRule.getTypeOfBilling())) {
             if (customer.getJoiningDate() == null){
                 return new ResponseEntity<>("Joining date not found", HttpStatus.BAD_REQUEST);
             }
             billingDates = billingRulesService
-                    .computeJoiningBillingDatesWithBillingModel(billingRule, customer.getJoiningDate(), today);
+                    .computeJoiningBillingDatesWithBillingModel(billingRule, customer.getJoiningDate(), leavingDate);
         }
 
         if (billingDates == null){
@@ -1086,7 +1086,7 @@ public class CustomersService {
         CustomerDeductionsInfoRes customerDeductionsInfoRes = buildDeductionsInfoRes(advanceInvoice);
 
         CustomerInfoRes customerInfoRes = buildCustomerInfoRes(bookingInvoice, advanceInvoice, booking,
-                customer);
+                customer, hostel);
 
         CustomerStayInfoRes customerStayInfoRes = buildCustomerStayInfoRes(booking, leavingDate);
 
@@ -1139,7 +1139,7 @@ public class CustomersService {
         CustomerDeductionsInfoRes customerDeductionsInfoRes = buildDeductionsInfoRes(advanceInvoice);
 
         CustomerInfoRes customerInfoRes = buildCustomerInfoRes(bookingInvoice, advanceInvoice, booking,
-                customer);
+                customer, hostel);
 
         CustomerStayInfoRes customerStayInfoRes = buildCustomerStayInfoRes(booking, leavingDate);
 
@@ -1192,7 +1192,7 @@ public class CustomersService {
         CustomerDeductionsInfoRes customerDeductionsInfoRes = buildDeductionsInfoRes(advanceInvoice);
 
         CustomerInfoRes customerInfoRes = buildCustomerInfoRes(bookingInvoice, advanceInvoice, booking,
-                customer);
+                customer, hostel);
 
         CustomerStayInfoRes customerStayInfoRes = buildCustomerStayInfoRes(booking, leavingDate);
 
@@ -1247,7 +1247,7 @@ public class CustomersService {
         CustomerDeductionsInfoRes customerDeductionsInfoRes = buildDeductionsInfoRes(advanceInvoice);
 
         CustomerInfoRes customerInfoRes = buildCustomerInfoRes(bookingInvoice, advanceInvoice, booking,
-                customer);
+                customer, hostel);
 
         CustomerStayInfoRes customerStayInfoRes = buildCustomerStayInfoRes(booking, leavingDate);
 
@@ -1365,9 +1365,9 @@ public class CustomersService {
     }
 
     private CustomerInfoRes buildCustomerInfoRes(InvoicesV1 bookingInvoice, InvoicesV1 advanceInvoice,
-                                                 BookingsV1 booking, Customers customer) {
+                                                 BookingsV1 booking, Customers customer, HostelV1 hostel) {
 
-        if (customer == null){
+        if (customer == null || hostel == null){
             return null;
         }
 
@@ -1435,11 +1435,39 @@ public class CustomersService {
             }
         }
 
+        CustomersBedHistory currentBedHistory = customerBedHistoryService
+                .getLatestBedHistoryByCustomerId(customerId);
+
+        Integer floorId = null;
+        String floorName = null;
+        Integer roomId = null;
+        String roomName = null;
+        Integer bedId = null;
+        String bedName = null;
+        if (currentBedHistory != null) {
+            floorId = currentBedHistory.getFloorId();
+            roomId = currentBedHistory.getRoomId();
+            bedId = currentBedHistory.getBedId();
+            Floors floor = floorsService.getByFloorId(floorId);
+            if (floor != null) {
+                floorName = floor.getFloorName();
+            }
+            Rooms room = roomsService.getRoomById(roomId);
+            if (room != null) {
+                roomName = room.getRoomName();
+            }
+            Beds bed = bedsService.getBedById(bedId);
+            if (bed != null) {
+                bedName = bed.getBedName();
+            }
+        }
+
         AvailableRedemptionAmountRes availableRedemptionAmountRes = new AvailableRedemptionAmountRes(
                 availableBookingAmountToRedeem, availableAdvanceAmountToRedeem, availableAmountToRedeem);
 
         return new CustomerInfoRes(customerId, customer.getFirstName(), customer.getLastName(),
-                Utils.getFullName(customer.getFirstName(), customer.getLastName()), customer.getProfilePic(),
+                Utils.getFullName(customer.getFirstName(), customer.getLastName()), customer.getHostelId(),
+                hostel.getHostelName(), floorId, floorName, roomId, roomName, bedId, bedName, customer.getProfilePic(),
                 Utils.getInitials(customer.getFirstName(), customer.getLastName()), "91", customer.getMobile(),
                 joiningDate, customerAdvanceAmount, bookingRentAmount, isBookingOrAdvancePaid, totalBookingAndAdvancePaidAmount,
                 bookingInvoicePaidAmount, availableRedemptionAmountRes);
