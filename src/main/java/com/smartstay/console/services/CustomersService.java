@@ -1028,19 +1028,19 @@ public class CustomersService {
             if (BillingModel.PREPAID.name().equals(billingRule.getBillingModel())){
                 if (Utils.compareWithTwoDates(latestBedHistory.getStartDate(), billingDates.currentBillStartDate()) > 0) {
                     response = buildFixedDateBasedPrepaidBedChangeSettlementInfo(customer, booking,
-                            leavingDate, hostel, billingDates);
+                            leavingDate, hostel, billingDates, latestBedHistory);
                 } else {
                     response = buildFixedDateBasedPrepaidSettlementInfo(customer, booking,
-                            leavingDate, hostel, billingDates);
+                            leavingDate, hostel, billingDates, latestBedHistory);
                 }
             } else if (BillingModel.POSTPAID.name().equals(billingRule.getBillingModel())) {
                 response = buildFixedDateBasedPostpaidSettlementInfo(customer, booking,
-                        leavingDate, hostel, billingDates);
+                        leavingDate, hostel, billingDates, latestBedHistory);
             }
         } else if (BillingType.JOINING_DATE_BASED.name().equals(billingRule.getTypeOfBilling())) {
             if (BillingModel.PREPAID.name().equals(billingRule.getBillingModel())){
                 response = buildJoiningBasedPrepaidSettlementInfo(customer, booking,
-                        leavingDate, hostel, billingDates);
+                        leavingDate, hostel, billingDates, latestBedHistory);
             } else if (BillingModel.POSTPAID.name().equals(billingRule.getBillingModel())) {
                 //Joining based does not have postpaid yet
             }
@@ -1061,7 +1061,8 @@ public class CustomersService {
 
     private CustomerSettlementInfoRes buildFixedDateBasedPrepaidBedChangeSettlementInfo(Customers customer, BookingsV1 booking,
                                                                                         Date leavingDate, HostelV1 hostel,
-                                                                                        BillingDates billingDates) {
+                                                                                        BillingDates billingDates,
+                                                                                        CustomersBedHistory latestBedHistory) {
 
         if (customer == null){
             return null;
@@ -1086,7 +1087,7 @@ public class CustomersService {
         CustomerDeductionsInfoRes customerDeductionsInfoRes = buildDeductionsInfoRes(advanceInvoice);
 
         CustomerInfoRes customerInfoRes = buildCustomerInfoRes(bookingInvoice, advanceInvoice, booking,
-                customer, hostel);
+                customer, hostel, latestBedHistory);
 
         CustomerStayInfoRes customerStayInfoRes = buildCustomerStayInfoRes(booking, leavingDate);
 
@@ -1114,7 +1115,8 @@ public class CustomersService {
 
     private CustomerSettlementInfoRes buildFixedDateBasedPrepaidSettlementInfo(Customers customer, BookingsV1 booking,
                                                                                Date leavingDate, HostelV1 hostel,
-                                                                               BillingDates billingDates) {
+                                                                               BillingDates billingDates,
+                                                                               CustomersBedHistory latestBedHistory) {
 
         if (customer == null){
             return null;
@@ -1139,7 +1141,7 @@ public class CustomersService {
         CustomerDeductionsInfoRes customerDeductionsInfoRes = buildDeductionsInfoRes(advanceInvoice);
 
         CustomerInfoRes customerInfoRes = buildCustomerInfoRes(bookingInvoice, advanceInvoice, booking,
-                customer, hostel);
+                customer, hostel, latestBedHistory);
 
         CustomerStayInfoRes customerStayInfoRes = buildCustomerStayInfoRes(booking, leavingDate);
 
@@ -1167,7 +1169,8 @@ public class CustomersService {
 
     private CustomerSettlementInfoRes buildFixedDateBasedPostpaidSettlementInfo(Customers customer, BookingsV1 booking,
                                                                                 Date leavingDate, HostelV1 hostel,
-                                                                                BillingDates billingDates) {
+                                                                                BillingDates billingDates,
+                                                                                CustomersBedHistory latestBedHistory) {
 
         if (customer == null){
             return null;
@@ -1192,7 +1195,7 @@ public class CustomersService {
         CustomerDeductionsInfoRes customerDeductionsInfoRes = buildDeductionsInfoRes(advanceInvoice);
 
         CustomerInfoRes customerInfoRes = buildCustomerInfoRes(bookingInvoice, advanceInvoice, booking,
-                customer, hostel);
+                customer, hostel, latestBedHistory);
 
         CustomerStayInfoRes customerStayInfoRes = buildCustomerStayInfoRes(booking, leavingDate);
 
@@ -1222,7 +1225,8 @@ public class CustomersService {
                                                                              BookingsV1 booking,
                                                                              Date leavingDate,
                                                                              HostelV1 hostel,
-                                                                             BillingDates billingDates) {
+                                                                             BillingDates billingDates,
+                                                                             CustomersBedHistory latestBedHistory) {
 
         if (customer == null){
             return null;
@@ -1247,7 +1251,7 @@ public class CustomersService {
         CustomerDeductionsInfoRes customerDeductionsInfoRes = buildDeductionsInfoRes(advanceInvoice);
 
         CustomerInfoRes customerInfoRes = buildCustomerInfoRes(bookingInvoice, advanceInvoice, booking,
-                customer, hostel);
+                customer, hostel, latestBedHistory);
 
         CustomerStayInfoRes customerStayInfoRes = buildCustomerStayInfoRes(booking, leavingDate);
 
@@ -1365,7 +1369,8 @@ public class CustomersService {
     }
 
     private CustomerInfoRes buildCustomerInfoRes(InvoicesV1 bookingInvoice, InvoicesV1 advanceInvoice,
-                                                 BookingsV1 booking, Customers customer, HostelV1 hostel) {
+                                                 BookingsV1 booking, Customers customer, HostelV1 hostel,
+                                                 CustomersBedHistory latestBedHistory) {
 
         if (customer == null || hostel == null){
             return null;
@@ -1435,19 +1440,16 @@ public class CustomersService {
             }
         }
 
-        CustomersBedHistory currentBedHistory = customerBedHistoryService
-                .getLatestBedHistoryByCustomerId(customerId);
-
         Integer floorId = null;
         String floorName = null;
         Integer roomId = null;
         String roomName = null;
         Integer bedId = null;
         String bedName = null;
-        if (currentBedHistory != null) {
-            floorId = currentBedHistory.getFloorId();
-            roomId = currentBedHistory.getRoomId();
-            bedId = currentBedHistory.getBedId();
+        if (latestBedHistory != null) {
+            floorId = latestBedHistory.getFloorId();
+            roomId = latestBedHistory.getRoomId();
+            bedId = latestBedHistory.getBedId();
             Floors floor = floorsService.getByFloorId(floorId);
             if (floor != null) {
                 floorName = floor.getFloorName();
