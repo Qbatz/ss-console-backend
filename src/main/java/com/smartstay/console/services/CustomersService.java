@@ -988,13 +988,13 @@ public class CustomersService {
 
         BillingDates billingDates = null;
         if (BillingType.FIXED_DATE.name().equals(billingRule.getTypeOfBilling())){
-            billingDates = billingRulesService.computeBillingDatesWithBillingModel(billingRule, leavingDate);
+            billingDates = billingRulesService.computeBillingDatesWithBillingModel(billingRule, today);
         } else if (BillingType.JOINING_DATE_BASED.name().equals(billingRule.getTypeOfBilling())) {
             if (customer.getJoiningDate() == null){
                 return new ResponseEntity<>("Joining date not found", HttpStatus.BAD_REQUEST);
             }
             billingDates = billingRulesService
-                    .computeJoiningBillingDatesWithBillingModel(billingRule, customer.getJoiningDate(), leavingDate);
+                    .computeJoiningBillingDatesWithBillingModel(billingRule, customer.getJoiningDate(), today);
         }
 
         if (billingDates == null){
