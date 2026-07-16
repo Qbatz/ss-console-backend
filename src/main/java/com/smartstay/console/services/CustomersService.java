@@ -2065,10 +2065,6 @@ public class CustomersService {
                     List<CustomersEbHistory> pendingCustomersEbHistories = customerEbHistoryService
                             .getAllByCustomerIdAndReadingId(customerId, new ArrayList<>(allPendingEbReadingsIds));
 
-                    System.out.println("Unique readings: " + uniquePendingReadings.size());
-
-                    System.out.println("Customer EB History: " + pendingCustomersEbHistories.size());
-
                     if (!pendingCustomersEbHistories.isEmpty()){
                         // Already calculated entries from CustomerEbHistory
                         List<PendingEbRes> ebHistoryResponses = buildPendingEbResponseByEbHistory(
@@ -2086,17 +2082,6 @@ public class CustomersService {
                                 .filter(reading -> !processedReadingIds.contains(reading.getId()))
                                 .toList();
 
-                        System.out.println("Readings to calculate: " + readingsToCalculate.size());
-
-                        System.out.println("Processed IDs:");
-                        processedReadingIds.forEach(System.out::println);
-
-                        System.out.println("Remaining IDs:");
-                        readingsToCalculate.forEach(r ->
-                                System.out.println(r.getId() + " "
-                                        + Utils.dateToString(r.getBillStartDate()) + " - "
-                                        + Utils.dateToString(r.getBillEndDate())));
-
                         if (!readingsToCalculate.isEmpty()) {
                             allPendingEbRes.addAll(
                                     buildPendingEbResponse(readingsToCalculate, roomHistoryMap,
@@ -2105,14 +2090,10 @@ public class CustomersService {
                         }
                     } else {
 
-                        System.out.println("Before calculate = " + allPendingEbRes.size());
-
                         allPendingEbRes.addAll(
                                 buildPendingEbResponse(uniquePendingReadings, roomHistoryMap,
                                         floorsMap, roomsMap, bedsMap, customerId, leavingDate, ebConfig)
                         );
-
-                        System.out.println("After calculate = " + allPendingEbRes.size());
                     }
                 }
 
@@ -2131,7 +2112,6 @@ public class CustomersService {
 
             double pendingEbAmount = 0.0;
             if (!allPendingEbRes.isEmpty()) {
-                System.out.println(allPendingEbRes.size());
                 pendingEbAmount = allPendingEbRes.stream()
                         .mapToDouble(PendingEbRes::amount)
                         .sum();
@@ -2170,8 +2150,8 @@ public class CustomersService {
             );
 
             customerEbInfoRes = new CustomerEbInfoRes(0.0, ebConfig.getCharge(), "NA",
-                    ebConfig.getTypeOfReading(), pendingEbAmount, false, true,
-                    allMissedEbRoomsRes, allPendingEbRes);
+                    ebConfig.getTypeOfReading(), Utils.roundOfDoubleTo2Digits(pendingEbAmount),
+                    false, true, allMissedEbRoomsRes, allPendingEbRes);
         }
 
         return customerEbInfoRes;
