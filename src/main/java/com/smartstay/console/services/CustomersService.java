@@ -1508,16 +1508,18 @@ public class CustomersService {
             roomId = latestBedHistory.getRoomId();
             bedId = latestBedHistory.getBedId();
             Floors floor = floorsMap.getOrDefault(floorId, null);
-            if (floor != null) {
-                floorName = floor.getFloorName();
-            }
             Rooms room = roomsMap.getOrDefault(roomId, null);
             if (room != null) {
                 roomName = room.getRoomName();
+                floorId = room.getFloorId();
+                floor = floorsMap.getOrDefault(floorId, null);
             }
             Beds bed = bedsMap.getOrDefault(bedId, null);
             if (bed != null) {
                 bedName = bed.getBedName();
+            }
+            if (floor != null) {
+                floorName = floor.getFloorName();
             }
         }
 
@@ -1963,9 +1965,16 @@ public class CustomersService {
                     totalRent = bedHistoryRentPerDay * noOfDays;
                     rent =  bedHistory.getRentAmount();
 
-                    Floors floor = floorsMap.getOrDefault(bedHistory.getFloorId(), null);
                     Rooms room = roomsMap.getOrDefault(bedHistory.getRoomId(), null);
                     Beds bed = bedsMap.getOrDefault(bedHistory.getBedId(), null);
+
+                    Integer floorId = bedHistory.getFloorId();
+                    Floors floor = floorsMap.getOrDefault(floorId, null);
+
+                    if (room != null) {
+                        floorId = room.getFloorId();
+                        floor = floorsMap.getOrDefault(floorId, null);
+                    }
 
                     floorName = floor != null ? floor.getFloorName() : null;
                     roomName = room != null ? room.getRoomName() : null;
@@ -1975,7 +1984,7 @@ public class CustomersService {
                             noOfDays, Utils.roundOfDoubleTo2Digits(bedHistoryRentPerDay),
                             Utils.roundOfDoubleTo2Digits(rent), Utils.roundOfDoubleTo2Digits(totalRent),
                             bedHistory.getBedId(), bedName, bedHistory.getRoomId(), roomName,
-                            bedHistory.getFloorId(), floorName);
+                            floorId, floorName);
                 }).toList();
     }
 
@@ -2014,7 +2023,7 @@ public class CustomersService {
                 List<CustomersBedHistory> customersBedHistories = customerBedHistoryService
                         .getBedHistoriesByCustomerIdAndTypeNotIn(customerId, CustomersBedType.BOOKED.name());
 
-                Map<Integer, List<CustomersBedHistory>> roomHistoryMap = customersBedHistories.stream()
+                Map<Integer, List<CustomersBedHistory>> customerRoomHistoryMap = customersBedHistories.stream()
                         .collect(Collectors.groupingBy(CustomersBedHistory::getRoomId));
 
                 Set<Integer> roomIds = customersBedHistories
@@ -2022,10 +2031,16 @@ public class CustomersService {
                         .map(CustomersBedHistory::getRoomId)
                         .collect(Collectors.toSet());
 
+                List<CustomersBedHistory> roomBedHistories = customerBedHistoryService
+                        .getBedHistoriesByRoomIdsAndTypeNotIn(roomIds, CustomersBedType.BOOKED.name());
+
+                Map<Integer, List<CustomersBedHistory>> roomHistoryMap = roomBedHistories.stream()
+                                .collect(Collectors.groupingBy(CustomersBedHistory::getRoomId));
+
                 List<ElectricityReadings> latestReadingOfRooms = electricityReadingsService
                         .getLatestEntriesByHostelIdAndRoomIds(hostelId, roomIds);
 
-                roomHistoryMap.forEach((roomId, histories) -> {
+                customerRoomHistoryMap.forEach((roomId, histories) -> {
 
                     Date start = histories.stream()
                             .map(CustomersBedHistory::getStartDate)
@@ -2066,6 +2081,7 @@ public class CustomersService {
                             .getAllByCustomerIdAndReadingId(customerId, new ArrayList<>(allPendingEbReadingsIds));
 
                     if (!pendingCustomersEbHistories.isEmpty()){
+
                         // Already calculated entries from CustomerEbHistory
                         List<PendingEbRes> ebHistoryResponses = buildPendingEbResponseByEbHistory(
                                 pendingCustomersEbHistories, customersBedHistories, floorsMap, roomsMap,
@@ -2446,9 +2462,9 @@ public class CustomersService {
                     String bedName = null;
 
                     Rooms room = roomsMap.getOrDefault(ebHistory.getRoomId(), null);
-                    Floors floor = null;
 
                     Integer floorId = ebHistory.getFloorId();
+                    Floors floor = floorsMap.getOrDefault(floorId, null);
                     if (room != null) {
                         floorId = room.getFloorId();
                         floor = floorsMap.getOrDefault(floorId, null);
@@ -2517,7 +2533,7 @@ public class CustomersService {
             Rooms room = roomsMap.get(reading.getRoomId());
 
             Integer floorId = reading.getFloorId();
-            Floors floor = null;
+            Floors floor = floorsMap.get(floorId);
 
             if (room != null) {
                 floorId = room.getFloorId();
@@ -2666,9 +2682,15 @@ public class CustomersService {
                 continue;
             }
 
-            Floors floor = floorsMap.get(latestBedHistory.getFloorId());
             Rooms room = roomsMap.get(latestBedHistory.getRoomId());
             Beds bed = bedsMap.get(latestBedHistory.getBedId());
+
+            Integer floorId = latestBedHistory.getFloorId();
+            Floors floor = floorsMap.get(floorId);
+            if (room != null) {
+                floorId = room.getFloorId();
+                floor = floorsMap.get(floorId);
+            }
 
             String fromDate = Utils.dateToString(latestBedHistory.getStartDate());
             String toDate = Utils.dateToString(endDate);

@@ -72,4 +72,10 @@ public class CustomerBedHistoryService {
         return customerBedHistoryRepository
                 .findAllByCustomerIdAndTypeNot(customerId, type);
     }
+
+    public List<CustomersBedHistory> getBedHistoriesByRoomIdsAndTypeNotIn(Set<Integer> roomIds,
+                                                                          String type) {
+        return customerBedHistoryRepository
+                .findAllByRoomIdInAndTypeNot(roomIds, type);
+    }
 }

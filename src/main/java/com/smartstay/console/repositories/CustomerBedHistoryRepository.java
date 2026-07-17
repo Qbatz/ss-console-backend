@@ -65,4 +65,6 @@ public interface CustomerBedHistoryRepository extends JpaRepository<CustomersBed
     List<CustomersBedHistory> findAllByCustomerIdAndEndDateBefore(String customerId, Date beforeDate);
 
     List<CustomersBedHistory> findAllByCustomerIdAndTypeNot(String customerId, String type);
+
+    List<CustomersBedHistory> findAllByRoomIdInAndTypeNot(Set<Integer> roomIds, String type);
 }
