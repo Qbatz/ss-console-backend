@@ -1382,6 +1382,7 @@ public class CustomersService {
         double totalRefundableRent = 0.0;
         double discountAmount = 0.0;
         double currentPayableRent = 0.0;
+        double fullRent = 0.0;
 
         if (customerRentInfoRes != null) {
             currentMonthTotalAmount = customerRentInfoRes.currentMonthTotalAmount() != null ?
@@ -1394,6 +1395,8 @@ public class CustomersService {
                     customerRentInfoRes.discountAmount() : 0.0;
             currentPayableRent = customerRentInfoRes.currentPayableRent() != null ?
                     customerRentInfoRes.currentPayableRent() : 0.0;
+            fullRent = customerRentInfoRes.fullRent() != null ?
+                    customerRentInfoRes.fullRent() : 0.0;
 
             if (currentRentPaidAmount > currentPayableRent) {
                 label = "Refundable rent";
@@ -1425,12 +1428,14 @@ public class CustomersService {
         }
         boolean isRefundable = totalAmountToBePaid < 0;
 
-        return new CustomerFinalSettlementInfoRes(
-                Utils.roundOfDoubleTo2Digits(totalAmountToBePaid), Utils.roundOfDoubleTo2Digits(unpaidInvoicesUnPaidAmount),
-                Utils.roundOfDoubleTo2Digits(pendingAmount), pendingRent, currentRentPaidAmount, pendingDeductionAmount,
-                Utils.roundOfDoubleTo2Digits(ebAmount), Utils.roundOfDoubleTo2Digits(walletAmount), discountAmount,
+        return new CustomerFinalSettlementInfoRes(label,
+                Utils.roundOfDoubleTo2Digits(totalAmountToBePaid), Utils.roundOfDoubleTo2Digits(fullRent),
+                Utils.roundOfDoubleTo2Digits(unpaidInvoicesUnPaidAmount), Utils.roundOfDoubleTo2Digits(pendingAmount),
+                Utils.roundOfDoubleTo2Digits(pendingRent), Utils.roundOfDoubleTo2Digits(currentRentPaidAmount),
+                Utils.roundOfDoubleTo2Digits(pendingDeductionAmount), Utils.roundOfDoubleTo2Digits(ebAmount),
+                Utils.roundOfDoubleTo2Digits(walletAmount), Utils.roundOfDoubleTo2Digits(discountAmount),
                 Utils.roundOfDoubleTo2Digits(totalRefundableAdvance), isRefundable,
-                Utils.roundOfDoubleTo2Digits(totalRefundableRent), label
+                Utils.roundOfDoubleTo2Digits(totalRefundableRent)
         );
     }
 
