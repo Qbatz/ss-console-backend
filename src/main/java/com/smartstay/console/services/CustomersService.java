@@ -1360,7 +1360,8 @@ public class CustomersService {
 
         double ebAmount = 0.0;
         if (customerEbInfoRes != null) {
-            ebAmount = customerEbInfoRes.pendingEbAmount();
+            ebAmount = customerEbInfoRes.pendingEbAmount() != null ?
+                    customerEbInfoRes.pendingEbAmount() : 0.0;
         }
 
         double unpaidInvoicesTotalAmount = 0;
@@ -1379,25 +1380,35 @@ public class CustomersService {
         String label = null;
         double pendingAmount = 0.0;
         double totalRefundableRent = 0.0;
+        double discountAmount = 0.0;
+        double currentPayableRent = 0.0;
 
         if (customerRentInfoRes != null) {
-            currentMonthTotalAmount = customerRentInfoRes.currentMonthTotalAmount();
-            currentRentPaidAmount = customerRentInfoRes.currentRentPaid();
-            currentMonthPendingAmount = customerRentInfoRes.currentMonthPendingAmount();
+            currentMonthTotalAmount = customerRentInfoRes.currentMonthTotalAmount() != null ?
+                    customerRentInfoRes.currentMonthTotalAmount() : 0.0;
+            currentRentPaidAmount = customerRentInfoRes.currentRentPaid() != null ?
+                    customerRentInfoRes.currentRentPaid() : 0.0;
+            currentMonthPendingAmount = customerRentInfoRes.currentMonthPendingAmount() != null ?
+                    customerRentInfoRes.currentMonthPendingAmount() : 0.0;
+            discountAmount = customerRentInfoRes.discountAmount() != null ?
+                    customerRentInfoRes.discountAmount() : 0.0;
+            currentPayableRent = customerRentInfoRes.currentPayableRent() != null ?
+                    customerRentInfoRes.currentPayableRent() : 0.0;
 
-            if (customerRentInfoRes.currentRentPaid() > customerRentInfoRes.currentPayableRent()) {
+            if (currentRentPaidAmount > currentPayableRent) {
                 label = "Refundable rent";
-                pendingAmount = customerRentInfoRes.currentMonthPendingAmount();
-                totalRefundableRent = customerRentInfoRes.currentMonthPendingAmount();
+                pendingAmount = currentMonthPendingAmount;
+                totalRefundableRent = currentMonthPendingAmount;
             } else {
                 label = "Payable rent";
-                pendingAmount = customerRentInfoRes.currentMonthPendingAmount();
+                pendingAmount = currentMonthPendingAmount;
             }
         }
 
         double walletAmount = 0;
         if (customerWalletInfoRes != null) {
-            walletAmount = customerWalletInfoRes.walletAmount();
+            walletAmount = customerWalletInfoRes.walletAmount() != null ?
+                    customerWalletInfoRes.walletAmount() : 0.0;
         }
 
         double totalRefundableAdvance = 0.0;
@@ -1415,11 +1426,12 @@ public class CustomersService {
         boolean isRefundable = totalAmountToBePaid < 0;
 
         return new CustomerFinalSettlementInfoRes(
-                Utils.roundOfDoubleTo2Digits(totalAmountToBePaid), pendingDeductionAmount, pendingRent,
-                Utils.roundOfDoubleTo2Digits(totalRefundableRent),
-                Utils.roundOfDoubleTo2Digits(totalRefundableAdvance), Utils.roundOfDoubleTo2Digits(ebAmount),
-                Utils.roundOfDoubleTo2Digits(unpaidInvoicesUnPaidAmount), isRefundable, label,
-                Utils.roundOfDoubleTo2Digits(pendingAmount));
+                Utils.roundOfDoubleTo2Digits(totalAmountToBePaid), Utils.roundOfDoubleTo2Digits(unpaidInvoicesUnPaidAmount),
+                Utils.roundOfDoubleTo2Digits(pendingAmount), pendingRent, currentRentPaidAmount, pendingDeductionAmount,
+                Utils.roundOfDoubleTo2Digits(ebAmount), Utils.roundOfDoubleTo2Digits(walletAmount), discountAmount,
+                Utils.roundOfDoubleTo2Digits(totalRefundableAdvance), isRefundable,
+                Utils.roundOfDoubleTo2Digits(totalRefundableRent), label
+        );
     }
 
     private CustomerInfoRes buildCustomerInfoRes(InvoicesV1 bookingInvoice, InvoicesV1 advanceInvoice,

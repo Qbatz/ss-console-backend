@@ -1,13 +1,17 @@
 package com.smartstay.console.responses.customers;
 
 public record CustomerFinalSettlementInfoRes(Double amountToBePaid,
-                                             Double totalDeductions,
-                                             Double pendingRent,
-                                             Double refundableRent,
-                                             Double refundableAdvance,
-                                             Double ebAmount,
                                              Double unpaidInvoiceAmount,
+                                             double pendingAmount,
+                                             Double pendingRent,
+                                             Double currentMonthPaidRent,
+                                             Double totalDeductions,
+                                             Double ebAmount,
+                                             Double walletAmount,
+                                             Double discountAmount,
+                                             Double refundableAdvance,
                                              boolean isRefundable,
-                                             String label,
-                                             double pendingAmount) {
+                                             Double refundableRent,
+                                             String label
+                                             ) {
 }
