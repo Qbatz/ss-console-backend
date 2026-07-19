@@ -10,6 +10,7 @@ import com.smartstay.console.dto.agentRoles.AgentRoleSnapshot;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.Source;
+import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.payloads.roles.AddRoles;
 import com.smartstay.console.payloads.roles.Permission;
 import com.smartstay.console.payloads.roles.UpdateRoles;
@@ -69,6 +70,7 @@ public class AgentRolesService {
 
         AgentRoles role = new AgentRoles();
         List<RolesPermission> rolesPermissions = permissionInsertion(roleData.permissionList());
+        validatePermissions(rolesPermissions);
         role.setCreatedAt(new Date());
         role.setUpdatedAt(new Date());
         role.setIsActive(true);
@@ -147,6 +149,8 @@ public class AgentRolesService {
                     .map(module -> updatePermission(module.getId(), incomingPermissions, finalExistingRole.getPermissions()))
                     .collect(Collectors.toList());
 
+            validatePermissions(finalPermissions);
+
             existingRole.setPermissions(finalPermissions);
         }
 
@@ -159,6 +163,27 @@ public class AgentRolesService {
                 String.valueOf(existingRole.getRoleId()), oldRole, newRole);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    private void validatePermissions(List<RolesPermission> permissions) {
+
+        permissions.stream()
+                .filter(p -> !p.isCanRead()
+                        && (p.isCanWrite()
+                        || p.isCanUpdate()
+                        || p.isCanDelete()))
+                .findFirst()
+                .ifPresent(p -> {
+                    throw new BadRequestException(ModuleId.fromId(p.getModuleId()).name()
+                            + ": Read permission is required when Write, Update, or Delete permission is enabled");
+                });
+
+        boolean hasReadPermission = permissions.stream()
+                .anyMatch(RolesPermission::isCanRead);
+
+        if (!hasReadPermission) {
+            throw new BadRequestException(Utils.MINIMUM_1_PERMISSION_ENABLED);
+        }
     }
 
     public ResponseEntity<?> deleteRoleById(long roleId) {

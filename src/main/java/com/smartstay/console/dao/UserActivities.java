@@ -26,7 +26,7 @@ public class UserActivities {
     //from Activity source enum
     private String source;
     private String sourceId;
-    //    from activity type enum
+    //from activity type enum
     private String activityType;
     private String hostelId;
     private String platform;

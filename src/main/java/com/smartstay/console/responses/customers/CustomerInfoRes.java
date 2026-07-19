@@ -1,0 +1,18 @@
+package com.smartstay.console.responses.customers;
+
+public record CustomerInfoRes(String customerId,
+                              String firstName,
+                              String lastName,
+                              String fullName,
+                              String profilePic,
+                              String initials,
+                              String countryCode,
+                              String mobile,
+                              String joiningDate,
+                              Double customerAdvanceAmount,
+                              Double bookingRentAmount,
+                              boolean isBookingOrAdvancePaid,
+                              Double totalBookingAndAdvancePaidAmount,
+                              Double bookingInvoicePaidAmount,
+                              AvailableRedemptionAmountRes availableRedemptionAmount) {
+}

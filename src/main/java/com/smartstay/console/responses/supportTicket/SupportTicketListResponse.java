@@ -5,6 +5,7 @@ import com.smartstay.console.responses.hostels.OwnerInfo;
 public record SupportTicketListResponse(Long ticketId,
                                         String ticketNumber,
                                         boolean canAssignStaff,
+                                        boolean isReAssignStaff,
                                         boolean isOwnerDeleted,
                                         boolean isHostelDeleted,
                                         boolean isRaisedByDeleted,

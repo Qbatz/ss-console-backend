@@ -1,10 +1,12 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.invoice.AdvanceBalanceAmountPayload;
 import com.smartstay.console.payloads.invoice.InvoiceIdMobilePayload;
 import com.smartstay.console.services.InvoiceV1Service;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,5 +33,24 @@ public class InvoiceController {
     @DeleteMapping
     public ResponseEntity<?> deleteInvoicesByIds(@RequestBody List<InvoiceIdMobilePayload> payloads) {
         return invoiceService.deleteInvoicesByIds(payloads);
+    }
+
+    @GetMapping("/receipt/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> getReceiptsById(@PathVariable("hostelId") String hostelId,
+                                             @PathVariable("invoiceId") String invoiceId) {
+        return invoiceService.getReceiptsByInvoiceId(hostelId, invoiceId);
+    }
+
+    @PutMapping("/balance/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> updateAdvanceInvoiceBalance(@PathVariable("hostelId") String hostelId,
+                                                         @PathVariable("invoiceId") String invoiceId,
+                                                         @Valid @RequestBody AdvanceBalanceAmountPayload payload) {
+        return invoiceService.updateAdvanceInvoiceBalance(hostelId, invoiceId, payload);
+    }
+
+    @PutMapping("/advance/amount/{hostelId}/{invoiceId}")
+    public ResponseEntity<?> updateAdvanceInvoiceAmount(@PathVariable("hostelId") String hostelId,
+                                                        @PathVariable("invoiceId") String invoiceId) {
+        return invoiceService.updateAdvanceInvoiceAmount(hostelId, invoiceId);
     }
 }

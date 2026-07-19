@@ -89,7 +89,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
            FROM Subscription s
            WHERE s.hostelId IN :hostelIds
              AND s.planCode IN :planCodes
-             AND s.planEndsAt >= CURRENT_DATE
              AND s.planStartsAt = (
                  SELECT MAX(s2.planStartsAt)
                  FROM Subscription s2
@@ -101,9 +100,48 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
                  WHERE s3.hostelId = s.hostelId
                    AND s3.planStartsAt = s.planStartsAt
              )
-           ORDER BY s.createdAt DESC
+             AND (
+                 :isActive IS NULL
+                 OR (
+                     :isActive = TRUE
+                     AND s.planEndsAt IS NOT NULL
+                     AND s.planEndsAt >= CURRENT_DATE
+                 )
+                 OR (
+                     :isActive = FALSE
+                     AND (
+                         s.planEndsAt IS NULL
+                         OR s.planEndsAt < CURRENT_DATE
+                     )
+                 )
+             )
+           ORDER BY
+             CASE
+                 WHEN s.planEndsAt IS NOT NULL AND s.planEndsAt >= CURRENT_DATE THEN 0
+                 ELSE 1
+             END,
+             s.createdAt DESC
            """)
     Page<Subscription> findLatestByHostelIdInAndPlanCodeIn(Set<String> hostelIds,
                                                            Set<String> planCodes,
+                                                           Boolean isActive,
                                                            Pageable pageable);
+
+    @Query("""
+           SELECT s
+           FROM Subscription s
+           WHERE s.hostelId IN :hostelIds
+               AND CURRENT_DATE BETWEEN s.planStartsAt AND s.planEndsAt
+           ORDER BY s.createdAt DESC
+           """)
+    List<Subscription> findCurrentSubscriptionsPerHostel(Set<String> hostelIds);
+
+    @Query("""
+                SELECT DISTINCT s.hostelId
+                FROM Subscription s
+                WHERE s.hostelId IN :hostelIds
+                AND s.planCode NOT IN :freePlanCodes
+            """)
+    Set<String> findHostelIdsWithPaidSubscriptions(@Param("hostelIds") Set<String> hostelIds,
+                                                   @Param("freePlanCodes") Set<String> freePlanCodes);
 }

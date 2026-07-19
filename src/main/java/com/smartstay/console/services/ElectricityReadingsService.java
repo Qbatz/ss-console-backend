@@ -5,7 +5,9 @@ import com.smartstay.console.repositories.ElectricityReadingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class ElectricityReadingsService {
@@ -27,5 +29,14 @@ public class ElectricityReadingsService {
 
     public void markAsInvoiceGenerated(List<ElectricityReadings> listReadingForMakingInvoiceGenerated) {
         electricityReadingRepository.saveAll(listReadingForMakingInvoiceGenerated);
+    }
+
+    public List<ElectricityReadings> getPendingReadingsBetweenDates(String hostelId, int roomId,
+                                                                    Date startDate, Date endDate) {
+        return electricityReadingRepository.findPendingReadingsBetweenDates(hostelId, roomId, startDate, endDate);
+    }
+
+    public List<ElectricityReadings> getLatestEntriesByHostelIdAndRoomIds(String hostelId, Set<Integer> roomIds) {
+        return electricityReadingRepository.findLatestEntriesByHostelIdAndRoomIds(hostelId, roomIds);
     }
 }

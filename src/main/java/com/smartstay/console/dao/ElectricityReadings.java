@@ -36,5 +36,4 @@ public class ElectricityReadings {
     private Date updatedAt;
     private String createdBy;
     private String updatedBy;
-
 }

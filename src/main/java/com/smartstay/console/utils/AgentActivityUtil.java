@@ -6,7 +6,6 @@ import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.Source;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -95,6 +94,8 @@ public class AgentActivityUtil {
             case SUPPORT_TICKET_NOTES -> "Created a new support ticket note";
             case HOSTEL_NOTES -> "Created a new hostel note";
             case USERS_NOTES -> "Created a new users note";
+            case SMARTSTAY_FEATURES -> "Created a new smartstay feature";
+            case SETTLEMENT_DETAILS -> "Generated settlement details";
             default -> "Created successfully";
         };
     }
@@ -121,6 +122,9 @@ public class AgentActivityUtil {
             case RESET_USER_PIN -> "User pin has been reset";
             case INVOICE_REDEMPTION -> "Updated an invoice redemption";
             case SUPPORT_TICKET -> "Updated a support ticket";
+            case SMARTSTAY_FEATURES -> "Updated a smartstay feature";
+            case INVOICE -> "Updated an invoice";
+            case KYC_DETAILS -> "Approved a kyc request";
             default -> "Updated successfully";
         };
     }
@@ -153,6 +157,8 @@ public class AgentActivityUtil {
             case OWNERS -> "Deleted an owner";
             case INVOICE_REDEMPTION -> "Deleted an invoice redemption";
             case DEMO_REQUEST -> "Deleted a demo request";
+            case SMARTSTAY_FEATURES -> "Deleted a smartstay feature";
+            case TRANSACTION -> "Deleted a transaction";
             default -> "Deleted successfully";
         };
     }

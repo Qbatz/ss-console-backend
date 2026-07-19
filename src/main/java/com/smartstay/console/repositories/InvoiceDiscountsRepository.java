@@ -15,4 +15,6 @@ public interface InvoiceDiscountsRepository extends JpaRepository<InvoiceDiscoun
     List<InvoiceDiscounts> findAllByHostelIdAndCustomerId(String hostelId, String customerId);
 
     List<InvoiceDiscounts> findAllByHostelIdAndCustomerIdIn(String hostelId, List<String> customerIds);
+
+    List<InvoiceDiscounts> findAllByHostelIdAndInvoiceIdIn(String hostelId, Set<String> invoiceIds);
 }

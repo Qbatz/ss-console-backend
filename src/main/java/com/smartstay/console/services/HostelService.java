@@ -118,4 +118,8 @@ public class HostelService {
     public List<HostelLiteProjection> getHostelsLiteProjectionByParentIds(Set<String> parentIds) {
         return hostelRepository.findLiteByParentIds(parentIds);
     }
+
+    public List<HostelV1> getAllHostels(){
+        return hostelRepository.findAllHostels();
+    }
 }

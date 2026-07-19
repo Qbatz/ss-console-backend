@@ -3,6 +3,7 @@ package com.smartstay.console.services;
 import com.smartstay.console.Mapper.agent.AgentActivitiesResMapper;
 import com.smartstay.console.Mapper.agent.AgentDetailsResMapper;
 import com.smartstay.console.Mapper.agent.AgentResMapper;
+import com.smartstay.console.Mapper.agent.AgentSubscriptionResMapper;
 import com.smartstay.console.Mapper.hostelRelationalAgent.RelationalAgentResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
@@ -12,6 +13,7 @@ import com.smartstay.console.dto.zoho.ZohoUserDetails;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.Source;
+import com.smartstay.console.ennum.UserType;
 import com.smartstay.console.payloads.AddAdmin;
 import com.smartstay.console.payloads.agent.AddMockAgent;
 import com.smartstay.console.payloads.roles.RoleIdPayload;
@@ -52,6 +54,12 @@ public class AgentService {
     @Lazy
     @Autowired
     private UsersService usersService;
+    @Autowired
+    @Lazy
+    private PlansService plansService;
+    @Autowired
+    @Lazy
+    private SubscriptionService subscriptionService;
 
     public Agent findAgentByEmail(String agentEmail) {
         return agentRepository.findByAgentEmailId(agentEmail);
@@ -438,7 +446,48 @@ public class AgentService {
         List<HostelRelationalAgent> hostelRelations = hostelRelationalAgentService
                 .getByAgentId(agentId);
 
+        Set<String> parentIds = hostelRelations.stream()
+                .map(HostelRelationalAgent::getParentId)
+                .collect(Collectors.toSet());
+
+        List<Users> owners = usersService.getOwners(new ArrayList<>(parentIds));
+        Map<String, Users> ownerMap = owners.stream()
+                .collect(Collectors.toMap(Users::getParentId, user -> user));
+
+        List<HostelV1> hostels = hostelService.getHostelsByParentIds(parentIds);
+        Map<String, List<HostelV1>> hostelMap = hostels.stream()
+                .collect(Collectors.groupingBy(HostelV1::getParentId));
+        Map<String, HostelV1> hostelByHostelIdMap = hostels.stream()
+                .collect(Collectors.toMap(HostelV1::getHostelId, hostel -> hostel));
+
+        Set<String> hostelIds = hostels.stream()
+                .map(HostelV1::getHostelId)
+                .collect(Collectors.toSet());
+
+       List<Subscription> currentSubscriptions = subscriptionService
+               .getCurrentSubscriptionsPerHostel(hostelIds);
+       Map<String, Subscription> currentSubscriptionsMap = currentSubscriptions.stream()
+               .collect(Collectors.toMap(Subscription::getHostelId, s -> s));
+
+       Set<String> expiredHostelIds = new HashSet<>();
+       for (String hostelId : hostelIds) {
+           Subscription subscription = currentSubscriptionsMap.get(hostelId);
+           if (subscription == null) {
+               expiredHostelIds.add(hostelId);
+           }
+       }
+
+       List<Subscription> latestSubscriptions = subscriptionService
+               .getLatestSubscriptionsPerHostel(expiredHostelIds);
+
+       List<Subscription> subscriptions = new ArrayList<>();
+       subscriptions.addAll(currentSubscriptions);
+       subscriptions.addAll(latestSubscriptions);
+
         Set<String> agentIds = new HashSet<>();
+        Set<String> userIds = new HashSet<>();
+        Set<String> planCodes = new HashSet<>();
+
         for (AgentActivities a : agentActivities) {
             if (a.getAgentId() != null){
                 agentIds.add(a.getAgentId());
@@ -454,11 +503,39 @@ public class AgentService {
             }
         }
 
+        for (Subscription subscription : subscriptions) {
+            if (subscription.getCreatedBy() != null){
+                if (subscription.getCreatedByUserType() != null &&
+                        subscription.getCreatedByUserType().equals(UserType.AGENT.name())) {
+                    agentIds.add(subscription.getCreatedBy());
+                } else {
+                    userIds.add(subscription.getCreatedBy());
+                }
+            }
+            if (subscription.getPlanCode() != null){
+                planCodes.add(subscription.getPlanCode());
+            }
+        }
+
+        agentIds.add(inputAgent.getCreatedBy());
+        if (inputAgent.getUpdatedBy() != null){
+            agentIds.add(inputAgent.getUpdatedBy());
+        }
+
         List<Agent> agents = agentRepository
                 .findAllByAgentIdIn(agentIds);
-
         Map<String, Agent> agentMap = agents.stream()
                 .collect(Collectors.toMap(Agent::getAgentId, a -> a));
+
+        List<Users> users = usersService
+                .getUsersByIds(userIds);
+        Map<String, Users> usersMap = users.stream()
+                .collect(Collectors.toMap(Users::getUserId, u -> u));
+
+        List<Plans> plans = plansService
+                .findPlansByPlanCodes(planCodes);
+        Map<String, Plans> plansMap = plans.stream()
+                .collect(Collectors.toMap(Plans::getPlanCode, p -> p));
 
         List<AgentActivitiesRes> agentActivitiesRes = agentActivities.stream()
                 .map(agentActivity -> new AgentActivitiesResMapper(
@@ -466,25 +543,13 @@ public class AgentService {
                 ).apply(agentActivity))
                 .toList();
 
-        AgentRoles agentRole = agentRolesService.getAgentRoleById(inputAgent.getRoleId());
-
-        Agent createdBy = agentRepository.findByAgentId(inputAgent.getCreatedBy());
-        Agent updatedBy = null;
-        if (inputAgent.getUpdatedBy() != null){
-            updatedBy = agentRepository.findByAgentId(inputAgent.getUpdatedBy());
-        }
-
-        Set<String> parentIds = hostelRelations.stream()
-                .map(HostelRelationalAgent::getParentId)
-                .collect(Collectors.toSet());
-
-        List<Users> owners = usersService.getOwners(new ArrayList<>(parentIds));
-        Map<String, Users> ownerMap = owners.stream()
-                .collect(Collectors.toMap(Users::getParentId, user -> user));
-
-        List<HostelV1> hostels = hostelService.getHostelsByParentIds(parentIds);
-        Map<String, List<HostelV1>> hostelMap = hostels.stream()
-                .collect(Collectors.groupingBy(HostelV1::getParentId));
+       List<AgentSubscriptionRes> subscriptionRes = subscriptions.stream()
+               .map(subscription -> {
+                   HostelV1 hostel = hostelByHostelIdMap.getOrDefault(subscription.getHostelId(), null);
+                   Plans plan = plansMap.getOrDefault(subscription.getPlanCode(), null);
+                   return new AgentSubscriptionResMapper(hostel, agentMap, usersMap, plan)
+                           .apply(subscription);
+               }).toList();
 
         List<RelationalAgentResponse> hostelRelationsRes = hostelRelations.stream()
                 .map(hostelRelationalAgent -> {
@@ -498,8 +563,16 @@ public class AgentService {
                     ).apply(hostelRelationalAgent);
                 }).toList();
 
+        AgentRoles agentRole = agentRolesService.getAgentRoleById(inputAgent.getRoleId());
+
+        Agent createdBy = agentMap.getOrDefault(inputAgent.getCreatedBy(), null);
+        Agent updatedBy = null;
+        if (inputAgent.getUpdatedBy() != null){
+            updatedBy = agentMap.getOrDefault(inputAgent.getUpdatedBy(), null);
+        }
+
         AgentDetailsRes response = new AgentDetailsResMapper(
-                agentActivitiesRes, agentRole, createdBy, updatedBy, hostelRelationsRes
+                agentActivitiesRes, agentRole, createdBy, updatedBy, hostelRelationsRes, subscriptionRes
         ).apply(inputAgent);
 
         return new ResponseEntity<>(response, HttpStatus.OK);

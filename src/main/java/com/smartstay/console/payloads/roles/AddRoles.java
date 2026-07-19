@@ -1,16 +1,15 @@
 package com.smartstay.console.payloads.roles;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
-public record AddRoles(@NotNull(message = "Role name is required")
-                       @NotEmpty(message = "Role name is required")
+public record AddRoles(@NotBlank(message = "Role name is required")
                        String roleName,
                        String description,
-                       @NotNull(message = "Permission list cannot be null")
-                       @Size(min = 1, max =14, message = "Permission list must contain between 1 and 25 items")
+                       @NotNull(message = "Permission list can not be null")
+                       @NotEmpty(message = "Permission list can not be empty")
                        List<Permission> permissionList) {
 }

@@ -3,6 +3,7 @@ package com.smartstay.console.config;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.smartstay.console.dto.files.UploadFiles;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -39,5 +40,24 @@ public class UploadFileToS3 {
         }
 
         return fileName;
+    }
+
+    public UploadFiles uploadFilesToS3(File file, String folderName) {
+        AmazonS3 s3 = AWSConfig.setupS3Client(accessKey, secretKey);
+
+        PutObjectRequest request = new PutObjectRequest(bucketName, folderName + "/" + file.getName(), file);
+        PutObjectResult result = s3.putObject(request);
+
+        String fileName = s3.getUrl(bucketName, folderName + "/" + file.getName()).toString();
+
+        String mimeType = null;
+        try {
+            mimeType = Files.probeContentType(file.toPath());
+            Files.delete(Paths.get(file.toURI()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return new UploadFiles(fileName, mimeType);
     }
 }

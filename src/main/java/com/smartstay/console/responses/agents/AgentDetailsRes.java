@@ -23,5 +23,6 @@ public record AgentDetailsRes(String agentId,
                               String updatedAtTime,
                               String updatedBy,
                               List<AgentActivitiesRes> agentActivities,
-                              List<RelationalAgentResponse> hostelRelations) {
+                              List<RelationalAgentResponse> hostelRelations,
+                              List<AgentSubscriptionRes> subscriptions) {
 }

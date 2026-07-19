@@ -13,7 +13,7 @@ import java.util.Set;
 public class BedsService {
 
     @Autowired
-    BedsRepository bedsRepository;
+    private BedsRepository bedsRepository;
 
     public List<Beds> getBedsByHostelId(String hostelId) {
         return bedsRepository.findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
@@ -36,6 +36,10 @@ public class BedsService {
 
     public List<Beds> getBedsByBedIds(Set<Integer> occupiedBedIds) {
         return bedsRepository.findAllByBedIdIn(occupiedBedIds);
+    }
+
+    public Beds getBedById(int bedId) {
+        return bedsRepository.findByBedIdAndIsActiveTrueAndIsDeletedFalse(bedId);
     }
 
     public void deleteAll(List<Beds> listBeds) {

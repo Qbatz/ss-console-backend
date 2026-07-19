@@ -20,7 +20,8 @@ public enum ModuleId {
     Hostel_Activities(17),
     EXPENSES(18),
     Recurring(19),
-    Payments(20);
+    Payments(20),
+    Receipt(21);
 
 
     private final int id;

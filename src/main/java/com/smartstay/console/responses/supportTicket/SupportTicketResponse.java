@@ -7,6 +7,7 @@ import java.util.List;
 public record SupportTicketResponse(Long ticketId,
                                     String ticketNumber,
                                     boolean canAssignStaff,
+                                    boolean isReAssignStaff,
                                     boolean isOwnerDeleted,
                                     boolean isHostelDeleted,
                                     boolean isRaisedByDeleted,

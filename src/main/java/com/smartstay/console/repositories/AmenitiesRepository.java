@@ -5,9 +5,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface AmenitiesRepository extends JpaRepository<AmenitiesV1, String> {
 
     List<AmenitiesV1> findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(String hostelId);
+
+    List<AmenitiesV1> findAllByAmenityIdInAndIsActiveTrueAndIsDeletedFalse(Set<String> amenityIds);
 }

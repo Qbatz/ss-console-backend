@@ -15,4 +15,6 @@ public interface BedsRepository extends JpaRepository<Beds, Integer> {
     List<Beds> findAllByHostelIdAndStatusAndIsActiveTrueAndIsDeletedFalse(String hostelId, String status);
 
     List<Beds> findAllByBedIdIn(Set<Integer> occupiedBedIds);
+
+    Beds findByBedIdAndIsActiveTrueAndIsDeletedFalse(int bedId);
 }

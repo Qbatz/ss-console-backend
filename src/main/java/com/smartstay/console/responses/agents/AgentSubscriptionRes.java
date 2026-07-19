@@ -1,0 +1,25 @@
+package com.smartstay.console.responses.agents;
+
+public record AgentSubscriptionRes(Long subscriptionId,
+                                   String subscriptionNumber,
+                                   Long orderHistoryId,
+                                   String hostelId,
+                                   String hostelName,
+                                   String hostelInitials,
+                                   String planCode,
+                                   String planName,
+                                   String planType,
+                                   boolean isExpired,
+                                   String planStartsAt,
+                                   String planEndsAt,
+                                   Double planAmount,
+                                   Double paidAmount,
+                                   Double discount,
+                                   Double discountAmount,
+                                   String paymentProof,
+                                   String invoiceUrl,
+                                   String createdByUserType,
+                                   String createdBy,
+                                   String createdAtDate,
+                                   String createdAtTime) {
+}

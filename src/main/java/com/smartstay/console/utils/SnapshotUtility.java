@@ -15,11 +15,14 @@ import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
+import com.smartstay.console.dto.plans.SmartstayFeaturesSnapshot;
+import com.smartstay.console.dto.settlementDetails.SettlementDetailsSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketActivitySnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketNotesSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketSnapshot;
 import com.smartstay.console.dto.tableColumns.ColumnFiltersSnapshot;
 import com.smartstay.console.dto.tableColumns.TableColumnsSnapshot;
+import com.smartstay.console.dto.transaction.TransactionSnapshot;
 import com.smartstay.console.dto.users.AddressSnapshot;
 import com.smartstay.console.dto.users.UserSnapshot;
 import com.smartstay.console.dto.users.UsersConfigSnapshot;
@@ -72,11 +75,25 @@ public class SnapshotUtility {
 
         return new PlanFeatureSnapshot(
                 pf.getId(),
+                pf.getSmartstayFeatureId(),
                 pf.getFeatureName(),
                 pf.getPrice(),
+                pf.isFeatureActive(),
+                pf.getLabelText(),
+                pf.getLabelDescription(),
+                copyDate(pf.getStartsFrom()),
+                copyDate(pf.getEndsAt()),
                 pf.isActive(),
                 pf.getPlan() != null ? pf.getPlan().getPlanId() : null
         );
+    }
+
+    public static SmartstayFeaturesSnapshot toSnapshot(SmartstayFeatures sf) {
+        if (sf == null) return null;
+
+        return new SmartstayFeaturesSnapshot(sf.getId(),
+                sf.getFeatureName(), sf.isCommon(), sf.isActive(),
+                copyDate(sf.getCreatedAt()), copyDate(sf.getUpdatedAt()));
     }
 
     public static HostelPlanSnapshot toSnapshot(HostelPlan p) {
@@ -316,14 +333,53 @@ public class SnapshotUtility {
         );
     }
 
+    public static KycAddressDetailsSnapshot toSnapshot(KycAddressDetails a) {
+
+        if (a == null) return null;
+
+        return new KycAddressDetailsSnapshot(
+                a.getId(),
+                a.getCurrentAddress(),
+                a.getCurrentLocality(),
+                a.getCurrentCity(),
+                a.getCurrentState(),
+                a.getCurrentPincode(),
+                a.getPermanentAddress(),
+                a.getPermanentLocality(),
+                a.getPermanentCity(),
+                a.getPermanentState(),
+                a.getPermanentPincode(),
+                a.getKycDetails() != null ? a.getKycDetails().getId() : null
+        );
+    }
+
     public static KycDetailsSnapshot toSnapshot(KycDetails k) {
+
         if (k == null) return null;
 
         return new KycDetailsSnapshot(
                 k.getId(),
                 k.getCurrentStatus(),
                 k.getTransactionId(),
+                k.getEntityId(),
+                k.getTemplateId(),
+                k.getAccessTokenId(),
                 k.getReferenceId(),
+                copyDate(k.getCreatedAt()),
+                copyDate(k.getCompletedAt()),
+                k.getAadhaarNumber(),
+                k.getKycDocument(),
+                k.getKycDocumentType(),
+                k.getDocumentType(),
+                k.getGender(),
+                k.getIdPic(),
+                k.getNameInDocument(),
+                k.getDateOfBirth(),
+                k.getPermanentAddress(),
+                k.getCreatedBy(),
+                copyDate(k.getUpdatedAt()),
+                copyDate(k.getExpireAt()),
+                toSnapshot(k.getAddressDetails()),
                 k.getCustomers() != null ? k.getCustomers().getCustomerId() : null
         );
     }
@@ -741,6 +797,47 @@ public class SnapshotUtility {
                 copyDate(n.getCreatedAt()),
                 n.getUserId(),
                 n.getParentId()
+        );
+    }
+
+    public static TransactionSnapshot toSnapshot(TransactionV1 t) {
+
+        if (t == null) return null;
+
+        return new TransactionSnapshot(
+                t.getTransactionId(),
+                t.getType(),
+                t.getPaidAmount(),
+                t.getCreatedBy(),
+                copyDate(t.getCreatedAt()),
+                t.getStatus(),
+                t.getInvoiceId(),
+                t.getHostelId(),
+                t.getIsInvoice(),
+                t.getCustomerId(),
+                copyDate(t.getPaymentDate()),
+                t.getTransactionMode(),
+                t.getTransactionReferenceId(),
+                t.getReceiptUrl(),
+                t.getBankId(),
+                t.getReferenceNumber(),
+                copyDate(t.getPaidAt()),
+                t.getUpdatedBy()
+        );
+    }
+
+    public static SettlementDetailsSnapshot toSnapshot(SettlementDetails s) {
+
+        if (s == null) return null;
+
+        return new SettlementDetailsSnapshot(
+                s.getId(),
+                s.getCustomerId(),
+                copyDate(s.getLeavingDate()),
+                copyDate(s.getCreatedAt()),
+                copyDate(s.getUpdatedAt()),
+                s.getCreatedBy(),
+                s.getUpdatedBy()
         );
     }
 
