@@ -29,4 +29,8 @@ public class SettlementItemsService {
     public List<SettlementItems> findByCustomerIds(Set<String> customerIdsSet) {
         return settlementItemsRepository.findAllByCustomerIdIn(customerIdsSet);
     }
+
+    public SettlementItems getByInvoiceId(String invoiceId) {
+        return settlementItemsRepository.findByInvoiceId(invoiceId);
+    }
 }

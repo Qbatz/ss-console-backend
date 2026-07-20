@@ -9,8 +9,6 @@ import java.util.List;
 @Repository
 public interface SettlementDetailsRepository extends JpaRepository<SettlementDetails, Long> {
 
-    List<SettlementDetails> findAllByCustomerId(String customerId);
-
     List<SettlementDetails> findAllByCustomerIdIn(List<String> customerIds);
 
     SettlementDetails findByCustomerId(String customerId);

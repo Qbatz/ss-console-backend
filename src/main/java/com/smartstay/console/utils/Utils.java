@@ -105,6 +105,8 @@ public class Utils {
     public static final String BANK_NOT_FOUND = "Bank not found";
     public static final String ADVANCE_NOT_FOUND = "Advance not found";
     public static final String KYC_DETAILS_NOT_FOUND = "Kyc details not found";
+    public static final String SETTLEMENT_DETAILS_NOT_FOUND = "SettlementDetails not found";
+    public static final String BILLING_RULE_NOT_FOUND = "Billing rule not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
