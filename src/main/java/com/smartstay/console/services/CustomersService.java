@@ -12,6 +12,7 @@ import com.smartstay.console.dto.customers.CustomersCredentialsSnapshot;
 import com.smartstay.console.dto.customers.CustomersSnapshot;
 import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.dto.hostel.BillingDates;
+import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.settlement.CurrentOtherItems;
 import com.smartstay.console.dto.settlement.CurrentRentBreakUp;
 import com.smartstay.console.dto.settlement.SettlementUnpaidInvoices;
@@ -1629,6 +1630,11 @@ public class CustomersService {
             customerBedHistoryService.save(latestBedHistory);
             customersRepository.save(customer);
             customerWalletHistoryService.saveAll(customerWalletHistories);
+
+            InvoiceSnapshot snapshot = SnapshotUtility.toSnapshot(settlementInvoice);
+
+            agentActivitiesService.createAgentActivity(agent, ActivityType.CREATE, Source.SETTLEMENT_GENERATED,
+                    settlementInvoice.getInvoiceId(), null, snapshot);
 
             return new ResponseEntity<>("Settlement generated successfully", HttpStatus.OK);
         }

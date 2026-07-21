@@ -96,6 +96,7 @@ public class AgentActivityUtil {
             case USERS_NOTES -> "Created a new users note";
             case SMARTSTAY_FEATURES -> "Created a new smartstay feature";
             case SETTLEMENT_DETAILS -> "Generated settlement details";
+            case SETTLEMENT_GENERATED -> "Generated a settlement invoice";
             default -> "Created successfully";
         };
     }
