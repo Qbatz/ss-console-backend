@@ -49,4 +49,8 @@ public class BedsService {
     public void saveAll(List<Beds> bedsList) {
         bedsRepository.saveAll(bedsList);
     }
+
+    public void save(Beds bed) {
+        bedsRepository.save(bed);
+    }
 }

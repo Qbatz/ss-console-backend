@@ -33,4 +33,8 @@ public class SettlementItemsService {
     public SettlementItems getByInvoiceId(String invoiceId) {
         return settlementItemsRepository.findByInvoiceId(invoiceId);
     }
+
+    public void save(SettlementItems settlementItems) {
+        settlementItemsRepository.save(settlementItems);
+    }
 }

@@ -78,4 +78,8 @@ public class CustomerBedHistoryService {
         return customerBedHistoryRepository
                 .findAllByRoomIdInAndTypeNot(roomIds, type);
     }
+
+    public void save(CustomersBedHistory customersBedHistory) {
+        customerBedHistoryRepository.save(customersBedHistory);
+    }
 }

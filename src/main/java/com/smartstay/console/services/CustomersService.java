@@ -12,7 +12,10 @@ import com.smartstay.console.dto.customers.CustomersCredentialsSnapshot;
 import com.smartstay.console.dto.customers.CustomersSnapshot;
 import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.dto.hostel.BillingDates;
-import com.smartstay.console.dto.settlementDetails.SettlementDetailsSnapshot;
+import com.smartstay.console.dto.settlement.CurrentOtherItems;
+import com.smartstay.console.dto.settlement.CurrentRentBreakUp;
+import com.smartstay.console.dto.settlement.SettlementUnpaidInvoices;
+import com.smartstay.console.dto.settlement.WalltetItems;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.payloads.customers.CusSettlementDeductionsPayload;
@@ -26,7 +29,6 @@ import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
 import com.smartstay.console.responses.transaction.TransactionResponse;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -1287,6 +1289,8 @@ public class CustomersService {
                 .collect(Collectors.toMap(Floors::getFloorId,
                         floor -> floor));
 
+        CustomerWallet customerWallet = customer.getWallet();
+
         CustomerSettlementInfoRes response = null;
 
         if (BillingType.FIXED_DATE.name().equals(billingRule.getTypeOfBilling())){
@@ -1332,23 +1336,29 @@ public class CustomersService {
             double currentMonthPaidRent = 0;
             double bookingAvailableBalance = 0;
             double advanceAvailableBalance = 0;
+            List<InvoicesV1> unpaidInvoices = new ArrayList<>();
+            List<UnpaidInvoicesRes> unpaidInvoicesRes = new ArrayList<>();
+            List<WalletHistoryRes> walletHistoriesRes = new ArrayList<>();
+            List<RentBreakUpInfoRes> rentBreakUpsRes = new ArrayList<>();
+            List<OtherItemsRes> otherItemsRes = new ArrayList<>();
+            List<CustomerWalletHistory> customerWalletHistories = new ArrayList<>();
 
             CustomerFinalSettlementInfoRes finalSettlementInfoRes = response.customerFinalSettlementInfo();
             UnpaidInvoicesInfoRes unpaidInvoicesInfoRes = response.unpaidInvoicesInfo();
             CustomerRentInfoRes rentInfoRes = response.customerRentInfo();
             CustomerBookingInfoRes bookingInfoRes = response.customerBookingInfo();
             CustomerAdvanceInfoRes advanceInfoRes = response.customerAdvanceInfo();
+            CustomerWalletInfoRes walletInfoRes = response.customerWalletInfo();
 
             if (unpaidInvoicesInfoRes != null){
-                List<UnpaidInvoicesRes> unpaidInvoicesRes = unpaidInvoicesInfoRes.unpaidInvoices() != null ?
+                unpaidInvoicesRes = unpaidInvoicesInfoRes.unpaidInvoices() != null ?
                         unpaidInvoicesInfoRes.unpaidInvoices() : new ArrayList<>();
 
                 Set<String> unpaidInvoicesIds = unpaidInvoicesRes.stream()
                         .map(UnpaidInvoicesRes::invoiceId)
                         .collect(Collectors.toSet());
 
-                List<InvoicesV1> unpaidInvoices = invoiceV1Service
-                        .getInvoicesByIds(unpaidInvoicesIds);
+                unpaidInvoices = invoiceV1Service.getInvoicesByIds(unpaidInvoicesIds);
 
                 for (InvoicesV1 unpaidInvoice : unpaidInvoices) {
                     unpaidInvoice.setCancelled(true);
@@ -1428,6 +1438,9 @@ public class CustomersService {
             if (rentInfoRes != null) {
                 currentMonthTotalAmount = rentInfoRes.currentMonthTotalAmount() != null ?
                         rentInfoRes.currentMonthTotalAmount() : 0;
+
+                rentBreakUpsRes = rentInfoRes.rentBreakUpInfo();
+                otherItemsRes = rentInfoRes.otherItems();
             }
 
             if (bookingInfoRes != null){
@@ -1440,7 +1453,18 @@ public class CustomersService {
                         advanceInfoRes.availableBalance() : 0;
             }
 
-            if (advanceInvoice != null){
+            if (walletInfoRes != null){
+                walletHistoriesRes = walletInfoRes.walletHistory();
+            }
+
+            if (advanceInvoice != null) {
+                advInvDeductions = advInvDeductions.stream()
+                        .filter(d ->
+                                d.getPaidAmount() == null ||
+                                        d.getPaidAmount() < d.getAmount()
+                        )
+                        .toList();
+
                 advanceInvoice.setDeductions(advInvDeductions);
             }
 
@@ -1497,6 +1521,7 @@ public class CustomersService {
             settlementInvoice.setInvoiceEndDate(leavingDate);
 
             InvoicesV1 finalSettlementInvoice = settlementInvoice;
+
             List<InvoiceItems> invoiceItems = advInvDeductions.stream()
                     .map(i -> {
                         InvoiceItems item = new InvoiceItems();
@@ -1518,11 +1543,31 @@ public class CustomersService {
 
                         return item;
                     }).toList();
+
             settlementInvoice.setInvoiceItems(invoiceItems);
 
             settlementInvoice = invoiceV1Service.save(settlementInvoice);
 
-            SettlementItems settlementItems = settlementItemsService.getByInvoiceId(settlementInvoice.getInvoiceId());
+            List<SettlementUnpaidInvoices> settlementItemsUnpaidInvoices = unpaidInvoicesRes.stream()
+                    .map(i -> new SettlementUnpaidInvoices(i.invoiceNumber(), i.invoiceTotalAmount(),
+                            i.type(), i.invoiceId(), i.pendingAmount()))
+                    .toList();
+
+            List<WalltetItems> settlementItemsWalletItems = walletHistoriesRes.stream()
+                    .map(i -> new WalltetItems(i.source(), i.amount(), i.walletHistoryId()))
+                    .toList();
+
+            List<CurrentRentBreakUp> settlementItemsCurrentRentBreakups = rentBreakUpsRes.stream()
+                    .map(i -> new CurrentRentBreakUp(i.bedName(), i.roomName(), i.floorName(),
+                            i.dbStartDate(), i.dbEndDate(), i.rentPerDay(),  i.rent(), isCustomRent))
+                    .toList();
+
+            List<CurrentOtherItems> settlementItemsCurrentOtherItems = otherItemsRes.stream()
+                    .map(i -> new CurrentOtherItems(i.item(), i.amount()))
+                    .toList();
+
+            SettlementItems settlementItems = settlementItemsService
+                    .getByInvoiceId(settlementInvoice.getInvoiceId());
             if (settlementItems == null){
                 settlementItems = new SettlementItems();
                 settlementItems.setInvoiceId(settlementInvoice.getInvoiceId());
@@ -1538,11 +1583,52 @@ public class CustomersService {
             settlementItems.setCurrentMonthPaidAmount(currentMonthPaidRent);
             settlementItems.setBookingBalance(bookingAvailableBalance);
             settlementItems.setAdvanceBalance(advanceAvailableBalance);
+            settlementItems.setUnpaidInvoices(settlementItemsUnpaidInvoices);
+            settlementItems.setWalltetItems(settlementItemsWalletItems);
+            settlementItems.setCurrentRentBreakUps(settlementItemsCurrentRentBreakups);
+            settlementItems.setCurrentMonthOtherItems(settlementItemsCurrentOtherItems);
 
+            if (customerWallet != null){
+                customerWallet.setAmount(0.0);
+                customer.setWallet(customerWallet);
+
+                customerWalletHistories = customerWalletHistoryService
+                        .getAllInvoiceNotGeneratedWallets(customerId);
+
+                customerWalletHistories.forEach(i -> {
+                    i.setInvoiceId(finalSettlementInvoice.getInvoiceId());
+                    i.setBillingStatus(WalletBillingStatus.INVOICE_GENERATED.name());
+                });
+            }
+
+            Beds bed = bedService.getBedById(booking.getBedId());
+            if (bed != null){
+                bed.setStatus(BedStatus.VACANT.name());
+                bed.setCurrentStatus(BedStatus.VACANT.name());
+                bed.setFreeFrom(leavingDate);
+                bed.setUpdatedAt(today);
+            }
+
+            booking.setCurrentStatus(BookingsStatus.VACATED.name());
+            booking.setSettlementGeneratedDate(leavingDate);
+            booking.setUpdatedAt(today);
+
+            latestBedHistory.setEndDate(leavingDate);
+
+            customer.setCustomerBedStatus(CustomerBedStatus.BED_NOT_ASSIGNED.name());
+            customer.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
+            customer.setLastUpdatedAt(today);
+
+            settlementItemsService.save(settlementItems);
             if (advanceInvoice != null) {
                 invoiceV1Service.save(advanceInvoice);
             }
             invoiceV1Service.saveAll(cancelledInvoices);
+            bedService.save(bed);
+            bookingsService.save(booking);
+            customerBedHistoryService.save(latestBedHistory);
+            customersRepository.save(customer);
+            customerWalletHistoryService.saveAll(customerWalletHistories);
 
             return new ResponseEntity<>("Settlement generated successfully", HttpStatus.OK);
         }
