@@ -759,6 +759,9 @@ public class HostelsService {
         List<BankTransactionsV1> listBankTransactions = bankTransactionService.getAllTransactions(hostelId);
         List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
 
+        List<AssetsV1> listAssets = assetsService.findByHostelId(hostelId);
+        List<VendorV1> listVendors = vendorService.findByHostelId(hostelId);
+
         List<BankTransactionsV1> listItemsExpense = listBankTransactions
                 .stream()
                 .filter(i -> i.getSource().equalsIgnoreCase(BankSource.EXPENSE.name()))
@@ -794,6 +797,14 @@ public class HostelsService {
             if (!invoiceRedemptions.isEmpty()){
                 invoiceRedemptionService.deleteAll(invoiceRedemptions);
             }
+        }
+        if (listAssets != null && !listAssets.isEmpty()) {
+            recordsFound = true;
+            assetsService.deleteAll(listAssets);
+        }
+        if (listVendors != null && !listVendors.isEmpty()) {
+            recordsFound = true;
+            vendorService.deleteAll(listVendors);
         }
         if (listBookings != null && !listBookings.isEmpty()) {
             recordsFound = true;
@@ -1056,7 +1067,6 @@ public class HostelsService {
     private void deleteHostelRelatedData(String hostelId) {
 
         List<AmenitiesV1> listAmenities = amenitiesService.getAmenitiesByHostelId(hostelId);
-        List<AssetsV1> listAssets = assetsService.findByHostelId(hostelId);
         List<BillTemplates> listBillTemplates = templatesService.findByHostelId(hostelId);
         List<ComplaintTypeV1> listComplaintTypes = complaintTypeService.findByHostelId(hostelId);
         List<CustomerNotifications> listHostelCustomerNotifications = customerNotificationsService.findByHostelId(hostelId);
@@ -1066,15 +1076,11 @@ public class HostelsService {
         List<Rooms> listRooms = roomsService.getRoomsByHostelId(hostelId);
         List<Subscription> listSubscriptions = subscriptionService.getSubscriptionsByHostelId(hostelId);
         List<TableColumns> listTableColumns = tableColumnsService.findByHostelId(hostelId);
-        List<VendorV1> listVendors = vendorService.findByHostelId(hostelId);
         List<Beds> listBeds = bedsService.getBedsByHostelId(hostelId);
         List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
 
         if (listAmenities != null && !listAmenities.isEmpty()) {
             amenitiesService.deleteAll(listAmenities);
-        }
-        if (listAssets != null && !listAssets.isEmpty()) {
-            assetsService.deleteAll(listAssets);
         }
         if (listBillTemplates != null && !listBillTemplates.isEmpty()) {
             templatesService.deleteAll(listBillTemplates);
@@ -1102,9 +1108,6 @@ public class HostelsService {
         }
         if (listTableColumns != null && !listTableColumns.isEmpty()) {
             tableColumnsService.deleteAll(listTableColumns);
-        }
-        if (listVendors != null && !listVendors.isEmpty()) {
-            vendorService.deleteAll(listVendors);
         }
         if (listBeds != null && !listBeds.isEmpty()) {
             bedsService.deleteAll(listBeds);
