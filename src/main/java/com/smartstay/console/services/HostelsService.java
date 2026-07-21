@@ -189,6 +189,10 @@ public class HostelsService {
     private HostelNotesService hostelNotesService;
     @Autowired
     private UserActivityUtil userActivityUtil;
+    @Autowired
+    private VendorCategoriesService vendorCategoriesService;
+    @Autowired
+    private VendorCommentsService vendorCommentsService;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -761,6 +765,8 @@ public class HostelsService {
 
         List<AssetsV1> listAssets = assetsService.findByHostelId(hostelId);
         List<VendorV1> listVendors = vendorService.findByHostelId(hostelId);
+        List<VendorCategories> listVendorCategories = vendorCategoriesService
+                .getByHostelId(hostelId);
 
         List<BankTransactionsV1> listItemsExpense = listBankTransactions
                 .stream()
@@ -804,7 +810,21 @@ public class HostelsService {
         }
         if (listVendors != null && !listVendors.isEmpty()) {
             recordsFound = true;
+            Set<Integer> vendorIds = listVendors.stream()
+                    .map(VendorV1::getVendorId)
+                    .collect(Collectors.toSet());
+
+            List<VendorComments> vendorCommentsList = vendorCommentsService
+                    .getByVendorIds(vendorIds);
+            if (!vendorCommentsList.isEmpty()){
+                vendorCommentsService.deleteAll(vendorCommentsList);
+            }
+
             vendorService.deleteAll(listVendors);
+        }
+        if (listVendorCategories != null && !listVendorCategories.isEmpty()) {
+            recordsFound = true;
+            vendorCategoriesService.deleteAll(listVendorCategories);
         }
         if (listBookings != null && !listBookings.isEmpty()) {
             recordsFound = true;

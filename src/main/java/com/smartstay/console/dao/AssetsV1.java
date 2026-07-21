@@ -19,7 +19,6 @@ public class AssetsV1 {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long assetId;
-
     private String assetName;
     private String productName;
     private int vendorId;
@@ -28,7 +27,6 @@ public class AssetsV1 {
     private Date purchaseDate;
     private Double price;
     private String bankId;
-
     private Date createdAt;
     private String createdBy;
     private Date updatedAt;
