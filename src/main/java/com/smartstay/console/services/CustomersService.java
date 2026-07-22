@@ -127,6 +127,12 @@ public class CustomersService {
     private ElectricityReadingsService electricityReadingsService;
     @Autowired
     private AmenitiesService amenitiesService;
+    @Autowired
+    private CustomerJobDetailsService customerJobDetailsService;
+    @Autowired
+    private TenantBankingService tenantBankingService;
+    @Autowired
+    private TenantBankTransactionsService tenantBankTransactionsService;
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
@@ -258,12 +264,19 @@ public class CustomersService {
             customersOtp = customersOtpService.findByXuid(customer.getXuid());
         }
 
+        List<TenantBanking> listTenantBankings = tenantBankingService
+                .getByCustomerId(customerId);
+        List<TenantBankTransactions> listTenantBankTransactions = tenantBankTransactionsService
+                .getByCustomerId(customerId);
+
         List<InvoicesV1> invoicesList = invoiceV1Service.findAllByHostelIdAndCustomerId(hostelId, customerId);
         List<BookingsV1> listBookings = bookingsService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomersConfig> listConfigs = customersConfigService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomerDocuments> listCustomerDocuments = customerDocumentService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomerAdditionalContacts> listCustomerAdditionalContacts = customerAdditionalContactsService
                 .findByHostelIdAndCustomerId(hostelId, customerId);
+        List<CustomerJobDetails> listCustomerJobDetails = customerJobDetailsService
+                .getByCustomerId(customerId);
         List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<BedChangeRequest> listBedChangeRequests = bedChangeRequestService.findByHostelIdAndCustomerId(hostelId, customerId);
         List<CustomerNotifications> listCustomerNotifications = customerNotificationsService.getByUserIds(Set.of(customerId));
@@ -320,6 +333,12 @@ public class CustomersService {
                 oldCredentials
         );
 
+        if (listTenantBankings != null && !listTenantBankings.isEmpty()) {
+            tenantBankingService.deleteAll(listTenantBankings);
+        }
+        if (listTenantBankTransactions != null && !listTenantBankTransactions.isEmpty()) {
+            tenantBankTransactionsService.deleteAll(listTenantBankTransactions);
+        }
         if (invoicesList != null && !invoicesList.isEmpty()) {
             invoiceV1Service.deleteAllInvoices(invoicesList);
 
@@ -378,6 +397,9 @@ public class CustomersService {
         }
         if (listCustomerAdditionalContacts != null && !listCustomerAdditionalContacts.isEmpty()) {
             customerAdditionalContactsService.deleteAll(listCustomerAdditionalContacts);
+        }
+        if (listCustomerJobDetails != null && !listCustomerJobDetails.isEmpty()) {
+            customerJobDetailsService.deleteAll(listCustomerJobDetails);
         }
         if (listAmenityRequests != null && !listAmenityRequests.isEmpty()) {
             amenityRequestService.deleteAmenities(listAmenityRequests);

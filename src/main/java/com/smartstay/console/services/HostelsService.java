@@ -193,6 +193,12 @@ public class HostelsService {
     private VendorCategoriesService vendorCategoriesService;
     @Autowired
     private VendorCommentsService vendorCommentsService;
+    @Autowired
+    private CustomerJobDetailsService customerJobDetailsService;
+    @Autowired
+    private TenantBankingService tenantBankingService;
+    @Autowired
+    private TenantBankTransactionsService tenantBankTransactionsService;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -729,12 +735,19 @@ public class HostelsService {
         List<CustomerCredentials> listCustomerCredentials = customersCredentialService.findAllByXuids(allXuids);
         List<CustomersOtp> listCustomersOtp = customersOtpService.findAllByXuids(allXuids);
 
+        List<TenantBanking> listTenantBankings = tenantBankingService
+                .getByCustomerIds(customerIds);
+        List<TenantBankTransactions> listTenantBankTransactions = tenantBankTransactionsService
+                .getByCustomerIds(customerIds);
+
         List<InvoicesV1> invoicesList = invoiceV1Service.findByListOfCustomers(hostelId, customerIds);
         List<BookingsV1> listBookings = bookingsService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomersConfig> listConfigs = customersConfigService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomerDocuments> listCustomerDocuments = customerDocumentService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomerAdditionalContacts> listCustomerAdditionalContacts = customerAdditionalContactsService
                 .findByHostelIdAndCustomerIds(hostelId, customerIds);
+        List<CustomerJobDetails> listCustomerJobDetails = customerJobDetailsService
+                .getByCustomerIds(customerIds);
         List<AmenityRequest> listAmenityRequests = amenityRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<BedChangeRequest> listBedChangeRequests = bedChangeRequestService.findByHostelIdAndCustomerIds(hostelId, customerIds);
         List<CustomerNotifications> listCustomerNotifications = customerNotificationsService.getByUserIds(customerIdsSet);
@@ -789,6 +802,14 @@ public class HostelsService {
                 credentialsSnapshots
         );
 
+        if (listTenantBankings != null && !listTenantBankings.isEmpty()) {
+            recordsFound = true;
+            tenantBankingService.deleteAll(listTenantBankings);
+        }
+        if (listTenantBankTransactions != null && !listTenantBankTransactions.isEmpty()) {
+            recordsFound = true;
+            tenantBankTransactionsService.deleteAll(listTenantBankTransactions);
+        }
         if (invoicesList != null && !invoicesList.isEmpty()) {
             recordsFound = true;
             invoiceV1Service.deleteAllInvoices(invoicesList);
@@ -841,6 +862,10 @@ public class HostelsService {
         if (listCustomerAdditionalContacts != null && !listCustomerAdditionalContacts.isEmpty()) {
             recordsFound = true;
             customerAdditionalContactsService.deleteAll(listCustomerAdditionalContacts);
+        }
+        if (listCustomerJobDetails != null && !listCustomerJobDetails.isEmpty()) {
+            recordsFound = true;
+            customerJobDetailsService.deleteAll(listCustomerJobDetails);
         }
         if (listCustomerCredentials != null && !listCustomerCredentials.isEmpty()) {
             recordsFound = true;
