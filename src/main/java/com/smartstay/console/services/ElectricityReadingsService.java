@@ -39,4 +39,12 @@ public class ElectricityReadingsService {
     public List<ElectricityReadings> getLatestEntriesByHostelIdAndRoomIds(String hostelId, Set<Integer> roomIds) {
         return electricityReadingRepository.findLatestEntriesByHostelIdAndRoomIds(hostelId, roomIds);
     }
+
+    public List<ElectricityReadings> getAllByReadingIds(List<Integer> readingIds) {
+        return electricityReadingRepository.findAllByIdIn(readingIds);
+    }
+
+    public void saveAll(List<ElectricityReadings> electricityReadings) {
+        electricityReadingRepository.saveAll(electricityReadings);
+    }
 }

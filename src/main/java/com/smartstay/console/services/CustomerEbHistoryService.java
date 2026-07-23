@@ -28,4 +28,12 @@ public class CustomerEbHistoryService {
     public List<CustomersEbHistory> getAllByCustomerIdAndReadingId(String customerId, List<Integer> ebReadingsId) {
         return customerEbHistoryRepository.findByCustomerIdAndReadingsId(customerId, ebReadingsId);
     }
+
+    public void saveAll(List<CustomersEbHistory> customersEbHistories) {
+        customerEbHistoryRepository.saveAll(customersEbHistories);
+    }
+
+    public List<CustomersEbHistory> getAllByReadingIds(List<Integer> readingIds) {
+        return customerEbHistoryRepository.findAllByReadingIdIn(readingIds);
+    }
 }

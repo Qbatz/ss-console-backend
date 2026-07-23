@@ -13,10 +13,7 @@ import com.smartstay.console.dto.customers.CustomersSnapshot;
 import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
-import com.smartstay.console.dto.settlement.CurrentOtherItems;
-import com.smartstay.console.dto.settlement.CurrentRentBreakUp;
-import com.smartstay.console.dto.settlement.SettlementUnpaidInvoices;
-import com.smartstay.console.dto.settlement.WalltetItems;
+import com.smartstay.console.dto.settlement.*;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.payloads.customers.CusSettlementDeductionsPayload;
@@ -1589,6 +1586,8 @@ public class CustomersService {
                     .map(i -> new CurrentOtherItems(i.item(), i.amount()))
                     .toList();
 
+            List<EBItems> settlementItemsEbItems = buildSettlementEbItems(hostelId, customerId, leavingDate);
+
             SettlementItems settlementItems = settlementItemsService
                     .getByInvoiceId(settlementInvoice.getInvoiceId());
             if (settlementItems == null){
@@ -1610,6 +1609,7 @@ public class CustomersService {
             settlementItems.setWalltetItems(settlementItemsWalletItems);
             settlementItems.setCurrentRentBreakUps(settlementItemsCurrentRentBreakups);
             settlementItems.setCurrentMonthOtherItems(settlementItemsCurrentOtherItems);
+            settlementItems.setEbItems(settlementItemsEbItems);
 
             if (customerWallet != null){
                 customerWallet.setAmount(0.0);
@@ -1642,6 +1642,14 @@ public class CustomersService {
             customer.setCurrentStatus(CustomerStatus.SETTLEMENT_GENERATED.name());
             customer.setLastUpdatedAt(today);
 
+            List<CustomersAmenity> customersAmenities = customersAmenityService
+                    .getAllByCustomerIdAndDateBetween(customerId, leavingDate);
+
+            customersAmenities.forEach(i -> {
+                i.setEndDate(leavingDate);
+                i.setReasonForStop("SETTLEMENT");
+            });
+
             settlementItemsService.save(settlementItems);
             if (advanceInvoice != null) {
                 invoiceV1Service.save(advanceInvoice);
@@ -1652,6 +1660,7 @@ public class CustomersService {
             customerBedHistoryService.save(latestBedHistory);
             customersRepository.save(customer);
             customerWalletHistoryService.saveAll(customerWalletHistories);
+            customersAmenityService.saveAll(customersAmenities);
 
             InvoiceSnapshot snapshot = SnapshotUtility.toSnapshot(settlementInvoice);
 
@@ -2351,7 +2360,7 @@ public class CustomersService {
             }
 
             List<CustomersAmenity> customersAmenities = customersAmenityService
-                    .getAllByCustomerIdAndDatesBetween(customerId, startDate, leavingDate);
+                    .getAllByCustomerIdAndDateBetween(customerId, leavingDate);
 
             Set<String> amenityIds = customersAmenities.stream()
                     .map(CustomersAmenity::getAmenityId)
@@ -2703,6 +2712,361 @@ public class CustomersService {
         }
 
         return customerEbInfoRes;
+    }
+
+    private List<ElectricityReadings> collectPendingElectricityReadings(String hostelId,
+                                                                        String customerId,
+                                                                        Date leavingDate) {
+
+        List<CustomersBedHistory> customersBedHistories = customerBedHistoryService
+                .getBedHistoriesByCustomerIdAndTypeNotIn(
+                        customerId,
+                        CustomersBedType.BOOKED.name());
+
+        if (customersBedHistories.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Map<Integer, List<CustomersBedHistory>> customerRoomHistoryMap =
+                customersBedHistories.stream()
+                        .collect(Collectors.groupingBy(CustomersBedHistory::getRoomId));
+
+        List<ElectricityReadings> allPendingReadings = new ArrayList<>();
+
+        customerRoomHistoryMap.forEach((roomId, histories) -> {
+
+            Date start = histories.stream()
+                    .map(CustomersBedHistory::getStartDate)
+                    .filter(Objects::nonNull)
+                    .min(Date::compareTo)
+                    .orElse(null);
+
+            Date end = histories.stream()
+                    .map(h -> h.getEndDate() == null ? leavingDate : h.getEndDate())
+                    .max(Date::compareTo)
+                    .orElse(leavingDate);
+
+            List<ElectricityReadings> readings =
+                    electricityReadingsService.getPendingReadingsBetweenDates(
+                            hostelId,
+                            roomId,
+                            start,
+                            end);
+
+            if (readings != null) {
+                allPendingReadings.addAll(readings);
+            }
+        });
+
+        return new ArrayList<>(
+                allPendingReadings.stream()
+                        .collect(Collectors.toMap(
+                                ElectricityReadings::getId,
+                                Function.identity(),
+                                (a, b) -> a))
+                        .values());
+    }
+
+    private void finalizePendingElectricityReadings(String customerId, List<ElectricityReadings> pendingReadings) {
+
+        if (pendingReadings.isEmpty()) {
+            return;
+        }
+
+        Date now = new Date();
+
+        List<Integer> readingIds = pendingReadings.stream()
+                .map(ElectricityReadings::getId)
+                .toList();
+
+        // Mark readings as invoiced
+        pendingReadings.forEach(reading ->
+                reading.setBillStatus(ElectricityBillStatus.INVOICE_GENERATED.name()));
+
+        electricityReadingsService.saveAll(pendingReadings);
+
+        List<CustomersEbHistory> histories =
+                customerEbHistoryService.getAllByReadingIds(readingIds);
+
+        if (histories.isEmpty()) {
+            return;
+        }
+
+        Set<String> customerIds = histories.stream()
+                .map(CustomersEbHistory::getCustomerId)
+                .collect(Collectors.toSet());
+
+        List<Customers> customers = customersRepository
+                .findAllByCustomerIdIn(customerIds);
+
+        Map<String, Customers> customerMap = customers.stream()
+                .collect(Collectors.toMap(
+                        Customers::getCustomerId,
+                        Function.identity()));
+
+        List<Customers> customersToUpdate = new ArrayList<>();
+        List<CustomerWalletHistory> walletHistories = new ArrayList<>();
+
+        for (CustomersEbHistory history : histories) {
+
+            // Leaving customer already pays via settlement invoice
+            if (customerId.equalsIgnoreCase(history.getCustomerId())) {
+                continue;
+            }
+
+            Customers customer = customerMap.get(history.getCustomerId());
+
+            if (customer == null) {
+                continue;
+            }
+
+            CustomerWallet wallet = customer.getWallet();
+
+            if (wallet == null) {
+                wallet = new CustomerWallet();
+                wallet.setCustomers(customer);
+                wallet.setAmount(0.0);
+                customer.setWallet(wallet);
+            }
+
+            wallet.setAmount((wallet.getAmount() == null ? 0.0 : wallet.getAmount()) + history.getAmount());
+
+            wallet.setTransactionDate(now);
+
+            customersToUpdate.add(customer);
+
+            walletHistories.add(customerWalletHistoryService
+                    .buildEbWalletHistory(customer.getCustomerId(), history));
+        }
+
+        if (!walletHistories.isEmpty()) {
+            customerWalletHistoryService.saveAll(walletHistories);
+        }
+
+        if (!customersToUpdate.isEmpty()) {
+            customersRepository.saveAll(customersToUpdate);
+        }
+    }
+
+    private void generateMissingCustomerEbHistory(String hostelId, List<ElectricityReadings> pendingReadings) {
+
+        if (pendingReadings.isEmpty()) {
+            return;
+        }
+
+        List<Integer> readingIds = pendingReadings.stream()
+                .map(ElectricityReadings::getId)
+                .toList();
+
+        List<CustomersEbHistory> existing =
+                customerEbHistoryService.getAllByReadingIds(readingIds);
+
+        Set<Integer> existingReadingIds = existing.stream()
+                .map(CustomersEbHistory::getReadingId)
+                .collect(Collectors.toSet());
+
+        List<ElectricityReadings> missingReadings = pendingReadings.stream()
+                .filter(r -> !existingReadingIds.contains(r.getId()))
+                .toList();
+
+        if (missingReadings.isEmpty()) {
+            return;
+        }
+
+        ElectricityConfig electricityConfig =
+                hostelService.getElectricityConfig(hostelId);
+
+        List<CustomersEbHistory> histories = new ArrayList<>();
+
+        for (ElectricityReadings reading : missingReadings) {
+
+            List<CustomersEbHistory> calculated =
+                    formCustomerEbHistory(reading, electricityConfig);
+
+            if (!calculated.isEmpty()) {
+                histories.addAll(calculated);
+            }
+        }
+
+        if (!histories.isEmpty()) {
+            customerEbHistoryService.saveAll(histories);
+        }
+    }
+
+    private List<EBItems> buildSettlementEbItems(String hostelId, String customerId, Date leavingDate) {
+
+        List<ElectricityReadings> pendingReadings = collectPendingElectricityReadings(
+                hostelId, customerId, leavingDate);
+
+        if (pendingReadings.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        generateMissingCustomerEbHistory(hostelId, pendingReadings);
+
+        finalizePendingElectricityReadings(customerId, pendingReadings);
+
+        List<Integer> readingIds = pendingReadings.stream()
+                .map(ElectricityReadings::getId)
+                .toList();
+
+        List<CustomersEbHistory> customerEbHistories = customerEbHistoryService
+                .getAllByCustomerIdAndReadingId(customerId, readingIds);
+
+        if (customerEbHistories.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return customerEbHistories.stream()
+                .map(history -> new EBItems(
+                        history.getReadingId(),
+                        history.getId(),
+                        history.getStartDate(),
+                        history.getEndDate(),
+                        Utils.roundOfDoubleTo2Digits(history.getAmount()),
+                        Utils.roundOfDoubleTo2Digits(history.getUnits())))
+                .toList();
+    }
+
+    private long getOverlapDays(CustomersBedHistory item, Date electricityStartDate, Date electricityEndDate) {
+
+        if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0
+                && item.getEndDate() == null) {
+
+            return Utils.findNumberOfDays(electricityStartDate, electricityEndDate);
+
+        } else if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0
+                && item.getEndDate() != null) {
+
+            if (Utils.compareWithTwoDates(item.getEndDate(), electricityEndDate) <= 0) {
+                return Utils.findNumberOfDays(electricityStartDate, item.getEndDate());
+            } else {
+                return Utils.findNumberOfDays(electricityStartDate, electricityEndDate);
+            }
+
+        } else if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) > 0
+                && item.getEndDate() == null) {
+
+            return Utils.findNumberOfDays(item.getStartDate(), electricityEndDate);
+
+        } else {
+
+            if (Utils.compareWithTwoDates(item.getEndDate(), electricityEndDate) <= 0) {
+                return Utils.findNumberOfDays(item.getStartDate(), item.getEndDate());
+            } else {
+                return Utils.findNumberOfDays(item.getStartDate(), electricityEndDate);
+            }
+        }
+    }
+
+    private List<CustomersEbHistory> formCustomerEbHistory(ElectricityReadings electricityReadings,
+                                                           ElectricityConfig electricityConfig) {
+
+        Date electricityStartDate = electricityReadings.getBillStartDate();
+        Date electricityEndDate = electricityReadings.getBillEndDate();
+        Date now = new Date();
+
+        List<CustomersBedHistory> listCustomerBedHistory =
+                customerBedHistoryService.getCustomersByRoomIdAndDates(
+                        electricityReadings.getRoomId(),
+                        electricityStartDate,
+                        electricityEndDate);
+
+        if (listCustomerBedHistory.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        long personCount = listCustomerBedHistory.stream()
+                .filter(item ->
+                        Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0 &&
+                                (item.getEndDate() == null ||
+                                        Utils.compareWithTwoDates(
+                                                electricityReadings.getEntryDate(),
+                                                item.getEndDate()) <= 0))
+                .count();
+
+        if (listCustomerBedHistory.size() == personCount) {
+
+            double unitsPerPerson =
+                    electricityReadings.getConsumption() / listCustomerBedHistory.size();
+
+            double amountPerPerson =
+                    unitsPerPerson * electricityConfig.getCharge();
+
+            return listCustomerBedHistory.stream()
+                    .map(item -> {
+                        CustomersEbHistory ebHistory = new CustomersEbHistory();
+                        ebHistory.setReadingId(electricityReadings.getId());
+                        ebHistory.setCustomerId(item.getCustomerId());
+                        ebHistory.setRoomId(item.getRoomId());
+                        ebHistory.setFloorId(item.getFloorId());
+                        ebHistory.setBedId(item.getBedId());
+                        ebHistory.setUnits(unitsPerPerson);
+                        ebHistory.setAmount(amountPerPerson);
+                        ebHistory.setStartDate(electricityStartDate);
+                        ebHistory.setEndDate(electricityEndDate);
+                        ebHistory.setCreatedAt(now);
+                        ebHistory.setCreatedBy(authentication.getName());
+                        return ebHistory;
+                    })
+                    .toList();
+        }
+
+        long totalPersonDays = 0;
+
+        for (CustomersBedHistory history : listCustomerBedHistory) {
+            totalPersonDays += getOverlapDays(
+                    history,
+                    electricityStartDate,
+                    electricityEndDate);
+        }
+
+        if (totalPersonDays == 0) {
+            return Collections.emptyList();
+        }
+
+        double unitsPerPersonDay =
+                electricityReadings.getConsumption() / totalPersonDays;
+
+        return listCustomerBedHistory.stream()
+                .map(item -> {
+
+                    long overlapDays =
+                            getOverlapDays(item, electricityStartDate, electricityEndDate);
+
+                    Date startDate = Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0
+                            ? electricityStartDate
+                            : item.getStartDate();
+
+                    Date endDate;
+
+                    if (item.getEndDate() == null) {
+                        endDate = electricityEndDate;
+                    } else if (Utils.compareWithTwoDates(item.getEndDate(), electricityEndDate) <= 0) {
+                        endDate = item.getEndDate();
+                    } else {
+                        endDate = electricityEndDate;
+                    }
+
+                    double units = overlapDays * unitsPerPersonDay;
+                    double amount = units * electricityConfig.getCharge();
+
+                    CustomersEbHistory ebHistory = new CustomersEbHistory();
+                    ebHistory.setReadingId(electricityReadings.getId());
+                    ebHistory.setCustomerId(item.getCustomerId());
+                    ebHistory.setRoomId(item.getRoomId());
+                    ebHistory.setFloorId(item.getFloorId());
+                    ebHistory.setBedId(item.getBedId());
+                    ebHistory.setUnits(units);
+                    ebHistory.setAmount(amount);
+                    ebHistory.setStartDate(startDate);
+                    ebHistory.setEndDate(endDate);
+                    ebHistory.setCreatedAt(now);
+                    ebHistory.setCreatedBy(authentication.getName());
+
+                    return ebHistory;
+                })
+                .toList();
     }
 
     private UnpaidInvoicesInfoRes buildUnpaidInvoiceInfoRes(BillingDates billingDates,

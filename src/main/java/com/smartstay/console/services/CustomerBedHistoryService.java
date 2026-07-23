@@ -82,4 +82,9 @@ public class CustomerBedHistoryService {
     public void save(CustomersBedHistory customersBedHistory) {
         customerBedHistoryRepository.save(customersBedHistory);
     }
+
+    public List<CustomersBedHistory> getCustomersByRoomIdAndDates(Integer roomId, Date startDate,
+                                                                  Date endDate) {
+        return customerBedHistoryRepository.findByRoomIdStartAndEndDate(roomId, startDate, endDate);
+    }
 }

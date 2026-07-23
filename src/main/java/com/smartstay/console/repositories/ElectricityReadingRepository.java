@@ -51,4 +51,6 @@ public interface ElectricityReadingRepository extends JpaRepository<ElectricityR
             """, nativeQuery = true)
     List<ElectricityReadings> findLatestEntriesByHostelIdAndRoomIds(@Param("hostelId") String hostelId,
                                                                     @Param("roomIds") Set<Integer> roomIds);
+
+    List<ElectricityReadings> findAllByIdIn(List<Integer> missingReadingIds);
 }
