@@ -92,28 +92,20 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         }
 
         if (lastLogin != null) {
-            if (lastActivity != null) {
-                if (Utils.compareWithTwoDates(lastActivity, lastLogin.getLoginAt()) > 0) {
-                    lastUpdateAt = Utils.dateToString(lastLogin.getLoginAt());
-                    lastUpdateTime = Utils.dateToTime(lastLogin.getLoginAt());
-                    platform = lastLogin.getPlatform();
-                }
-            }
-            else {
+            if (lastActivity == null || lastLogin.getLoginAt().after(lastActivity)) {
                 lastUpdateAt = Utils.dateToString(lastLogin.getLoginAt());
                 lastUpdateTime = Utils.dateToTime(lastLogin.getLoginAt());
-            }
-            if (platform == null || !platform.isBlank()) {
-                if (lastLogin.getSource().equalsIgnoreCase("WEB")) {
+                lastUpdateDateDisplay = Utils.formatDateDisplay(lastLogin.getLoginAt());
+
+                if ("WEB".equalsIgnoreCase(lastLogin.getSource())) {
                     platform = "Web";
-                }
-                else {
+                } else {
                     platform = lastLogin.getPlatform();
                 }
             }
         }
 
-        if (platform == null) {
+        if (platform == null || platform.isBlank()) {
             platform = "NA";
         }
 

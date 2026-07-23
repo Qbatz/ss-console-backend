@@ -2,6 +2,7 @@ package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.customers.CustomerDatePayload;
 import com.smartstay.console.payloads.customers.CustomerResetPayload;
+import com.smartstay.console.payloads.customers.CustomerSettlementGeneratePayload;
 import com.smartstay.console.services.CustomersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -62,5 +63,11 @@ public class CustomersController {
     public ResponseEntity<?> getCustomerSettlementInfo(@PathVariable("customerId") String customerId,
                                                        @Valid @RequestBody CustomerDatePayload payload){
         return customersService.getCustomerSettlementInfo(customerId, payload);
+    }
+
+    @PostMapping("/settlement/generate/{customerId}")
+    public ResponseEntity<?> generateCustomerSettlement(@PathVariable("customerId") String customerId,
+                                                        @Valid @RequestBody CustomerSettlementGeneratePayload payload){
+        return customersService.generateCustomerSettlement(customerId, payload);
     }
 }

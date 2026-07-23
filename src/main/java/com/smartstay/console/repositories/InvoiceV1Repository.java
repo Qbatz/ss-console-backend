@@ -74,4 +74,13 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
     List<InvoicesV1> findAllCurrentMonthInvoices(@Param("customerId") String customerId,
                                                  @Param("hostelId") String hostelId,
                                                  @Param("startDate") Date startDate);
+
+    @Query(value = """
+            SELECT * FROM invoicesv1
+            WHERE customer_id = :customerId
+                AND DATE(invoice_start_date) > DATE(:afterDate)
+                AND is_cancelled = false
+            """, nativeQuery = true)
+    List<InvoicesV1> findInvoicesByCustomerIdAndStartDateAfter(@Param("customerId") String customerId,
+                                                               @Param("afterDate") Date afterDate);
 }

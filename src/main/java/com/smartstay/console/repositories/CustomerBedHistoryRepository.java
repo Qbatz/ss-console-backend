@@ -65,4 +65,16 @@ public interface CustomerBedHistoryRepository extends JpaRepository<CustomersBed
     List<CustomersBedHistory> findAllByCustomerIdAndEndDateBefore(String customerId, Date beforeDate);
 
     List<CustomersBedHistory> findAllByCustomerIdAndTypeNot(String customerId, String type);
+
+    List<CustomersBedHistory> findAllByRoomIdInAndTypeNot(Set<Integer> roomIds, String type);
+
+    @Query(value = """
+            SELECT * FROM customers_bed_history cbh
+            where cbh.room_id = :roomId
+            AND DATE(cbh.start_date) <= DATE(:endDate)
+            AND (cbh.end_date IS NULL OR DATE(cbh.end_date) >= DATE(:startDate))
+            """, nativeQuery = true)
+    List<CustomersBedHistory> findByRoomIdStartAndEndDate(@Param("roomId") Integer roomId,
+                                                          @Param("startDate") Date startDate,
+                                                          @Param("endDate") Date endDate);
 }

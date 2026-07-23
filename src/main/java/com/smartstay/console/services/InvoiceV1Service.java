@@ -4,6 +4,7 @@ import com.smartstay.console.Mapper.invoice.InvoiceResponseMapper;
 import com.smartstay.console.Mapper.transaction.TransactionResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.billTemplates.BillTemplatesDto;
 import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoice.InvoiceSnapshotWrapper;
@@ -79,6 +80,8 @@ public class InvoiceV1Service {
     private CustomerWalletService customerWalletService;
     @Autowired
     private CustomerBedHistoryService customerBedHistoryService;
+    @Autowired
+    private TemplatesService templatesService;
 
     public List<InvoicesV1> findByListOfCustomers(String hostelId, List<String> customerIds) {
         return invoiceV1Repository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
@@ -468,8 +471,8 @@ public class InvoiceV1Service {
         return invoiceV1Repository.findByInvoiceId(invoiceId);
     }
 
-    public void save(InvoicesV1 invoice) {
-        invoiceV1Repository.save(invoice);
+    public InvoicesV1 save(InvoicesV1 invoice) {
+        return invoiceV1Repository.save(invoice);
     }
 
     public List<InvoicesV1> getLimitedInvoicesByHostelId(String hostelId, int size) {
@@ -1173,5 +1176,43 @@ public class InvoiceV1Service {
 
     public List<InvoicesV1> getCurrentMonthInvoices(String customerId, String hostelId, Date startDate) {
         return invoiceV1Repository.findAllCurrentMonthInvoices(customerId, hostelId, startDate);
+    }
+
+    public List<InvoicesV1> getInvoicesByCustomerIdAndStartDateAfter(String customerId, Date afterDate) {
+        return invoiceV1Repository.findInvoicesByCustomerIdAndStartDateAfter(customerId, afterDate);
+    }
+
+    public String generateInvoiceNumber(String hostelId, String type) {
+
+        StringBuilder invoiceNumber = new StringBuilder();
+
+        BillTemplatesDto templates = templatesService.getBillTemplate(hostelId, type);
+
+        InvoicesV1 existing = null;
+
+        if (templates != null) {
+            existing = invoiceV1Repository
+                    .findLatestInvoiceByPrefix(templates.prefix(), hostelId);
+
+            invoiceNumber = new StringBuilder();
+            invoiceNumber.append(templates.prefix());
+
+            if (existing == null) {
+                invoiceNumber.append("-001");
+            } else {
+                String[] suffix = existing.getInvoiceNumber().split("-");
+                if (suffix.length > 1) {
+                    invoiceNumber.append("-");
+                    int suff = Integer.parseInt(suffix[suffix.length - 1]) + 1;
+                    invoiceNumber.append(String.format("%03d", suff));
+                }
+            }
+        } else {
+            invoiceNumber.append("INV");
+            invoiceNumber.append("-");
+            invoiceNumber.append("001");
+        }
+
+        return invoiceNumber.toString();
     }
 }

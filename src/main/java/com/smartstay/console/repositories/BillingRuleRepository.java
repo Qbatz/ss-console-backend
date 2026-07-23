@@ -15,7 +15,8 @@ public interface BillingRuleRepository extends JpaRepository<BillingRules, Integ
     @Query(value = """
            SELECT * FROM billing_rules
            WHERE hostel_id = :hostelId
-           ORDER BY created_at DESC LIMIT 1
+           ORDER BY created_at DESC
+           LIMIT 1
            """, nativeQuery = true)
     BillingRules findCurrentBillingRules(@Param("hostelId") String hostelId);
 

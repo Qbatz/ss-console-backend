@@ -18,14 +18,15 @@ public class CustomersAmenity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    String id;
-    String amenityId;
-    String customerId;
-    Double amenityPrice;
-    Date createdAt;
-    Date updatedAt;
-    String updatedBy;
-    String createdBy;
-    Date startDate;
-    Date endDate;
+    private String id;
+    private String amenityId;
+    private String customerId;
+    private Double amenityPrice;
+    private Date createdAt;
+    private Date updatedAt;
+    private String updatedBy;
+    private String createdBy;
+    private Date startDate;
+    private Date endDate;
+    private String reasonForStop;
 }

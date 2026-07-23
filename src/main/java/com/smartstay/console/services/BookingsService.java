@@ -58,4 +58,8 @@ public class BookingsService {
     public void saveAll(List<BookingsV1> bookingsList) {
         bookingsRepository.saveAll(bookingsList);
     }
+
+    public void save(BookingsV1 booking) {
+        bookingsRepository.save(booking);
+    }
 }
