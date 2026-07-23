@@ -1062,4 +1062,9 @@ public class Utils {
 
         return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
     }
+
+    public static Date stringToDate(String date) {
+        LocalDate localDate = LocalDate.parse(date, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
 }

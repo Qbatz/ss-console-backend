@@ -2714,6 +2714,332 @@ public class CustomersService {
         return customerEbInfoRes;
     }
 
+    private List<PendingEbRes> buildPendingEbResponseByEbHistory(List<CustomersEbHistory> pendingCustomersEbHistories,
+                                                                 List<CustomersBedHistory> customersBedHistories,
+                                                                 Map<Integer, Floors> floorsMap,
+                                                                 Map<Integer, Rooms> roomsMap,
+                                                                 Map<Integer, Beds> bedsMap, Date leavingDate) {
+
+        if (pendingCustomersEbHistories == null || pendingCustomersEbHistories.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return pendingCustomersEbHistories.stream()
+                .map(ebHistory -> {
+
+                    String floorName = null;
+                    String roomName = null;
+                    String bedName = null;
+
+                    Rooms room = roomsMap.getOrDefault(ebHistory.getRoomId(), null);
+
+                    Integer floorId = ebHistory.getFloorId();
+                    Floors floor = floorsMap.getOrDefault(floorId, null);
+                    if (room != null) {
+                        floorId = room.getFloorId();
+                        floor = floorsMap.getOrDefault(floorId, null);
+                    }
+
+                    floorName = floor != null ? floor.getFloorName() : null;
+                    roomName = room != null ? room.getRoomName() : null;
+
+                    Integer bedId = ebHistory.getBedId();
+                    Beds bed = bedsMap.getOrDefault(bedId, null);
+                    if (bed != null) {
+                        bedName = bed.getBedName();
+                    }
+
+                    Date startDate = ebHistory.getStartDate();
+                    Date endDate = ebHistory.getEndDate();
+
+                    if (customersBedHistories != null && !customersBedHistories.isEmpty()) {
+
+                        Set<Integer> customerRoomIds = customersBedHistories.stream()
+                                .map(CustomersBedHistory::getRoomId)
+                                .collect(Collectors.toSet());
+
+                        if (customerRoomIds.contains(ebHistory.getRoomId())
+                                && leavingDate != null
+                                && ebHistory.getEndDate() != null
+                                && Utils.compareWithTwoDates(leavingDate, ebHistory.getEndDate()) < 0) {
+                            endDate = leavingDate;
+                        }
+                    }
+
+                    return new PendingEbRes(
+                            floorId,
+                            floorName,
+                            ebHistory.getRoomId(),
+                            roomName,
+                            bedId,
+                            bedName,
+                            Utils.roundOfDoubleTo2Digits(ebHistory.getUnits()),
+                            Utils.roundOfDoubleTo2Digits(ebHistory.getAmount()),
+                            Utils.dateToString(startDate),
+                            Utils.dateToString(endDate),
+                            startDate, endDate
+                    );
+                })
+                .toList();
+    }
+
+    private List<PendingEbRes> buildPendingEbResponse(List<ElectricityReadings> allPendingEbReadings,
+                                                      Map<Integer, List<CustomersBedHistory>> roomHistoryMap,
+                                                      Map<Integer, Floors> floorsMap,
+                                                      Map<Integer, Rooms> roomsMap,
+                                                      Map<Integer, Beds> bedsMap,
+                                                      String customerId,
+                                                      Date leavingDate,
+                                                      ElectricityConfig ebConfig) {
+
+        List<PendingEbRes> result = new ArrayList<>();
+
+        double unitPrice = ebConfig != null && ebConfig.getCharge() != null
+                ? ebConfig.getCharge()
+                : 0;
+
+        for (ElectricityReadings reading : allPendingEbReadings) {
+
+            Rooms room = roomsMap.get(reading.getRoomId());
+
+            Integer floorId = reading.getFloorId();
+            Floors floor = floorsMap.get(floorId);
+
+            if (room != null) {
+                floorId = room.getFloorId();
+                floor = floorsMap.get(floorId);
+            }
+
+            String floorName = floor != null ? floor.getFloorName() : null;
+            String roomName = room != null ? room.getRoomName() : null;
+
+            List<CustomersBedHistory> histories = roomHistoryMap
+                    .getOrDefault(reading.getRoomId(), Collections.emptyList())
+                    .stream()
+                    .filter(history ->
+                            Utils.compareWithTwoDates(history.getStartDate(), reading.getBillEndDate()) <= 0 &&
+                                    (history.getEndDate() == null ||
+                                            Utils.compareWithTwoDates(history.getEndDate(), reading.getBillStartDate()) >= 0))
+                    .toList();
+
+            if (histories.isEmpty()) {
+                continue;
+            }
+
+            // ---------- PASS 1 : Calculate total person days ----------
+
+            long totalPersonDays = 0;
+
+            for (CustomersBedHistory history : histories) {
+
+                Date historyEnd = history.getEndDate() == null
+                        ? leavingDate
+                        : history.getEndDate();
+
+                Date overlapStart = Utils.compareWithTwoDates(
+                        history.getStartDate(), reading.getBillStartDate()) > 0
+                        ? history.getStartDate()
+                        : reading.getBillStartDate();
+
+                Date overlapEnd = Utils.compareWithTwoDates(
+                        historyEnd, reading.getBillEndDate()) < 0
+                        ? historyEnd
+                        : reading.getBillEndDate();
+
+                if (Utils.compareWithTwoDates(overlapStart, overlapEnd) > 0) {
+                    continue;
+                }
+
+                long days = Utils.findNumberOfDays(overlapStart, overlapEnd);
+
+                totalPersonDays += Utils.findNumberOfDays(overlapStart, overlapEnd);
+            }
+
+            if (totalPersonDays == 0) {
+                continue;
+            }
+
+            double unitsPerPersonDay = reading.getConsumption() / totalPersonDays;
+
+            // ---------- PASS 2 : Create response only for this customer ----------
+
+            for (CustomersBedHistory history : histories) {
+
+                if (!customerId.equals(history.getCustomerId())) {
+                    continue;
+                }
+
+                Date historyEnd = history.getEndDate() == null
+                        ? leavingDate
+                        : history.getEndDate();
+
+                Date overlapStart = Utils.compareWithTwoDates(
+                        history.getStartDate(), reading.getBillStartDate()) > 0
+                        ? history.getStartDate()
+                        : reading.getBillStartDate();
+
+                Date overlapEnd = Utils.compareWithTwoDates(
+                        historyEnd, reading.getBillEndDate()) < 0
+                        ? historyEnd
+                        : reading.getBillEndDate();
+
+                if (Utils.compareWithTwoDates(overlapStart, overlapEnd) > 0) {
+                    continue;
+                }
+
+                long stayDays = Utils.findNumberOfDays(overlapStart, overlapEnd);
+
+                double units = unitsPerPersonDay * stayDays;
+                double amount = units * unitPrice;
+
+                Beds bed = bedsMap.get(history.getBedId());
+
+                result.add(new PendingEbRes(
+                        floorId,
+                        floorName,
+                        reading.getRoomId(),
+                        roomName,
+                        history.getBedId(),
+                        bed != null ? bed.getBedName() : null,
+                        Utils.roundOfDoubleTo2Digits(units),
+                        Utils.roundOfDoubleTo2Digits(amount),
+                        Utils.dateToString(overlapStart),
+                        Utils.dateToString(overlapEnd),
+                        overlapStart, overlapEnd
+                ));
+            }
+        }
+
+        return result;
+    }
+
+    private List<MissedEbRoomsRes> buildMissedEbRoomResponse(List<CustomersBedHistory> customersBedHistories,
+                                                             List<ElectricityReadings> latestReadingOfRooms,
+                                                             Map<Integer, Floors> floorsMap,
+                                                             Map<Integer, Rooms> roomsMap,
+                                                             Map<Integer, Beds> bedsMap,
+                                                             Date leavingDate) {
+
+        List<MissedEbRoomsRes> allMissedEbRoomsRes = new ArrayList<>();
+
+        Map<Integer, ElectricityReadings> latestReadingMap = latestReadingOfRooms.stream()
+                .collect(Collectors.toMap(
+                        ElectricityReadings::getRoomId,
+                        Function.identity(),
+                        (a, b) -> a
+                ));
+
+        // Latest bed history for each room
+        Map<Integer, CustomersBedHistory> latestBedHistoryMap = customersBedHistories.stream()
+                .collect(Collectors.toMap(
+                        CustomersBedHistory::getRoomId,
+                        Function.identity(),
+                        (h1, h2) -> {
+                            Date end1 = h1.getEndDate() != null ? h1.getEndDate() : leavingDate;
+                            Date end2 = h2.getEndDate() != null ? h2.getEndDate() : leavingDate;
+                            return end1.after(end2) ? h1 : h2;
+                        }
+                ));
+
+        for (CustomersBedHistory latestBedHistory : latestBedHistoryMap.values()) {
+
+            ElectricityReadings latestReading = latestReadingMap.get(latestBedHistory.getRoomId());
+
+            Date endDate = latestBedHistory.getEndDate() != null
+                    ? latestBedHistory.getEndDate()
+                    : leavingDate;
+
+            if (latestReading != null &&
+                    Utils.compareWithTwoDates(endDate, latestReading.getBillEndDate()) <= 0) {
+                continue;
+            }
+
+            Rooms room = roomsMap.get(latestBedHistory.getRoomId());
+            Beds bed = bedsMap.get(latestBedHistory.getBedId());
+
+            Integer floorId = latestBedHistory.getFloorId();
+            Floors floor = floorsMap.get(floorId);
+            if (room != null) {
+                floorId = room.getFloorId();
+                floor = floorsMap.get(floorId);
+            }
+
+            String fromDate = Utils.dateToString(latestBedHistory.getStartDate());
+            String toDate = Utils.dateToString(endDate);
+
+            String lastEntryDate = null;
+            Double lastReadingValue = 0.0;
+
+            if (latestReading != null) {
+                lastEntryDate = Utils.dateToString(latestReading.getEntryDate());
+                lastReadingValue = latestReading.getCurrentReading();
+
+                if (Utils.compareWithTwoDates(
+                        latestReading.getEntryDate(),
+                        latestBedHistory.getStartDate()) >= 0) {
+
+                    fromDate = Utils.dateToString(
+                            Utils.addDaysToDate(latestReading.getEntryDate(), 1));
+                }
+            }
+
+            allMissedEbRoomsRes.add(new MissedEbRoomsRes(
+                    latestBedHistory.getFloorId(),
+                    floor != null ? floor.getFloorName() : null,
+                    latestBedHistory.getRoomId(),
+                    room != null ? room.getRoomName() : null,
+                    latestBedHistory.getBedId(),
+                    bed != null ? bed.getBedName() : null,
+                    fromDate,
+                    toDate,
+                    lastReadingValue,
+                    lastEntryDate,
+                    latestReading != null &&
+                            Utils.compareWithTwoDates(latestReading.getEntryDate(), latestBedHistory.getStartDate()) >= 0
+                            ? Utils.addDaysToDate(latestReading.getEntryDate(), 1)
+                            : latestBedHistory.getStartDate(),
+                    endDate
+            ));
+        }
+
+        return allMissedEbRoomsRes;
+    }
+
+    private List<EBItems> buildSettlementEbItems(String hostelId, String customerId, Date leavingDate) {
+
+        List<ElectricityReadings> pendingReadings = collectPendingElectricityReadings(
+                hostelId, customerId, leavingDate);
+
+        if (pendingReadings.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        generateMissingCustomerEbHistory(hostelId, pendingReadings, leavingDate);
+
+        finalizePendingElectricityReadings(customerId, pendingReadings);
+
+        List<Integer> readingIds = pendingReadings.stream()
+                .map(ElectricityReadings::getId)
+                .toList();
+
+        List<CustomersEbHistory> customerEbHistories = customerEbHistoryService
+                .getAllByCustomerIdAndReadingId(customerId, readingIds);
+
+        if (customerEbHistories.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return customerEbHistories.stream()
+                .map(history -> new EBItems(
+                        history.getReadingId(),
+                        history.getId(),
+                        history.getStartDate(),
+                        history.getEndDate(),
+                        Utils.roundOfDoubleTo2Digits(history.getAmount()),
+                        Utils.roundOfDoubleTo2Digits(history.getUnits())))
+                .toList();
+    }
+
     private List<ElectricityReadings> collectPendingElectricityReadings(String hostelId,
                                                                         String customerId,
                                                                         Date leavingDate) {
@@ -2848,7 +3174,8 @@ public class CustomersService {
         }
     }
 
-    private void generateMissingCustomerEbHistory(String hostelId, List<ElectricityReadings> pendingReadings) {
+    private void generateMissingCustomerEbHistory(String hostelId, List<ElectricityReadings> pendingReadings,
+                                                  Date leavingDate) {
 
         if (pendingReadings.isEmpty()) {
             return;
@@ -2881,7 +3208,7 @@ public class CustomersService {
         for (ElectricityReadings reading : missingReadings) {
 
             List<CustomersEbHistory> calculated =
-                    formCustomerEbHistory(reading, electricityConfig);
+                    formCustomerEbHistory(reading, electricityConfig, leavingDate);
 
             if (!calculated.isEmpty()) {
                 histories.addAll(calculated);
@@ -2893,96 +3220,52 @@ public class CustomersService {
         }
     }
 
-    private List<EBItems> buildSettlementEbItems(String hostelId, String customerId, Date leavingDate) {
+    private long getOverlapDays(CustomersBedHistory history,
+                                Date electricityStartDate,
+                                Date electricityEndDate) {
 
-        List<ElectricityReadings> pendingReadings = collectPendingElectricityReadings(
-                hostelId, customerId, leavingDate);
+        Date overlapStart = Utils.compareWithTwoDates(
+                history.getStartDate(), electricityStartDate) > 0
+                ? history.getStartDate()
+                : electricityStartDate;
 
-        if (pendingReadings.isEmpty()) {
-            return Collections.emptyList();
+        Date overlapEnd = Utils.compareWithTwoDates(
+                history.getEndDate(), electricityEndDate) < 0
+                ? history.getEndDate()
+                : electricityEndDate;
+
+        if (Utils.compareWithTwoDates(overlapStart, overlapEnd) > 0) {
+            return 0;
         }
 
-        generateMissingCustomerEbHistory(hostelId, pendingReadings);
-
-        finalizePendingElectricityReadings(customerId, pendingReadings);
-
-        List<Integer> readingIds = pendingReadings.stream()
-                .map(ElectricityReadings::getId)
-                .toList();
-
-        List<CustomersEbHistory> customerEbHistories = customerEbHistoryService
-                .getAllByCustomerIdAndReadingId(customerId, readingIds);
-
-        if (customerEbHistories.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return customerEbHistories.stream()
-                .map(history -> new EBItems(
-                        history.getReadingId(),
-                        history.getId(),
-                        history.getStartDate(),
-                        history.getEndDate(),
-                        Utils.roundOfDoubleTo2Digits(history.getAmount()),
-                        Utils.roundOfDoubleTo2Digits(history.getUnits())))
-                .toList();
-    }
-
-    private long getOverlapDays(CustomersBedHistory item, Date electricityStartDate, Date electricityEndDate) {
-
-        if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0
-                && item.getEndDate() == null) {
-
-            return Utils.findNumberOfDays(electricityStartDate, electricityEndDate);
-
-        } else if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0
-                && item.getEndDate() != null) {
-
-            if (Utils.compareWithTwoDates(item.getEndDate(), electricityEndDate) <= 0) {
-                return Utils.findNumberOfDays(electricityStartDate, item.getEndDate());
-            } else {
-                return Utils.findNumberOfDays(electricityStartDate, electricityEndDate);
-            }
-
-        } else if (Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) > 0
-                && item.getEndDate() == null) {
-
-            return Utils.findNumberOfDays(item.getStartDate(), electricityEndDate);
-
-        } else {
-
-            if (Utils.compareWithTwoDates(item.getEndDate(), electricityEndDate) <= 0) {
-                return Utils.findNumberOfDays(item.getStartDate(), item.getEndDate());
-            } else {
-                return Utils.findNumberOfDays(item.getStartDate(), electricityEndDate);
-            }
-        }
+        return Utils.findNumberOfDays(overlapStart, overlapEnd);
     }
 
     private List<CustomersEbHistory> formCustomerEbHistory(ElectricityReadings electricityReadings,
-                                                           ElectricityConfig electricityConfig) {
+                                                           ElectricityConfig electricityConfig,
+                                                           Date leavingDate) {
 
         Date electricityStartDate = electricityReadings.getBillStartDate();
         Date electricityEndDate = electricityReadings.getBillEndDate();
         Date now = new Date();
 
-        List<CustomersBedHistory> listCustomerBedHistory =
-                customerBedHistoryService.getCustomersByRoomIdAndDates(
-                        electricityReadings.getRoomId(),
-                        electricityStartDate,
-                        electricityEndDate);
+        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistoryService.getCustomersByRoomIdAndDates(
+                electricityReadings.getRoomId(), electricityStartDate, electricityEndDate);
 
         if (listCustomerBedHistory.isEmpty()) {
             return Collections.emptyList();
         }
 
         long personCount = listCustomerBedHistory.stream()
-                .filter(item ->
-                        Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0 &&
-                                (item.getEndDate() == null ||
-                                        Utils.compareWithTwoDates(
-                                                electricityReadings.getEntryDate(),
-                                                item.getEndDate()) <= 0))
+                .filter(item -> {
+                    Date historyEnd = item.getEndDate() == null
+                            ? leavingDate
+                            : item.getEndDate();
+
+                    return Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0
+                            && historyEnd != null
+                            && Utils.compareWithTwoDates(historyEnd, electricityStartDate) >= 0;
+                })
                 .count();
 
         if (listCustomerBedHistory.size() == personCount) {
@@ -2995,6 +3278,15 @@ public class CustomersService {
 
             return listCustomerBedHistory.stream()
                     .map(item -> {
+
+                        Date historyEnd = item.getEndDate() == null
+                                ? leavingDate
+                                : item.getEndDate();
+
+                        Date endDate = Utils.compareWithTwoDates(historyEnd, electricityEndDate) <= 0
+                                ? historyEnd
+                                : electricityEndDate;
+
                         CustomersEbHistory ebHistory = new CustomersEbHistory();
                         ebHistory.setReadingId(electricityReadings.getId());
                         ebHistory.setCustomerId(item.getCustomerId());
@@ -3004,9 +3296,10 @@ public class CustomersService {
                         ebHistory.setUnits(unitsPerPerson);
                         ebHistory.setAmount(amountPerPerson);
                         ebHistory.setStartDate(electricityStartDate);
-                        ebHistory.setEndDate(electricityEndDate);
+                        ebHistory.setEndDate(endDate);
                         ebHistory.setCreatedAt(now);
                         ebHistory.setCreatedBy(authentication.getName());
+
                         return ebHistory;
                     })
                     .toList();
@@ -3015,8 +3308,13 @@ public class CustomersService {
         long totalPersonDays = 0;
 
         for (CustomersBedHistory history : listCustomerBedHistory) {
+
+            CustomersBedHistory adjusted = new CustomersBedHistory();
+            adjusted.setStartDate(history.getStartDate());
+            adjusted.setEndDate(history.getEndDate() == null ? leavingDate : history.getEndDate());
+
             totalPersonDays += getOverlapDays(
-                    history,
+                    adjusted,
                     electricityStartDate,
                     electricityEndDate);
         }
@@ -3031,22 +3329,26 @@ public class CustomersService {
         return listCustomerBedHistory.stream()
                 .map(item -> {
 
+                    CustomersBedHistory adjusted = new CustomersBedHistory();
+                    adjusted.setStartDate(item.getStartDate());
+                    adjusted.setEndDate(item.getEndDate() == null ? leavingDate : item.getEndDate());
+
                     long overlapDays =
-                            getOverlapDays(item, electricityStartDate, electricityEndDate);
+                            getOverlapDays(adjusted,
+                                    electricityStartDate,
+                                    electricityEndDate);
 
                     Date startDate = Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0
                             ? electricityStartDate
                             : item.getStartDate();
 
-                    Date endDate;
+                    Date historyEnd = item.getEndDate() == null
+                            ? leavingDate
+                            : item.getEndDate();
 
-                    if (item.getEndDate() == null) {
-                        endDate = electricityEndDate;
-                    } else if (Utils.compareWithTwoDates(item.getEndDate(), electricityEndDate) <= 0) {
-                        endDate = item.getEndDate();
-                    } else {
-                        endDate = electricityEndDate;
-                    }
+                    Date endDate = Utils.compareWithTwoDates(historyEnd, electricityEndDate) <= 0
+                            ? historyEnd
+                            : electricityEndDate;
 
                     double units = overlapDays * unitsPerPersonDay;
                     double amount = units * electricityConfig.getCharge();
@@ -3338,294 +3640,5 @@ public class CustomersService {
                             invoiceDate, invoiceType, defaultInvoiceType, Utils.dateToString(redemption.getRedeemedAt()),
                             redemption.getRedemptionAmount());
                 }).toList();
-    }
-
-    private List<PendingEbRes> buildPendingEbResponseByEbHistory(List<CustomersEbHistory> pendingCustomersEbHistories,
-                                                                 List<CustomersBedHistory> customersBedHistories,
-                                                                 Map<Integer, Floors> floorsMap,
-                                                                 Map<Integer, Rooms> roomsMap,
-                                                                 Map<Integer, Beds> bedsMap, Date leavingDate) {
-
-        if (pendingCustomersEbHistories == null || pendingCustomersEbHistories.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        return pendingCustomersEbHistories.stream()
-                .map(ebHistory -> {
-
-                    String floorName = null;
-                    String roomName = null;
-                    String bedName = null;
-
-                    Rooms room = roomsMap.getOrDefault(ebHistory.getRoomId(), null);
-
-                    Integer floorId = ebHistory.getFloorId();
-                    Floors floor = floorsMap.getOrDefault(floorId, null);
-                    if (room != null) {
-                        floorId = room.getFloorId();
-                        floor = floorsMap.getOrDefault(floorId, null);
-                    }
-
-                    floorName = floor != null ? floor.getFloorName() : null;
-                    roomName = room != null ? room.getRoomName() : null;
-
-                    Integer bedId = ebHistory.getBedId();
-                    Beds bed = bedsMap.getOrDefault(bedId, null);
-                    if (bed != null) {
-                        bedName = bed.getBedName();
-                    }
-
-                    Date startDate = ebHistory.getStartDate();
-                    Date endDate = ebHistory.getEndDate();
-
-                    if (customersBedHistories != null && !customersBedHistories.isEmpty()) {
-
-                        Set<Integer> customerRoomIds = customersBedHistories.stream()
-                                .map(CustomersBedHistory::getRoomId)
-                                .collect(Collectors.toSet());
-
-                        if (customerRoomIds.contains(ebHistory.getRoomId())
-                                && leavingDate != null
-                                && ebHistory.getEndDate() != null
-                                && Utils.compareWithTwoDates(leavingDate, ebHistory.getEndDate()) < 0) {
-                            endDate = leavingDate;
-                        }
-                    }
-
-                    return new PendingEbRes(
-                            floorId,
-                            floorName,
-                            ebHistory.getRoomId(),
-                            roomName,
-                            bedId,
-                            bedName,
-                            Utils.roundOfDoubleTo2Digits(ebHistory.getUnits()),
-                            Utils.roundOfDoubleTo2Digits(ebHistory.getAmount()),
-                            Utils.dateToString(startDate),
-                            Utils.dateToString(endDate),
-                            startDate, endDate
-                    );
-                })
-                .toList();
-    }
-
-    private List<PendingEbRes> buildPendingEbResponse(List<ElectricityReadings> allPendingEbReadings,
-                                                      Map<Integer, List<CustomersBedHistory>> roomHistoryMap,
-                                                      Map<Integer, Floors> floorsMap,
-                                                      Map<Integer, Rooms> roomsMap,
-                                                      Map<Integer, Beds> bedsMap,
-                                                      String customerId,
-                                                      Date leavingDate,
-                                                      ElectricityConfig ebConfig) {
-
-        List<PendingEbRes> result = new ArrayList<>();
-
-        double unitPrice = ebConfig != null && ebConfig.getCharge() != null
-                ? ebConfig.getCharge()
-                : 0;
-
-        for (ElectricityReadings reading : allPendingEbReadings) {
-
-            Rooms room = roomsMap.get(reading.getRoomId());
-
-            Integer floorId = reading.getFloorId();
-            Floors floor = floorsMap.get(floorId);
-
-            if (room != null) {
-                floorId = room.getFloorId();
-                floor = floorsMap.get(floorId);
-            }
-
-            String floorName = floor != null ? floor.getFloorName() : null;
-            String roomName = room != null ? room.getRoomName() : null;
-
-            List<CustomersBedHistory> histories = roomHistoryMap
-                    .getOrDefault(reading.getRoomId(), Collections.emptyList())
-                    .stream()
-                    .filter(history ->
-                            Utils.compareWithTwoDates(history.getStartDate(), reading.getBillEndDate()) <= 0 &&
-                                    (history.getEndDate() == null ||
-                                            Utils.compareWithTwoDates(history.getEndDate(), reading.getBillStartDate()) >= 0))
-                    .toList();
-
-            if (histories.isEmpty()) {
-                continue;
-            }
-
-            // ---------- PASS 1 : Calculate total person days ----------
-
-            long totalPersonDays = 0;
-
-            for (CustomersBedHistory history : histories) {
-
-                Date historyEnd = history.getEndDate() == null
-                        ? leavingDate
-                        : history.getEndDate();
-
-                Date overlapStart = Utils.compareWithTwoDates(
-                        history.getStartDate(), reading.getBillStartDate()) > 0
-                        ? history.getStartDate()
-                        : reading.getBillStartDate();
-
-                Date overlapEnd = Utils.compareWithTwoDates(
-                        historyEnd, reading.getBillEndDate()) < 0
-                        ? historyEnd
-                        : reading.getBillEndDate();
-
-                if (Utils.compareWithTwoDates(overlapStart, overlapEnd) > 0) {
-                    continue;
-                }
-
-                totalPersonDays += Utils.findNumberOfDays(overlapStart, overlapEnd);
-            }
-
-            if (totalPersonDays == 0) {
-                continue;
-            }
-
-            double unitsPerPersonDay = reading.getConsumption() / totalPersonDays;
-
-            // ---------- PASS 2 : Create response only for this customer ----------
-
-            for (CustomersBedHistory history : histories) {
-
-                if (!customerId.equals(history.getCustomerId())) {
-                    continue;
-                }
-
-                Date historyEnd = history.getEndDate() == null
-                        ? leavingDate
-                        : history.getEndDate();
-
-                Date overlapStart = Utils.compareWithTwoDates(
-                        history.getStartDate(), reading.getBillStartDate()) > 0
-                        ? history.getStartDate()
-                        : reading.getBillStartDate();
-
-                Date overlapEnd = Utils.compareWithTwoDates(
-                        historyEnd, reading.getBillEndDate()) < 0
-                        ? historyEnd
-                        : reading.getBillEndDate();
-
-                if (Utils.compareWithTwoDates(overlapStart, overlapEnd) > 0) {
-                    continue;
-                }
-
-                long stayDays = Utils.findNumberOfDays(overlapStart, overlapEnd);
-
-                double units = unitsPerPersonDay * stayDays;
-                double amount = units * unitPrice;
-
-                Beds bed = bedsMap.get(history.getBedId());
-
-                result.add(new PendingEbRes(
-                        floorId,
-                        floorName,
-                        reading.getRoomId(),
-                        roomName,
-                        history.getBedId(),
-                        bed != null ? bed.getBedName() : null,
-                        Utils.roundOfDoubleTo2Digits(units),
-                        Utils.roundOfDoubleTo2Digits(amount),
-                        Utils.dateToString(overlapStart),
-                        Utils.dateToString(overlapEnd),
-                        overlapStart, overlapEnd
-                ));
-            }
-        }
-
-        return result;
-    }
-
-    private List<MissedEbRoomsRes> buildMissedEbRoomResponse(List<CustomersBedHistory> customersBedHistories,
-                                                             List<ElectricityReadings> latestReadingOfRooms,
-                                                             Map<Integer, Floors> floorsMap,
-                                                             Map<Integer, Rooms> roomsMap,
-                                                             Map<Integer, Beds> bedsMap,
-                                                             Date leavingDate) {
-
-        List<MissedEbRoomsRes> allMissedEbRoomsRes = new ArrayList<>();
-
-        Map<Integer, ElectricityReadings> latestReadingMap = latestReadingOfRooms.stream()
-                .collect(Collectors.toMap(
-                        ElectricityReadings::getRoomId,
-                        Function.identity(),
-                        (a, b) -> a
-                ));
-
-        // Latest bed history for each room
-        Map<Integer, CustomersBedHistory> latestBedHistoryMap = customersBedHistories.stream()
-                .collect(Collectors.toMap(
-                        CustomersBedHistory::getRoomId,
-                        Function.identity(),
-                        (h1, h2) -> {
-                            Date end1 = h1.getEndDate() != null ? h1.getEndDate() : leavingDate;
-                            Date end2 = h2.getEndDate() != null ? h2.getEndDate() : leavingDate;
-                            return end1.after(end2) ? h1 : h2;
-                        }
-                ));
-
-        for (CustomersBedHistory latestBedHistory : latestBedHistoryMap.values()) {
-
-            ElectricityReadings latestReading = latestReadingMap.get(latestBedHistory.getRoomId());
-
-            Date endDate = latestBedHistory.getEndDate() != null
-                    ? latestBedHistory.getEndDate()
-                    : leavingDate;
-
-            if (latestReading != null &&
-                    Utils.compareWithTwoDates(endDate, latestReading.getBillEndDate()) <= 0) {
-                continue;
-            }
-
-            Rooms room = roomsMap.get(latestBedHistory.getRoomId());
-            Beds bed = bedsMap.get(latestBedHistory.getBedId());
-
-            Integer floorId = latestBedHistory.getFloorId();
-            Floors floor = floorsMap.get(floorId);
-            if (room != null) {
-                floorId = room.getFloorId();
-                floor = floorsMap.get(floorId);
-            }
-
-            String fromDate = Utils.dateToString(latestBedHistory.getStartDate());
-            String toDate = Utils.dateToString(endDate);
-
-            String lastEntryDate = null;
-            Double lastReadingValue = 0.0;
-
-            if (latestReading != null) {
-                lastEntryDate = Utils.dateToString(latestReading.getEntryDate());
-                lastReadingValue = latestReading.getCurrentReading();
-
-                if (Utils.compareWithTwoDates(
-                        latestReading.getEntryDate(),
-                        latestBedHistory.getStartDate()) >= 0) {
-
-                    fromDate = Utils.dateToString(
-                            Utils.addDaysToDate(latestReading.getEntryDate(), 1));
-                }
-            }
-
-            allMissedEbRoomsRes.add(new MissedEbRoomsRes(
-                    latestBedHistory.getFloorId(),
-                    floor != null ? floor.getFloorName() : null,
-                    latestBedHistory.getRoomId(),
-                    room != null ? room.getRoomName() : null,
-                    latestBedHistory.getBedId(),
-                    bed != null ? bed.getBedName() : null,
-                    fromDate,
-                    toDate,
-                    lastReadingValue,
-                    lastEntryDate,
-                    latestReading != null &&
-                            Utils.compareWithTwoDates(latestReading.getEntryDate(), latestBedHistory.getStartDate()) >= 0
-                            ? Utils.addDaysToDate(latestReading.getEntryDate(), 1)
-                            : latestBedHistory.getStartDate(),
-                    endDate
-            ));
-        }
-
-        return allMissedEbRoomsRes;
     }
 }
