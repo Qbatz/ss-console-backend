@@ -179,8 +179,8 @@ public class AgentService {
                 agent.getLastName(),
                 agent.getMobile(),
                 agent.getRoleId(),
-                agentRoles.getRoleName(),
-                agentRoles.getPermissions());
+                agentRoles != null ? agentRoles.getRoleName() : null,
+                agentRoles != null ? agentRoles.getPermissions() : null);
 
         return new ResponseEntity<>(agentDetails, HttpStatus.OK);
     }
