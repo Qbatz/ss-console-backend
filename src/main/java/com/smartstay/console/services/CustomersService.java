@@ -130,6 +130,8 @@ public class CustomersService {
     private TenantBankingService tenantBankingService;
     @Autowired
     private TenantBankTransactionsService tenantBankTransactionsService;
+    @Autowired
+    private BankingV2Service bankingV2Service;
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
@@ -301,6 +303,7 @@ public class CustomersService {
                 .collect(Collectors.toSet());
         List<BankTransactionsV1> listBankTransactions = bankTransactionService.getTransactionsByTransactionIds(transactionIds);
         List<BankingV1> bankingList = bankingService.findByBankIds(bankIds);
+        List<BankingV2> bankingV2List = bankingV2Service.getByBankIds(bankIds);
 
         Set<String> activeStatuses = Set.of(
                 BookingsStatus.CHECKIN.name(),
@@ -321,6 +324,7 @@ public class CustomersService {
                 .toList();
 
         HashMap<String, Double> bankBalances = new HashMap<>();
+        HashMap<String, Double> bankV2Balances = new HashMap<>();
 
         CustomersSnapshot oldCustomer = SnapshotUtility.toSnapshot(customer);
         CustomersCredentialsSnapshot oldCredentials = SnapshotUtility.toSnapshot(customerCredentials);
@@ -441,6 +445,23 @@ public class CustomersService {
                         bankBalances.put(item.getBankId(), item.getPaidAmount() * -1);
                     }
                 }
+                if (bankV2Balances.containsKey(item.getBankId())) {
+                    if (item.getType() == null) {
+                        double amount = bankV2Balances.get(item.getBankId());
+                        amount = amount + item.getPaidAmount();
+                        bankV2Balances.put(item.getBankId(), amount);
+                    } else {
+                        double amount = bankV2Balances.get(item.getBankId());
+                        amount = amount  + (-1 * item.getPaidAmount());
+                        bankV2Balances.put(item.getBankId(), amount);
+                    }
+                } else {
+                    if (item.getType() == null) {
+                        bankV2Balances.put(item.getBankId(), item.getPaidAmount());
+                    } else {
+                        bankV2Balances.put(item.getBankId(), item.getPaidAmount() * -1);
+                    }
+                }
             });
             transactionV1Service.deleteAll(listTransactions);
         }
@@ -459,6 +480,17 @@ public class CustomersService {
                         return i;
                     }).toList();
             bankingService.updateBankAccount(newBalanceAmounts);
+        }
+        if (bankingV2List != null && !bankingV2List.isEmpty()) {
+            List<BankingV2> updatedBankingV2s = bankingV2List.stream()
+                    .map(i -> {
+                        if (bankV2Balances.get(i.getBankId()) != null) {
+                            double amount = bankV2Balances.get(i.getBankId());
+                            i.setBalance(i.getBalance() - amount);
+                        }
+                        return i;
+                    }).toList();
+            bankingV2Service.saveAll(updatedBankingV2s);
         }
         if (listBeds != null && !listBeds.isEmpty()) {
             bedsService.makeAllBedAvailable(listBeds);

@@ -199,6 +199,8 @@ public class HostelsService {
     private TenantBankingService tenantBankingService;
     @Autowired
     private TenantBankTransactionsService tenantBankTransactionsService;
+    @Autowired
+    private BankingV2Service bankingV2Service;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -775,6 +777,7 @@ public class HostelsService {
         List<Beds> listBeds = bedsService.findOccupiedBeds(hostelId);
         List<BankTransactionsV1> listBankTransactions = bankTransactionService.getAllTransactions(hostelId);
         List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
+        List<BankingV2> bankingV2List = bankingV2Service.getByHostelId(hostelId);
 
         List<AssetsV1> listAssets = assetsService.findByHostelId(hostelId);
         List<VendorV1> listVendors = vendorService.findByHostelId(hostelId);
@@ -792,6 +795,7 @@ public class HostelsService {
                 .toList();
 
         HashMap<String, Double> bankBalances = new HashMap<>();
+        HashMap<String, Double> bankV2Balances = new HashMap<>();
 
         HostelSnapshot oldHostel = SnapshotUtility.toSnapshot(hostel);
         List<CustomersCredentialsSnapshot> credentialsSnapshots =
@@ -967,14 +971,18 @@ public class HostelsService {
             recordsFound = true;
             listBankTransactions.forEach(item -> {
                 double currentBalance = bankBalances.getOrDefault(item.getBankId(), 0.0);
+                double currentBankV2Balance = bankV2Balances.getOrDefault(item.getBankId(), 0.0);
 
                 if (BankTransactionType.CREDIT.name().equalsIgnoreCase(item.getType())) {
                     currentBalance += item.getAmount();
+                    currentBankV2Balance += item.getAmount();
                 } else if (BankTransactionType.DEBIT.name().equalsIgnoreCase(item.getType())) {
                     currentBalance -= item.getAmount();
+                    currentBankV2Balance -= item.getAmount();
                 }
 
                 bankBalances.put(item.getBankId(), currentBalance);
+                bankV2Balances.put(item.getBankId(), currentBankV2Balance);
             });
         }
         if (bankingList != null && !bankingList.isEmpty()) {
@@ -988,6 +996,20 @@ public class HostelsService {
                 }
             });
             bankingService.updateBankAccount(bankingList);
+        }
+        if (bankingV2List != null && !bankingV2List.isEmpty()) {
+            if (bankingV2List.stream().anyMatch(i -> bankV2Balances.containsKey(i.getBankId()))) {
+                recordsFound = true;
+            }
+            List<BankingV2> updatedBankingV2s = bankingV2List.stream()
+                    .map(i -> {
+                        if (bankV2Balances.get(i.getBankId()) != null) {
+                            double amount = bankV2Balances.get(i.getBankId());
+                            i.setBalance(i.getBalance() - amount);
+                        }
+                        return i;
+                    }).toList();
+            bankingV2Service.saveAll(updatedBankingV2s);
         }
         if (!listItemsExpense.isEmpty()) {
             recordsFound = true;
@@ -1123,6 +1145,7 @@ public class HostelsService {
         List<TableColumns> listTableColumns = tableColumnsService.findByHostelId(hostelId);
         List<Beds> listBeds = bedsService.getBedsByHostelId(hostelId);
         List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
+        List<BankingV2> bankingV2List = bankingV2Service.getByHostelId(hostelId);
 
         if (listAmenities != null && !listAmenities.isEmpty()) {
             amenitiesService.deleteAll(listAmenities);
@@ -1159,6 +1182,9 @@ public class HostelsService {
         }
         if (bankingList != null && !bankingList.isEmpty()) {
             bankingService.deleteAll(bankingList);
+        }
+        if (bankingV2List != null && !bankingV2List.isEmpty()) {
+            bankingV2Service.deleteAll(bankingV2List);
         }
     }
 
