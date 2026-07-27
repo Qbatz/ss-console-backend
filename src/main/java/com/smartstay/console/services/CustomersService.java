@@ -1484,7 +1484,7 @@ public class CustomersService {
                         + otherItemAmount + finalDeductionPendingAmount + ebAmount + walletAmount
                         - discountAmount - refundableAdvanceAmount;
 
-                totalAmountToBePaid = Utils.roundOfDoubleTo2Digits(totalAmountToBePaid);
+                totalAmountToBePaid = Utils.roundOfDouble(totalAmountToBePaid);
             }
 
             if (rentInfoRes != null) {
@@ -1665,6 +1665,7 @@ public class CustomersService {
             }
 
             booking.setCurrentStatus(BookingsStatus.VACATED.name());
+            booking.setCheckoutDate(leavingDate);
             booking.setSettlementGeneratedDate(leavingDate);
             booking.setUpdatedAt(today);
 

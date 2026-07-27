@@ -584,7 +584,7 @@ public class Utils {
 
     }
 
-    public static Double roundOfDouble(Double number) {
+    public static double roundOfDouble(Double number) {
         if (number == null){
             return 0d;
         }
