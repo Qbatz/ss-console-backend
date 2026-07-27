@@ -28,8 +28,8 @@ public interface ElectricityReadingRepository extends JpaRepository<ElectricityR
                 AND room_id = :roomId
                 AND DATE(bill_start_date) <= DATE(:endDate)
                 AND DATE(bill_end_date) >= DATE(:startDate)
-                AND bill_status='INVOICE_NOT_GENERATED'
-                AND is_first_entry=false
+                AND bill_status = 'INVOICE_NOT_GENERATED'
+                AND is_first_entry = false
             """, nativeQuery = true)
     List<ElectricityReadings> findPendingReadingsBetweenDates(@Param("hostelId") String hostelId,
                                                               @Param("roomId") Integer roomId,

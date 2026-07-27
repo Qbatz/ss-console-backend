@@ -2594,6 +2594,10 @@ public class CustomersService {
                             .max(Date::compareTo)
                             .orElse(leavingDate);
 
+                    if (start == null) {
+                        return;
+                    }
+
                     List<ElectricityReadings> readings = electricityReadingsService
                             .getPendingReadingsBetweenDates(hostelId, roomId, start, end);
 
@@ -2833,7 +2837,7 @@ public class CustomersService {
             for (CustomersBedHistory history : histories) {
 
                 Date historyEnd = history.getEndDate() == null
-                        ? leavingDate
+                        ? reading.getBillEndDate()
                         : history.getEndDate();
 
                 Date overlapStart = Utils.compareWithTwoDates(
@@ -3014,7 +3018,7 @@ public class CustomersService {
             return Collections.emptyList();
         }
 
-        generateMissingCustomerEbHistory(hostelId, pendingReadings, leavingDate);
+        generateMissingCustomerEbHistory(hostelId, pendingReadings, customerId, leavingDate);
 
         finalizePendingElectricityReadings(customerId, pendingReadings);
 
@@ -3045,9 +3049,7 @@ public class CustomersService {
                                                                         Date leavingDate) {
 
         List<CustomersBedHistory> customersBedHistories = customerBedHistoryService
-                .getBedHistoriesByCustomerIdAndTypeNotIn(
-                        customerId,
-                        CustomersBedType.BOOKED.name());
+                .getBedHistoriesByCustomerIdAndTypeNotIn(customerId, CustomersBedType.BOOKED.name());
 
         if (customersBedHistories.isEmpty()) {
             return Collections.emptyList();
@@ -3072,20 +3074,19 @@ public class CustomersService {
                     .max(Date::compareTo)
                     .orElse(leavingDate);
 
-            List<ElectricityReadings> readings =
-                    electricityReadingsService.getPendingReadingsBetweenDates(
-                            hostelId,
-                            roomId,
-                            start,
-                            end);
+            if (start == null) {
+                return;
+            }
+
+            List<ElectricityReadings> readings = electricityReadingsService
+                    .getPendingReadingsBetweenDates(hostelId, roomId, start, end);
 
             if (readings != null) {
                 allPendingReadings.addAll(readings);
             }
         });
 
-        return new ArrayList<>(
-                allPendingReadings.stream()
+        return new ArrayList<>(allPendingReadings.stream()
                         .collect(Collectors.toMap(
                                 ElectricityReadings::getId,
                                 Function.identity(),
@@ -3175,7 +3176,7 @@ public class CustomersService {
     }
 
     private void generateMissingCustomerEbHistory(String hostelId, List<ElectricityReadings> pendingReadings,
-                                                  Date leavingDate) {
+                                                  String leavingCustomerId, Date leavingDate) {
 
         if (pendingReadings.isEmpty()) {
             return;
@@ -3185,8 +3186,8 @@ public class CustomersService {
                 .map(ElectricityReadings::getId)
                 .toList();
 
-        List<CustomersEbHistory> existing =
-                customerEbHistoryService.getAllByReadingIds(readingIds);
+        List<CustomersEbHistory> existing = customerEbHistoryService
+                .getAllByReadingIds(readingIds);
 
         Set<Integer> existingReadingIds = existing.stream()
                 .map(CustomersEbHistory::getReadingId)
@@ -3200,15 +3201,14 @@ public class CustomersService {
             return;
         }
 
-        ElectricityConfig electricityConfig =
-                hostelService.getElectricityConfig(hostelId);
+        ElectricityConfig electricityConfig = hostelService.getElectricityConfig(hostelId);
 
         List<CustomersEbHistory> histories = new ArrayList<>();
 
         for (ElectricityReadings reading : missingReadings) {
 
             List<CustomersEbHistory> calculated =
-                    formCustomerEbHistory(reading, electricityConfig, leavingDate);
+                    formCustomerEbHistory(reading, electricityConfig, leavingCustomerId, leavingDate);
 
             if (!calculated.isEmpty()) {
                 histories.addAll(calculated);
@@ -3220,9 +3220,13 @@ public class CustomersService {
         }
     }
 
-    private long getOverlapDays(CustomersBedHistory history,
-                                Date electricityStartDate,
+    private long getOverlapDays(CustomersBedHistory history, Date electricityStartDate,
                                 Date electricityEndDate) {
+
+        if (history.getStartDate() == null || history.getEndDate() == null
+                || electricityStartDate == null || electricityEndDate == null) {
+            return 0;
+        }
 
         Date overlapStart = Utils.compareWithTwoDates(
                 history.getStartDate(), electricityStartDate) > 0
@@ -3243,14 +3247,33 @@ public class CustomersService {
 
     private List<CustomersEbHistory> formCustomerEbHistory(ElectricityReadings electricityReadings,
                                                            ElectricityConfig electricityConfig,
+                                                           String leavingCustomerId,
                                                            Date leavingDate) {
+
+        if (electricityConfig == null || electricityConfig.getCharge() == null) {
+            return Collections.emptyList();
+        }
+
+        if (electricityReadings == null) {
+            return Collections.emptyList();
+        }
+
+        if (leavingDate == null){
+            return Collections.emptyList();
+        }
 
         Date electricityStartDate = electricityReadings.getBillStartDate();
         Date electricityEndDate = electricityReadings.getBillEndDate();
+
+        if (electricityStartDate == null || electricityEndDate == null) {
+            return Collections.emptyList();
+        }
+
         Date now = new Date();
 
-        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistoryService.getCustomersByRoomIdAndDates(
-                electricityReadings.getRoomId(), electricityStartDate, electricityEndDate);
+        List<CustomersBedHistory> listCustomerBedHistory = customerBedHistoryService
+                .getCustomersByRoomIdAndDates(electricityReadings.getRoomId(),
+                        electricityStartDate, electricityEndDate);
 
         if (listCustomerBedHistory.isEmpty()) {
             return Collections.emptyList();
@@ -3259,29 +3282,36 @@ public class CustomersService {
         long personCount = listCustomerBedHistory.stream()
                 .filter(item -> {
                     Date historyEnd = item.getEndDate() == null
-                            ? leavingDate
+                            ? electricityEndDate
                             : item.getEndDate();
 
+                    if (item.getStartDate() == null) {
+                        return false;
+                    }
+
                     return Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0
-                            && historyEnd != null
                             && Utils.compareWithTwoDates(historyEnd, electricityStartDate) >= 0;
                 })
                 .count();
 
         if (listCustomerBedHistory.size() == personCount) {
 
-            double unitsPerPerson =
-                    electricityReadings.getConsumption() / listCustomerBedHistory.size();
+            double unitsPerPerson = electricityReadings.getConsumption() / listCustomerBedHistory.size();
 
-            double amountPerPerson =
-                    unitsPerPerson * electricityConfig.getCharge();
+            double amountPerPerson = unitsPerPerson * electricityConfig.getCharge();
 
             return listCustomerBedHistory.stream()
                     .map(item -> {
 
-                        Date historyEnd = item.getEndDate() == null
-                                ? leavingDate
-                                : item.getEndDate();
+                        Date historyEnd;
+
+                        if (Objects.equals(item.getCustomerId(), leavingCustomerId)) {
+                            historyEnd = leavingDate;
+                        } else {
+                            historyEnd = item.getEndDate() == null
+                                    ? electricityEndDate
+                                    : item.getEndDate();
+                        }
 
                         Date endDate = Utils.compareWithTwoDates(historyEnd, electricityEndDate) <= 0
                                 ? historyEnd
@@ -3309,42 +3339,46 @@ public class CustomersService {
 
         for (CustomersBedHistory history : listCustomerBedHistory) {
 
+            if (history.getStartDate() == null) {
+                continue;
+            }
+
             CustomersBedHistory adjusted = new CustomersBedHistory();
             adjusted.setStartDate(history.getStartDate());
-            adjusted.setEndDate(history.getEndDate() == null ? leavingDate : history.getEndDate());
+            adjusted.setEndDate(history.getEndDate() == null ? electricityEndDate : history.getEndDate());
 
-            totalPersonDays += getOverlapDays(
-                    adjusted,
-                    electricityStartDate,
-                    electricityEndDate);
+            totalPersonDays += getOverlapDays(adjusted, electricityStartDate, electricityEndDate);
         }
 
         if (totalPersonDays == 0) {
             return Collections.emptyList();
         }
 
-        double unitsPerPersonDay =
-                electricityReadings.getConsumption() / totalPersonDays;
+        double unitsPerPersonDay = electricityReadings.getConsumption() / totalPersonDays;
 
         return listCustomerBedHistory.stream()
+                .filter(item -> item.getStartDate() != null)
                 .map(item -> {
+
+                    Date historyEnd;
+
+                    if (Objects.equals(item.getCustomerId(), leavingCustomerId)) {
+                        historyEnd = leavingDate;
+                    } else {
+                        historyEnd = item.getEndDate() == null
+                                ? electricityEndDate
+                                : item.getEndDate();
+                    }
 
                     CustomersBedHistory adjusted = new CustomersBedHistory();
                     adjusted.setStartDate(item.getStartDate());
-                    adjusted.setEndDate(item.getEndDate() == null ? leavingDate : item.getEndDate());
+                    adjusted.setEndDate(historyEnd);
 
-                    long overlapDays =
-                            getOverlapDays(adjusted,
-                                    electricityStartDate,
-                                    electricityEndDate);
+                    long overlapDays = getOverlapDays(adjusted, electricityStartDate, electricityEndDate);
 
                     Date startDate = Utils.compareWithTwoDates(item.getStartDate(), electricityStartDate) <= 0
                             ? electricityStartDate
                             : item.getStartDate();
-
-                    Date historyEnd = item.getEndDate() == null
-                            ? leavingDate
-                            : item.getEndDate();
 
                     Date endDate = Utils.compareWithTwoDates(historyEnd, electricityEndDate) <= 0
                             ? historyEnd
