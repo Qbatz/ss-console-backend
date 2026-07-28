@@ -42,7 +42,26 @@ public interface UsersRepository extends JpaRepository<Users, String> {
 
     List<Users> findAllByUserIdInAndIsActiveTrueAndIsDeletedFalse(Set<String> userIds);
 
-    List<Users> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseAndIsActiveTrueAndIsDeletedFalse(String firstName, String lastName);
+    @Query("""
+        select u
+        from Users u
+        where u.isActive = true
+            and u.isDeleted = false
+            and (
+                lower(replace(coalesce(u.firstName, ''), ' ', ''))
+                    like lower(concat('%', replace(:name, ' ', ''), '%'))
+                or
+                lower(replace(coalesce(u.lastName, ''), ' ', ''))
+                    like lower(concat('%', replace(:name, ' ', ''), '%'))
+                or
+                lower(concat(
+                    replace(coalesce(u.firstName, ''), ' ', ''),
+                    replace(coalesce(u.lastName, ''), ' ', '')
+                ))
+                    like lower(concat('%', replace(:name, ' ', ''), '%'))
+            )
+        """)
+    List<Users> findByName(@Param("name") String name);
 
     boolean existsByEmailIdAndUserIdNotAndIsActiveTrueAndIsDeletedFalse(String email, String userId);
 
@@ -55,7 +74,7 @@ public interface UsersRepository extends JpaRepository<Users, String> {
                 u.mobileNo AS mobileNo,
                 u.emailId AS emailId,
                 u.createdAt AS createdAt,
-            
+    
                 a.addressId AS addressId,
                 a.houseNo AS houseNo,
                 a.street AS street,
@@ -67,19 +86,21 @@ public interface UsersRepository extends JpaRepository<Users, String> {
             LEFT JOIN u.address a
             WHERE u.roleId = 1
                 AND (
-                     :name IS NULL OR :name = '' OR
-                     LOWER(u.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
-                     OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
-                     OR LOWER(CONCAT(
-                         COALESCE(u.firstName, ''),
-                         ' ',
-                         COALESCE(u.lastName, '')
-                     )) LIKE LOWER(CONCAT('%', TRIM(:name), '%'))
+                    :name IS NULL OR :name = '' OR
+                    LOWER(REPLACE(COALESCE(u.firstName, ''), ' ', ''))
+                        LIKE LOWER(CONCAT('%', REPLACE(:name, ' ', ''), '%'))
+                    OR LOWER(REPLACE(COALESCE(u.lastName, ''), ' ', ''))
+                        LIKE LOWER(CONCAT('%', REPLACE(:name, ' ', ''), '%'))
+                    OR LOWER(CONCAT(
+                        REPLACE(COALESCE(u.firstName, ''), ' ', ''),
+                        REPLACE(COALESCE(u.lastName, ''), ' ', '')
+                    ))
+                        LIKE LOWER(CONCAT('%', REPLACE(:name, ' ', ''), '%'))
                 )
                 AND u.isActive = true
                 AND u.isDeleted = false
             """)
-    List<OwnerWithAddressProjection> findAllOwnersWithAddressProjection(String name);
+    List<OwnerWithAddressProjection> findAllOwnersWithAddressProjection(@Param("name") String name);
 
     @Query("""
             select count(u)
@@ -102,16 +123,24 @@ public interface UsersRepository extends JpaRepository<Users, String> {
     List<Users> findOwnersByMobileNo(String ownerMobile);
 
     @Query("""
-            SELECT usr FROM Users usr
+            SELECT usr
+            FROM Users usr
             WHERE usr.roleId = 1
                 AND usr.isActive = true
                 AND usr.isDeleted = false
                 AND (
-                     :name IS NULL OR :name = '' OR
-                     LOWER(usr.firstName) LIKE LOWER(CONCAT('%', :name, '%'))
-                     OR LOWER(usr.lastName) LIKE LOWER(CONCAT('%', :name, '%'))
-                     OR LOWER(CONCAT(usr.firstName, ' ', usr.lastName)) LIKE LOWER(CONCAT('%', :name, '%'))
-                     OR usr.mobileNo LIKE CONCAT('%', :name, '%')
+                    :name IS NULL OR :name = '' OR
+                    LOWER(REPLACE(COALESCE(usr.firstName, ''), ' ', ''))
+                        LIKE LOWER(CONCAT('%', REPLACE(:name, ' ', ''), '%'))
+                    OR LOWER(REPLACE(COALESCE(usr.lastName, ''), ' ', ''))
+                        LIKE LOWER(CONCAT('%', REPLACE(:name, ' ', ''), '%'))
+                    OR LOWER(CONCAT(
+                        REPLACE(COALESCE(usr.firstName, ''), ' ', ''),
+                        REPLACE(COALESCE(usr.lastName, ''), ' ', '')
+                    ))
+                        LIKE LOWER(CONCAT('%', REPLACE(:name, ' ', ''), '%'))
+                    OR REPLACE(COALESCE(usr.mobileNo, ''), ' ', '')
+                        LIKE CONCAT('%', REPLACE(:name, ' ', ''), '%')
                 )
             """)
     List<Users> findOwnersByMobileNoOrName(@Param("name") String name);

@@ -79,13 +79,13 @@ public class OrderHistoryService {
         Set<String> filteredHostelIds = new HashSet<>();
         Set<String> filteredUserIds = new HashSet<>();
 
-        if (name != null && !name.trim().isEmpty()) {
-            List<HostelV1> filteredHostels = hostelService.getHostelsByHostelName(name);
+        if (name != null && !name.isBlank()) {
+            List<HostelV1> filteredHostels = hostelService.getHostelsByHostelName(name.trim());
             filteredHostelIds = filteredHostels.stream()
                     .map(HostelV1::getHostelId)
                     .collect(Collectors.toSet());
 
-            List<Users> filteredUsers = usersService.getUsersByName(name);
+            List<Users> filteredUsers = usersService.getUsersByName(name.trim());
             filteredUserIds = filteredUsers.stream()
                     .map(Users::getUserId)
                     .collect(Collectors.toSet());

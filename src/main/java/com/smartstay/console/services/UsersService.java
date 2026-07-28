@@ -106,9 +106,12 @@ public class UsersService {
         return usersRepository.findByUserIdAndIsActiveTrueAndIsDeletedFalse(userId);
     }
 
-    public List<Users> getUsersByName(String name){
-        return usersRepository
-                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseAndIsActiveTrueAndIsDeletedFalse(name, name);
+    public List<Users> getUsersByName(String name) {
+        if (name == null || name.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        return usersRepository.findByName(name.trim());
     }
 
     public void deleteAll(List<Users> users) {

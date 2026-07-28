@@ -13,6 +13,7 @@ import java.io.IOException;
 @RequestMapping("/v2/agents")
 @CrossOrigin("*")
 public class LoginController {
+
     @Value("${REDIRECT-DOMAIN}")
     private String domain;
     @Autowired
@@ -20,7 +21,6 @@ public class LoginController {
 
     @GetMapping("/authorize")
     public void authorize(HttpServletResponse response) throws IOException {
-
 
         String authUrl =
                 "https://accounts.zoho.com/oauth/v2/auth" +
@@ -35,7 +35,9 @@ public class LoginController {
     }
 
     @GetMapping("/verify")
-    public ResponseEntity<?> verify(@RequestParam("code") String code, @RequestParam("location") String location, @RequestParam("accountsServer") String authorizeUrl)  {
+    public ResponseEntity<?> verify(@RequestParam("code") String code,
+                                    @RequestParam("location") String location,
+                                    @RequestParam("accountsServer") String authorizeUrl)  {
         return loginService.verifyAuthToken(code, location, authorizeUrl);
     }
 
@@ -43,5 +45,4 @@ public class LoginController {
     public ResponseEntity<?> mockAgentLogin(@PathVariable String email){
         return loginService.verifyMockAuthToken(email);
     }
-
 }

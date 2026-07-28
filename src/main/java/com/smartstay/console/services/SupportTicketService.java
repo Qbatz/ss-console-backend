@@ -308,7 +308,7 @@ public class SupportTicketService {
 
             // 1. Search by ticket number
             List<SupportTicket> tickets = supportTicketRepository
-                    .findByTicketNumberContainingIgnoreCase(name);
+                    .findByTicketNumber(name);
 
             tickets.forEach(ticket ->
                     ids.add(ticket.getTicketId())

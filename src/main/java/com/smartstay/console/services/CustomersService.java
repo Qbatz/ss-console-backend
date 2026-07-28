@@ -513,9 +513,12 @@ public class CustomersService {
         customersRepository.save(customers);
     }
 
-    public List<Customers> getCustomersByName(String name){
-        return customersRepository
-                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(name, name);
+    public List<Customers> getCustomersByName(String name) {
+        if (name == null || name.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        return customersRepository.findByName(name.trim());
     }
 
     public List<Customers> getCustomersByDays(Set<Integer> daySet){

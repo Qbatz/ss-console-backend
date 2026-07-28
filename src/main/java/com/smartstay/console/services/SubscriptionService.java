@@ -518,7 +518,7 @@ public class SubscriptionService {
         if (hostelName != null && !hostelName.isBlank()) {
 
             List<HostelV1> filteredHostels =
-                    hostelService.getHostelsByHostelName(hostelName);
+                    hostelService.getHostelsByHostelName(hostelName.trim());
 
             Set<String> filteredHostelIds = filteredHostels.stream()
                     .map(HostelV1::getHostelId)
@@ -726,7 +726,7 @@ public class SubscriptionService {
         if (hostelName != null && !hostelName.isBlank()) {
 
             List<HostelV1> filteredHostels =
-                    hostelService.getHostelsByHostelName(hostelName);
+                    hostelService.getHostelsByHostelName(hostelName.trim());
 
             Set<String> filteredHostelIds = filteredHostels.stream()
                     .map(HostelV1::getHostelId)

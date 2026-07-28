@@ -161,7 +161,8 @@ public class OwnersService {
         boolean active = Boolean.TRUE.equals(isActive);
         boolean noProperties = Boolean.TRUE.equals(hasNoProperties);
 
-        List<OwnerWithAddressProjection> owners = usersRepository.findAllOwnersWithAddressProjection(name);
+        List<OwnerWithAddressProjection> owners = usersRepository
+                .findAllOwnersWithAddressProjection(name);
 
         List<Map<String, String>> sortOptions = Arrays.stream(OwnerSortField.values())
                 .map(field -> Map.of(
@@ -452,7 +453,8 @@ public class OwnersService {
         boolean active = Boolean.TRUE.equals(isActive);
         boolean noProperties = Boolean.TRUE.equals(hasNoProperties);
 
-        List<OwnerWithAddressProjection> owners = usersRepository.findAllOwnersWithAddressProjection(name);
+        List<OwnerWithAddressProjection> owners = usersRepository
+                .findAllOwnersWithAddressProjection(name);
 
         if (owners.isEmpty()) {
             return Collections.emptyList();

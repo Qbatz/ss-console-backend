@@ -44,7 +44,23 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
 
     List<Customers> findByCustomerIdIn(List<String> customerId);
 
-    List<Customers> findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(String name, String name1);
+    @Query("""
+            select c
+            from Customers c
+            where
+                lower(replace(coalesce(c.firstName, ''), ' ', ''))
+                    like lower(concat('%', replace(:name, ' ', ''), '%'))
+                or
+                lower(replace(coalesce(c.lastName, ''), ' ', ''))
+                    like lower(concat('%', replace(:name, ' ', ''), '%'))
+                or
+                lower(concat(
+                    replace(coalesce(c.firstName, ''), ' ', ''),
+                    replace(coalesce(c.lastName, ''), ' ', '')
+                ))
+                    like lower(concat('%', replace(:name, ' ', ''), '%'))
+            """)
+    List<Customers> findByName(@Param("name") String name);
 
     @Query("""
            SELECT c

@@ -642,10 +642,9 @@ public class HostelsService {
         Page<UserActivities> pagedActivities;
         List<UserActivities> userActivities;
         List<Users> users;
-        Map<String, Users> usersMap;
 
         if (name != null && !name.isBlank()){
-            users = usersService.getUsersByName(name);
+            users = usersService.getUsersByName(name.trim());
 
             Set<String> userIds = users.stream()
                     .map(Users::getUserId)
@@ -678,9 +677,6 @@ public class HostelsService {
 
             users = usersService.getUsersByIds(userIds);
         }
-
-        usersMap = users.stream()
-                .collect(Collectors.toMap(Users::getUserId, user -> user));
 
         List<UserActivitiesResponse> responseList = userActivityUtil.buildResponses(userActivities);
 
@@ -1350,6 +1346,11 @@ public class HostelsService {
 
         Pageable pageable = PageRequest.of(page, size);
 
+        System.out.println("Search = [" + name + "]");
+        System.out.println("Normalized = [" + name.replace(" ", "") + "]");
+        System.out.println("Target hostel count = " + targetHostelIds.size());
+        System.out.println("Contains expected hostel? " + targetHostelIds.contains("<hostel_id>"));
+
         Page<HostelV1> pagedHostels = hostelRepository
                 .findAllHostels(name, startDate, endDate, subActive, targetHostelIds,
                         trialStartDate, trialEndDate, pageable);
@@ -1597,7 +1598,7 @@ public class HostelsService {
                 .collect(Collectors.toSet());
 
         List<HostelV1> listHostels = hostelRepository
-                .findAllHostels(name, startDate, endDate, subActive,
+                .findAllHostels(name.trim(), startDate, endDate, subActive,
                         targetHostelIds, trialStartDate, trialEndDate);
 
         Set<String> hostelIds = new HashSet<>();
@@ -2035,7 +2036,7 @@ public class HostelsService {
 
         Set<String> filteredHostelIds = null;
         if (hostelName != null) {
-            List<HostelV1> filteredHostels = hostelService.getHostelsByHostelName(hostelName);
+            List<HostelV1> filteredHostels = hostelService.getHostelsByHostelName(hostelName.trim());
             filteredHostelIds = filteredHostels.stream()
                     .map(HostelV1::getHostelId)
                     .collect(Collectors.toSet());
@@ -2728,7 +2729,7 @@ public class HostelsService {
             }
         }
 
-        name = name == null || name.isBlank() ? null : name;
+        name = name == null || name.isBlank() ? null : name.trim();
 
         Set<String> filteredCustomerIds = null;
         if (name != null) {
