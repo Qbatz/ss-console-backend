@@ -1346,11 +1346,6 @@ public class HostelsService {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        System.out.println("Search = [" + name + "]");
-        System.out.println("Normalized = [" + name.replace(" ", "") + "]");
-        System.out.println("Target hostel count = " + targetHostelIds.size());
-        System.out.println("Contains expected hostel? " + targetHostelIds.contains("<hostel_id>"));
-
         Page<HostelV1> pagedHostels = hostelRepository
                 .findAllHostels(name, startDate, endDate, subActive, targetHostelIds,
                         trialStartDate, trialEndDate, pageable);
