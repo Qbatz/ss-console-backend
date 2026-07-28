@@ -31,24 +31,19 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             """)
     List<Subscription> findSubscriptionStartingToday(@Param("date") Date date);
 
-    @Query("""
-           select count(s)
-           from Subscription s
-           where s.hostelId IN :hostelIds
-           AND s.planEndsAt < CURRENT_DATE
-           AND s.planStartsAt = (
-                   SELECT MAX(s2.planStartsAt)
-                   FROM Subscription s2
-                   WHERE s2.hostelId = s.hostelId
-               )
-               AND s.subscriptionId = (
-                   SELECT MAX(s3.subscriptionId)
-                   FROM Subscription s3
-                   WHERE s3.hostelId = s.hostelId
-                     AND s3.planStartsAt = s.planStartsAt
-               )
-           ORDER BY s.createdAt DESC
-           """)
+    @Query(value = """
+           SELECT COUNT(*)
+           FROM subscription s
+           JOIN (
+               SELECT hostel_id, MAX(subscription_id) AS subscription_id
+               FROM subscription
+               WHERE hostel_id IN (:hostelIds)
+               GROUP BY hostel_id
+           ) latest
+           ON latest.hostel_id = s.hostel_id
+           AND latest.subscription_id = s.subscription_id
+           WHERE s.plan_ends_at < CURRENT_DATE();
+           """, nativeQuery = true)
     long getExpiredLatestSubscriptionCountByHostels(Set<String> hostelIds);
 
     List<Subscription> findByHostelIdAndPlanCode(String hostelId, String planCode);
