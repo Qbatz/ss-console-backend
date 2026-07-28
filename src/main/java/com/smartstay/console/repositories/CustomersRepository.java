@@ -18,11 +18,25 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
 
     Page<Customers> findAllByCustomerIdInOrderByJoiningDateDesc(Set<String> customerIds, Pageable pageable);
 
-    Page<Customers> findAllByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrderByCreatedAtDesc(String firstName,
-                                                                                                             String lastName,
-                                                                                                             Pageable pageable);
-
-    Page<Customers> findAllByOrderByCreatedAtDesc(Pageable pageable);
+    @Query("""
+        select c
+        from Customers c
+        where (
+            :name is null or :name = '' or
+            lower(replace(coalesce(c.firstName, ''), ' ', ''))
+                like lower(concat('%', replace(:name, ' ', ''), '%')) or
+            lower(replace(coalesce(c.lastName, ''), ' ', ''))
+                like lower(concat('%', replace(:name, ' ', ''), '%')) or
+            lower(concat(
+                replace(coalesce(c.firstName, ''), ' ', ''),
+                replace(coalesce(c.lastName, ''), ' ', '')
+            ))
+                like lower(concat('%', replace(:name, ' ', ''), '%'))
+        )
+        order by c.createdAt desc
+        """)
+    Page<Customers> findPaginatedCustomers(@Param("name") String name,
+                                           Pageable pageable);
 
     List<Customers> findByHostelId(String hostelId);
 

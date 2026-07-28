@@ -154,17 +154,14 @@ public class CustomersService {
 
         page = Math.max(page - 1, 0);
         size = Math.max(size, 1);
+        tenantName = tenantName == null || tenantName.isBlank()
+                ? null
+                : tenantName.trim();
+
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<Customers> pagedTenants;
-
-        if (tenantName != null && !tenantName.isBlank()){
-            pagedTenants = customersRepository
-                    .findAllByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrderByCreatedAtDesc(
-                            tenantName, tenantName, pageable);
-        } else {
-            pagedTenants = customersRepository.findAllByOrderByCreatedAtDesc(pageable);
-        }
+        Page<Customers> pagedTenants = customersRepository
+                .findPaginatedCustomers(tenantName, pageable);
 
         List<Customers> tenants = pagedTenants.getContent();
 
