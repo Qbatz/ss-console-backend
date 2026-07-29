@@ -1233,6 +1233,15 @@ public class CustomersService {
             return new ResponseEntity<>("Settlement details leaving date is null", HttpStatus.BAD_REQUEST);
         }
 
+        if (payload.leavingDate() != null){
+            Date payloadLeavingDate = Utils.localDateToDate(payload.leavingDate());
+            if (!payloadLeavingDate.equals(leavingDate)){
+                return new ResponseEntity<>("Payload leaving date does not match settlement details leaving date,"
+                        + "Generate settlement details first",
+                        HttpStatus.BAD_REQUEST);
+            }
+        }
+
         if (Utils.compareWithTwoDates(leavingDate, today) > 0) {
             return new ResponseEntity<>("Future leaving date is not allowed", HttpStatus.BAD_REQUEST);
         }
