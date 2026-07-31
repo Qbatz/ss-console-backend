@@ -1,6 +1,7 @@
 package com.smartstay.console.controller;
 
 import com.smartstay.console.payloads.customers.CustomerDatePayload;
+import com.smartstay.console.payloads.customers.CustomerJoiningDatePayload;
 import com.smartstay.console.payloads.customers.CustomerResetPayload;
 import com.smartstay.console.payloads.customers.CustomerSettlementGeneratePayload;
 import com.smartstay.console.services.CustomersService;
@@ -69,5 +70,10 @@ public class CustomersController {
     public ResponseEntity<?> generateCustomerSettlement(@PathVariable("customerId") String customerId,
                                                         @Valid @RequestBody CustomerSettlementGeneratePayload payload){
         return customersService.generateCustomerSettlement(customerId, payload);
+    }
+
+    @PutMapping("/joining-date")
+    public ResponseEntity<?> editJoiningDate(@Valid @RequestBody CustomerJoiningDatePayload payload){
+        return customersService.editJoiningDate(payload);
     }
 }

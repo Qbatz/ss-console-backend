@@ -16,10 +16,7 @@ import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.settlement.*;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
-import com.smartstay.console.payloads.customers.CusSettlementDeductionsPayload;
-import com.smartstay.console.payloads.customers.CustomerDatePayload;
-import com.smartstay.console.payloads.customers.CustomerResetPayload;
-import com.smartstay.console.payloads.customers.CustomerSettlementGeneratePayload;
+import com.smartstay.console.payloads.customers.*;
 import com.smartstay.console.repositories.CustomersRepository;
 import com.smartstay.console.responses.customers.*;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
@@ -3716,5 +3713,53 @@ public class CustomersService {
                             invoiceDate, invoiceType, defaultInvoiceType, Utils.dateToString(redemption.getRedeemedAt()),
                             redemption.getRedemptionAmount());
                 }).toList();
+    }
+
+    public ResponseEntity<?> editJoiningDate(CustomerJoiningDatePayload payload) {
+
+        if (!authentication.isAuthenticated()) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        String customerId = payload.customerId();
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Customers customer = customersRepository.findByCustomerId(customerId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_TENANT_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!payload.tenantMobile().equals(customer.getMobile())){
+            return new ResponseEntity<>(Utils.TENANT_MOBILE_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
+
+        BookingsV1 booking = bookingsService.getBookingInfoByCustomerId(customerId);
+        if (booking == null){
+            return new ResponseEntity<>(Utils.BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+        Date newJoiningDate = Utils.localDateToDate(payload.newJoiningDate());
+
+        customer.setJoiningDate(newJoiningDate);
+        customer.setLastUpdatedAt(today);
+        customer.setUpdatedBy(authentication.getName());
+
+        booking.setJoiningDate(newJoiningDate);
+        booking.setUpdatedAt(today);
+        booking.setUpdatedBy(authentication.getName());
+
+        customersRepository.save(customer);
+        bookingsService.save(booking);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 }
