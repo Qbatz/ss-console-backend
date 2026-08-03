@@ -83,4 +83,6 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
             """, nativeQuery = true)
     List<InvoicesV1> findInvoicesByCustomerIdAndStartDateAfter(@Param("customerId") String customerId,
                                                                @Param("afterDate") Date afterDate);
+
+    List<InvoicesV1> findByCustomerIdAndInvoiceTypeIn(String customerId, Set<String> invoiceTypes);
 }

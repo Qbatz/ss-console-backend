@@ -7,6 +7,7 @@ import com.smartstay.console.Mapper.transaction.TransactionResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.InvoiceItems;
+import com.smartstay.console.dto.billing.BillingPeriod;
 import com.smartstay.console.dto.customers.CustomerResetSnapshot;
 import com.smartstay.console.dto.customers.CustomersCredentialsSnapshot;
 import com.smartstay.console.dto.customers.CustomersSnapshot;
@@ -3737,6 +3738,14 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.NO_TENANT_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        if (!CustomerStatus.ACTIVE.name().equals(customer.getCurrentStatus()) &&
+                !CustomerStatus.NOTICE.name().equals(customer.getCurrentStatus()) &&
+                !CustomerStatus.BOOKED.name().equals(customer.getCurrentStatus()) &&
+                !CustomerStatus.CHECK_IN.name().equals(customer.getCurrentStatus()) &&
+                !CustomerStatus.WALKED_IN.name().equals(customer.getCurrentStatus())){
+            return new ResponseEntity<>(Utils.CUSTOMER_NOT_ACTIVE, HttpStatus.BAD_REQUEST);
+        }
+
         if (!payload.tenantMobile().equals(customer.getMobile())){
             return new ResponseEntity<>(Utils.TENANT_MOBILE_MISMATCH, HttpStatus.BAD_REQUEST);
         }
@@ -3746,8 +3755,95 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        String hostelId = customer.getHostelId();
+
         Date today = new Date();
+        Date oldJoiningDate = customer.getJoiningDate();
         Date newJoiningDate = Utils.localDateToDate(payload.newJoiningDate());
+
+        oldJoiningDate = Utils.getStartOfDay(oldJoiningDate);
+        newJoiningDate = Utils.getStartOfDay(newJoiningDate);
+
+        BillingRules billingRules = billingRulesService
+                .getCurrentMonthTemplate(hostelId);
+        if (billingRules == null){
+            return new ResponseEntity<>(Utils.BILLING_RULE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<BillingDates> expectedBillingPeriods = billingRulesService
+                .getBillingPeriods(billingRules, newJoiningDate, today);
+
+        Set<String> invoiceTypes = new HashSet<>();
+        invoiceTypes.add(InvoiceType.RENT.name());
+        invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
+
+        List<InvoicesV1> existingInvoices = invoiceV1Service
+                .getInvoicesByCustomerIdAndInvoiceTypes(customerId, invoiceTypes);
+
+        for (InvoicesV1 invoice : existingInvoices){
+            if (PaymentStatus.PAID.name().equals(invoice.getPaymentStatus()) ||
+                    PaymentStatus.PARTIAL_PAYMENT.name().equals(invoice.getPaymentStatus())){
+                return new ResponseEntity<>("Payment has been made, delete receipts first.", HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        Map<BillingPeriod, List<InvoicesV1>> grouped = existingInvoices.stream()
+                        .collect(Collectors.groupingBy(i ->
+                                new BillingPeriod(
+                                        Utils.getStartOfDay(i.getInvoiceStartDate()),
+                                        Utils.getStartOfDay(i.getInvoiceEndDate())
+                                )));
+
+        for (Map.Entry<BillingPeriod, List<InvoicesV1>> entry : grouped.entrySet()) {
+            if (entry.getValue().size() > 1) {
+                // Duplicate invoices
+                return ResponseEntity.badRequest()
+                        .body("Duplicate invoices found for billing period.");
+            }
+        }
+
+        Map<BillingPeriod, InvoicesV1> billingPeriodInvoiceMap = existingInvoices.stream()
+                        .collect(Collectors.toMap(i ->
+                                        new BillingPeriod(
+                                                Utils.getStartOfDay(i.getInvoiceStartDate()),
+                                                Utils.getStartOfDay(i.getInvoiceEndDate())
+                                        ),
+                                Function.identity()));
+
+        Set<BillingPeriod> expectedKeys = new HashSet<>();
+        Set<String> deletableInvoiceIds = new HashSet<>();
+        List<InvoicesV1> deletableInvoices = new ArrayList<>();
+
+        for (BillingDates billingDates : expectedBillingPeriods){
+
+            BillingPeriod key = new BillingPeriod(billingDates.currentBillStartDate(),
+                    billingDates.currentBillEndDate());
+
+            expectedKeys.add(key);
+
+            InvoicesV1 invoice = billingPeriodInvoiceMap.get(key);
+
+            if (invoice != null){
+                // update invoice
+            } else {
+                // create invoice
+            }
+        }
+
+        for (InvoicesV1 invoice : existingInvoices){
+
+            BillingPeriod key = new BillingPeriod(invoice.getInvoiceStartDate(),
+                    invoice.getInvoiceEndDate());
+
+            if (!expectedKeys.contains(key)) {
+                deletableInvoiceIds.add(invoice.getInvoiceId());
+                deletableInvoices.add(invoice);
+            }
+        }
+
+        if (!deletableInvoiceIds.isEmpty() && !deletableInvoices.isEmpty()){
+            invoiceV1Service.deleteInvoices(deletableInvoiceIds, deletableInvoices);
+        }
 
         customer.setJoiningDate(newJoiningDate);
         customer.setLastUpdatedAt(today);

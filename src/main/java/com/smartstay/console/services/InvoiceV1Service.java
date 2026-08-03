@@ -107,7 +107,7 @@ public class InvoiceV1Service {
         deleteInvoices(invoiceIds, invoices);
     }
 
-    private void deleteInvoices(Set<String> invoiceIds, List<InvoicesV1> invoices) {
+    public void deleteInvoices(Set<String> invoiceIds, List<InvoicesV1> invoices) {
 
         Set<String> cancelledInvoiceIds = invoices.stream()
                 .filter(invoice -> InvoiceType.SETTLEMENT.name().equals(invoice.getInvoiceType()))
@@ -1162,8 +1162,8 @@ public class InvoiceV1Service {
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 
-    public List<InvoicesV1> getInvoicesByCustomerIdAndInvoiceType(String customerId, String invoiceType){
-        return invoiceV1Repository.findByCustomerIdAndInvoiceType(customerId, invoiceType);
+    public List<InvoicesV1> getInvoicesByCustomerIdAndInvoiceType(String customerId, String invoiceType) {
+        return null;
     }
 
     public List<InvoicesV1> getOlderUnpaidInvoicesByInvoiceTypes(String customerId, Set<String> invoiceTypes,
@@ -1214,5 +1214,10 @@ public class InvoiceV1Service {
         }
 
         return invoiceNumber.toString();
+    }
+
+    public List<InvoicesV1> getInvoicesByCustomerIdAndInvoiceTypes(String customerId,
+                                                                   Set<String> invoiceTypes) {
+        return invoiceV1Repository.findByCustomerIdAndInvoiceTypeIn(customerId, invoiceTypes);
     }
 }

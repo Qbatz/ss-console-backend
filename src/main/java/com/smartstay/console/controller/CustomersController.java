@@ -74,7 +74,7 @@ public class CustomersController {
         return customersService.editJoiningDate(payload);
     }
 
-    @GetMapping("/verify-mobile/{customerId}")
+    @PostMapping("/verify-mobile/{customerId}")
     public ResponseEntity<?> verifyMobile(@PathVariable("customerId") String customerId,
                                           @Valid @RequestBody CustomerMobilePayload payload){
         return customersService.verifyMobile(customerId, payload);

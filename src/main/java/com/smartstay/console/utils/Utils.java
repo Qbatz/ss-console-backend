@@ -108,6 +108,7 @@ public class Utils {
     public static final String SETTLEMENT_DETAILS_NOT_FOUND = "SettlementDetails not found";
     public static final String BILLING_RULE_NOT_FOUND = "Billing rule not found";
     public static final String AGENT_ROLE_NOT_FOUND = "Agent role not found";
+    public static final String BILLING_DATES_NOT_FOUND = "Billing dates not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -143,6 +144,7 @@ public class Utils {
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";
     public static final String SUBSCRIPTION_NOT_ACTIVE = "Subscription is not active for this hostel";
+    public static final String CUSTOMER_NOT_ACTIVE = "Customer not active";
 
     public static final String IS_NOT_FIXED_DATE = "Type of billing is not fixed date";
     public static final String IS_NOT_JOINING_BASED = "Type of billing is not joining date based";
