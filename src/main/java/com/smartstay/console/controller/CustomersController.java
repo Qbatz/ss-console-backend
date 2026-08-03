@@ -1,9 +1,6 @@
 package com.smartstay.console.controller;
 
-import com.smartstay.console.payloads.customers.CustomerDatePayload;
-import com.smartstay.console.payloads.customers.CustomerJoiningDatePayload;
-import com.smartstay.console.payloads.customers.CustomerResetPayload;
-import com.smartstay.console.payloads.customers.CustomerSettlementGeneratePayload;
+import com.smartstay.console.payloads.customers.*;
 import com.smartstay.console.services.CustomersService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -75,5 +72,11 @@ public class CustomersController {
     @PutMapping("/joining-date")
     public ResponseEntity<?> editJoiningDate(@Valid @RequestBody CustomerJoiningDatePayload payload){
         return customersService.editJoiningDate(payload);
+    }
+
+    @GetMapping("/verify-mobile/{customerId}")
+    public ResponseEntity<?> verifyMobile(@PathVariable("customerId") String customerId,
+                                          @Valid @RequestBody CustomerMobilePayload payload){
+        return customersService.verifyMobile(customerId, payload);
     }
 }

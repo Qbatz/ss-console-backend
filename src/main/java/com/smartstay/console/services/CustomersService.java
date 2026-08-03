@@ -3762,4 +3762,27 @@ public class CustomersService {
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
+
+    public ResponseEntity<?> verifyMobile(String customerId, CustomerMobilePayload payload) {
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Customers customer = customersRepository.findByCustomerId(customerId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_TENANT_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!payload.tenantMobile().equals(customer.getMobile())){
+            return new ResponseEntity<>(Utils.TENANT_MOBILE_MISMATCH, HttpStatus.BAD_REQUEST);
+        }
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
 }
