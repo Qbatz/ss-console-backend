@@ -25,6 +25,7 @@ import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
 import com.smartstay.console.responses.transaction.TransactionResponse;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -1083,14 +1084,14 @@ public class CustomersService {
         List<InvoicesV1> bookingInvoices = invoiceV1Service
                 .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.BOOKING.name());
 
-        InvoicesV1 bookingInvoice = bookingInvoices.isEmpty()
+        InvoicesV1 bookingInvoice = bookingInvoices == null || bookingInvoices.isEmpty()
                 ? null
                 : bookingInvoices.getFirst();
 
         List<InvoicesV1> advanceInvoices = invoiceV1Service
                 .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.ADVANCE.name());
 
-        InvoicesV1 advanceInvoice = advanceInvoices.isEmpty()
+        InvoicesV1 advanceInvoice = advanceInvoices == null || advanceInvoices.isEmpty()
                 ? null
                 : advanceInvoices.getFirst();
 
@@ -1294,14 +1295,14 @@ public class CustomersService {
         List<InvoicesV1> bookingInvoices = invoiceV1Service
                 .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.BOOKING.name());
 
-        InvoicesV1 bookingInvoice = bookingInvoices.isEmpty()
+        InvoicesV1 bookingInvoice = bookingInvoices == null || bookingInvoices.isEmpty()
                 ? null
                 : bookingInvoices.getFirst();
 
         List<InvoicesV1> advanceInvoices = invoiceV1Service
                 .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.ADVANCE.name());
 
-        InvoicesV1 advanceInvoice = advanceInvoices.isEmpty()
+        InvoicesV1 advanceInvoice = advanceInvoices == null || advanceInvoices.isEmpty()
                 ? null
                 : advanceInvoices.getFirst();
 
@@ -3716,6 +3717,7 @@ public class CustomersService {
                 }).toList();
     }
 
+    @Transactional
     public ResponseEntity<?> editJoiningDate(CustomerJoiningDatePayload payload) {
 
         if (!authentication.isAuthenticated()) {
@@ -3764,6 +3766,10 @@ public class CustomersService {
         oldJoiningDate = Utils.getStartOfDay(oldJoiningDate);
         newJoiningDate = Utils.getStartOfDay(newJoiningDate);
 
+        if (oldJoiningDate.equals(newJoiningDate)){
+            return new ResponseEntity<>("Joining date is not changed", HttpStatus.BAD_REQUEST);
+        }
+
         BillingRules billingRules = billingRulesService
                 .getCurrentMonthTemplate(hostelId);
         if (billingRules == null){
@@ -3802,13 +3808,11 @@ public class CustomersService {
             }
         }
 
-        Map<BillingPeriod, InvoicesV1> billingPeriodInvoiceMap = existingInvoices.stream()
-                        .collect(Collectors.toMap(i ->
-                                        new BillingPeriod(
-                                                Utils.getStartOfDay(i.getInvoiceStartDate()),
-                                                Utils.getStartOfDay(i.getInvoiceEndDate())
-                                        ),
-                                Function.identity()));
+        Map<BillingPeriod, InvoicesV1> billingPeriodInvoiceMap = grouped.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue().getFirst()
+                ));
 
         Set<BillingPeriod> expectedKeys = new HashSet<>();
         Set<String> deletableInvoiceIds = new HashSet<>();
@@ -3824,7 +3828,8 @@ public class CustomersService {
             InvoicesV1 invoice = billingPeriodInvoiceMap.get(key);
 
             if (invoice != null){
-                // update invoice
+                invoiceV1Service.updateInvoice(billingRules, billingDates, invoice, newJoiningDate,
+                        customer, booking);
             } else {
                 // create invoice
             }
@@ -3841,10 +3846,6 @@ public class CustomersService {
             }
         }
 
-        if (!deletableInvoiceIds.isEmpty() && !deletableInvoices.isEmpty()){
-            invoiceV1Service.deleteInvoices(deletableInvoiceIds, deletableInvoices);
-        }
-
         customer.setJoiningDate(newJoiningDate);
         customer.setLastUpdatedAt(today);
         customer.setUpdatedBy(authentication.getName());
@@ -3852,6 +3853,10 @@ public class CustomersService {
         booking.setJoiningDate(newJoiningDate);
         booking.setUpdatedAt(today);
         booking.setUpdatedBy(authentication.getName());
+
+        if (!deletableInvoiceIds.isEmpty() && !deletableInvoices.isEmpty()){
+            invoiceV1Service.deleteInvoices(deletableInvoiceIds, deletableInvoices);
+        }
 
         customersRepository.save(customer);
         bookingsService.save(booking);
@@ -3880,5 +3885,9 @@ public class CustomersService {
         }
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public void save(Customers customer) {
+        customersRepository.save(customer);
     }
 }

@@ -389,13 +389,14 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                 .toList();
 
         return new HostelResponse(hostelV1.getHostelId(), hostelV1.getHostelName(), Utils.getInitials(hostelV1.getHostelName()),
-                hostelV1.getMobile(), hostelV1.getHouseNo(), hostelV1.getStreet(), hostelV1.getLandmark(), hostelV1.getCity(),
-                hostelV1.getState(), hostelV1.getCountry(), hostelV1.getPincode(), fullAddress, hostelV1.getMainImage(), isTrial,
-                canAddTrial, canAddExpandableTrial, addImages, amenitiesRes, sharingTypeList, noOfFloors, noOfRooms, noOfBeds,
-                noOfActiveTenants, noOfBookedTenants, noOfCheckedInTenants, noOfNoticeTenants, noOfVacatedTenants, noOfTerminatedTenants,
-                tenantList, Utils.dateToString(hostelV1.getCreatedAt()), Utils.dateToTime(hostelV1.getCreatedAt()), owner, masters,
-                staffs, billingTypeRes, billingModelRes, currentBillingRulesRes, billingRules, ebConfig, currentSubRes, otherSubsRes,
-                subscriptionStatus, subscriptionRenewalTimeLeftDays, isSubscriptionActive, recurringStatus, recurringHistory,
+                hostelV1.getMobile(), hostelV1.getEmailId(), hostelV1.getHouseNo(), hostelV1.getStreet(), hostelV1.getLandmark(),
+                hostelV1.getCity(), hostelV1.getState(), hostelV1.getCountry(), hostelV1.getPincode(), fullAddress,
+                hostelV1.getMainImage(), isTrial, canAddTrial, canAddExpandableTrial, addImages, amenitiesRes, sharingTypeList,
+                noOfFloors, noOfRooms, noOfBeds, noOfActiveTenants, noOfBookedTenants, noOfCheckedInTenants, noOfNoticeTenants,
+                noOfVacatedTenants, noOfTerminatedTenants, tenantList, Utils.dateToString(hostelV1.getCreatedAt()),
+                Utils.dateToTime(hostelV1.getCreatedAt()), owner, masters, staffs, billingTypeRes, billingModelRes,
+                currentBillingRulesRes, billingRules, ebConfig, currentSubRes, otherSubsRes, subscriptionStatus,
+                subscriptionRenewalTimeLeftDays, isSubscriptionActive, recurringStatus, recurringHistory,
                 customerRecurringHistory, activitiesRes, relationalAgentResponses, invoiceRedemptionResponses, invoiceResponses);
     }
 }

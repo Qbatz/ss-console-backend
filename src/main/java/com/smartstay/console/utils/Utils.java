@@ -109,6 +109,7 @@ public class Utils {
     public static final String BILLING_RULE_NOT_FOUND = "Billing rule not found";
     public static final String AGENT_ROLE_NOT_FOUND = "Agent role not found";
     public static final String BILLING_DATES_NOT_FOUND = "Billing dates not found";
+    public static final String EB_CONFIG_NOT_FOUND = "Eb config not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";

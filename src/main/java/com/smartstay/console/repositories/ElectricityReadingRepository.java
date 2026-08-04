@@ -37,6 +37,18 @@ public interface ElectricityReadingRepository extends JpaRepository<ElectricityR
                                                               @Param("endDate") Date endDate);
 
     @Query(value = """
+            SELECT * FROM electricity_readings
+            WHERE hostel_id = :hostelId
+                AND DATE(bill_start_date) <= DATE(:endDate)
+                AND DATE(bill_end_date) >= DATE(:startDate)
+                AND bill_status = 'INVOICE_NOT_GENERATED'
+                AND is_first_entry = false
+            """, nativeQuery = true)
+    List<ElectricityReadings> findPendingReadingsBetweenDates(@Param("hostelId") String hostelId,
+                                                              @Param("startDate") Date startDate,
+                                                              @Param("endDate") Date endDate);
+
+    @Query(value = """
             SELECT er.*
             FROM electricity_readings er
             WHERE er.id = (
