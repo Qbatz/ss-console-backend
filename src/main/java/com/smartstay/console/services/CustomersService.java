@@ -1576,7 +1576,7 @@ public class CustomersService {
             settlementInvoice.setInvoiceGeneratedDate(today);
             settlementInvoice.setCancelledDate(null);
             settlementInvoice.setInvoiceDueDate(leavingDate);
-            settlementInvoice.setInvoiceDate(today);
+            settlementInvoice.setInvoiceDate(leavingDate);
             settlementInvoice.setInvoiceStartDate(leavingDate);
             settlementInvoice.setInvoiceEndDate(leavingDate);
 
@@ -2374,9 +2374,90 @@ public class CustomersService {
         }
 
         String customerId = customer.getCustomerId();
+        String hostelId = customer.getHostelId();
 
         if (billingDates != null && billingDates.currentBillStartDate() != null
                 && billingDates.currentBillEndDate() != null && leavingDate != null) {
+
+            List<InvoicesV1> currentMonthInvoices = invoiceV1Service
+                    .getCurrentMonthInvoices(customerId, hostelId, billingDates.currentBillStartDate());
+
+            InvoicesV1 latestCurrentMonthInvoice;
+            boolean discountApplied = false;
+            double discountAmount = 0.0;
+            double paidRent = 0.0;
+            double otherItemAmount = 0.0;
+            List<OtherItemsRes> otherItems = new ArrayList<>();
+
+            if (!currentMonthInvoices.isEmpty()){
+
+                // latest invoice
+                latestCurrentMonthInvoice = currentMonthInvoices.stream()
+                        .max(Comparator.comparing(InvoicesV1::getInvoiceStartDate))
+                        .orElse(null);
+
+                Set<String> discountedInvoiceIds = new HashSet<>();
+
+                for (InvoicesV1 invoice : currentMonthInvoices) {
+
+                    if (invoice.isDiscounted()) {
+                        discountApplied = true;
+                        discountedInvoiceIds.add(invoice.getInvoiceId());
+                    }
+
+                    if (invoice.getInvoiceItems() == null) {
+                        continue;
+                    }
+
+                    for (InvoiceItems item : invoice.getInvoiceItems()) {
+
+                        if (com.smartstay.console.ennum.InvoiceItems.RENT.name()
+                                .equals(item.getInvoiceItem())) {
+                            continue;
+                        }
+
+                        if (item.getAmount() != null) {
+                            otherItemAmount += item.getAmount();
+                        }
+
+                        String itemName;
+
+                        switch (item.getInvoiceItem()) {
+                            case "OTHERS" -> itemName = item.getOtherItem();
+                            case "EB" -> itemName = "Electricity";
+                            case "AMENITY" -> itemName = "Amenities";
+                            default -> itemName = item.getInvoiceItem();
+                        }
+
+                        otherItems.add(new OtherItemsRes(itemName, item.getAmount()));
+                    }
+                }
+
+                if (!discountedInvoiceIds.isEmpty()) {
+                    discountAmount = invoiceDiscountsService
+                            .getByHostelIdAndInvoiceIds(hostelId, discountedInvoiceIds)
+                            .stream()
+                            .mapToDouble(InvoiceDiscounts::getDiscountAmount)
+                            .sum();
+                }
+
+                // Previous invoices
+                List<InvoicesV1> oldInvoices = currentMonthInvoices.stream()
+                        .filter(i -> !i.getInvoiceId().equals(latestCurrentMonthInvoice.getInvoiceId()))
+                        .toList();
+
+                paidRent = oldInvoices.stream()
+                        .mapToDouble(i -> i.getPaidAmount() == null ? 0 : i.getPaidAmount())
+                        .sum();
+
+                double runningInvoicePaid = latestCurrentMonthInvoice.getPaidAmount() == null
+                        ? 0
+                        : latestCurrentMonthInvoice.getPaidAmount();
+
+                paidRent += runningInvoicePaid;
+            } else {
+                latestCurrentMonthInvoice = null;
+            }
 
             // Rent breakup
             List<CustomersBedHistory> customersBedHistories = customerBedHistoryService
@@ -2385,7 +2466,7 @@ public class CustomersService {
             List<RentBreakUpInfoRes> rentBreakUpInfoRes = buildRentBreakUpInfoRes(customersBedHistories,
                     bedsMap, roomsMap, floorsMap, billingDates, leavingDate);
 
-            List<OtherItemsRes> otherItems = new ArrayList<>();
+            //List<OtherItemsRes> otherItems = new ArrayList<>();
 
             Date startDate = null;
             if (booking.getJoiningDate() != null){
@@ -2400,43 +2481,43 @@ public class CustomersService {
                 throw new BadRequestException(Utils.DATE_IS_NULL);
             }
 
-            List<CustomersAmenity> customersAmenities = customersAmenityService
-                    .getAllByCustomerIdAndDateBetween(customerId, leavingDate);
+//            List<CustomersAmenity> customersAmenities = customersAmenityService
+//                    .getAllByCustomerIdAndDateBetween(customerId, leavingDate);
+//
+//            Set<String> amenityIds = customersAmenities.stream()
+//                    .map(CustomersAmenity::getAmenityId)
+//                    .collect(Collectors.toSet());
+//
+//            List<AmenitiesV1> amenities = amenitiesService.getAmenitiesByIds(amenityIds);
+//
+//            Map<String, AmenitiesV1> amenitiesMap = amenities.stream()
+//                    .collect(Collectors.toMap(AmenitiesV1::getAmenityId, Function.identity()));
+//
+//            double otherItemAmount = 0.0;
+//            long totalStayDays = Utils.findNumberOfDays(startDate, leavingDate);
+//            long totalDaysInMonth = Utils.findNumberOfDays(
+//                    billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
 
-            Set<String> amenityIds = customersAmenities.stream()
-                    .map(CustomersAmenity::getAmenityId)
-                    .collect(Collectors.toSet());
-
-            List<AmenitiesV1> amenities = amenitiesService.getAmenitiesByIds(amenityIds);
-
-            Map<String, AmenitiesV1> amenitiesMap = amenities.stream()
-                    .collect(Collectors.toMap(AmenitiesV1::getAmenityId, Function.identity()));
-
-            double otherItemAmount = 0.0;
-            long totalStayDays = Utils.findNumberOfDays(startDate, leavingDate);
-            long totalDaysInMonth = Utils.findNumberOfDays(
-                    billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
-
-            for (CustomersAmenity customerAmenity : customersAmenities) {
-
-                AmenitiesV1 amenity = amenitiesMap.get(customerAmenity.getAmenityId());
-                if (amenity == null) {
-                    continue;
-                }
-
-                double amount;
-
-                if (amenity.getIsProRate()) {
-                    double perDayAmount = amenity.getAmenityAmount() / totalDaysInMonth;
-                    amount = perDayAmount * totalStayDays;
-                } else {
-                    amount = amenity.getAmenityAmount();
-                }
-
-                otherItemAmount += amount;
-
-                otherItems.add(new OtherItemsRes(amenity.getAmenityName(), Utils.roundOfDoubleTo2Digits(amount)));
-            }
+//            for (CustomersAmenity customerAmenity : customersAmenities) {
+//
+//                AmenitiesV1 amenity = amenitiesMap.get(customerAmenity.getAmenityId());
+//                if (amenity == null) {
+//                    continue;
+//                }
+//
+//                double amount;
+//
+//                if (amenity.getIsProRate()) {
+//                    double perDayAmount = amenity.getAmenityAmount() / totalDaysInMonth;
+//                    amount = perDayAmount * totalStayDays;
+//                } else {
+//                    amount = amenity.getAmenityAmount();
+//                }
+//
+//                otherItemAmount += amount;
+//
+//                otherItems.add(new OtherItemsRes(amenity.getAmenityName(), Utils.roundOfDoubleTo2Digits(amount)));
+//            }
 
             double payableRent = rentBreakUpInfoRes.stream()
                     .mapToDouble(RentBreakUpInfoRes::totalRent)
@@ -2457,7 +2538,7 @@ public class CustomersService {
             }
 
             double currentMonthTotalAmount = payableRent + otherItemAmount;
-            double currentMonthPendingAmount = currentMonthTotalAmount;
+            double currentMonthPendingAmount = currentMonthTotalAmount - paidRent;
             double rentDifference = fullRent - payableRent;
 
             Date currentMonthStartDate;
@@ -2471,17 +2552,17 @@ public class CustomersService {
 
             customerRentInfoRes = new CustomerRentInfoRes(
                     Utils.roundOfDoubleTo2Digits(payableRent),
-                    0.0,
+                    Utils.roundOfDoubleTo2Digits(paidRent),
                     (int) stayDays,
                     Utils.roundOfDoubleTo2Digits(monthlyRent),
                     Utils.roundOfDoubleTo2Digits(currentMonthTotalAmount),
                     Utils.roundOfDoubleTo2Digits(currentMonthPendingAmount),
                     Utils.dateToString(currentMonthStartDate),
                     Utils.dateToString(billingDates.currentBillEndDate()),
-                    null,
+                    latestCurrentMonthInvoice != null ? latestCurrentMonthInvoice.getInvoiceId() : null,
                     Utils.roundOfDoubleTo2Digits(otherItemAmount),
-                    false,
-                    0.0,
+                    discountApplied,
+                    Utils.roundOfDoubleTo2Digits(discountAmount),
                     Utils.roundOfDoubleTo2Digits(fullRent),
                     Utils.roundOfDoubleTo2Digits(rentDifference),
                     otherItems,
@@ -3786,13 +3867,6 @@ public class CustomersService {
         List<InvoicesV1> existingInvoices = invoiceV1Service
                 .getInvoicesByCustomerIdAndInvoiceTypes(customerId, invoiceTypes);
 
-        for (InvoicesV1 invoice : existingInvoices){
-            if (PaymentStatus.PAID.name().equals(invoice.getPaymentStatus()) ||
-                    PaymentStatus.PARTIAL_PAYMENT.name().equals(invoice.getPaymentStatus())){
-                return new ResponseEntity<>("Payment has been made, delete receipts first.", HttpStatus.BAD_REQUEST);
-            }
-        }
-
         Map<BillingPeriod, List<InvoicesV1>> grouped = existingInvoices.stream()
                         .collect(Collectors.groupingBy(i ->
                                 new BillingPeriod(
@@ -3814,6 +3888,156 @@ public class CustomersService {
                         e -> e.getValue().getFirst()
                 ));
 
+        BillingDates newJoiningBillingDates;
+
+        if (BillingType.FIXED_DATE.name().equals(billingRules.getTypeOfBilling())) {
+
+            newJoiningBillingDates = billingRulesService
+                    .computeBillingDates(billingRules, newJoiningDate);
+
+        } else {
+
+            newJoiningBillingDates = billingRulesService
+                    .computeJoiningBasedBillingDates(
+                            billingRules,
+                            newJoiningDate,
+                            newJoiningDate);
+        }
+
+        Date finalOldJoiningDate = oldJoiningDate;
+        InvoicesV1 oldJoiningInvoice = existingInvoices.stream()
+                .filter(i -> {
+                    Date start = Utils.getStartOfDay(i.getInvoiceStartDate());
+                    Date end = Utils.getStartOfDay(i.getInvoiceEndDate());
+
+                    return !finalOldJoiningDate.before(start)
+                            && !finalOldJoiningDate.after(end);
+                })
+                .findFirst()
+                .orElse(null);
+
+        Date finalNewJoiningDate = newJoiningDate;
+        InvoicesV1 newJoiningInvoice = existingInvoices.stream()
+                .filter(i -> {
+                    Date start = Utils.getStartOfDay(i.getInvoiceStartDate());
+                    Date end = Utils.getStartOfDay(i.getInvoiceEndDate());
+
+                    return !finalNewJoiningDate.before(start)
+                            && !finalNewJoiningDate.after(end);
+                })
+                .findFirst()
+                .orElse(null);
+
+        boolean movedEarlier = newJoiningDate.before(oldJoiningDate);
+
+        if (Objects.equals(oldJoiningInvoice, newJoiningInvoice)) {
+
+            // Same invoice
+            if (oldJoiningInvoice != null) {
+
+                BillingPeriod expectedKey = new BillingPeriod(
+                        newJoiningBillingDates.currentBillStartDate(),
+                        newJoiningBillingDates.currentBillEndDate());
+
+                BillingPeriod existingKey = new BillingPeriod(
+                        oldJoiningInvoice.getInvoiceStartDate(),
+                        oldJoiningInvoice.getInvoiceEndDate());
+
+                invoiceV1Service.updateInvoice(
+                        billingRules,
+                        newJoiningBillingDates,
+                        oldJoiningInvoice,
+                        newJoiningDate,
+                        customer,
+                        booking);
+
+                if (!expectedKey.equals(existingKey)) {
+                    billingPeriodInvoiceMap.remove(existingKey);
+                    billingPeriodInvoiceMap.put(expectedKey, oldJoiningInvoice);
+                }
+            }
+
+        } else {
+
+            //----------------------------------------------------
+            // Update invoice containing NEW joining date
+            //----------------------------------------------------
+
+            if (newJoiningInvoice != null) {
+
+                BillingPeriod expectedKey = new BillingPeriod(
+                        newJoiningBillingDates.currentBillStartDate(),
+                        newJoiningBillingDates.currentBillEndDate());
+
+                BillingPeriod existingKey = new BillingPeriod(
+                        newJoiningInvoice.getInvoiceStartDate(),
+                        newJoiningInvoice.getInvoiceEndDate());
+
+                invoiceV1Service.updateInvoice(
+                        billingRules,
+                        newJoiningBillingDates,
+                        newJoiningInvoice,
+                        newJoiningDate,
+                        customer,
+                        booking);
+
+                if (!expectedKey.equals(existingKey)) {
+                    billingPeriodInvoiceMap.remove(existingKey);
+                    billingPeriodInvoiceMap.put(expectedKey, newJoiningInvoice);
+                }
+            }
+
+            //----------------------------------------------------
+            // Moving earlier:
+            // update old invoice as it now becomes a full period.
+            //----------------------------------------------------
+
+            if (movedEarlier && oldJoiningInvoice != null) {
+
+                BillingDates recalculatedBillingDates;
+
+                if (BillingType.FIXED_DATE.name().equals(billingRules.getTypeOfBilling())) {
+
+                    recalculatedBillingDates = billingRulesService
+                            .computeBillingDates(billingRules, oldJoiningInvoice.getInvoiceStartDate());
+
+                } else {
+
+                    recalculatedBillingDates = billingRulesService
+                            .computeJoiningBasedBillingDates(
+                                    billingRules, newJoiningDate,
+                                    oldJoiningInvoice.getInvoiceStartDate());
+                }
+
+                BillingPeriod updatedKey = new BillingPeriod(
+                        recalculatedBillingDates.currentBillStartDate(),
+                        recalculatedBillingDates.currentBillEndDate());
+
+                BillingPeriod existingKey = new BillingPeriod(
+                        oldJoiningInvoice.getInvoiceStartDate(),
+                        oldJoiningInvoice.getInvoiceEndDate());
+
+                invoiceV1Service.updateInvoice(
+                        billingRules,
+                        recalculatedBillingDates,
+                        oldJoiningInvoice,
+                        newJoiningDate,
+                        customer,
+                        booking);
+
+                if (!existingKey.equals(updatedKey)) {
+                    billingPeriodInvoiceMap.remove(existingKey);
+                }
+                billingPeriodInvoiceMap.put(updatedKey, oldJoiningInvoice);
+            }
+
+            //----------------------------------------------------
+            // Moving later:
+            // do nothing with old invoice.
+            // reconciliation will delete it.
+            //----------------------------------------------------
+        }
+
         Set<BillingPeriod> expectedKeys = new HashSet<>();
         Set<String> deletableInvoiceIds = new HashSet<>();
         List<InvoicesV1> deletableInvoices = new ArrayList<>();
@@ -3828,8 +4052,7 @@ public class CustomersService {
             InvoicesV1 invoice = billingPeriodInvoiceMap.get(key);
 
             if (invoice != null){
-                invoiceV1Service.updateInvoice(billingRules, billingDates, invoice, newJoiningDate,
-                        customer, booking);
+                // invoice exists
             } else {
                 // create invoice
             }
