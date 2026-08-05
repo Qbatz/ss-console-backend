@@ -169,6 +169,7 @@ public class Utils {
     public static final String PRIORITY_REQUIRED = "Priority is required";
     public static final String TRIAL_DAYS_REASON_REQUIRED = "Trial days reason is required";
     public static final String COMMENTS_REQUIRED_FOR_REASSIGN_STAFF = "Comments is required for reassigning staff";
+    public static final String PAID_AT_DATE_TIME_IS_REQUIRED = "Paid at date time is required";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";

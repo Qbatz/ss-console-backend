@@ -133,8 +133,7 @@ public class OrderHistoryService {
                             filteredUserIds.isEmpty() ? null : filteredUserIds, startDate, endDate, pageable);
         } else {
             paginatedOrderHistory = orderHistoryRepository
-                    .findAllByIsActiveTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtDesc(
-                            startDate, endDate, pageable);
+                    .findAllByPaidOrCreatedDate(startDate, endDate, pageable);
         }
 
         List<OrderHistory> orderHistories = paginatedOrderHistory.getContent();
@@ -207,13 +206,23 @@ public class OrderHistoryService {
                             plan, usersMap, agentMap, owner).apply(orderHistory);
                 }).toList();
 
+        List<OrderHistoryResponse> paidHistories = responseList.stream()
+                .filter(i -> OrderStatus.PAID.name().equals(i.orderStatus()))
+                .toList();
+
+        List<OrderHistoryResponse> createdHistories = responseList.stream()
+                .filter(i -> OrderStatus.CREATED.name().equals(i.orderStatus()))
+                .toList();
+
         Map<String, Object> response = new HashMap<>();
-        response.put("orderHistories", responseList);
         response.put("totalRevenue", totalRevenue);
         response.put("currentPage", page + 1);
         response.put("pageSize", size);
         response.put("totalItems", paginatedOrderHistory.getTotalElements());
         response.put("totalPages", paginatedOrderHistory.getTotalPages());
+        response.put("paidHistories", paidHistories);
+        response.put("createdHistories", createdHistories);
+        response.put("orderHistories", responseList);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

@@ -152,6 +152,11 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
             }
         }
 
+        boolean isPaidAtDateAvailable = false;
+        if (orderHistory.getPaidAt() != null){
+            isPaidAtDateAvailable = true;
+        }
+
         return new OrderHistoryResponse(orderHistory.getHistoryId(), isHostelDeleted, orderHistory.getHostelId(), hostelName,
                 hostelInitials, hostelType, mobile, houseNo, street, landmark, city, state, country, pincode,
                 fullAddress, mainImage, ownerInfo, orderHistory.getDiscountAmount(), Utils.roundOfDoubleTo2Digits(orderHistory.getPlanAmount()),
@@ -159,7 +164,7 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
                 orderHistory.getOrderStatus(), canVerifyPayment, orderHistory.getPaymentType(), orderHistory.getChannel(),
                 orderHistory.getPaymentUrl(), orderHistory.getPaymentProof(), paymentProofFileName, upiId, orderHistory.getCardHolderName(),
                 orderHistory.getCardType(), orderHistory.getCardBrand(), orderHistory.getIssuer(), cardNo, orderHistory.getUserType(),
-                Utils.dateToString(orderHistory.getPaidAt()), Utils.dateToTime(orderHistory.getPaidAt()), paidBy, collectedBy,
-                createdBy, Utils.dateToString(orderHistory.getCreatedAt()), Utils.dateToTime(orderHistory.getCreatedAt()));
+                Utils.dateToString(orderHistory.getPaidAt()), Utils.dateToTime(orderHistory.getPaidAt()), isPaidAtDateAvailable, paidBy,
+                collectedBy, createdBy, Utils.dateToString(orderHistory.getCreatedAt()), Utils.dateToTime(orderHistory.getCreatedAt()));
     }
 }

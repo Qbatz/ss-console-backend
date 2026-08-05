@@ -217,6 +217,10 @@ public class SubscriptionService {
                 return new ResponseEntity<>(Utils.PAID_BY_REQUIRED, HttpStatus.BAD_REQUEST);
             }
 
+            if (payload.paidAtDate() == null || payload.paidAtTime() == null){
+                return new ResponseEntity<>(Utils.PAID_AT_DATE_TIME_IS_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
             if (payload.discountAmount() != null) {
                 try {
                     discountAmount = Double.parseDouble(payload.discountAmount().toString());
@@ -286,6 +290,7 @@ public class SubscriptionService {
             newOrder.setPaymentProof(paymentProofUrl);
             newOrder.setPaidBy(payload.paidBy());
             newOrder.setCollectedBy(agent.getAgentId());
+            newOrder.setPaidAt(Utils.localDateTimeToDate(payload.paidAtDate(), payload.paidAtTime()));
             newOrder.setActive(true);
             newOrder.setCreatedAt(today);
             newOrder.setCreatedBy(agent.getAgentId());
