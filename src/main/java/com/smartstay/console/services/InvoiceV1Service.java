@@ -1293,7 +1293,6 @@ public class InvoiceV1Service {
 
         if (ebConfig != null) {
             if (EBReadingType.FLAT_RATE.name().equalsIgnoreCase(ebConfig.getTypeOfReading())) {
-
                 if (!ebConfig.isShouldIncludeInRent()) {
                     isFlatRate = true;
                     shouldIncludeEb = false;
@@ -1438,6 +1437,35 @@ public class InvoiceV1Service {
         invoice.setBasePrice(total);
         invoice.setSubTotal(total);
         invoice.setTotalAmount(total);
+
+        double paid = Optional.ofNullable(invoice.getPaidAmount()).orElse(0.0);
+
+        double balance = total - paid;
+
+        if (balance <= 0) {
+
+            invoice.setBalanceAmount(0.0);
+
+            if (paid > total) {
+
+                double excess = paid - total;
+
+                // add to wallet / advance
+                // customerWalletService.add(customerId, excess);
+            }
+
+            invoice.setPaymentStatus(PaymentStatus.PAID.name());
+
+        } else {
+
+            invoice.setBalanceAmount(balance);
+
+            if (paid == 0) {
+                invoice.setPaymentStatus(PaymentStatus.PENDING.name());
+            } else {
+                invoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+            }
+        }
 
         invoice.setInvoiceStartDate(billingDates.currentBillStartDate());
         invoice.setInvoiceEndDate(billingDates.currentBillEndDate());
@@ -1700,6 +1728,35 @@ public class InvoiceV1Service {
         invoice.setSubTotal(total);
         invoice.setTotalAmount(total);
 
+        double paid = Optional.ofNullable(invoice.getPaidAmount()).orElse(0.0);
+
+        double balance = total - paid;
+
+        if (balance <= 0) {
+
+            invoice.setBalanceAmount(0.0);
+
+            if (paid > total) {
+
+                double excess = paid - total;
+
+                // add to wallet / advance
+                // customerWalletService.add(customerId, excess);
+            }
+
+            invoice.setPaymentStatus(PaymentStatus.PAID.name());
+
+        } else {
+
+            invoice.setBalanceAmount(balance);
+
+            if (paid == 0) {
+                invoice.setPaymentStatus(PaymentStatus.PENDING.name());
+            } else {
+                invoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+            }
+        }
+
         invoice.setInvoiceStartDate(invoiceStartDate);
         invoice.setInvoiceEndDate(billingDates.currentBillEndDate());
         invoice.setInvoiceDueDate(invoiceDueDate);
@@ -1894,6 +1951,35 @@ public class InvoiceV1Service {
         invoice.setBasePrice(total);
         invoice.setSubTotal(total);
         invoice.setTotalAmount(total);
+
+        double paid = Optional.ofNullable(invoice.getPaidAmount()).orElse(0.0);
+
+        double balance = total - paid;
+
+        if (balance <= 0) {
+
+            invoice.setBalanceAmount(0.0);
+
+            if (paid > total) {
+
+                double excess = paid - total;
+
+                // add to wallet / advance
+                // customerWalletService.add(customerId, excess);
+            }
+
+            invoice.setPaymentStatus(PaymentStatus.PAID.name());
+
+        } else {
+
+            invoice.setBalanceAmount(balance);
+
+            if (paid == 0) {
+                invoice.setPaymentStatus(PaymentStatus.PENDING.name());
+            } else {
+                invoice.setPaymentStatus(PaymentStatus.PARTIAL_PAYMENT.name());
+            }
+        }
 
         invoice.setInvoiceStartDate(billingDates.currentBillStartDate());
         invoice.setInvoiceEndDate(billingDates.currentBillEndDate());

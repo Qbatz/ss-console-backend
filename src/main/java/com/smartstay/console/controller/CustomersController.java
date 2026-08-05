@@ -74,6 +74,11 @@ public class CustomersController {
         return customersService.editJoiningDate(payload);
     }
 
+    @PostMapping("/joining-date-impact")
+    public ResponseEntity<?> getJoiningDateImpact(@Valid @RequestBody CustomerJoiningDatePayload payload) {
+        return customersService.getJoiningDateImpact(payload);
+    }
+
     @PostMapping("/verify-mobile/{customerId}")
     public ResponseEntity<?> verifyMobile(@PathVariable("customerId") String customerId,
                                           @Valid @RequestBody CustomerMobilePayload payload){
