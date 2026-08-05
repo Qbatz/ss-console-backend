@@ -4342,10 +4342,26 @@ public class CustomersService {
             }
         }
 
+        boolean includeUnchanged = false;
+
         List<InvoiceImpact> invoices = new ArrayList<>(impacts.values());
 
-        invoices.sort(Comparator
-                        .comparing((InvoiceImpact i) -> Utils.stringToDate(i.newInvoiceStartDate()))
+        if (!includeUnchanged) {
+            invoices.removeIf(i -> i.action() == InvoiceImpactType.UNCHANGED);
+        }
+
+        Map<InvoiceImpactType, Integer> actionPriority = Map.of(
+                InvoiceImpactType.UPDATED, 1,
+                InvoiceImpactType.DELETED, 2,
+                InvoiceImpactType.CREATED, 3,
+                InvoiceImpactType.UNCHANGED, 4
+        );
+
+        invoices.sort(
+                Comparator
+                        .comparingInt((InvoiceImpact i) ->
+                                actionPriority.getOrDefault(i.action(), Integer.MAX_VALUE))
+                        .thenComparing(i -> Utils.stringToDate(i.newInvoiceStartDate()))
                         .thenComparing(i -> Utils.stringToDate(i.invoiceStartDate()))
         );
 
