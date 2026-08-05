@@ -1391,7 +1391,6 @@ public class CustomersService {
 
             double totalAmountToBePaid = 0;
             double finalDeductionPendingAmount = 0;
-            boolean isDiscounted = false;
             double currentMonthTotalAmount = 0;
             double currentMonthPaidRent = 0;
             double bookingAvailableBalance = 0;
@@ -1450,10 +1449,6 @@ public class CustomersService {
                         finalSettlementInfoRes.unpaidInvoiceAmount() : 0;
                 double otherItemAmount = finalSettlementInfoRes.otherItemAmount() != null ?
                         finalSettlementInfoRes.otherItemAmount() : 0;
-
-                if (discountAmount > 0) {
-                    isDiscounted = true;
-                }
 
                 if (isCustomRent){
 //                    if (customRentAmount < currentMonthPaidRent) {
@@ -1569,7 +1564,7 @@ public class CustomersService {
             settlementInvoice.setOthersDescription(null);
             settlementInvoice.setInvoiceMode(InvoiceMode.MANUAL.name());
             settlementInvoice.setCancelled(false);
-            settlementInvoice.setDiscounted(isDiscounted);
+            settlementInvoice.setDiscounted(false);
             settlementInvoice.setCancelledInvoices(cancelledInvoiceIds);
             settlementInvoice.setDeductions(advInvDeductions);
             settlementInvoice.setInvoiceUrl(null);
