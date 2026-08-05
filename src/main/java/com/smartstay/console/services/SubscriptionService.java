@@ -221,6 +221,10 @@ public class SubscriptionService {
                 return new ResponseEntity<>(Utils.PAID_AT_DATE_TIME_IS_REQUIRED, HttpStatus.BAD_REQUEST);
             }
 
+            if (Utils.checkDateIsFromFutureOrPresent(payload.paidAtDate(), payload.paidAtTime())) {
+                return new ResponseEntity<>("Date must be from past or present", HttpStatus.BAD_REQUEST);
+            }
+
             if (payload.discountAmount() != null) {
                 try {
                     discountAmount = Double.parseDouble(payload.discountAmount().toString());
