@@ -126,6 +126,7 @@ public class AgentActivityUtil {
             case SMARTSTAY_FEATURES -> "Updated a smartstay feature";
             case INVOICE -> "Updated an invoice";
             case KYC_DETAILS -> "Approved a kyc request";
+            case SUBSCRIPTION_INVOICE_URL -> "Updated a subscription invoice url";
             default -> "Updated successfully";
         };
     }

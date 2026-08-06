@@ -112,6 +112,7 @@ public class Utils {
     public static final String EB_CONFIG_NOT_FOUND = "Eb config not found";
     public static final String TRANSACTION_RECEIPT_URL_NOT_FOUND = "Transaction receipt url not found";
     public static final String INVOICE_URL_NOT_FOUND = "Invoice url not found";
+    public static final String SUBSCRIPTION_NOT_FOUND = "Subscription not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -188,6 +189,7 @@ public class Utils {
     public static final String CANNOT_EXTEND_FREE_TRIAL_ANY_MORE = "Cannot extend free trial anymore";
     public static final String THIS_USER_IS_NOT_AN_OWNER = "This user is not an owner";
     public static final String FILE_UPLOAD_FAILED = "File upload failed";
+    public static final String FILE_UPLOAD_SUCCESS = "File upload success";
     public static final String COLUMNS_CAN_NOT_BE_EMPTY = "Columns can not be empty";
     public static final String COLUMN_FILTER_CAN_NOT_BE_NULL = "Column filter cannot be null";
     public static final String ORDER_CAN_NOT_BE_NEGATIVE = "Order cannot be negative";

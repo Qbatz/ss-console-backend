@@ -19,19 +19,22 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
     Map<String, Users> usersMap;
     Map<String, Agent> agentMap;
     Users owner;
+    Subscription subscription;
 
     public OrderHistoryMapper(HostelV1 hostel,
                               HotelType hotelType,
                               Plans plan,
                               Map<String, Users> usersMap,
                               Map<String, Agent> agentMap,
-                              Users owner) {
+                              Users owner,
+                              Subscription subscription) {
         this.hostel = hostel;
         this.hotelType = hotelType;
         this.plan = plan;
         this.usersMap = usersMap;
         this.agentMap = agentMap;
         this.owner = owner;
+        this.subscription = subscription;
     }
 
     @Override
@@ -157,6 +160,17 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
             isPaidAtDateAvailable = true;
         }
 
+        Long subscriptionId = null;
+        boolean canUploadSubscriptionInvoice = false;
+        String subscriptionInvoiceUrl = null;
+        String subscriptionGenerationType = null;
+        if (subscription != null){
+            subscriptionId = subscription.getSubscriptionId();
+            canUploadSubscriptionInvoice = true;
+            subscriptionInvoiceUrl = subscription.getInvoiceUrl();
+            subscriptionGenerationType = subscription.getGenerationType();
+        }
+
         return new OrderHistoryResponse(orderHistory.getHistoryId(), isHostelDeleted, orderHistory.getHostelId(), hostelName,
                 hostelInitials, hostelType, mobile, houseNo, street, landmark, city, state, country, pincode,
                 fullAddress, mainImage, ownerInfo, orderHistory.getDiscountAmount(), Utils.roundOfDoubleTo2Digits(orderHistory.getPlanAmount()),
@@ -165,6 +179,7 @@ public class OrderHistoryMapper implements Function<OrderHistory, OrderHistoryRe
                 orderHistory.getPaymentUrl(), orderHistory.getPaymentProof(), paymentProofFileName, upiId, orderHistory.getCardHolderName(),
                 orderHistory.getCardType(), orderHistory.getCardBrand(), orderHistory.getIssuer(), cardNo, orderHistory.getUserType(),
                 Utils.dateToString(orderHistory.getPaidAt()), Utils.dateToTime(orderHistory.getPaidAt()), isPaidAtDateAvailable, paidBy,
-                collectedBy, createdBy, Utils.dateToString(orderHistory.getCreatedAt()), Utils.dateToTime(orderHistory.getCreatedAt()));
+                collectedBy, createdBy, Utils.dateToString(orderHistory.getCreatedAt()), Utils.dateToTime(orderHistory.getCreatedAt()),
+                subscriptionId, canUploadSubscriptionInvoice, subscriptionInvoiceUrl, subscriptionGenerationType);
     }
 }

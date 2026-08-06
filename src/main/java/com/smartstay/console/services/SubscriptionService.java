@@ -851,4 +851,16 @@ public class SubscriptionService {
     public List<com.smartstay.console.dao.Subscription> getLatestSubscriptionsPerHostel(Set<String> hostelIds) {
         return subscriptionRepository.findLatestSubscriptionsPerHostel(hostelIds);
     }
+
+    public List<com.smartstay.console.dao.Subscription> getSubscriptionsByOrderIds(Set<Long> historyIds) {
+        return subscriptionRepository.findAllByOrderIdIn(historyIds);
+    }
+
+    public List<com.smartstay.console.dao.Subscription> getSubscriptionByOrderId(Long historyId) {
+        return subscriptionRepository.findByOrderId(historyId);
+    }
+
+    public com.smartstay.console.dao.Subscription save(com.smartstay.console.dao.Subscription subscription) {
+        return subscriptionRepository.save(subscription);
+    }
 }

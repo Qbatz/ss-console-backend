@@ -2,18 +2,23 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.orderHistory.OrderHistoryMapper;
 import com.smartstay.console.config.Authentication;
+import com.smartstay.console.config.FilesConfig;
 import com.smartstay.console.config.RestTemplateLoggingInterceptor;
+import com.smartstay.console.config.UploadFileToS3;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.orderHistory.PaymentLinkGenerateDto;
 import com.smartstay.console.dto.orderHistory.PaymentLinkGenerateResDto;
+import com.smartstay.console.dto.subscription.SubscriptionSnapshot;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.orderHistory.PaymentLinkGeneratePayload;
 import com.smartstay.console.payloads.orderHistory.PaymentLinkSharePayload;
 import com.smartstay.console.repositories.OrderHistoryRepository;
 import com.smartstay.console.responses.orderHistory.*;
+import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -48,6 +54,13 @@ public class OrderHistoryService {
     private UsersService usersService;
     @Autowired
     private WhatsappService whatsappService;
+    @Autowired
+    @Lazy
+    private SubscriptionService subscriptionService;
+    @Autowired
+    private UploadFileToS3 uploadFileToS3;
+    @Autowired
+    private AgentActivitiesService agentActivitiesService;
 
     @Value("${PAYMENT_URL}")
     private String paymentUrl;
@@ -159,12 +172,16 @@ public class OrderHistoryService {
         orderHistories.addAll(paidOrderHistories);
         orderHistories.addAll(createdOrderHistories);
 
+        Set<Long> historyIds = new HashSet<>();
         Set<String> hostelIds = new HashSet<>();
         Set<String> planCodes = new HashSet<>();
         Set<String> userIds = new HashSet<>();
         Set<String> agentIds = new HashSet<>();
 
         for (OrderHistory orderHistory : orderHistories) {
+            if (orderHistory.getHistoryId() != null) {
+                historyIds.add(orderHistory.getHistoryId());
+            }
             if (orderHistory.getHostelId() != null) {
                 hostelIds.add(orderHistory.getHostelId());
             }
@@ -185,6 +202,12 @@ public class OrderHistoryService {
                 }
             }
         }
+
+        List<Subscription> subscriptions = subscriptionService
+                .getSubscriptionsByOrderIds(historyIds);
+        Map<Long, Subscription> subscriptionMap = subscriptions.stream()
+                .collect(Collectors.toMap(Subscription::getOrderId, s -> s,
+                        (a, b) -> a));
 
         List<HotelType> hotelTypes = hotelTypeService.getAllHotelTypes();
         Map<Integer, HotelType> hotelTypeMap = hotelTypes.stream()
@@ -214,13 +237,13 @@ public class OrderHistoryService {
                 .collect(Collectors.toMap(Users::getParentId, user -> user, (a, b) -> a));
 
         List<OrderHistoryResponse> orderHistoriesRes = mapOrderHistories(allOrderHistories,
-                hostelMap, hotelTypeMap, plansMap, usersMap, agentMap, ownerMap);
+                hostelMap, hotelTypeMap, plansMap, usersMap, agentMap, ownerMap, subscriptionMap);
 
         List<OrderHistoryResponse> paidOrderHistoriesRes = mapOrderHistories(paidOrderHistories,
-                hostelMap, hotelTypeMap, plansMap, usersMap, agentMap, ownerMap);
+                hostelMap, hotelTypeMap, plansMap, usersMap, agentMap, ownerMap, subscriptionMap);
 
         List<OrderHistoryResponse> createdOrderHistoriesRes = mapOrderHistories(createdOrderHistories,
-                hostelMap, hotelTypeMap, plansMap, usersMap, agentMap, ownerMap);
+                hostelMap, hotelTypeMap, plansMap, usersMap, agentMap, ownerMap, subscriptionMap);
 
         StatusOrderHistoryPagedResponse paidHistories = new StatusOrderHistoryPagedResponse(
                 page + 1, size, paginatedPaidOrderHistory.getTotalElements(),
@@ -247,7 +270,8 @@ public class OrderHistoryService {
                                                          Map<String, Plans> plansMap,
                                                          Map<String, Users> usersMap,
                                                          Map<String, Agent> agentMap,
-                                                         Map<String, Users> ownerMap) {
+                                                         Map<String, Users> ownerMap,
+                                                         Map<Long, Subscription> subscriptionMap) {
 
         return orderHistories.stream()
                 .map(orderHistory -> {
@@ -259,8 +283,9 @@ public class OrderHistoryService {
                         hotelType = hotelTypeMap.getOrDefault(hostel.getHostelType(), null);
                         owner = ownerMap.getOrDefault(hostel.getParentId(), null);
                     }
-                    return new OrderHistoryMapper(hostel, hotelType,
-                            plan, usersMap, agentMap, owner).apply(orderHistory);
+                    Subscription subscription = subscriptionMap.getOrDefault(orderHistory.getHistoryId(), null);
+                    return new OrderHistoryMapper(hostel, hotelType, plan, usersMap, agentMap,
+                            owner, subscription).apply(orderHistory);
                 }).toList();
     }
 
@@ -475,5 +500,73 @@ public class OrderHistoryService {
         whatsappService.sendPaymentLink(ownerName, ownerMobile, paymentLink);
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> uploadInvoice(Long orderHistoryId, MultipartFile invoice, Boolean isManual) {
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Payments.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        OrderHistory orderHistory = orderHistoryRepository.findByHistoryIdAndIsActiveTrue(orderHistoryId);
+        if (orderHistory == null){
+            return new ResponseEntity<>(Utils.ORDER_HISTORY_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<Subscription> subscriptions = subscriptionService.getSubscriptionByOrderId(orderHistoryId);
+        if (subscriptions.isEmpty()){
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (subscriptions.size() > 1){
+            return new ResponseEntity<>("Multiple subscription exists for this order", HttpStatus.BAD_REQUEST);
+        }
+
+        Subscription subscription = subscriptions.getFirst();
+        if (subscription == null){
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (subscription.getInvoiceUrl() != null){
+            return new ResponseEntity<>("Invoice already exists, delete first", HttpStatus.BAD_REQUEST);
+        }
+
+        SubscriptionSnapshot oldSnapshot = SnapshotUtility.toSnapshot(subscription);
+
+        String invoiceUrl = null;
+        try {
+            invoiceUrl = uploadFileToS3.uploadFileToS3(
+                    FilesConfig.convertMultipartToFileNew(invoice), "subscription/invoice");
+        } catch (Exception e) {
+            return new ResponseEntity<>(Utils.FILE_UPLOAD_FAILED, HttpStatus.BAD_REQUEST);
+        }
+
+        if (isManual == null){
+            isManual = true;
+        }
+
+        String generationType = null;
+        if (isManual){
+            generationType = GenerationType.MANUAL.name();
+        } else {
+            generationType = GenerationType.AUTOMATIC.name();
+        }
+
+        subscription.setInvoiceUrl(invoiceUrl);
+        subscription.setGenerationType(generationType);
+
+        subscription = subscriptionService.save(subscription);
+
+        SubscriptionSnapshot newSnapshot = SnapshotUtility.toSnapshot(subscription);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.SUBSCRIPTION_INVOICE_URL,
+                String.valueOf(subscription.getSubscriptionId()), oldSnapshot, newSnapshot);
+
+        return new ResponseEntity<>(Utils.FILE_UPLOAD_SUCCESS, HttpStatus.OK);
     }
 }

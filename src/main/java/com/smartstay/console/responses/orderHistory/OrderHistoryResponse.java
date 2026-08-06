@@ -46,5 +46,9 @@ public record OrderHistoryResponse(Long historyId,
                                    String collectedBy,
                                    String createdBy,
                                    String createdAtDate,
-                                   String createdAtTime) {
+                                   String createdAtTime,
+                                   Long subscriptionId,
+                                   boolean canUploadSubscriptionInvoice,
+                                   String subscriptionInvoiceUrl,
+                                   String subscriptionInvoiceGenerationType) {
 }

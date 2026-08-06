@@ -139,4 +139,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
             """)
     Set<String> findHostelIdsWithPaidSubscriptions(@Param("hostelIds") Set<String> hostelIds,
                                                    @Param("freePlanCodes") Set<String> freePlanCodes);
+
+    List<Subscription> findAllByOrderIdIn(Set<Long> historyIds);
+
+    List<Subscription> findByOrderId(Long historyId);
 }
