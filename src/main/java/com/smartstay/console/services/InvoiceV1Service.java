@@ -1406,7 +1406,7 @@ public class InvoiceV1Service {
         total = Utils.roundOfDouble(total);
 
         // Remove old items
-        invoiceItemsService.deleteInvoiceItemsByInvoice(invoice);
+        invoice.getInvoiceItems().clear();
 
         List<InvoiceItems> items = new ArrayList<>();
 
@@ -1471,7 +1471,7 @@ public class InvoiceV1Service {
         invoice.setInvoiceEndDate(billingDates.currentBillEndDate());
         invoice.setInvoiceDueDate(billingDates.dueDate());
 
-        invoice.setInvoiceItems(items);
+        invoice.getInvoiceItems().addAll(items);
 
         invoice.setUpdatedAt(today);
         invoice.setUpdatedBy(authentication.getName());
@@ -1686,7 +1686,7 @@ public class InvoiceV1Service {
         // Invoice Items
         //--------------------------------------------------------
 
-        invoiceItemsService.deleteInvoiceItemsByInvoice(invoice);
+        invoice.getInvoiceItems().clear();
 
         List<InvoiceItems> items = new ArrayList<>();
 
@@ -1761,7 +1761,7 @@ public class InvoiceV1Service {
         invoice.setInvoiceEndDate(billingDates.currentBillEndDate());
         invoice.setInvoiceDueDate(invoiceDueDate);
 
-        invoice.setInvoiceItems(items);
+        invoice.getInvoiceItems().addAll(items);
 
         invoice.setUpdatedAt(today);
         invoice.setUpdatedBy(authentication.getName());
@@ -1920,7 +1920,7 @@ public class InvoiceV1Service {
         total = Utils.roundOfDouble(total);
 
         // Remove old items
-        invoiceItemsService.deleteInvoiceItemsByInvoice(invoice);
+        invoice.getInvoiceItems().clear();
 
         List<InvoiceItems> items = new ArrayList<>();
 
@@ -1985,7 +1985,7 @@ public class InvoiceV1Service {
         invoice.setInvoiceEndDate(billingDates.currentBillEndDate());
         invoice.setInvoiceDueDate(billingDates.dueDate());
 
-        invoice.setInvoiceItems(items);
+        invoice.getInvoiceItems().addAll(items);
 
         invoice.setUpdatedAt(today);
         invoice.setUpdatedBy(authentication.getName());

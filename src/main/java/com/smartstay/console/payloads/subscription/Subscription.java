@@ -14,10 +14,8 @@ public record Subscription(Integer trialDays,
                            Double paidAmount,
                            Double discountAmount,
                            String paidBy,
-                           @NotNull(message = "Paid date is required")
                            @JsonFormat(pattern = "dd-MM-yyyy")
                            LocalDate paidAtDate,
-                           @NotNull(message = "Paid time is required")
                            @JsonFormat(pattern = "HH:mm")
                            LocalTime paidAtTime,
                            String trialDaysReason,

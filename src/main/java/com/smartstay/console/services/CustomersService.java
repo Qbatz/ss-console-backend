@@ -1539,9 +1539,11 @@ public class CustomersService {
                 settlementInvoice.setInvoiceType(InvoiceType.SETTLEMENT.name());
                 settlementInvoice.setCreatedBy(authentication.getName());
                 settlementInvoice.setCreatedAt(today);
+                settlementInvoice.setInvoiceItems(new ArrayList<>());
             } else {
                 settlementInvoice.setUpdatedBy(authentication.getName());
                 settlementInvoice.setUpdatedAt(today);
+                settlementInvoice.getInvoiceItems().clear();;
             }
 
             settlementInvoice.setBasePrice(totalAmountToBePaid);
@@ -1599,7 +1601,7 @@ public class CustomersService {
                         return item;
                     }).toList();
 
-            settlementInvoice.setInvoiceItems(invoiceItems);
+            settlementInvoice.getInvoiceItems().addAll(invoiceItems);
 
             settlementInvoice = invoiceV1Service.save(settlementInvoice);
 
