@@ -63,10 +63,15 @@ public class InvoiceResponseMapper implements Function<InvoicesV1, InvoiceRespon
             canUpdateAmount = true;
         }
 
+        boolean canDeleteInvoiceUrl = false;
+        if (invoice.getInvoiceUrl() != null){
+            canDeleteInvoiceUrl = true;
+        }
+
         return new InvoiceResponse(invoice.getInvoiceId(), invoice.getCustomerId(), tenantName,
                 invoice.getInvoiceNumber(), invoice.getCustomerMobile(), invoice.getCustomerMailId(),
                 invoice.getInvoiceType(), invoice.getPaymentStatus(), canShowReceipts, canUpdateAmount,
-                invoice.getOthersDescription(), invoice.getInvoiceMode(), invoice.getInvoiceUrl(),
+                invoice.getOthersDescription(), invoice.getInvoiceMode(), invoice.getInvoiceUrl(), canDeleteInvoiceUrl,
                 invoice.isCancelled(), invoice.isDiscounted(), Utils.dateToString(invoice.getInvoiceGeneratedDate()),
                 Utils.dateToTime(invoice.getInvoiceGeneratedDate()), Utils.dateToString(invoice.getCancelledDate()),
                 Utils.dateToTime(invoice.getCancelledDate()), Utils.dateToString(invoice.getInvoiceDueDate()),

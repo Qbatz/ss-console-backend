@@ -160,6 +160,8 @@ public class AgentActivityUtil {
             case DEMO_REQUEST -> "Deleted a demo request";
             case SMARTSTAY_FEATURES -> "Deleted a smartstay feature";
             case TRANSACTION -> "Deleted a transaction";
+            case TRANSACTION_RECEIPT_URL -> "Deleted a transaction receipt";
+            case INVOICE_URL -> "Deleted an invoice url";
             default -> "Deleted successfully";
         };
     }

@@ -44,6 +44,7 @@ public class TransactionResMapper implements Function<TransactionV1, Transaction
         String accountHolderName = null;
         String createdByUserName = null;
         String updatedByUserName = null;
+        boolean canDeleteReceiptUrl = false;
 
         if (transaction.getPaymentDate() != null) {
             paymentDate = Utils.dateToString(transaction.getPaymentDate());
@@ -81,12 +82,16 @@ public class TransactionResMapper implements Function<TransactionV1, Transaction
             updatedByUserName = Utils.getFullName(updatedByUser.getFirstName(), updatedByUser.getLastName());
         }
 
+        if (transaction.getReceiptUrl() != null){
+            canDeleteReceiptUrl = true;
+        }
+
         return new TransactionResponse(transaction.getTransactionId(), transaction.getType(),
                 transaction.getPaidAmount(), transaction.getStatus(), transaction.getInvoiceId(),
                 invoiceNumber, invoiceType, invoicePaymentStatus, transaction.getHostelId(), hostelName,
                 transaction.getCustomerId(), customerName, paymentDate, paymentTime, transaction.getTransactionMode(),
-                transaction.getTransactionReferenceId(), transaction.getReceiptUrl(), transaction.getBankId(),
-                accountHolderName, transaction.getReferenceNumber(), transaction.getCreatedBy(), createdByUserName,
-                transaction.getUpdatedBy(), updatedByUserName, createdAtDate, createdAtTime);
+                transaction.getTransactionReferenceId(), transaction.getReceiptUrl(), canDeleteReceiptUrl,
+                transaction.getBankId(), accountHolderName, transaction.getReferenceNumber(), transaction.getCreatedBy(),
+                createdByUserName, transaction.getUpdatedBy(), updatedByUserName, createdAtDate, createdAtTime);
     }
 }

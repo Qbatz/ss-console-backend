@@ -1,6 +1,7 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.config.Authentication;
+import com.smartstay.console.config.S3Service;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.dto.transaction.TransactionSnapshot;
@@ -47,6 +48,8 @@ public class TransactionV1Service {
     private PaymentSummaryService paymentSummaryService;
     @Autowired
     private InvoiceRedemptionService invoiceRedemptionService;
+    @Autowired
+    private S3Service s3Service;
 
     public List<TransactionV1> findByHostelIdAndCustomerIds(String hostelId, List<String> customerIds) {
         return transactionV1Repository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
@@ -297,5 +300,44 @@ public class TransactionV1Service {
 
     public List<TransactionV1> getByTransactionIds(Set<String> transactionIds) {
         return transactionV1Repository.findAllByTransactionIdIn(transactionIds);
+    }
+
+    public ResponseEntity<?> deleteTransactionUrl(String transactionId) {
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Receipt.getId(), Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        TransactionV1 transaction = transactionV1Repository.findByTransactionId(transactionId);
+        if (transaction == null) {
+            return new ResponseEntity<>(Utils.TRANSACTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (transaction.getReceiptUrl() == null){
+            return new ResponseEntity<>(Utils.TRANSACTION_RECEIPT_URL_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        TransactionSnapshot oldSnapshot = SnapshotUtility.toSnapshot(transaction);
+
+        try {
+            s3Service.deleteFile(transaction.getReceiptUrl());
+        } catch (Exception e) {
+//            return new ResponseEntity<>("Failed to delete receipt file from S3",
+//                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        transaction.setReceiptUrl(null);
+
+        transactionV1Repository.save(transaction);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.TRANSACTION_RECEIPT_URL,
+                transactionId, oldSnapshot, null);
+
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
 }

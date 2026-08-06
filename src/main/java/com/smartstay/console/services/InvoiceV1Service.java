@@ -3,6 +3,7 @@ package com.smartstay.console.services;
 import com.smartstay.console.Mapper.invoice.InvoiceResponseMapper;
 import com.smartstay.console.Mapper.transaction.TransactionResMapper;
 import com.smartstay.console.config.Authentication;
+import com.smartstay.console.config.S3Service;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.InvoiceItems;
 import com.smartstay.console.dto.billTemplates.BillTemplatesDto;
@@ -91,7 +92,7 @@ public class InvoiceV1Service {
     @Autowired
     private CustomersAmenityService customersAmenityService;
     @Autowired
-    private InvoiceItemsService invoiceItemsService;
+    private S3Service s3Service;
 
     public List<InvoicesV1> findByListOfCustomers(String hostelId, List<String> customerIds) {
         return invoiceV1Repository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
@@ -2001,5 +2002,44 @@ public class InvoiceV1Service {
         }
 
         invoiceV1Repository.save(invoice);
+    }
+
+    public ResponseEntity<?> deleteInvoiceUrl(String invoiceId) {
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Invoices.getId(), Utils.PERMISSION_DELETE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        InvoicesV1 invoice = invoiceV1Repository.findByInvoiceId(invoiceId);
+        if (invoice == null) {
+            return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (invoice.getInvoiceUrl() == null){
+            return new ResponseEntity<>(Utils.INVOICE_URL_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        InvoiceSnapshot oldSnapshot = SnapshotUtility.toSnapshot(invoice);
+
+        try {
+            s3Service.deleteFile(invoice.getInvoiceUrl());
+        } catch (Exception e) {
+//            return new ResponseEntity<>("Failed to delete invoice file from S3",
+//                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        invoice.setInvoiceUrl(null);
+
+        invoiceV1Repository.save(invoice);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.INVOICE_URL,
+                invoiceId, oldSnapshot, null);
+
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
 }
