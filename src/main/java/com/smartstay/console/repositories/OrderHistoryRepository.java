@@ -33,6 +33,25 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
                                                 Pageable pageable);
 
     @Query("""
+            SELECT o FROM OrderHistory o
+            WHERE o.isActive = true
+              AND o.orderStatus = :orderStatus
+              AND COALESCE(o.paidAt, o.createdAt) >= :startDate
+              AND COALESCE(o.paidAt, o.createdAt) < :endDate
+              AND (
+                   (:hostelIds IS NOT NULL AND o.hostelId IN :hostelIds)
+                OR (:userIds IS NOT NULL AND o.createdBy IN :userIds)
+              )
+            ORDER BY COALESCE(o.paidAt, o.createdAt) DESC
+            """)
+    Page<OrderHistory> findStatusFilteredOrderHistory(@Param("hostelIds") Set<String> hostelIds,
+                                                      @Param("userIds") Set<String> userIds,
+                                                      @Param("startDate") Date startDate,
+                                                      @Param("endDate") Date endDate,
+                                                      @Param("orderStatus") String orderStatus,
+                                                      Pageable pageable);
+
+    @Query("""
             SELECT o
             FROM OrderHistory o
             WHERE o.isActive = true
@@ -43,6 +62,20 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
     Page<OrderHistory> findAllByPaidOrCreatedDate(@Param("startDate") Date startDate,
                                                   @Param("endDate") Date endDate,
                                                   Pageable pageable);
+
+    @Query("""
+            SELECT o
+            FROM OrderHistory o
+            WHERE o.isActive = true
+              AND o.orderStatus = :orderStatus
+              AND COALESCE(o.paidAt, o.createdAt) >= :startDate
+              AND COALESCE(o.paidAt, o.createdAt) < :endDate
+            ORDER BY COALESCE(o.paidAt, o.createdAt) DESC
+            """)
+    Page<OrderHistory> findStatusAllByPaidOrCreatedDate(@Param("startDate") Date startDate,
+                                                        @Param("endDate") Date endDate,
+                                                        @Param("orderStatus") String orderStatus,
+                                                        Pageable pageable);
 
     @Query("""
             SELECT coalesce(sum(o.totalAmount), 0) FROM OrderHistory o

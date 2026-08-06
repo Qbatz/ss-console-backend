@@ -10,9 +10,7 @@ import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.orderHistory.PaymentLinkGeneratePayload;
 import com.smartstay.console.payloads.orderHistory.PaymentLinkSharePayload;
 import com.smartstay.console.repositories.OrderHistoryRepository;
-import com.smartstay.console.responses.orderHistory.GeneratePaymentLinkRes;
-import com.smartstay.console.responses.orderHistory.OrderHistoryResponse;
-import com.smartstay.console.responses.orderHistory.VerifyResponse;
+import com.smartstay.console.responses.orderHistory.*;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -115,28 +113,51 @@ public class OrderHistoryService {
         if (name != null && !name.trim().isEmpty()
                 && filteredHostelIds.isEmpty() && filteredUserIds.isEmpty()) {
 
-            return ResponseEntity.ok(Map.of(
-                    "orderHistories", Collections.emptyList(),
-                    "totalRevenue", totalRevenue,
-                    "currentPage", page + 1,
-                    "pageSize", size,
-                    "totalItems", 0,
-                    "totalPages", 0
-            ));
+            OrderHistoryPagedResponse response = new OrderHistoryPagedResponse(totalRevenue, page + 1,
+                    size, 0, 0, Collections.emptyList(), null, null);
+
+            return ResponseEntity.ok(response);
         }
 
-        Page<OrderHistory> paginatedOrderHistory;
+        Page<OrderHistory> paginatedAllOrderHistory;
+        Page<OrderHistory> paginatedPaidOrderHistory;
+        Page<OrderHistory> paginatedCreatedOrderHistory;
+
+        String paidOrderStatus = OrderStatus.PAID.name();
+        String createdOrderStatus = OrderStatus.CREATED.name();
 
         if (!filteredHostelIds.isEmpty() || !filteredUserIds.isEmpty()) {
-            paginatedOrderHistory = orderHistoryRepository
-                    .findFilteredOrderHistory(filteredHostelIds.isEmpty() ? null : filteredHostelIds,
-                            filteredUserIds.isEmpty() ? null : filteredUserIds, startDate, endDate, pageable);
+
+            filteredHostelIds = filteredHostelIds.isEmpty() ? null : filteredHostelIds;
+            filteredUserIds = filteredUserIds.isEmpty() ? null : filteredUserIds;
+
+            paginatedAllOrderHistory = orderHistoryRepository
+                    .findFilteredOrderHistory(filteredHostelIds, filteredUserIds, startDate, endDate,
+                            pageable);
+            paginatedPaidOrderHistory = orderHistoryRepository
+                    .findStatusFilteredOrderHistory(filteredHostelIds, filteredUserIds, startDate, endDate,
+                            paidOrderStatus, pageable);
+            paginatedCreatedOrderHistory = orderHistoryRepository
+                    .findStatusFilteredOrderHistory(filteredHostelIds, filteredUserIds, startDate, endDate,
+                            createdOrderStatus, pageable);
+
         } else {
-            paginatedOrderHistory = orderHistoryRepository
+            paginatedAllOrderHistory = orderHistoryRepository
                     .findAllByPaidOrCreatedDate(startDate, endDate, pageable);
+            paginatedPaidOrderHistory = orderHistoryRepository
+                    .findStatusAllByPaidOrCreatedDate(startDate, endDate, paidOrderStatus, pageable);
+            paginatedCreatedOrderHistory = orderHistoryRepository
+                    .findStatusAllByPaidOrCreatedDate(startDate, endDate, createdOrderStatus, pageable);
         }
 
-        List<OrderHistory> orderHistories = paginatedOrderHistory.getContent();
+        List<OrderHistory> allOrderHistories = paginatedAllOrderHistory.getContent();
+        List<OrderHistory> paidOrderHistories = paginatedPaidOrderHistory.getContent();
+        List<OrderHistory> createdOrderHistories = paginatedCreatedOrderHistory.getContent();
+
+        List<OrderHistory> orderHistories = new ArrayList<>();
+        orderHistories.addAll(allOrderHistories);
+        orderHistories.addAll(paidOrderHistories);
+        orderHistories.addAll(createdOrderHistories);
 
         Set<String> hostelIds = new HashSet<>();
         Set<String> planCodes = new HashSet<>();
@@ -192,7 +213,43 @@ public class OrderHistoryService {
         Map<String, Users> ownerMap = owners.stream()
                 .collect(Collectors.toMap(Users::getParentId, user -> user, (a, b) -> a));
 
-        List<OrderHistoryResponse> responseList = orderHistories.stream()
+        List<OrderHistoryResponse> orderHistoriesRes = mapOrderHistories(allOrderHistories,
+                hostelMap, hotelTypeMap, plansMap, usersMap, agentMap, ownerMap);
+
+        List<OrderHistoryResponse> paidOrderHistoriesRes = mapOrderHistories(paidOrderHistories,
+                hostelMap, hotelTypeMap, plansMap, usersMap, agentMap, ownerMap);
+
+        List<OrderHistoryResponse> createdOrderHistoriesRes = mapOrderHistories(createdOrderHistories,
+                hostelMap, hotelTypeMap, plansMap, usersMap, agentMap, ownerMap);
+
+        StatusOrderHistoryPagedResponse paidHistories = new StatusOrderHistoryPagedResponse(
+                page + 1, size, paginatedPaidOrderHistory.getTotalElements(),
+                paginatedPaidOrderHistory.getTotalPages(), paidOrderHistoriesRes
+        );
+
+        StatusOrderHistoryPagedResponse createdHistories = new StatusOrderHistoryPagedResponse(
+                page + 1, size, paginatedCreatedOrderHistory.getTotalElements(),
+                paginatedCreatedOrderHistory.getTotalPages(), createdOrderHistoriesRes
+        );
+
+        OrderHistoryPagedResponse response = new OrderHistoryPagedResponse(
+                totalRevenue, page + 1, size, paginatedAllOrderHistory.getTotalElements(),
+                paginatedAllOrderHistory.getTotalPages(), orderHistoriesRes, paidHistories,
+                createdHistories
+        );
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private List<OrderHistoryResponse> mapOrderHistories(List<OrderHistory> orderHistories,
+                                                         Map<String, HostelV1> hostelMap,
+                                                         Map<Integer, HotelType> hotelTypeMap,
+                                                         Map<String, Plans> plansMap,
+                                                         Map<String, Users> usersMap,
+                                                         Map<String, Agent> agentMap,
+                                                         Map<String, Users> ownerMap) {
+
+        return orderHistories.stream()
                 .map(orderHistory -> {
                     HostelV1 hostel = hostelMap.getOrDefault(orderHistory.getHostelId(), null);
                     Plans plan = plansMap.getOrDefault(orderHistory.getPlanCode(), null);
@@ -205,26 +262,6 @@ public class OrderHistoryService {
                     return new OrderHistoryMapper(hostel, hotelType,
                             plan, usersMap, agentMap, owner).apply(orderHistory);
                 }).toList();
-
-        List<OrderHistoryResponse> paidHistories = responseList.stream()
-                .filter(i -> OrderStatus.PAID.name().equals(i.orderStatus()))
-                .toList();
-
-        List<OrderHistoryResponse> createdHistories = responseList.stream()
-                .filter(i -> OrderStatus.CREATED.name().equals(i.orderStatus()))
-                .toList();
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("totalRevenue", totalRevenue);
-        response.put("currentPage", page + 1);
-        response.put("pageSize", size);
-        response.put("totalItems", paginatedOrderHistory.getTotalElements());
-        response.put("totalPages", paginatedOrderHistory.getTotalPages());
-        response.put("paidHistories", paidHistories);
-        response.put("createdHistories", createdHistories);
-        response.put("orderHistories", responseList);
-
-        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     public OrderHistory save(OrderHistory newOrder) {
