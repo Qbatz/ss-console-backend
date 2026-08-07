@@ -1,6 +1,7 @@
 package com.smartstay.console.dao;
 
 import com.smartstay.console.converters.*;
+import com.smartstay.console.dto.retainer.RetainerItems;
 import com.smartstay.console.dto.settlement.*;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -33,6 +34,9 @@ public class SettlementItems {
     @Column(columnDefinition = "TEXT")
     @Convert(converter = SettlementEBItemsConverter.class)
     private List<EBItems> ebItems;
+    @Column(columnDefinition = "TEXT")
+    @Convert(converter = SettlementRetainerItemsConverter.class)
+    private List<RetainerItems> retainerItems;
 
     private Double currentMonthPayableAmount;
     private Double currentMonthPaidAmount;
@@ -43,6 +47,7 @@ public class SettlementItems {
     private String invoiceId;
     private Double bookingBalance;
     private Double advanceBalance;
+    private Double retainerBalance;
     private Date createAt;
     private String createdBy;
 }
