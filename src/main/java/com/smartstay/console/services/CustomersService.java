@@ -1419,6 +1419,22 @@ public class CustomersService {
 
                 unpaidInvoices = invoiceV1Service.getInvoicesByIds(unpaidInvoicesIds);
 
+                Set<String> invoicesTypes = new HashSet<>();
+                invoicesTypes.add(InvoiceType.RENT.name());
+                invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
+
+                List<InvoicesV1> currentUnpaidInvoices = invoiceV1Service
+                        .getCurrentUnpaidInvoicesByInvoiceTypes(customerId, invoicesTypes,
+                                billingDates.currentBillStartDate());
+                unpaidInvoices.addAll(currentUnpaidInvoices);
+
+                if (advanceInvoice != null && !PaymentStatus.PAID.name().equals(advanceInvoice.getPaymentStatus())){
+                    unpaidInvoices.add(advanceInvoice);
+                }
+                if (bookingInvoice != null && !PaymentStatus.PAID.name().equals(bookingInvoice.getPaymentStatus())){
+                    unpaidInvoices.add(bookingInvoice);
+                }
+
                 for (InvoicesV1 unpaidInvoice : unpaidInvoices) {
                     unpaidInvoice.setCancelled(true);
                     unpaidInvoice.setCancelledDate(today);

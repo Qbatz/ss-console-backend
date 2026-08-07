@@ -63,6 +63,17 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
     List<InvoicesV1> findOlderUnpaidInvoicesByInvoiceTypes(String customerId, Set<String> invoiceTypes,
                                                            Date beforeDate, String paidName);
 
+    @Query("""
+            SELECT i FROM invoicesv1 i
+            WHERE i.customerId = :customerId
+                AND i.invoiceType IN :invoiceTypes
+                AND DATE(i.invoiceStartDate) >= DATE(:startDate)
+                AND i.isCancelled = false
+                AND i.paymentStatus != :paidName
+            """)
+    List<InvoicesV1> findCurrentUnpaidInvoicesByInvoiceTypes(String customerId, Set<String> invoiceTypes,
+                                                             Date startDate, String paidName);
+
     @Query(value = """
             SELECT * FROM invoicesv1
             WHERE customer_id = :customerId

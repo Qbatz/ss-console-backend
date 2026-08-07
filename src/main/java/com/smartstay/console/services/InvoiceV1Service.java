@@ -1185,6 +1185,14 @@ public class InvoiceV1Service {
                 beforeDate, paidName);
     }
 
+    public List<InvoicesV1> getCurrentUnpaidInvoicesByInvoiceTypes(String customerId, Set<String> invoiceTypes,
+                                                                   Date startDate){
+        String paidName = PaymentStatus.PAID.name();
+
+        return invoiceV1Repository.findCurrentUnpaidInvoicesByInvoiceTypes(customerId, invoiceTypes,
+                startDate, paidName);
+    }
+
     public List<InvoicesV1> getCurrentMonthInvoices(String customerId, String hostelId, Date startDate) {
         return invoiceV1Repository.findAllCurrentMonthInvoices(customerId, hostelId, startDate);
     }
