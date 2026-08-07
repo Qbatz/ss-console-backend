@@ -113,6 +113,7 @@ public class Utils {
     public static final String TRANSACTION_RECEIPT_URL_NOT_FOUND = "Transaction receipt url not found";
     public static final String INVOICE_URL_NOT_FOUND = "Invoice url not found";
     public static final String SUBSCRIPTION_NOT_FOUND = "Subscription not found";
+    public static final String SUBSCRIPTION_INVOICE_URL_NOT_FOUND = "Subscription invoice url not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";

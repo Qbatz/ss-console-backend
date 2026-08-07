@@ -58,4 +58,9 @@ public class OrderHistoryController {
                                            @RequestPart(value = "isManual", required = false) Boolean isManual){
         return orderHistoryService.uploadInvoice(orderHistoryId, invoice, isManual);
     }
+
+    @DeleteMapping("/invoice/{orderHistoryId}")
+    public ResponseEntity<?> deleteInvoice(@PathVariable(value = "orderHistoryId") Long orderHistoryId){
+        return orderHistoryService.deleteInvoice(orderHistoryId);
+    }
 }

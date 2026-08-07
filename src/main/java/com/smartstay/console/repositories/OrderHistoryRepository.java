@@ -22,7 +22,7 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
               AND COALESCE(o.paidAt, o.createdAt) < :endDate
               AND (
                    (:hostelIds IS NOT NULL AND o.hostelId IN :hostelIds)
-                OR (:userIds IS NOT NULL AND o.createdBy IN :userIds)
+                OR (:userIds IS NOT NULL AND o.paidBy IN :userIds)
               )
             ORDER BY COALESCE(o.paidAt, o.createdAt) DESC
             """)
@@ -40,7 +40,7 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
               AND COALESCE(o.paidAt, o.createdAt) < :endDate
               AND (
                    (:hostelIds IS NOT NULL AND o.hostelId IN :hostelIds)
-                OR (:userIds IS NOT NULL AND o.createdBy IN :userIds)
+                OR (:userIds IS NOT NULL AND o.paidBy IN :userIds)
               )
             ORDER BY COALESCE(o.paidAt, o.createdAt) DESC
             """)

@@ -1,10 +1,7 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.orderHistory.OrderHistoryMapper;
-import com.smartstay.console.config.Authentication;
-import com.smartstay.console.config.FilesConfig;
-import com.smartstay.console.config.RestTemplateLoggingInterceptor;
-import com.smartstay.console.config.UploadFileToS3;
+import com.smartstay.console.config.*;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.orderHistory.PaymentLinkGenerateDto;
 import com.smartstay.console.dto.orderHistory.PaymentLinkGenerateResDto;
@@ -61,6 +58,8 @@ public class OrderHistoryService {
     private UploadFileToS3 uploadFileToS3;
     @Autowired
     private AgentActivitiesService agentActivitiesService;
+    @Autowired
+    private S3Service s3Service;
 
     @Value("${PAYMENT_URL}")
     private String paymentUrl;
@@ -568,5 +567,62 @@ public class OrderHistoryService {
                 String.valueOf(subscription.getSubscriptionId()), oldSnapshot, newSnapshot);
 
         return new ResponseEntity<>(Utils.FILE_UPLOAD_SUCCESS, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> deleteInvoice(Long orderHistoryId)  {
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Payments.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        OrderHistory orderHistory = orderHistoryRepository.findByHistoryIdAndIsActiveTrue(orderHistoryId);
+        if (orderHistory == null){
+            return new ResponseEntity<>(Utils.ORDER_HISTORY_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<Subscription> subscriptions = subscriptionService.getSubscriptionByOrderId(orderHistoryId);
+        if (subscriptions.isEmpty()){
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (subscriptions.size() > 1){
+            return new ResponseEntity<>("Multiple subscription exists for this order", HttpStatus.BAD_REQUEST);
+        }
+
+        Subscription subscription = subscriptions.getFirst();
+        if (subscription == null){
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (subscription.getInvoiceUrl() == null){
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_INVOICE_URL_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (GenerationType.MANUAL.name().equals(subscription.getGenerationType())){
+            return new ResponseEntity<>("Manual invoice can not be deleted", HttpStatus.BAD_REQUEST);
+        }
+
+        SubscriptionSnapshot oldSnapshot = SnapshotUtility.toSnapshot(subscription);
+
+        try {
+            s3Service.deleteFile(subscription.getInvoiceUrl());
+        } catch (Exception e) {
+//            return new ResponseEntity<>("Failed to delete invoice file from S3",
+//                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        subscription.setInvoiceUrl(null);
+
+        subscription = subscriptionService.save(subscription);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.DELETE, Source.SUBSCRIPTION_INVOICE_URL,
+                String.valueOf(subscription.getSubscriptionId()), oldSnapshot, null);
+
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
 }

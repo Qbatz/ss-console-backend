@@ -162,7 +162,8 @@ public class AgentActivityUtil {
             case SMARTSTAY_FEATURES -> "Deleted a smartstay feature";
             case TRANSACTION -> "Deleted a transaction";
             case TRANSACTION_RECEIPT_URL -> "Deleted a transaction receipt";
-            case INVOICE_URL -> "Deleted an invoice url";
+            case INVOICE_URL -> "Deleted an invoice";
+            case SUBSCRIPTION_INVOICE_URL -> "Deleted a subscription invoice";
             default -> "Deleted successfully";
         };
     }
