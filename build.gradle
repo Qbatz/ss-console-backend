@@ -52,6 +52,8 @@ dependencies {
 
 	implementation 'org.apache.poi:poi-ooxml:5.5.1'
 
+	implementation("org.apache.pdfbox:pdfbox:3.0.8")
+
 	implementation platform('com.amazonaws:aws-java-sdk-bom:1.12.529')
 	implementation 'com.amazonaws:aws-java-sdk-s3'
 

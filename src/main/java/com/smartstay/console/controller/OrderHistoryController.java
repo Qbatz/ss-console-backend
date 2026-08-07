@@ -63,4 +63,14 @@ public class OrderHistoryController {
     public ResponseEntity<?> deleteInvoice(@PathVariable(value = "orderHistoryId") Long orderHistoryId){
         return orderHistoryService.deleteInvoice(orderHistoryId);
     }
+
+    @GetMapping("/download-invoice/{orderHistoryId}")
+    public ResponseEntity<?> downloadInvoice(@PathVariable(value = "orderHistoryId") Long orderHistoryId) {
+        return orderHistoryService.downloadInvoice(orderHistoryId);
+    }
+
+    @GetMapping("/export-invoice-pdf/{orderHistoryId}")
+    public ResponseEntity<?> exportInvoicePdf(@PathVariable(value = "orderHistoryId") Long orderHistoryId) {
+        return orderHistoryService.exportInvoicePdf(orderHistoryId);
+    }
 }

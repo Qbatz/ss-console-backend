@@ -3,6 +3,7 @@ package com.smartstay.console.services;
 import com.smartstay.console.Mapper.orderHistory.OrderHistoryMapper;
 import com.smartstay.console.config.*;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.files.FileData;
 import com.smartstay.console.dto.orderHistory.PaymentLinkGenerateDto;
 import com.smartstay.console.dto.orderHistory.PaymentLinkGenerateResDto;
 import com.smartstay.console.dto.subscription.SubscriptionSnapshot;
@@ -60,6 +61,8 @@ public class OrderHistoryService {
     private AgentActivitiesService agentActivitiesService;
     @Autowired
     private S3Service s3Service;
+    @Autowired
+    private PdfService pdfService;
 
     @Value("${PAYMENT_URL}")
     private String paymentUrl;
@@ -540,7 +543,7 @@ public class OrderHistoryService {
         String invoiceUrl = null;
         try {
             invoiceUrl = uploadFileToS3.uploadFileToS3(
-                    FilesConfig.convertMultipartToFileNew(invoice), "subscription/invoice");
+                    FilesConfig.convertMultipartToFileNew(invoice), "subscriptions");
         } catch (Exception e) {
             return new ResponseEntity<>(Utils.FILE_UPLOAD_FAILED, HttpStatus.BAD_REQUEST);
         }
@@ -624,5 +627,153 @@ public class OrderHistoryService {
                 String.valueOf(subscription.getSubscriptionId()), oldSnapshot, null);
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> downloadInvoice(Long orderHistoryId) {
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Payments.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        OrderHistory orderHistory = orderHistoryRepository
+                .findByHistoryIdAndIsActiveTrue(orderHistoryId);
+        if (orderHistory == null) {
+            return new ResponseEntity<>(Utils.ORDER_HISTORY_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<Subscription> subscriptions = subscriptionService
+                .getSubscriptionByOrderId(orderHistoryId);
+        if (subscriptions.isEmpty()) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (subscriptions.size() > 1) {
+            return new ResponseEntity<>("Multiple subscription exists for this order",
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        Subscription subscription = subscriptions.getFirst();
+        if (subscription == null){
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (subscription.getInvoiceUrl() == null) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_INVOICE_URL_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+
+            FileData fileData;
+            try {
+                fileData = s3Service.downloadFile(subscription.getInvoiceUrl());
+            } catch (Exception e) {
+                fileData = FilesConfig.downloadFileFromUrl(subscription.getInvoiceUrl());
+            }
+
+            MediaType mediaType;
+
+            try {
+                mediaType = MediaType.parseMediaType(fileData.contentType());
+            } catch (Exception e) {
+                mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+
+            headers.setContentType(mediaType);
+
+            headers.setContentDisposition(ContentDisposition.attachment()
+                            .filename(fileData.fileName())
+                            .build());
+
+            headers.setContentLength(fileData.content().length);
+
+            return new ResponseEntity<>(fileData.content(), headers, HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>("Failed to download invoice",
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public ResponseEntity<?> exportInvoicePdf(Long orderHistoryId) {
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Payments.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        OrderHistory orderHistory = orderHistoryRepository
+                .findByHistoryIdAndIsActiveTrue(orderHistoryId);
+        if (orderHistory == null) {
+            return new ResponseEntity<>(Utils.ORDER_HISTORY_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<Subscription> subscriptions = subscriptionService
+                .getSubscriptionByOrderId(orderHistoryId);
+        if (subscriptions.isEmpty()) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (subscriptions.size() > 1) {
+            return new ResponseEntity<>("Multiple subscription exists for this order",
+                    HttpStatus.BAD_REQUEST);
+        }
+
+        Subscription subscription = subscriptions.getFirst();
+        if (subscription == null){
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (subscription.getInvoiceUrl() == null) {
+            return new ResponseEntity<>(Utils.SUBSCRIPTION_INVOICE_URL_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+
+            FileData fileData;
+            try {
+                fileData = s3Service.downloadFile(subscription.getInvoiceUrl());
+            } catch (Exception e) {
+                fileData = FilesConfig.downloadFileFromUrl(subscription.getInvoiceUrl());
+            }
+
+            byte[] pdfBytes;
+            if ("application/pdf".equalsIgnoreCase(fileData.contentType())) {
+                pdfBytes = fileData.content();
+            } else {
+                pdfBytes = pdfService.convertToPdf(fileData.content(),
+                        fileData.contentType(), fileData.fileName());
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+
+            headers.setContentType(MediaType.APPLICATION_PDF);
+
+            headers.setContentDisposition(ContentDisposition.attachment()
+                    .filename(pdfService
+                            .getFileNameWithoutExtension(fileData.fileName())
+                            + ".pdf")
+                    .build());
+
+            headers.setContentLength(pdfBytes.length);
+
+            return new ResponseEntity<>(pdfBytes, headers, HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>("Failed to export invoice",
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
