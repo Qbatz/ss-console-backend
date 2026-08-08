@@ -1418,31 +1418,31 @@ public class CustomersService {
                         .collect(Collectors.toSet());
 
                 unpaidInvoices = invoiceV1Service.getInvoicesByIds(unpaidInvoicesIds);
+            }
 
-                Set<String> invoicesTypes = new HashSet<>();
-                invoicesTypes.add(InvoiceType.RENT.name());
-                invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
+            Set<String> invoicesTypes = new HashSet<>();
+            invoicesTypes.add(InvoiceType.RENT.name());
+            invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
 
-                List<InvoicesV1> currentUnpaidInvoices = invoiceV1Service
-                        .getCurrentUnpaidInvoicesByInvoiceTypes(customerId, invoicesTypes,
-                                billingDates.currentBillStartDate());
-                unpaidInvoices.addAll(currentUnpaidInvoices);
+            List<InvoicesV1> currentUnpaidInvoices = invoiceV1Service
+                    .getCurrentUnpaidInvoicesByInvoiceTypes(customerId, invoicesTypes,
+                            billingDates.currentBillStartDate());
+            unpaidInvoices.addAll(currentUnpaidInvoices);
 
-                if (advanceInvoice != null && !PaymentStatus.PAID.name().equals(advanceInvoice.getPaymentStatus())){
-                    unpaidInvoices.add(advanceInvoice);
-                }
-                if (bookingInvoice != null && !PaymentStatus.PAID.name().equals(bookingInvoice.getPaymentStatus())){
-                    unpaidInvoices.add(bookingInvoice);
-                }
+            if (advanceInvoice != null && !PaymentStatus.PAID.name().equals(advanceInvoice.getPaymentStatus())){
+                unpaidInvoices.add(advanceInvoice);
+            }
+            if (bookingInvoice != null && !PaymentStatus.PAID.name().equals(bookingInvoice.getPaymentStatus())){
+                unpaidInvoices.add(bookingInvoice);
+            }
 
-                for (InvoicesV1 unpaidInvoice : unpaidInvoices) {
-                    unpaidInvoice.setCancelled(true);
-                    unpaidInvoice.setCancelledDate(today);
-                    unpaidInvoice.setUpdatedBy(authentication.getName());
-                    unpaidInvoice.setUpdatedAt(today);
+            for (InvoicesV1 unpaidInvoice : unpaidInvoices) {
+                unpaidInvoice.setCancelled(true);
+                unpaidInvoice.setCancelledDate(today);
+                unpaidInvoice.setUpdatedBy(authentication.getName());
+                unpaidInvoice.setUpdatedAt(today);
 
-                    cancelledInvoices.add(unpaidInvoice);
-                }
+                cancelledInvoices.add(unpaidInvoice);
             }
 
             if (finalSettlementInfoRes != null){
