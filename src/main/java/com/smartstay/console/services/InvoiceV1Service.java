@@ -1330,7 +1330,8 @@ public class InvoiceV1Service {
 
             if (BillingModel.PREPAID.name().equals(billingRules.getBillingModel())){
 
-                updateFixedDatePrepaidInvoice(ebConfig, invoice, billingDates, customer, booking);
+                updateFixedDatePrepaidInvoice(ebConfig, invoice, billingDates, customer, booking,
+                        newJoiningDate);
 
             } else if (BillingModel.POSTPAID.name().equals(billingRules.getBillingModel())) {
 
@@ -1341,7 +1342,8 @@ public class InvoiceV1Service {
 
             if (BillingModel.PREPAID.name().equals(billingRules.getBillingModel())){
 
-                updateJoiningBasedDatePrepaidInvoice(ebConfig, invoice, billingDates, customer, booking);
+                updateJoiningBasedDatePrepaidInvoice(ebConfig, invoice, billingDates, customer, booking,
+                        newJoiningDate);
 
             } else if (BillingModel.POSTPAID.name().equals(billingRules.getBillingModel())) {
                 // joining based postpaid is not implemented
@@ -1351,7 +1353,7 @@ public class InvoiceV1Service {
 
     private void updateFixedDatePrepaidInvoice(ElectricityConfig ebConfig, InvoicesV1 invoice,
                                                BillingDates billingDates, Customers customer,
-                                               BookingsV1 booking) {
+                                               BookingsV1 booking, Date newJoiningDate) {
 
         if (invoice == null || billingDates == null || customer == null || booking == null ||
                 billingDates.currentBillStartDate() == null || billingDates.currentBillEndDate() == null) {
@@ -1381,6 +1383,16 @@ public class InvoiceV1Service {
                 }
             }
         }
+
+        Date invoiceStartDate;
+
+        if (Utils.compareWithTwoDates(newJoiningDate, billingDates.currentBillStartDate()) <= 0) {
+            invoiceStartDate = billingDates.currentBillStartDate();
+        } else {
+            invoiceStartDate = newJoiningDate;
+        }
+
+        Date invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, billingDates.dueDays());
 
         // EB
         List<ElectricityReadings> newReadings = new ArrayList<>();
@@ -1441,8 +1453,8 @@ public class InvoiceV1Service {
             Date endDate = null;
             long noOfDays = 0;
 
-            if (Utils.compareWithTwoDates(customersBedHistory.getStartDate(), billingDates.currentBillStartDate()) < 0){
-                startDate = billingDates.currentBillStartDate();
+            if (Utils.compareWithTwoDates(customersBedHistory.getStartDate(), invoiceStartDate) < 0){
+                startDate = invoiceStartDate;
             } else {
                 startDate = customersBedHistory.getStartDate();
             }
@@ -1546,9 +1558,9 @@ public class InvoiceV1Service {
             }
         }
 
-        invoice.setInvoiceStartDate(billingDates.currentBillStartDate());
+        invoice.setInvoiceStartDate(invoiceStartDate);
         invoice.setInvoiceEndDate(billingDates.currentBillEndDate());
-        invoice.setInvoiceDueDate(billingDates.dueDate());
+        invoice.setInvoiceDueDate(invoiceDueDate);
 
         invoice.getInvoiceItems().addAll(items);
 
@@ -1610,28 +1622,20 @@ public class InvoiceV1Service {
 
         Date invoiceStartDate;
 
-        if (Utils.compareWithTwoDates(newJoiningDate,
-                billingDates.currentBillStartDate()) <= 0) {
-
+        if (Utils.compareWithTwoDates(newJoiningDate, billingDates.currentBillStartDate()) <= 0) {
             invoiceStartDate = billingDates.currentBillStartDate();
-
         } else {
-
             invoiceStartDate = newJoiningDate;
         }
 
-        Date invoiceDueDate = Utils.addDaysToDate(
-                invoiceStartDate,
-                billingDates.dueDays());
+        Date invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, billingDates.dueDays());
 
         //--------------------------------------------------------
         // Rent
         //--------------------------------------------------------
 
-        List<CustomersBedHistory> bedHistories =
-                customerBedHistoryService.findBedHistoriesByCustomerIdAndDates(
-                        customer.getCustomerId(),
-                        billingDates.currentBillStartDate(),
+        List<CustomersBedHistory> bedHistories = customerBedHistoryService
+                .findBedHistoriesByCustomerIdAndDates(customer.getCustomerId(), billingDates.currentBillStartDate(),
                         billingDates.currentBillEndDate());
 
         double totalBedHistoryRent = 0.0;
@@ -1640,13 +1644,9 @@ public class InvoiceV1Service {
 
             Date startDate;
 
-            if (Utils.compareWithTwoDates(history.getStartDate(),
-                    billingDates.currentBillStartDate()) < 0) {
-
-                startDate = billingDates.currentBillStartDate();
-
+            if (Utils.compareWithTwoDates(history.getStartDate(), invoiceStartDate) < 0) {
+                startDate = invoiceStartDate;
             } else {
-
                 startDate = history.getStartDate();
             }
 
@@ -1864,7 +1864,7 @@ public class InvoiceV1Service {
 
     private void updateJoiningBasedDatePrepaidInvoice(ElectricityConfig ebConfig, InvoicesV1 invoice,
                                                       BillingDates billingDates, Customers customer,
-                                                      BookingsV1 booking) {
+                                                      BookingsV1 booking, Date newJoiningDate) {
 
         if (invoice == null || billingDates == null || customer == null || booking == null ||
                 billingDates.currentBillStartDate() == null || billingDates.currentBillEndDate() == null) {
@@ -1895,6 +1895,16 @@ public class InvoiceV1Service {
                 }
             }
         }
+
+        Date invoiceStartDate;
+
+        if (Utils.compareWithTwoDates(newJoiningDate, billingDates.currentBillStartDate()) <= 0) {
+            invoiceStartDate = billingDates.currentBillStartDate();
+        } else {
+            invoiceStartDate = newJoiningDate;
+        }
+
+        Date invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, billingDates.dueDays());
 
         // EB
         List<ElectricityReadings> newReadings = new ArrayList<>();
@@ -1955,8 +1965,8 @@ public class InvoiceV1Service {
             Date endDate = null;
             long noOfDays = 0;
 
-            if (Utils.compareWithTwoDates(customersBedHistory.getStartDate(), billingDates.currentBillStartDate()) < 0){
-                startDate = billingDates.currentBillStartDate();
+            if (Utils.compareWithTwoDates(customersBedHistory.getStartDate(), invoiceStartDate) < 0){
+                startDate = invoiceStartDate;
             } else {
                 startDate = customersBedHistory.getStartDate();
             }
@@ -2060,9 +2070,9 @@ public class InvoiceV1Service {
             }
         }
 
-        invoice.setInvoiceStartDate(billingDates.currentBillStartDate());
+        invoice.setInvoiceStartDate(invoiceStartDate);
         invoice.setInvoiceEndDate(billingDates.currentBillEndDate());
-        invoice.setInvoiceDueDate(billingDates.dueDate());
+        invoice.setInvoiceDueDate(invoiceDueDate);
 
         invoice.getInvoiceItems().addAll(items);
 
