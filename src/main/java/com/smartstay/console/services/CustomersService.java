@@ -14,6 +14,7 @@ import com.smartstay.console.dto.customers.CustomersSnapshot;
 import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
+import com.smartstay.console.dto.retainer.RetainerItems;
 import com.smartstay.console.dto.settlement.*;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
@@ -1401,6 +1402,7 @@ public class CustomersService {
             List<RentBreakUpInfoRes> rentBreakUpsRes = new ArrayList<>();
             List<OtherItemsRes> otherItemsRes = new ArrayList<>();
             List<CustomerWalletHistory> customerWalletHistories = new ArrayList<>();
+            List<RetainerInfoRes> retainerInfosRes = new ArrayList<>();
 
             CustomerFinalSettlementInfoRes finalSettlementInfoRes = response.customerFinalSettlementInfo();
             UnpaidInvoicesInfoRes unpaidInvoicesInfoRes = response.unpaidInvoicesInfo();
@@ -1408,6 +1410,7 @@ public class CustomersService {
             CustomerBookingInfoRes bookingInfoRes = response.customerBookingInfo();
             CustomerAdvanceInfoRes advanceInfoRes = response.customerAdvanceInfo();
             CustomerWalletInfoRes walletInfoRes = response.customerWalletInfo();
+            CustomerRetainerInfoRes retainerInfoRes = response.customerRetainerInfo();
 
             if (unpaidInvoicesInfoRes != null){
                 unpaidInvoicesRes = unpaidInvoicesInfoRes.unpaidInvoices() != null ?
@@ -1457,6 +1460,8 @@ public class CustomersService {
                         finalSettlementInfoRes.ebAmount() : 0;
                 double walletAmount = finalSettlementInfoRes.walletAmount() != null ?
                         finalSettlementInfoRes.walletAmount() : 0;
+                double retainerBalanceAmount = finalSettlementInfoRes.retainerBalanceAmount() != null ?
+                        finalSettlementInfoRes.retainerBalanceAmount() : 0;
                 double discountAmount = finalSettlementInfoRes.discountAmount() != null ?
                         finalSettlementInfoRes.discountAmount() : 0;
                 double refundableAdvanceAmount = finalSettlementInfoRes.refundableAdvance() != null ?
@@ -1501,7 +1506,7 @@ public class CustomersService {
 
                 totalAmountToBePaid = unpaidInvoicesAmount + currentMonthPayableRent - currentMonthPaidRent
                         + otherItemAmount + finalDeductionPendingAmount + ebAmount + walletAmount
-                        - discountAmount - refundableAdvanceAmount;
+                        - retainerBalanceAmount - discountAmount - refundableAdvanceAmount;
 
                 totalAmountToBePaid = Utils.roundOfDouble(totalAmountToBePaid);
             }
@@ -1526,6 +1531,10 @@ public class CustomersService {
 
             if (walletInfoRes != null){
                 walletHistoriesRes = walletInfoRes.walletHistory();
+            }
+
+            if (retainerInfoRes != null){
+                retainerInfosRes = retainerInfoRes.retainerInfos();
             }
 
             if (advanceInvoice != null) {
@@ -1641,6 +1650,11 @@ public class CustomersService {
 
             List<EBItems> settlementItemsEbItems = buildSettlementEbItems(hostelId, customerId, leavingDate);
 
+            List<RetainerItems> settlementRetainerItems = retainerInfosRes.stream()
+                    .map(i -> new RetainerItems(i.invoiceId(), i.invoiceNumber(), i.invoiceDate(),
+                            i.invoiceDate(), i.invoiceAmount(), i.redeemedAmount(), i.balanceAmount()))
+                    .toList();
+
             SettlementItems settlementItems = settlementItemsService
                     .getByInvoiceId(settlementInvoice.getInvoiceId());
             if (settlementItems == null){
@@ -1663,6 +1677,7 @@ public class CustomersService {
             settlementItems.setCurrentRentBreakUps(settlementItemsCurrentRentBreakups);
             settlementItems.setCurrentMonthOtherItems(settlementItemsCurrentOtherItems);
             settlementItems.setEbItems(settlementItemsEbItems);
+            settlementItems.setRetainerItems(settlementRetainerItems);
 
             if (customerWallet != null){
                 customerWallet.setAmount(0.0);
@@ -1762,13 +1777,16 @@ public class CustomersService {
 
         CustomerAdvanceInfoRes customerAdvanceInfoRes = buildAdvanceInfoRes(advanceInvoice);
 
+        CustomerRetainerInfoRes customerRetainerInfoRes = buildCustomerRetainerInfoRes(customer.getCustomerId());
+
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
                 customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
-                customerInfoRes);
+                customerInfoRes, customerRetainerInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
-                customerAdvanceInfoRes, customerDeductionsInfoRes, finalSettlementInfoRes);
+                customerAdvanceInfoRes, customerRetainerInfoRes, customerDeductionsInfoRes,
+                finalSettlementInfoRes);
     }
 
     private CustomerSettlementInfoRes buildFixedDateBasedPrepaidSettlementInfo(Customers customer, BookingsV1 booking,
@@ -1806,13 +1824,16 @@ public class CustomersService {
 
         CustomerAdvanceInfoRes customerAdvanceInfoRes = buildAdvanceInfoRes(advanceInvoice);
 
+        CustomerRetainerInfoRes customerRetainerInfoRes = buildCustomerRetainerInfoRes(customer.getCustomerId());
+
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
                 customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
-                customerInfoRes);
+                customerInfoRes, customerRetainerInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
-                customerAdvanceInfoRes, customerDeductionsInfoRes, finalSettlementInfoRes);
+                customerAdvanceInfoRes, customerRetainerInfoRes, customerDeductionsInfoRes,
+                finalSettlementInfoRes);
     }
 
     private CustomerSettlementInfoRes buildFixedDateBasedPostpaidSettlementInfo(Customers customer, BookingsV1 booking,
@@ -1850,13 +1871,16 @@ public class CustomersService {
 
         CustomerAdvanceInfoRes customerAdvanceInfoRes = buildAdvanceInfoRes(advanceInvoice);
 
+        CustomerRetainerInfoRes customerRetainerInfoRes = buildCustomerRetainerInfoRes(customer.getCustomerId());
+
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
                 customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
-                customerInfoRes);
+                customerInfoRes, customerRetainerInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
-                customerAdvanceInfoRes, customerDeductionsInfoRes, finalSettlementInfoRes);
+                customerAdvanceInfoRes, customerRetainerInfoRes, customerDeductionsInfoRes,
+                finalSettlementInfoRes);
     }
 
     private CustomerSettlementInfoRes buildJoiningBasedPrepaidSettlementInfo(Customers customer,
@@ -1896,13 +1920,16 @@ public class CustomersService {
 
         CustomerAdvanceInfoRes customerAdvanceInfoRes = buildAdvanceInfoRes(advanceInvoice);
 
+        CustomerRetainerInfoRes customerRetainerInfoRes = buildCustomerRetainerInfoRes(customer.getCustomerId());
+
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
                 customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
-                customerInfoRes);
+                customerInfoRes, customerRetainerInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
-                customerAdvanceInfoRes, customerDeductionsInfoRes, finalSettlementInfoRes);
+                customerAdvanceInfoRes, customerRetainerInfoRes, customerDeductionsInfoRes,
+                finalSettlementInfoRes);
     }
 
     private CustomerFinalSettlementInfoRes buildFinalSettlementInfoRes(CustomerEbInfoRes customerEbInfoRes,
@@ -1910,7 +1937,8 @@ public class CustomersService {
                                                                        UnpaidInvoicesInfoRes unpaidInvoicesInfoRes,
                                                                        CustomerRentInfoRes customerRentInfoRes,
                                                                        CustomerDeductionsInfoRes customerDeductionsInfoRes,
-                                                                       CustomerInfoRes customerInfoRes) {
+                                                                       CustomerInfoRes customerInfoRes,
+                                                                       CustomerRetainerInfoRes customerRetainerInfoRes) {
 
         boolean isBookingOrAdvancePaid = false;
         double availableAmountToRedeem = 0;
@@ -1991,9 +2019,15 @@ public class CustomersService {
                     customerWalletInfoRes.walletAmount() : 0.0;
         }
 
+        double retainerBalanceAmount = 0;
+        if (customerRetainerInfoRes != null){
+            retainerBalanceAmount = customerRetainerInfoRes.totalBalanceAmount() != null ?
+                    customerRetainerInfoRes.totalBalanceAmount() : 0.0;
+        }
+
         double totalRefundableAdvance = 0.0;
         double totalAmountToBePaid = unpaidInvoicesTotalAmount + ebAmount +
-                walletAmount + currentMonthTotalAmount;
+                walletAmount + currentMonthTotalAmount - retainerBalanceAmount;
         double paidAmount = unpaidInvoicesPaidAmount + currentRentPaidAmount;
         double pendingRent = unpaidInvoicesUnPaidAmount + currentMonthPendingAmount;
 
@@ -2011,9 +2045,9 @@ public class CustomersService {
                 Utils.roundOfDoubleTo2Digits(pendingRent), Utils.roundOfDoubleTo2Digits(currentPayableRent),
                 Utils.roundOfDoubleTo2Digits(currentRentPaidAmount), Utils.roundOfDoubleTo2Digits(pendingAmount),
                 Utils.roundOfDoubleTo2Digits(pendingDeductionAmount), Utils.roundOfDoubleTo2Digits(ebAmount),
-                Utils.roundOfDoubleTo2Digits(walletAmount), Utils.roundOfDoubleTo2Digits(discountAmount),
-                Utils.roundOfDoubleTo2Digits(totalRefundableAdvance), isRefundable,
-                Utils.roundOfDoubleTo2Digits(totalRefundableRent)
+                Utils.roundOfDoubleTo2Digits(walletAmount), Utils.roundOfDoubleTo2Digits(retainerBalanceAmount),
+                Utils.roundOfDoubleTo2Digits(discountAmount), Utils.roundOfDoubleTo2Digits(totalRefundableAdvance),
+                isRefundable, Utils.roundOfDoubleTo2Digits(totalRefundableRent)
         );
     }
 
@@ -3811,6 +3845,44 @@ public class CustomersService {
                 }).toList();
     }
 
+    private CustomerRetainerInfoRes buildCustomerRetainerInfoRes(String customerId) {
+
+        Set<String> invoiceTypes = new HashSet<>();
+        invoiceTypes.add(InvoiceType.EB_HOLDING.name());
+        invoiceTypes.add(InvoiceType.AMOUNT_HOLDING.name());
+
+        List<InvoicesV1> retainerInvoices = invoiceV1Service
+                .getAvailableRetainerInvoicesByCustomerIdAndInvoiceTypes(customerId, invoiceTypes);
+        if (retainerInvoices == null){
+            retainerInvoices = new ArrayList<>();
+        }
+
+        double totalRetainerAmount = 0;
+        double totalBalanceAmount = 0;
+        List<RetainerInfoRes> retainerInfoRes = new ArrayList<>();
+        for (InvoicesV1 retainerInvoice : retainerInvoices){
+            double totalAmount = retainerInvoice.getTotalAmount() != null ?
+                    retainerInvoice.getTotalAmount() : 0;
+            double balanceAmount = retainerInvoice.getBalanceAmount() != null ?
+                    retainerInvoice.getBalanceAmount() : 0;
+            totalRetainerAmount += totalAmount;
+            totalBalanceAmount += balanceAmount;
+
+            Date invoiceDate = retainerInvoice.getInvoiceStartDate();
+            if (retainerInvoice.getInvoiceDate() != null) {
+                invoiceDate = retainerInvoice.getInvoiceDate();
+            }
+
+            double redeemedAmount = totalAmount - balanceAmount;
+
+            retainerInfoRes.add(new RetainerInfoRes(retainerInvoice.getInvoiceId(), retainerInvoice.getInvoiceNumber(),
+                    Utils.dateToString(invoiceDate), totalAmount, redeemedAmount, balanceAmount));
+        }
+
+        return new CustomerRetainerInfoRes(retainerInvoices.size(), totalRetainerAmount, totalBalanceAmount,
+                retainerInfoRes);
+    }
+
     @Transactional
     public ResponseEntity<?> editJoiningDate(CustomerJoiningDatePayload payload) {
 
@@ -4050,8 +4122,10 @@ public class CustomersService {
 
         for (BillingDates billingDates : expectedBillingPeriods){
 
-            BillingPeriod key = new BillingPeriod(billingDates.currentBillStartDate(),
-                    billingDates.currentBillEndDate());
+            BillingPeriod key = new BillingPeriod(
+                    Utils.getStartOfDay(billingDates.currentBillStartDate()),
+                    Utils.getStartOfDay(billingDates.currentBillEndDate())
+            );
 
             expectedKeys.add(key);
 

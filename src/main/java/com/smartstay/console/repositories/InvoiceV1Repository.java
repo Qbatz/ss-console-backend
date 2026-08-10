@@ -96,4 +96,13 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
                                                                @Param("afterDate") Date afterDate);
 
     List<InvoicesV1> findByCustomerIdAndInvoiceTypeIn(String customerId, Set<String> invoiceTypes);
+
+    @Query("""
+            SELECT i FROM invoicesv1 i
+            WHERE i.customerId = :customerId
+                AND i.invoiceType IN :invoiceTypes
+                AND i.balanceAmount > 0
+                AND i.isCancelled = false
+            """)
+    List<InvoicesV1> findAvailableRetainerInvoicesByCustomerIdAndInvoiceTypes(String customerId, Set<String> invoiceTypes);
 }

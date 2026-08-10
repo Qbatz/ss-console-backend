@@ -2050,4 +2050,9 @@ public class InvoiceV1Service {
 
         return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
+
+    public List<InvoicesV1> getAvailableRetainerInvoicesByCustomerIdAndInvoiceTypes(String customerId,
+                                                                                    Set<String> invoiceTypes) {
+        return invoiceV1Repository.findAvailableRetainerInvoicesByCustomerIdAndInvoiceTypes(customerId, invoiceTypes);
+    }
 }
