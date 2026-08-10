@@ -1403,6 +1403,7 @@ public class CustomersService {
             List<OtherItemsRes> otherItemsRes = new ArrayList<>();
             List<CustomerWalletHistory> customerWalletHistories = new ArrayList<>();
             List<RetainerInfoRes> retainerInfosRes = new ArrayList<>();
+            List<InvoicesV1> retainerInvoices = new ArrayList<>();
 
             CustomerFinalSettlementInfoRes finalSettlementInfoRes = response.customerFinalSettlementInfo();
             UnpaidInvoicesInfoRes unpaidInvoicesInfoRes = response.unpaidInvoicesInfo();
@@ -1535,6 +1536,13 @@ public class CustomersService {
 
             if (retainerInfoRes != null){
                 retainerInfosRes = retainerInfoRes.retainerInfos();
+                retainerInvoices = retainerInfoRes.retainerInvoices();
+            }
+
+            for (InvoicesV1 retainerInvoice : retainerInvoices){
+                retainerInvoice.setBalanceAmount(0.0);
+                retainerInvoice.setUpdatedBy(authentication.getName());
+                retainerInvoice.setUpdatedAt(today);
             }
 
             if (advanceInvoice != null) {
@@ -1724,6 +1732,7 @@ public class CustomersService {
                 invoiceV1Service.save(advanceInvoice);
             }
             invoiceV1Service.saveAll(cancelledInvoices);
+            invoiceV1Service.saveAll(retainerInvoices);
             bedService.save(bed);
             bookingsService.save(booking);
             customerBedHistoryService.save(latestBedHistory);
@@ -3880,7 +3889,7 @@ public class CustomersService {
         }
 
         return new CustomerRetainerInfoRes(retainerInvoices.size(), totalRetainerAmount, totalBalanceAmount,
-                retainerInfoRes);
+                retainerInfoRes, retainerInvoices);
     }
 
     @Transactional
