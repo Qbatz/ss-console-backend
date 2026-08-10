@@ -176,6 +176,19 @@ public class InvoiceV1Service {
                 .map(WalltetItems::getWalletId)
                 .collect(Collectors.toSet());
 
+        Set<String> retainerInvoiceIds = settlementItems.stream()
+                .map(SettlementItems::getRetainerItems)
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .map(RetainerItems::invoiceId)
+                .collect(Collectors.toSet());
+
+        List<InvoicesV1> retainerInvoices = invoiceV1Repository.findAllByInvoiceIdIn(retainerInvoiceIds);
+
+        Map<String, InvoicesV1> retainerInvoiceMap = retainerInvoices.stream()
+                .collect(Collectors.toMap(InvoicesV1::getInvoiceId,
+                        Function.identity(), (a, b) -> a));
+
         List<CustomerWalletHistory> customerWalletHistories = customerWalletHistoryService
                 .getByCustomerWalletHistoryIds(cwhIds);
 
@@ -197,6 +210,7 @@ public class InvoiceV1Service {
         List<CustomerWalletHistory> cwhList = new ArrayList<>();
         List<SettlementItems> settlementItemsList = new ArrayList<>();
         List<Customers> walletUpdateCustomers = new ArrayList<>();
+        List<InvoicesV1> updatableRetainerInvoices = new ArrayList<>();
 
         Date today = new Date();
 
@@ -329,6 +343,25 @@ public class InvoiceV1Service {
                     if (updateCustomerWallet){
                         walletUpdateCustomers.add(customer);
                     }
+
+                    List<RetainerItems> retainerItems = settlementItem.getRetainerItems();
+
+                    if (retainerItems != null && !retainerItems.isEmpty()){
+
+                        for (RetainerItems retainerItem : retainerItems) {
+
+                            InvoicesV1 retainerInvoice = retainerInvoiceMap
+                                    .getOrDefault(retainerItem.invoiceId(), null);
+
+                            if (retainerInvoice != null){
+                                retainerInvoice.setBalanceAmount(retainerItem.availableAmount());
+                                retainerInvoice.setUpdatedBy(authentication.getName());
+                                retainerInvoice.setUpdatedAt(today);
+
+                                updatableRetainerInvoices.add(retainerInvoice);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -338,6 +371,7 @@ public class InvoiceV1Service {
         customerBedHistoryService.saveAll(customersBedHistoryList);
         customersService.saveAll(customersList);
         invoiceV1Repository.saveAll(cancelledInvoicesList);
+        invoiceV1Repository.saveAll(updatableRetainerInvoices);
         customerWalletHistoryService.saveAll(cwhList);
 
         Set<String> walletUpdateCustomerIds = walletUpdateCustomers.stream()
