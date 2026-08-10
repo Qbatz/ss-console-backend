@@ -4015,12 +4015,14 @@ public class CustomersService {
             if (oldJoiningInvoice != null) {
 
                 BillingPeriod expectedKey = new BillingPeriod(
-                        newJoiningBillingDates.currentBillStartDate(),
-                        newJoiningBillingDates.currentBillEndDate());
+                        Utils.getStartOfDay(newJoiningBillingDates.currentBillStartDate()),
+                        Utils.getStartOfDay(newJoiningBillingDates.currentBillEndDate())
+                );
 
                 BillingPeriod existingKey = new BillingPeriod(
-                        oldJoiningInvoice.getInvoiceStartDate(),
-                        oldJoiningInvoice.getInvoiceEndDate());
+                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceStartDate()),
+                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceEndDate())
+                );
 
                 invoiceV1Service.updateInvoice(
                         billingRules,
@@ -4044,12 +4046,14 @@ public class CustomersService {
             if (newJoiningInvoice != null) {
 
                 BillingPeriod expectedKey = new BillingPeriod(
-                        newJoiningBillingDates.currentBillStartDate(),
-                        newJoiningBillingDates.currentBillEndDate());
+                        Utils.getStartOfDay(newJoiningBillingDates.currentBillStartDate()),
+                        Utils.getStartOfDay(newJoiningBillingDates.currentBillEndDate())
+                );
 
                 BillingPeriod existingKey = new BillingPeriod(
-                        newJoiningInvoice.getInvoiceStartDate(),
-                        newJoiningInvoice.getInvoiceEndDate());
+                        Utils.getStartOfDay(newJoiningInvoice.getInvoiceStartDate()),
+                                Utils.getStartOfDay(newJoiningInvoice.getInvoiceEndDate())
+                );
 
                 invoiceV1Service.updateInvoice(
                         billingRules,
@@ -4088,12 +4092,14 @@ public class CustomersService {
                 }
 
                 BillingPeriod updatedKey = new BillingPeriod(
-                        recalculatedBillingDates.currentBillStartDate(),
-                        recalculatedBillingDates.currentBillEndDate());
+                        Utils.getStartOfDay(recalculatedBillingDates.currentBillStartDate()),
+                        Utils.getStartOfDay(recalculatedBillingDates.currentBillEndDate())
+                );
 
                 BillingPeriod existingKey = new BillingPeriod(
-                        oldJoiningInvoice.getInvoiceStartDate(),
-                        oldJoiningInvoice.getInvoiceEndDate());
+                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceStartDate()),
+                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceEndDate())
+                );
 
                 invoiceV1Service.updateInvoice(
                         billingRules,
@@ -4140,8 +4146,10 @@ public class CustomersService {
 
         for (InvoicesV1 invoice : existingInvoices){
 
-            BillingPeriod key = new BillingPeriod(invoice.getInvoiceStartDate(),
-                    invoice.getInvoiceEndDate());
+            BillingPeriod key = new BillingPeriod(
+                    Utils.getStartOfDay(invoice.getInvoiceStartDate()),
+                    Utils.getStartOfDay(invoice.getInvoiceEndDate())
+            );
 
             if (!expectedKeys.contains(key)) {
                 deletableInvoiceIds.add(invoice.getInvoiceId());

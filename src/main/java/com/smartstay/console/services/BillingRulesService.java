@@ -92,6 +92,8 @@ public class BillingRulesService {
 
     public BillingDates computeBillingDates(BillingRules billingRules, Date requestedDate) {
 
+        requestedDate = Utils.getStartOfDay(requestedDate);
+
         int billStartDate = billingRules != null ? billingRules.getBillingStartDate() : 1;
         int billingRuleDueDate = billingRules != null ? billingRules.getBillDueDays() : 10;
 
@@ -131,6 +133,9 @@ public class BillingRulesService {
     }
 
     public BillingDates computeJoiningBasedBillingDates(BillingRules billingRules, Date joiningDate, Date requestedDate) {
+
+        joiningDate = Utils.getStartOfDay(joiningDate);
+        requestedDate = Utils.getStartOfDay(requestedDate);
 
         int billStartDate = 1;
         boolean hasGracePeriod = false;
