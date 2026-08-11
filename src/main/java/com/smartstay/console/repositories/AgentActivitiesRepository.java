@@ -13,16 +13,18 @@ import java.util.Set;
 @Repository
 public interface AgentActivitiesRepository extends JpaRepository<AgentActivities, Long> {
 
-    @Query("""
-            select aa
-            from AgentActivities aa
-            where aa.agentId in :agentIds
-            and aa.createdAt = (
-                select max(aa1.createdAt)
-                from AgentActivities aa1
-                where aa1.agentId = aa.agentId
-            )
-            """)
+    @Query(value = """
+            SELECT aa.*
+            FROM agent_activities aa
+            JOIN (
+                SELECT agent_id, MAX(created_at) AS created_at
+                FROM agent_activities
+                WHERE agent_id IN (:agentIds)
+                GROUP BY agent_id
+            ) latest
+            ON latest.agent_id = aa.agent_id
+            AND latest.created_at = aa.created_at
+            """, nativeQuery = true)
     List<AgentActivities> findLatestActivityByAgentIds(Set<String> agentIds);
 
     Page<AgentActivities> findAllByAgentIdOrderByCreatedAtDesc(String agentId, Pageable pageable);

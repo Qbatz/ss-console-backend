@@ -333,6 +333,37 @@ public class AgentRolesService {
         return false;
     }
 
+    public boolean checkPermission(AgentRoles agentRole, int moduleId, String type) {
+
+        if (agentRole != null) {
+
+            List<RolesPermission> rolesPermission = agentRole.getPermissions();
+
+            if (!rolesPermission.isEmpty()) {
+
+                for (RolesPermission permission : agentRole.getPermissions()) {
+
+                    if (permission.getModuleId() != moduleId) {
+                        continue;
+                    }
+
+                    return switch (type) {
+                        case Utils.PERMISSION_READ -> permission.isCanRead();
+                        case Utils.PERMISSION_WRITE -> permission.isCanWrite();
+                        case Utils.PERMISSION_UPDATE -> permission.isCanUpdate();
+                        case Utils.PERMISSION_DELETE -> permission.isCanDelete();
+                        default -> false;
+                    };
+
+                }
+
+                return false;
+            }
+        }
+
+        return false;
+    }
+
     public List<RolesPermission> permissionInsertion(List<Permission> inputPermissions) {
 
         Map<Integer, Permission> permissionMap = inputPermissions.stream()

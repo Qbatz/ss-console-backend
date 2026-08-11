@@ -25,4 +25,9 @@ public class TransactionsController {
                                                @Valid @RequestBody CustomerMobilePayload payload) {
         return transactionService.deleteTransactionById(transactionId, payload);
     }
+
+    @DeleteMapping("/receiptUrl/{transactionId}")
+    public ResponseEntity<?> deleteTransactionUrl(@PathVariable("transactionId") String transactionId) {
+        return transactionService.deleteTransactionUrl(transactionId);
+    }
 }

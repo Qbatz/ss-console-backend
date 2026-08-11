@@ -27,8 +27,8 @@ public interface CustomersAmenityRepository extends JpaRepository<CustomersAmeni
     @Query("""
             SELECT ca FROM CustomersAmenity ca
             WHERE ca.customerId = :customerId
-                AND DATE(ca.startDate) <= DATE(:endDate)
-                AND (ca.endDate IS NULL OR DATE(ca.endDate) >= DATE(:endDate))
+                AND (DATE(ca.startDate) <=  DATE(:date))
+                AND (ca.endDate IS NULL OR DATE(ca.endDate) >= DATE(:date))
             """)
-    List<CustomersAmenity> findAllByCustomerIdAndDatesBetween(String customerId, Date startDate, Date endDate);
+    List<CustomersAmenity> findAllByCustomerIdAndDateBetween(String customerId, Date date);
 }

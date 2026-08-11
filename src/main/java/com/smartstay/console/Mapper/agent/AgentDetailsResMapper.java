@@ -18,20 +18,23 @@ public class AgentDetailsResMapper implements Function<Agent, AgentDetailsRes> {
     Agent createdBy;
     Agent updatedBy;
     List<RelationalAgentResponse> hostelRelationsRes;
-    List<AgentSubscriptionRes> subscriptionRes;
+    List<AgentSubscriptionRes> paidSubscriptionRes;
+    List<AgentSubscriptionRes> trialSubscriptionRes;
 
     public AgentDetailsResMapper(List<AgentActivitiesRes> activities,
                                  AgentRoles agentRole,
                                  Agent createdBy,
                                  Agent updatedBy,
                                  List<RelationalAgentResponse> hostelRelationsRes,
-                                 List<AgentSubscriptionRes> subscriptionRes) {
+                                 List<AgentSubscriptionRes> paidSubscriptionRes,
+                                 List<AgentSubscriptionRes> trialSubscriptionRes) {
         this.activities = activities;
         this.agentRole = agentRole;
         this.createdBy = createdBy;
         this.updatedBy = updatedBy;
         this.hostelRelationsRes = hostelRelationsRes;
-        this.subscriptionRes = subscriptionRes;
+        this.paidSubscriptionRes = paidSubscriptionRes;
+        this.trialSubscriptionRes = trialSubscriptionRes;
     }
 
     @Override
@@ -65,6 +68,6 @@ public class AgentDetailsResMapper implements Function<Agent, AgentDetailsRes> {
                 agent.getMobile(), agent.getRoleId(), roleName, agent.getAgentZohoUserId(),
                 agent.getTicketLink(), agent.getIsProfileCompleted(), Utils.dateToString(agent.getCreatedAt()),
                 Utils.dateToTime(agent.getCreatedAt()), createdByName, updatedAtDate, updatedAtTime,
-                updatedByName, activities, hostelRelationsRes, subscriptionRes);
+                updatedByName, activities, hostelRelationsRes, paidSubscriptionRes, trialSubscriptionRes);
     }
 }

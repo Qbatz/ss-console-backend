@@ -2,7 +2,7 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
-import com.smartstay.console.dao.Subscription;
+import com.smartstay.console.dao.AgentRoles;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.responses.dashboard.DashboardResponse;
 import com.smartstay.console.utils.Utils;
@@ -11,7 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Set;
 
 @Service
@@ -43,23 +42,28 @@ public class DashboardService {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
         }
 
+        AgentRoles agentRole = agentRolesService.findById(agent.getRoleId());
+        if (agentRole == null) {
+            return new ResponseEntity<>(Utils.AGENT_ROLE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
         long hostelCount = 0;
         long ownersCount = 0;
         long agentCount = 0;
         long demoRequestCount = 0;
         long expiredSubscriptionsCount = 0;
 
-        if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+        if (agentRolesService.checkPermission(agentRole, ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
             hostelCount = hostelService.getHostelCount();
         }
-        if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
+        if (agentRolesService.checkPermission(agentRole, ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
             ownersCount = ownersService.getOwnerCount();
         }
-        if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Agents.getId(), Utils.PERMISSION_READ)) {
+        if (agentRolesService.checkPermission(agentRole, ModuleId.Agents.getId(), Utils.PERMISSION_READ)) {
             agentCount = agentService.getAgentCount();
         }
         demoRequestCount = demoRequestService.getDemoRequestCount();
-        if (agentRolesService.checkPermission(agent.getRoleId(), ModuleId.Subscriptions.getId(), Utils.PERMISSION_READ)) {
+        if (agentRolesService.checkPermission(agentRole, ModuleId.Subscriptions.getId(), Utils.PERMISSION_READ)) {
 
             Set<String> activeHostelIds = hostelService.getActiveHostelIds();
 

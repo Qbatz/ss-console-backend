@@ -12,10 +12,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class HostelService {
@@ -48,7 +45,11 @@ public class HostelService {
     }
 
     public List<HostelV1> getHostelsByHostelName(String hostelName) {
-        return hostelRepository.findByHostelNameContainingIgnoreCaseAndIsActiveTrueAndIsDeletedFalse(hostelName);
+        if (hostelName == null || hostelName.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        return hostelRepository.findByHostelName(hostelName.trim());
     }
 
     public BillingDates getCurrentBillStartAndEndDates(String hostelId) {

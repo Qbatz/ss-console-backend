@@ -63,6 +63,17 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
     List<InvoicesV1> findOlderUnpaidInvoicesByInvoiceTypes(String customerId, Set<String> invoiceTypes,
                                                            Date beforeDate, String paidName);
 
+    @Query("""
+            SELECT i FROM invoicesv1 i
+            WHERE i.customerId = :customerId
+                AND i.invoiceType IN :invoiceTypes
+                AND DATE(i.invoiceStartDate) >= DATE(:startDate)
+                AND i.isCancelled = false
+                AND i.paymentStatus != :paidName
+            """)
+    List<InvoicesV1> findCurrentUnpaidInvoicesByInvoiceTypes(String customerId, Set<String> invoiceTypes,
+                                                             Date startDate, String paidName);
+
     @Query(value = """
             SELECT * FROM invoicesv1
             WHERE customer_id = :customerId
@@ -74,4 +85,24 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
     List<InvoicesV1> findAllCurrentMonthInvoices(@Param("customerId") String customerId,
                                                  @Param("hostelId") String hostelId,
                                                  @Param("startDate") Date startDate);
+
+    @Query(value = """
+            SELECT * FROM invoicesv1
+            WHERE customer_id = :customerId
+                AND DATE(invoice_start_date) > DATE(:afterDate)
+                AND is_cancelled = false
+            """, nativeQuery = true)
+    List<InvoicesV1> findInvoicesByCustomerIdAndStartDateAfter(@Param("customerId") String customerId,
+                                                               @Param("afterDate") Date afterDate);
+
+    List<InvoicesV1> findByCustomerIdAndInvoiceTypeIn(String customerId, Set<String> invoiceTypes);
+
+    @Query("""
+            SELECT i FROM invoicesv1 i
+            WHERE i.customerId = :customerId
+                AND i.invoiceType IN :invoiceTypes
+                AND i.balanceAmount > 0
+                AND i.isCancelled = false
+            """)
+    List<InvoicesV1> findAvailableRetainerInvoicesByCustomerIdAndInvoiceTypes(String customerId, Set<String> invoiceTypes);
 }

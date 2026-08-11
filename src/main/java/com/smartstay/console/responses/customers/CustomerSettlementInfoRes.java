@@ -8,6 +8,7 @@ public record CustomerSettlementInfoRes(CustomerInfoRes customerInfo,
                                         CustomerWalletInfoRes customerWalletInfo,
                                         CustomerBookingInfoRes customerBookingInfo,
                                         CustomerAdvanceInfoRes customerAdvanceInfo,
+                                        CustomerRetainerInfoRes customerRetainerInfo,
                                         CustomerDeductionsInfoRes customerDeductionsInfo,
                                         CustomerFinalSettlementInfoRes customerFinalSettlementInfo) {
 }

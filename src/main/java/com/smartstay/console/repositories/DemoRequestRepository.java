@@ -15,9 +15,13 @@ import java.util.Date;
 public interface DemoRequestRepository extends JpaRepository<DemoRequest, Long> {
 
     @Query("""
-            select dr from DemoRequest dr
-            where (:name is null or :name = '' or
-                    lower(dr.name) like lower(concat('%', :name, '%')))
+            select dr
+            from DemoRequest dr
+            where (
+                :name is null or :name = '' or
+                lower(replace(coalesce(dr.name, ''), ' ', ''))
+                    like lower(concat('%', replace(:name, ' ', ''), '%'))
+            )
                 and (:status is null or :status = '' or
                     dr.demoRequestStatus = :status)
                 and (:agentId is null or :agentId = '' or

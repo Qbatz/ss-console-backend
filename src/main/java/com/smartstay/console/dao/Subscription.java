@@ -38,4 +38,6 @@ public class Subscription {
     private Boolean isActive;
     private String paymentProof;
     private String invoiceUrl;
+    // from generation type enum
+    private String generationType;
 }

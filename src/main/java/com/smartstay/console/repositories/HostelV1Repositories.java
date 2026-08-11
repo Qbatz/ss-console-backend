@@ -67,7 +67,11 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             SELECT h.*
             FROM hostelv1 h
             INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
-            WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+            WHERE (
+                :name IS NULL
+                OR LOWER(REPLACE(COALESCE(h.hostel_name, ''), ' ', ''))
+                    LIKE CONCAT('%', LOWER(REPLACE(:name, ' ', '')), '%')
+            )
                 AND (:startDate IS NULL OR h.created_at >= :startDate)
                 AND (:endDate IS NULL OR h.created_at < :endDate)
                 AND h.is_active = true
@@ -77,7 +81,7 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                     OR (:subActive = TRUE AND DATE(hp.current_plan_ends_at) >= CURRENT_DATE)
                     OR (:subActive = FALSE AND DATE(hp.current_plan_ends_at) < CURRENT_DATE)
                 )
-                AND h.hostel_id in :hostelIds
+                AND h.hostel_id IN :hostelIds
                 AND (
                     :trialStartDate IS NULL
                     OR (
@@ -98,7 +102,11 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             SELECT COUNT(*)
             FROM hostelv1 h
             INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
-            WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+            WHERE (
+                :name IS NULL
+                OR LOWER(REPLACE(COALESCE(h.hostel_name, ''), ' ', ''))
+                    LIKE CONCAT('%', LOWER(REPLACE(:name, ' ', '')), '%')
+            )
                 AND (:startDate IS NULL OR h.created_at >= :startDate)
                 AND (:endDate IS NULL OR h.created_at < :endDate)
                 AND h.is_active = true
@@ -108,7 +116,7 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                     OR (:subActive = TRUE AND DATE(hp.current_plan_ends_at) >= CURRENT_DATE)
                     OR (:subActive = FALSE AND DATE(hp.current_plan_ends_at) < CURRENT_DATE)
                 )
-                AND h.hostel_id in :hostelIds
+                AND h.hostel_id IN :hostelIds
                 AND (
                     :trialStartDate IS NULL
                     OR (
@@ -138,7 +146,11 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             SELECT h.*
             FROM hostelv1 h
             INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
-            WHERE (:name IS NULL OR LOWER(h.hostel_name) LIKE CONCAT('%', LOWER(:name), '%'))
+            WHERE (
+                :name IS NULL
+                OR LOWER(REPLACE(COALESCE(h.hostel_name, ''), ' ', ''))
+                    LIKE CONCAT('%', LOWER(REPLACE(:name, ' ', '')), '%')
+            )
                 AND (:startDate IS NULL OR h.created_at >= :startDate)
                 AND (:endDate IS NULL OR h.created_at < :endDate)
                 AND h.is_active = true
@@ -148,7 +160,7 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
                     OR (:subActive = TRUE AND DATE(hp.current_plan_ends_at) >= CURRENT_DATE)
                     OR (:subActive = FALSE AND DATE(hp.current_plan_ends_at) < CURRENT_DATE)
                 )
-                AND h.hostel_id in :hostelIds
+                AND h.hostel_id IN :hostelIds
                 AND (
                     :trialStartDate IS NULL
                     OR (
@@ -177,7 +189,15 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
 
     List<HostelV1> findAllByHostelIdInAndIsActiveTrueAndIsDeletedFalse(Set<String> hostelIds);
 
-    List<HostelV1> findByHostelNameContainingIgnoreCaseAndIsActiveTrueAndIsDeletedFalse(String hostelName);
+    @Query("""
+            select h
+            from hostelv1 h
+            where h.isActive = true
+                and h.isDeleted = false
+                and lower(replace(coalesce(h.hostelName, ''), ' ', ''))
+                    like lower(concat('%', replace(:hostelName, ' ', ''), '%'))
+            """)
+    List<HostelV1> findByHostelName(@Param("hostelName") String hostelName);
 
     List<HostelV1> findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(String parentId);
 

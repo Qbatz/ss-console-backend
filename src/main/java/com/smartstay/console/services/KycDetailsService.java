@@ -83,7 +83,7 @@ public class KycDetailsService {
 
         Set<String> customerIds = null;
         if (name != null && !name.isBlank()){
-            List<Customers> customers = customersService.getCustomersByName(name);
+            List<Customers> customers = customersService.getCustomersByName(name.trim());
 
             customerIds = customers.stream()
                     .map(Customers::getCustomerId)

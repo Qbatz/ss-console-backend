@@ -17,6 +17,7 @@ import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
 import com.smartstay.console.dto.plans.SmartstayFeaturesSnapshot;
 import com.smartstay.console.dto.settlementDetails.SettlementDetailsSnapshot;
+import com.smartstay.console.dto.subscription.SubscriptionSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketActivitySnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketNotesSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketSnapshot;
@@ -838,6 +839,35 @@ public class SnapshotUtility {
                 copyDate(s.getUpdatedAt()),
                 s.getCreatedBy(),
                 s.getUpdatedBy()
+        );
+    }
+
+    public static SubscriptionSnapshot toSnapshot(Subscription s) {
+
+        if (s == null) return null;
+
+        return new SubscriptionSnapshot(
+                s.getSubscriptionId(),
+                s.getSubscriptionNumber(),
+                s.getOrderId(),
+                s.getHostelId(),
+                s.getPlanCode(),
+                s.getPlanName(),
+                copyDate(s.getPlanStartsAt()),
+                copyDate(s.getPlanEndsAt()),
+                copyDate(s.getActivatedAt()),
+                s.getPaidAmount(),
+                s.getPlanAmount(),
+                s.getDiscount(),
+                s.getDiscountAmount(),
+                copyDate(s.getNextBillingAt()),
+                s.getCreatedBy(),
+                s.getCreatedByUserType(),
+                copyDate(s.getCreatedAt()),
+                s.getIsActive(),
+                s.getPaymentProof(),
+                s.getInvoiceUrl(),
+                s.getGenerationType()
         );
     }
 

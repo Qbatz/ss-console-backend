@@ -53,4 +53,9 @@ public class InvoiceController {
                                                         @PathVariable("invoiceId") String invoiceId) {
         return invoiceService.updateAdvanceInvoiceAmount(hostelId, invoiceId);
     }
+
+    @DeleteMapping("/invoiceUrl/{invoiceId}")
+    public ResponseEntity<?> deleteInvoiceUrl(@PathVariable("invoiceId") String invoiceId) {
+        return invoiceService.deleteInvoiceUrl(invoiceId);
+    }
 }

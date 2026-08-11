@@ -28,8 +28,8 @@ public interface ElectricityReadingRepository extends JpaRepository<ElectricityR
                 AND room_id = :roomId
                 AND DATE(bill_start_date) <= DATE(:endDate)
                 AND DATE(bill_end_date) >= DATE(:startDate)
-                AND bill_status='INVOICE_NOT_GENERATED'
-                AND is_first_entry=false
+                AND bill_status = 'INVOICE_NOT_GENERATED'
+                AND is_first_entry = false
             """, nativeQuery = true)
     List<ElectricityReadings> findPendingReadingsBetweenDates(@Param("hostelId") String hostelId,
                                                               @Param("roomId") Integer roomId,
@@ -37,15 +37,32 @@ public interface ElectricityReadingRepository extends JpaRepository<ElectricityR
                                                               @Param("endDate") Date endDate);
 
     @Query(value = """
-            SELECT * FROM electricity_readings er
-            WHERE er.entry_date = (
-                SELECT MAX(er2.entry_date)
-                FROM electricity_readings er2
-                WHERE er2.room_id = er.room_id)
-              AND hostel_id=:hostelId
-              AND room_id in (:roomIds)
-            ORDER BY er.entry_date DESC
+            SELECT * FROM electricity_readings
+            WHERE hostel_id = :hostelId
+                AND DATE(bill_start_date) <= DATE(:endDate)
+                AND DATE(bill_end_date) >= DATE(:startDate)
+                AND bill_status = 'INVOICE_NOT_GENERATED'
+                AND is_first_entry = false
+            """, nativeQuery = true)
+    List<ElectricityReadings> findPendingReadingsBetweenDates(@Param("hostelId") String hostelId,
+                                                              @Param("startDate") Date startDate,
+                                                              @Param("endDate") Date endDate);
+
+    @Query(value = """
+            SELECT er.*
+            FROM electricity_readings er
+            WHERE er.id = (
+               SELECT er2.id
+               FROM electricity_readings er2
+               WHERE er2.room_id = er.room_id
+               ORDER BY er2.entry_date DESC, er2.id DESC
+               LIMIT 1
+            )
+            AND er.hostel_id = :hostelId
+            AND er.room_id IN (:roomIds)
             """, nativeQuery = true)
     List<ElectricityReadings> findLatestEntriesByHostelIdAndRoomIds(@Param("hostelId") String hostelId,
                                                                     @Param("roomIds") Set<Integer> roomIds);
+
+    List<ElectricityReadings> findAllByIdIn(List<Integer> missingReadingIds);
 }

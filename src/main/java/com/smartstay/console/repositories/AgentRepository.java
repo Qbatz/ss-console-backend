@@ -72,18 +72,21 @@ public interface AgentRepository extends JpaRepository<Agent, String> {
             where a.isActive = :isActive
                 and a.isMockAgent = false
                 and (
-                     :roleId is null or a.roleId = :roleId
+                    :roleId is null or a.roleId = :roleId
                 )
                 and (
                     :name is null or :name = '' or
-                    lower(a.firstName) like lower(concat('%', :name, '%')) or
-                    lower(a.lastName) like lower(concat('%', :name, '%')) or
-                    LOWER(CONCAT(
-                         COALESCE(a.firstName, ''),
-                         ' ',
-                         COALESCE(a.lastName, '')
-                     )) LIKE LOWER(CONCAT('%', TRIM(:name), '%')) or
-                    lower(a.agentEmailId) like lower(concat('%', :name, '%'))
+                    lower(replace(coalesce(a.firstName, ''), ' ', ''))
+                        like lower(concat('%', replace(:name, ' ', ''), '%')) or
+                    lower(replace(coalesce(a.lastName, ''), ' ', ''))
+                        like lower(concat('%', replace(:name, ' ', ''), '%')) or
+                    lower(concat(
+                        replace(coalesce(a.firstName, ''), ' ', ''),
+                        replace(coalesce(a.lastName, ''), ' ', '')
+                    ))
+                        like lower(concat('%', replace(:name, ' ', ''), '%')) or
+                    lower(replace(coalesce(a.agentEmailId, ''), ' ', ''))
+                        like lower(concat('%', replace(:name, ' ', ''), '%'))
                 )
             order by a.createdAt desc
             """)

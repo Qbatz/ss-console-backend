@@ -9,8 +9,10 @@ import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Date;
 
@@ -48,5 +50,27 @@ public class OrderHistoryController {
     public ResponseEntity<?> sharePaymentLinkToWhatsapp(@PathVariable(value = "hostelId") String hostelId,
                                                         @RequestBody @Valid PaymentLinkSharePayload payload) {
         return orderHistoryService.sharePaymentLinkToWhatsapp(hostelId, payload);
+    }
+
+    @PostMapping(value = "/upload-invoice/{orderHistoryId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> uploadInvoice(@PathVariable(value = "orderHistoryId") Long orderHistoryId,
+                                           @RequestPart(value = "invoice") MultipartFile invoice,
+                                           @RequestPart(value = "isManual", required = false) Boolean isManual){
+        return orderHistoryService.uploadInvoice(orderHistoryId, invoice, isManual);
+    }
+
+    @DeleteMapping("/invoice/{orderHistoryId}")
+    public ResponseEntity<?> deleteInvoice(@PathVariable(value = "orderHistoryId") Long orderHistoryId){
+        return orderHistoryService.deleteInvoice(orderHistoryId);
+    }
+
+    @GetMapping("/download-invoice/{orderHistoryId}")
+    public ResponseEntity<?> downloadInvoice(@PathVariable(value = "orderHistoryId") Long orderHistoryId) {
+        return orderHistoryService.downloadInvoice(orderHistoryId);
+    }
+
+    @GetMapping("/export-invoice-pdf/{orderHistoryId}")
+    public ResponseEntity<?> exportInvoicePdf(@PathVariable(value = "orderHistoryId") Long orderHistoryId) {
+        return orderHistoryService.exportInvoicePdf(orderHistoryId);
     }
 }

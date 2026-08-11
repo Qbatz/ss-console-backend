@@ -105,6 +105,15 @@ public class Utils {
     public static final String BANK_NOT_FOUND = "Bank not found";
     public static final String ADVANCE_NOT_FOUND = "Advance not found";
     public static final String KYC_DETAILS_NOT_FOUND = "Kyc details not found";
+    public static final String SETTLEMENT_DETAILS_NOT_FOUND = "SettlementDetails not found";
+    public static final String BILLING_RULE_NOT_FOUND = "Billing rule not found";
+    public static final String AGENT_ROLE_NOT_FOUND = "Agent role not found";
+    public static final String BILLING_DATES_NOT_FOUND = "Billing dates not found";
+    public static final String EB_CONFIG_NOT_FOUND = "Eb config not found";
+    public static final String TRANSACTION_RECEIPT_URL_NOT_FOUND = "Transaction receipt url not found";
+    public static final String INVOICE_URL_NOT_FOUND = "Invoice url not found";
+    public static final String SUBSCRIPTION_NOT_FOUND = "Subscription not found";
+    public static final String SUBSCRIPTION_INVOICE_URL_NOT_FOUND = "Subscription invoice url not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -140,6 +149,7 @@ public class Utils {
     public static final String SUBSCRIPTION_INACTIVE = "Inactive";
     public static final String SUBSCRIPTION_ACTIVE = "Active";
     public static final String SUBSCRIPTION_NOT_ACTIVE = "Subscription is not active for this hostel";
+    public static final String CUSTOMER_NOT_ACTIVE = "Customer not active";
 
     public static final String IS_NOT_FIXED_DATE = "Type of billing is not fixed date";
     public static final String IS_NOT_JOINING_BASED = "Type of billing is not joining date based";
@@ -163,6 +173,7 @@ public class Utils {
     public static final String PRIORITY_REQUIRED = "Priority is required";
     public static final String TRIAL_DAYS_REASON_REQUIRED = "Trial days reason is required";
     public static final String COMMENTS_REQUIRED_FOR_REASSIGN_STAFF = "Comments is required for reassigning staff";
+    public static final String PAID_AT_DATE_TIME_IS_REQUIRED = "Paid at date time is required";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
@@ -179,6 +190,7 @@ public class Utils {
     public static final String CANNOT_EXTEND_FREE_TRIAL_ANY_MORE = "Cannot extend free trial anymore";
     public static final String THIS_USER_IS_NOT_AN_OWNER = "This user is not an owner";
     public static final String FILE_UPLOAD_FAILED = "File upload failed";
+    public static final String FILE_UPLOAD_SUCCESS = "File upload success";
     public static final String COLUMNS_CAN_NOT_BE_EMPTY = "Columns can not be empty";
     public static final String COLUMN_FILTER_CAN_NOT_BE_NULL = "Column filter cannot be null";
     public static final String ORDER_CAN_NOT_BE_NEGATIVE = "Order cannot be negative";
@@ -582,7 +594,7 @@ public class Utils {
 
     }
 
-    public static Double roundOfDouble(Double number) {
+    public static double roundOfDouble(Double number) {
         if (number == null){
             return 0d;
         }
@@ -708,12 +720,18 @@ public class Utils {
     }
 
     public static Date getStartOfDay(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
         cal.set(Calendar.HOUR_OF_DAY, 0);
         cal.set(Calendar.MINUTE, 0);
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
+
         return cal.getTime();
     }
 
@@ -725,7 +743,6 @@ public class Utils {
 
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(date);
-
         calendar.set(Calendar.HOUR_OF_DAY, 23);
         calendar.set(Calendar.MINUTE, 59);
         calendar.set(Calendar.SECOND, 59);
@@ -1059,5 +1076,10 @@ public class Utils {
         LocalDateTime localDateTime = LocalDateTime.parse(date, formatter);
 
         return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+    }
+
+    public static Date stringToDate(String date) {
+        LocalDate localDate = LocalDate.parse(date, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 }

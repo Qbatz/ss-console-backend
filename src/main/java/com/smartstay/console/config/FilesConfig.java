@@ -1,12 +1,18 @@
 package com.smartstay.console.config;
 
+import com.smartstay.console.dto.files.FileData;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Base64;
 
 public class FilesConfig {
@@ -60,5 +66,40 @@ public class FilesConfig {
         } catch (IOException e) {
             throw new RuntimeException("Failed to write PDF to temp file", e);
         }
+    }
+
+    public static FileData downloadFileFromUrl(String fileUrl) throws IOException {
+
+        URL url = URI.create(fileUrl).toURL();
+
+        String fileName = getFileNameFromUrl(fileUrl);
+
+        byte[] content;
+
+        try (InputStream inputStream = url.openStream()) {
+
+            content = inputStream.readAllBytes();
+        }
+
+        String contentType = URLConnection.guessContentTypeFromName(fileName);
+
+        if (contentType == null) {
+            contentType = "application/octet-stream";
+        }
+
+        return new FileData(
+                content,
+                contentType,
+                fileName
+        );
+    }
+
+    private static String getFileNameFromUrl(String fileUrl) {
+
+        String path = URI.create(fileUrl).getPath();
+
+        return Paths.get(path)
+                .getFileName()
+                .toString();
     }
 }

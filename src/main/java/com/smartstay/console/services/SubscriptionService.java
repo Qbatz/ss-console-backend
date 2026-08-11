@@ -217,6 +217,14 @@ public class SubscriptionService {
                 return new ResponseEntity<>(Utils.PAID_BY_REQUIRED, HttpStatus.BAD_REQUEST);
             }
 
+            if (payload.paidAtDate() == null || payload.paidAtTime() == null){
+                return new ResponseEntity<>(Utils.PAID_AT_DATE_TIME_IS_REQUIRED, HttpStatus.BAD_REQUEST);
+            }
+
+            if (Utils.checkDateIsFromFutureOrPresent(payload.paidAtDate(), payload.paidAtTime())) {
+                return new ResponseEntity<>("Date must be from past or present", HttpStatus.BAD_REQUEST);
+            }
+
             if (payload.discountAmount() != null) {
                 try {
                     discountAmount = Double.parseDouble(payload.discountAmount().toString());
@@ -286,6 +294,7 @@ public class SubscriptionService {
             newOrder.setPaymentProof(paymentProofUrl);
             newOrder.setPaidBy(payload.paidBy());
             newOrder.setCollectedBy(agent.getAgentId());
+            newOrder.setPaidAt(Utils.localDateTimeToDate(payload.paidAtDate(), payload.paidAtTime()));
             newOrder.setActive(true);
             newOrder.setCreatedAt(today);
             newOrder.setCreatedBy(agent.getAgentId());
@@ -518,7 +527,7 @@ public class SubscriptionService {
         if (hostelName != null && !hostelName.isBlank()) {
 
             List<HostelV1> filteredHostels =
-                    hostelService.getHostelsByHostelName(hostelName);
+                    hostelService.getHostelsByHostelName(hostelName.trim());
 
             Set<String> filteredHostelIds = filteredHostels.stream()
                     .map(HostelV1::getHostelId)
@@ -726,7 +735,7 @@ public class SubscriptionService {
         if (hostelName != null && !hostelName.isBlank()) {
 
             List<HostelV1> filteredHostels =
-                    hostelService.getHostelsByHostelName(hostelName);
+                    hostelService.getHostelsByHostelName(hostelName.trim());
 
             Set<String> filteredHostelIds = filteredHostels.stream()
                     .map(HostelV1::getHostelId)
@@ -841,5 +850,17 @@ public class SubscriptionService {
 
     public List<com.smartstay.console.dao.Subscription> getLatestSubscriptionsPerHostel(Set<String> hostelIds) {
         return subscriptionRepository.findLatestSubscriptionsPerHostel(hostelIds);
+    }
+
+    public List<com.smartstay.console.dao.Subscription> getSubscriptionsByOrderIds(Set<Long> historyIds) {
+        return subscriptionRepository.findAllByOrderIdIn(historyIds);
+    }
+
+    public List<com.smartstay.console.dao.Subscription> getSubscriptionByOrderId(Long historyId) {
+        return subscriptionRepository.findByOrderId(historyId);
+    }
+
+    public com.smartstay.console.dao.Subscription save(com.smartstay.console.dao.Subscription subscription) {
+        return subscriptionRepository.save(subscription);
     }
 }

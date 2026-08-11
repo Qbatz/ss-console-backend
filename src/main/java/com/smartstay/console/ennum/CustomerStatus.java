@@ -1,6 +1,7 @@
 package com.smartstay.console.ennum;
 
 public enum CustomerStatus {
+
     ACTIVE("active"),
     INACTIVE("inactive"),
     VACATED("vacated"),
@@ -10,7 +11,9 @@ public enum CustomerStatus {
     WALKED_IN("walk in"),
     CANCELLED_BOOKING("Cancelled"),
     DELETED("DELETED"),
-    SETTLEMENT_GENERATED("Settlement Generated");
+    SETTLEMENT_GENERATED("Settlement Generated"),
+    DRAFT("Draft");
+
     CustomerStatus(String active) {
     }
 }

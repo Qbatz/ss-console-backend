@@ -15,4 +15,6 @@ public interface SettlementItemsRepository extends JpaRepository<SettlementItems
     List<SettlementItems> findAllByCustomerId(String customerId);
 
     List<SettlementItems> findAllByCustomerIdIn(Set<String> customerIdsSet);
+
+    SettlementItems findByInvoiceId(String invoiceId);
 }

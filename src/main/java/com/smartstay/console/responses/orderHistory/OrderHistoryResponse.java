@@ -41,9 +41,14 @@ public record OrderHistoryResponse(Long historyId,
                                    String userType,
                                    String paidAtDate,
                                    String paidAtTime,
+                                   boolean isPaidAtDateAvailable,
                                    String paidBy,
                                    String collectedBy,
                                    String createdBy,
                                    String createdAtDate,
-                                   String createdAtTime) {
+                                   String createdAtTime,
+                                   Long subscriptionId,
+                                   boolean canUploadSubscriptionInvoice,
+                                   String subscriptionInvoiceUrl,
+                                   String subscriptionInvoiceGenerationType) {
 }

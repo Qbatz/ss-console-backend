@@ -96,6 +96,7 @@ public class AgentActivityUtil {
             case USERS_NOTES -> "Created a new users note";
             case SMARTSTAY_FEATURES -> "Created a new smartstay feature";
             case SETTLEMENT_DETAILS -> "Generated settlement details";
+            case SETTLEMENT_GENERATED -> "Generated a settlement invoice";
             default -> "Created successfully";
         };
     }
@@ -125,6 +126,7 @@ public class AgentActivityUtil {
             case SMARTSTAY_FEATURES -> "Updated a smartstay feature";
             case INVOICE -> "Updated an invoice";
             case KYC_DETAILS -> "Approved a kyc request";
+            case SUBSCRIPTION_INVOICE_URL -> "Updated a subscription invoice url";
             default -> "Updated successfully";
         };
     }
@@ -159,6 +161,9 @@ public class AgentActivityUtil {
             case DEMO_REQUEST -> "Deleted a demo request";
             case SMARTSTAY_FEATURES -> "Deleted a smartstay feature";
             case TRANSACTION -> "Deleted a transaction";
+            case TRANSACTION_RECEIPT_URL -> "Deleted a transaction receipt";
+            case INVOICE_URL -> "Deleted an invoice";
+            case SUBSCRIPTION_INVOICE_URL -> "Deleted a subscription invoice";
             default -> "Deleted successfully";
         };
     }

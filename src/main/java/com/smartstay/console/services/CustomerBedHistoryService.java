@@ -72,4 +72,19 @@ public class CustomerBedHistoryService {
         return customerBedHistoryRepository
                 .findAllByCustomerIdAndTypeNot(customerId, type);
     }
+
+    public List<CustomersBedHistory> getBedHistoriesByRoomIdsAndTypeNotIn(Set<Integer> roomIds,
+                                                                          String type) {
+        return customerBedHistoryRepository
+                .findAllByRoomIdInAndTypeNot(roomIds, type);
+    }
+
+    public void save(CustomersBedHistory customersBedHistory) {
+        customerBedHistoryRepository.save(customersBedHistory);
+    }
+
+    public List<CustomersBedHistory> getCustomersByRoomIdAndDates(Integer roomId, Date startDate,
+                                                                  Date endDate) {
+        return customerBedHistoryRepository.findByRoomIdStartAndEndDate(roomId, startDate, endDate);
+    }
 }

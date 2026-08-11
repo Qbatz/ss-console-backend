@@ -1,6 +1,7 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.dao.BillingRules;
+import com.smartstay.console.dto.billing.BillingPeriod;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.ennum.BillingModel;
 import com.smartstay.console.ennum.BillingType;
@@ -91,6 +92,8 @@ public class BillingRulesService {
 
     public BillingDates computeBillingDates(BillingRules billingRules, Date requestedDate) {
 
+        requestedDate = Utils.getStartOfDay(requestedDate);
+
         int billStartDate = billingRules != null ? billingRules.getBillingStartDate() : 1;
         int billingRuleDueDate = billingRules != null ? billingRules.getBillDueDays() : 10;
 
@@ -130,6 +133,9 @@ public class BillingRulesService {
     }
 
     public BillingDates computeJoiningBasedBillingDates(BillingRules billingRules, Date joiningDate, Date requestedDate) {
+
+        joiningDate = Utils.getStartOfDay(joiningDate);
+        requestedDate = Utils.getStartOfDay(requestedDate);
 
         int billStartDate = 1;
         boolean hasGracePeriod = false;
@@ -202,5 +208,47 @@ public class BillingRulesService {
 
     public BillingRules save(BillingRules billingRules) {
         return billingRuleRepository.save(billingRules);
+    }
+
+    public List<BillingDates> getBillingPeriods(BillingRules billingRules, Date joiningDate, Date today) {
+
+        joiningDate = Utils.getStartOfDay(joiningDate);
+        today = Utils.getStartOfDay(today);
+
+        Map<BillingPeriod, BillingDates> periods = new LinkedHashMap<>();
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(joiningDate);
+
+        while (!calendar.getTime().after(today)) {
+
+            Date referenceDate = calendar.getTime();
+
+            BillingDates billingDates;
+
+            if (BillingType.FIXED_DATE.name().equals(billingRules.getTypeOfBilling())) {
+
+                billingDates = computeBillingDates(billingRules, referenceDate);
+
+            } else if (BillingType.JOINING_DATE_BASED.name().equals(billingRules.getTypeOfBilling())) {
+
+                billingDates = computeJoiningBasedBillingDates(billingRules, joiningDate, referenceDate);
+
+            } else {
+                throw new IllegalArgumentException(
+                        "Unsupported billing type : " + billingRules.getTypeOfBilling());
+            }
+
+            BillingPeriod key = new BillingPeriod(
+                    Utils.getStartOfDay(billingDates.currentBillStartDate()),
+                    Utils.getStartOfDay(billingDates.currentBillEndDate())
+            );
+
+            periods.putIfAbsent(key, billingDates);
+
+            calendar.add(Calendar.MONTH, 1);
+        }
+
+        return new ArrayList<>(periods.values());
     }
 }
