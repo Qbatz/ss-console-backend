@@ -21,7 +21,9 @@ public class ClientConnect {
         WebSocketStompClient stompClient = new WebSocketStompClient(new StandardWebSocketClient());
         stompClient.setMessageConverter(new JacksonJsonMessageConverter());
 
-        String baseUrl = "wss://ssconsoledevapi.qbatz.com/ws";
+//        String baseUrl = "wss://ssconsoledevapi.qbatz.com/ws";
+
+        String baseUrl = "http://localhost:8080/ws";
         if (environment.equalsIgnoreCase("PROD")) {
             baseUrl = "wss://ssconsoleapi.qbatz.com/ws";
         }
