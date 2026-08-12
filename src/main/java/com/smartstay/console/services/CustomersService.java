@@ -427,8 +427,11 @@ public class CustomersService {
                         double amount = bankBalances.get(item.getBankId());
                         amount = amount + item.getPaidAmount();
                         bankBalances.put(item.getBankId(), amount);
-                    }
-                    else {
+                    } else if (TransactionType.ADVANCE_HOLDING.name().equals(item.getType())) {
+                        double amount = bankBalances.get(item.getBankId());
+                        amount = amount + item.getPaidAmount();
+                        bankBalances.put(item.getBankId(), amount);
+                    } else {
                         double amount = bankBalances.get(item.getBankId());
                         amount = amount  + (-1 * item.getPaidAmount());
                         bankBalances.put(item.getBankId(), amount);
@@ -437,8 +440,9 @@ public class CustomersService {
                 else {
                     if (item.getType() == null) {
                         bankBalances.put(item.getBankId(), item.getPaidAmount());
-                    }
-                    else {
+                    } else if (TransactionType.ADVANCE_HOLDING.name().equals(item.getType())) {
+                        bankBalances.put(item.getBankId(), item.getPaidAmount());
+                    } else {
                         bankBalances.put(item.getBankId(), item.getPaidAmount() * -1);
                     }
                 }
@@ -447,7 +451,11 @@ public class CustomersService {
                         double amount = bankV2Balances.get(item.getBankId());
                         amount = amount + item.getPaidAmount();
                         bankV2Balances.put(item.getBankId(), amount);
-                    } else {
+                    } else if (TransactionType.ADVANCE_HOLDING.name().equals(item.getType())) {
+                        double amount = bankV2Balances.get(item.getBankId());
+                        amount = amount + item.getPaidAmount();
+                        bankV2Balances.put(item.getBankId(), amount);
+                    }  else {
                         double amount = bankV2Balances.get(item.getBankId());
                         amount = amount  + (-1 * item.getPaidAmount());
                         bankV2Balances.put(item.getBankId(), amount);
@@ -455,7 +463,9 @@ public class CustomersService {
                 } else {
                     if (item.getType() == null) {
                         bankV2Balances.put(item.getBankId(), item.getPaidAmount());
-                    } else {
+                    } else if (TransactionType.ADVANCE_HOLDING.name().equals(item.getType())) {
+                        bankV2Balances.put(item.getBankId(), item.getPaidAmount());
+                    }  else {
                         bankV2Balances.put(item.getBankId(), item.getPaidAmount() * -1);
                     }
                 }
