@@ -1079,7 +1079,13 @@ public class Utils {
     }
 
     public static Date stringToDate(String date) {
+
+        if (date == null){
+            return null;
+        }
+
         LocalDate localDate = LocalDate.parse(date, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
         return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
     }
 }

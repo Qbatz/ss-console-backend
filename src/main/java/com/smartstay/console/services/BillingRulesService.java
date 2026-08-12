@@ -282,10 +282,29 @@ public class BillingRulesService {
         }
 
         joiningDate = Utils.getStartOfDay(joiningDate);
+        today = Utils.getStartOfDay(today);
 
-        List<BillingDates> billingPeriods = getBillingPeriods(billingRules, joiningDate, today);
+        List<BillingDates> billingPeriods;
+
+        if (BillingType.FIXED_DATE.name().equals(billingRules.getTypeOfBilling())) {
+
+            /*
+             * For FIXED_DATE billing, getBillingPeriods() starts iteration
+             * from the actual billing-period start instead of the joining-date day.
+             */
+            BillingDates firstBillingDates = computeBillingDates(billingRules, joiningDate);
+
+            Date firstBillingPeriodStart = Utils.getStartOfDay(firstBillingDates.currentBillStartDate());
+
+            billingPeriods = getBillingPeriods(billingRules, firstBillingPeriodStart, today);
+
+        } else {
+
+            billingPeriods = getBillingPeriods(billingRules, joiningDate, today);
+        }
 
         Date finalJoiningDate = joiningDate;
+
         return billingPeriods.stream()
                 .map(billingDates -> {
 

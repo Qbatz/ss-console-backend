@@ -4458,13 +4458,18 @@ public class CustomersService {
 
         impactList.sort(
                 Comparator.comparingInt((InvoiceImpact impact) ->
-                                actionPriority.getOrDefault(impact.action(), Integer.MAX_VALUE)
+                                actionPriority.getOrDefault(
+                                        impact.action(),
+                                        Integer.MAX_VALUE
+                                )
                         )
                         .thenComparing(
-                                impact -> Utils.stringToDate(impact.newInvoiceStartDate())
+                                impact -> Utils.stringToDate(impact.newInvoiceStartDate()),
+                                Comparator.nullsLast(Comparator.naturalOrder())
                         )
                         .thenComparing(
-                                impact -> Utils.stringToDate(impact.invoiceStartDate())
+                                impact -> Utils.stringToDate(impact.invoiceStartDate()),
+                                Comparator.nullsLast(Comparator.naturalOrder())
                         )
         );
 
