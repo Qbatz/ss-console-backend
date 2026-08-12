@@ -4240,17 +4240,15 @@ public class CustomersService {
 
             if (oldJoiningInvoice != null) {
 
-                BillingPeriod expectedKey =
-                        new BillingPeriod(
-                                Utils.getStartOfDay(newJoiningBillingDates.currentBillStartDate()),
-                                Utils.getStartOfDay(newJoiningBillingDates.currentBillEndDate())
-                        );
+                BillingPeriod expectedKey = new BillingPeriod(
+                        Utils.getStartOfDay(newJoiningBillingDates.currentBillStartDate()),
+                        Utils.getStartOfDay(newJoiningBillingDates.currentBillEndDate())
+                );
 
-                BillingPeriod existingKey =
-                        new BillingPeriod(
-                                Utils.getStartOfDay(oldJoiningInvoice.getInvoiceStartDate()),
-                                Utils.getStartOfDay(oldJoiningInvoice.getInvoiceEndDate())
-                        );
+                BillingPeriod existingKey = new BillingPeriod(
+                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceStartDate()),
+                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceEndDate())
+                );
 
                 /*
                  * If the invoice period actually changes,
@@ -4346,19 +4344,31 @@ public class CustomersService {
                         Utils.getStartOfDay(recalculatedBillingDates.currentBillEndDate())
                 );
 
-                occupiedExpectedPeriods.add(updatedKey);
-
-                matchedInvoiceIds.add(oldJoiningInvoice.getInvoiceId());
-
-                updates.put(
-                        oldJoiningInvoice.getInvoiceId(),
-                        new InvoiceUpdateAction(oldJoiningInvoice, recalculatedBillingDates, newJoiningDate)
+                BillingPeriod existingKey = new BillingPeriod(
+                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceStartDate()),
+                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceEndDate())
                 );
 
-                impacts.put(
-                        oldJoiningInvoice.getInvoiceId(),
-                        createInvoiceImpact(oldJoiningInvoice, InvoiceImpactType.UPDATED, recalculatedBillingDates)
-                );
+                /*
+                 * Only update the invoice if its billing period
+                 * actually changes.
+                 */
+                if (!updatedKey.equals(existingKey)) {
+
+                    occupiedExpectedPeriods.add(updatedKey);
+
+                    matchedInvoiceIds.add(oldJoiningInvoice.getInvoiceId());
+
+                    updates.put(
+                            oldJoiningInvoice.getInvoiceId(),
+                            new InvoiceUpdateAction(oldJoiningInvoice, recalculatedBillingDates, newJoiningDate)
+                    );
+
+                    impacts.put(
+                            oldJoiningInvoice.getInvoiceId(),
+                            createInvoiceImpact(oldJoiningInvoice, InvoiceImpactType.UPDATED, recalculatedBillingDates)
+                    );
+                }
             }
         }
 
@@ -4428,7 +4438,8 @@ public class CustomersService {
          * ---------------------------------------------------------
          */
         impacts.values().removeIf(impact ->
-                impact.action() == InvoiceImpactType.UNCHANGED
+                impact.action() == InvoiceImpactType.UNCHANGED ||
+                        impact.action() == InvoiceImpactType.CREATED
         );
 
         /*
