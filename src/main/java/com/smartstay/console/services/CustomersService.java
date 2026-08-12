@@ -4082,22 +4082,21 @@ public class CustomersService {
          * 1. Calculate expected billing periods for NEW joining date
          * ---------------------------------------------------------
          */
-        List<BillingDates> expectedBillingPeriods = billingRulesService.getBillingPeriods(
-                billingRules, newJoiningDate, today);
+        List<BillingDates> expectedBillingPeriods = billingRulesService
+                .getExpectedBillingPeriodsForJoiningDateChange(billingRules, newJoiningDate, today);
 
         /*
          * ---------------------------------------------------------
          * 2. Detect duplicate invoices
          * ---------------------------------------------------------
          */
-        Map<BillingPeriod, List<InvoicesV1>> grouped =
-                existingInvoices.stream()
-                        .collect(Collectors.groupingBy(invoice ->
-                                new BillingPeriod(
-                                        Utils.getStartOfDay(invoice.getInvoiceStartDate()),
-                                        Utils.getStartOfDay(invoice.getInvoiceEndDate())
-                                )
-                        ));
+        Map<BillingPeriod, List<InvoicesV1>> grouped = existingInvoices.stream()
+                .collect(Collectors.groupingBy(invoice ->
+                        new BillingPeriod(
+                                Utils.getStartOfDay(invoice.getInvoiceStartDate()),
+                                Utils.getStartOfDay(invoice.getInvoiceEndDate())
+                        )
+                ));
 
         for (Map.Entry<BillingPeriod, List<InvoicesV1>> entry : grouped.entrySet()) {
 
@@ -4146,15 +4145,14 @@ public class CustomersService {
          * 5. Calculate billing period for NEW joining date
          * ---------------------------------------------------------
          */
-        BillingDates newJoiningBillingDates;
-
-        if (BillingType.FIXED_DATE.name().equals(billingRules.getTypeOfBilling())) {
-            newJoiningBillingDates = billingRulesService.computeBillingDates(
-                    billingRules, newJoiningDate);
-        } else {
-            newJoiningBillingDates = billingRulesService.computeJoiningBasedBillingDates(
-                    billingRules, newJoiningDate, newJoiningDate);
-        }
+        BillingDates newJoiningBillingDates = expectedBillingPeriods.stream()
+                .filter(billingDates ->
+                        !newJoiningDate.before(Utils
+                                .getStartOfDay(billingDates.currentBillStartDate()))
+                                && !newJoiningDate.after(Utils
+                                .getStartOfDay(billingDates.currentBillEndDate())))
+                .findFirst()
+                .orElse(null);
 
         /*
          * ---------------------------------------------------------

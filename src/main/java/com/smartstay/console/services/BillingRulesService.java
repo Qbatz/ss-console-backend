@@ -5,6 +5,7 @@ import com.smartstay.console.dto.billing.BillingPeriod;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.ennum.BillingModel;
 import com.smartstay.console.ennum.BillingType;
+import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.repositories.BillingRuleRepository;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -92,6 +93,10 @@ public class BillingRulesService {
 
     public BillingDates computeBillingDates(BillingRules billingRules, Date requestedDate) {
 
+        if (requestedDate == null){
+            throw new BadRequestException("Date is null");
+        }
+
         requestedDate = Utils.getStartOfDay(requestedDate);
 
         int billStartDate = billingRules != null ? billingRules.getBillingStartDate() : 1;
@@ -133,6 +138,10 @@ public class BillingRulesService {
     }
 
     public BillingDates computeJoiningBasedBillingDates(BillingRules billingRules, Date joiningDate, Date requestedDate) {
+
+        if (joiningDate == null || requestedDate == null){
+            throw new BadRequestException("Date is null");
+        }
 
         joiningDate = Utils.getStartOfDay(joiningDate);
         requestedDate = Utils.getStartOfDay(requestedDate);
@@ -178,6 +187,10 @@ public class BillingRulesService {
 
     public BillingDates computeBillingDatesWithBillingModel(BillingRules billingRules, Date requestedDate) {
 
+        if (billingRules == null || requestedDate == null){
+            throw new BadRequestException("Date or billing rules is null");
+        }
+
         BillingDates billingDates = null;
 
         if (BillingModel.PREPAID.name().equals(billingRules.getBillingModel())) {
@@ -191,7 +204,12 @@ public class BillingRulesService {
         return billingDates;
     }
 
-    public BillingDates computeJoiningBillingDatesWithBillingModel(BillingRules billingRules, Date joiningDate, Date requestedDate) {
+    public BillingDates computeJoiningBillingDatesWithBillingModel(BillingRules billingRules, Date joiningDate,
+                                                                   Date requestedDate) {
+
+        if (billingRules == null || joiningDate == null || requestedDate == null){
+            throw new BadRequestException("Date or billing rules is null");
+        }
 
         BillingDates billingDates = null;
 
@@ -211,6 +229,10 @@ public class BillingRulesService {
     }
 
     public List<BillingDates> getBillingPeriods(BillingRules billingRules, Date joiningDate, Date today) {
+
+        if (billingRules == null || joiningDate == null || today == null){
+            throw new BadRequestException("Date or billing rules is null");
+        }
 
         joiningDate = Utils.getStartOfDay(joiningDate);
         today = Utils.getStartOfDay(today);
@@ -250,5 +272,46 @@ public class BillingRulesService {
         }
 
         return new ArrayList<>(periods.values());
+    }
+
+    public List<BillingDates> getExpectedBillingPeriodsForJoiningDateChange(BillingRules billingRules,
+                                                                            Date joiningDate, Date today) {
+
+        if (billingRules == null || joiningDate == null || today == null){
+            throw new BadRequestException("Date or billing rules is null");
+        }
+
+        joiningDate = Utils.getStartOfDay(joiningDate);
+
+        List<BillingDates> billingPeriods = getBillingPeriods(billingRules, joiningDate, today);
+
+        Date finalJoiningDate = joiningDate;
+        return billingPeriods.stream()
+                .map(billingDates -> {
+
+                    Date billStart = Utils.getStartOfDay(billingDates.currentBillStartDate());
+                    Date billEnd = Utils.getStartOfDay(billingDates.currentBillEndDate());
+
+                    /*
+                     * If joining date falls after the billing period start,
+                     * invoice should start from joining date.
+                     */
+                    if (finalJoiningDate.after(billStart)
+                            && !finalJoiningDate.after(billEnd)) {
+
+                        return new BillingDates(
+                                finalJoiningDate,
+                                billEnd,
+                                billingDates.dueDate(),
+                                billingDates.dueDays(),
+                                billingDates.hasGracePeriod(),
+                                billingDates.gracePeriodDays(),
+                                billingDates.typeOfBilling(),
+                                billingDates.billingModel()
+                        );
+                    }
+
+                    return billingDates;
+                }).toList();
     }
 }
