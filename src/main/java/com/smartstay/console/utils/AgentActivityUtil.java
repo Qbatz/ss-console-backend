@@ -127,6 +127,7 @@ public class AgentActivityUtil {
             case INVOICE -> "Updated an invoice";
             case KYC_DETAILS -> "Approved a kyc request";
             case SUBSCRIPTION_INVOICE_URL -> "Updated a subscription invoice url";
+            case TENANT_JOINING_DATE -> "Updated a tenant joining date";
             default -> "Updated successfully";
         };
     }

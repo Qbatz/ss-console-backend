@@ -3939,6 +3939,8 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        CustomersSnapshot oldSnapshot = SnapshotUtility.toSnapshot(customer);
+
         String hostelId = customer.getHostelId();
 
         Date today = new Date();
@@ -3996,8 +3998,13 @@ public class CustomersService {
         booking.setUpdatedAt(today);
         booking.setUpdatedBy(authentication.getName());
 
-        customersRepository.save(customer);
+        customer = customersRepository.save(customer);
         bookingsService.save(booking);
+
+        CustomersSnapshot newSnapshot = SnapshotUtility.toSnapshot(customer);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.TENANT_JOINING_DATE,
+                customerId, oldSnapshot, newSnapshot);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
