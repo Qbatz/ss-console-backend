@@ -1,5 +1,6 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.Mapper.users.UserOwnerInfoMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.HostelRelationalAgent;
@@ -12,9 +13,11 @@ import com.smartstay.console.ennum.Source;
 import com.smartstay.console.payloads.hostelRelationalAgent.HostelRelationalAgentPayload;
 import com.smartstay.console.repositories.HostelRelationalAgentRepository;
 import com.smartstay.console.responses.hostelRelationalAgent.RelationalAgentReasonsRes;
+import com.smartstay.console.responses.hostels.OwnerInfo;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -39,6 +42,9 @@ public class HostelRelationalAgentService {
     private UsersService usersService;
     @Autowired
     private AgentActivitiesService agentActivitiesService;
+    @Autowired
+    @Lazy
+    private OwnersService ownersService;
 
     public ResponseEntity<?> assignHostelRelationalAgent(String parentId, HostelRelationalAgentPayload payload) {
 
@@ -134,5 +140,38 @@ public class HostelRelationalAgentService {
 
     public void deleteAll(List<HostelRelationalAgent> hostelRelationalAgentList) {
         hostelRelationalAgentRepository.deleteAll(hostelRelationalAgentList);
+    }
+
+    public ResponseEntity<?> getUnAssignedOwners(String name) {
+
+        Agent agent = agentService.findUserByUserId(authentication.getName());
+        if (agent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (name != null && !name.isBlank()){
+            name = name.trim();
+        }
+
+        Set<String> parentIds = hostelRelationalAgentRepository
+                .findAllLatestParentIds();
+
+        List<Users> unassignedOwners;
+
+        if (parentIds == null || parentIds.isEmpty()) {
+            unassignedOwners = ownersService
+                    .getOwnersByMobileNoOrName(name);
+        } else {
+            unassignedOwners = ownersService
+                    .getUnAssignedOwners(name, parentIds);
+        }
+
+        UserOwnerInfoMapper mapper = new UserOwnerInfoMapper();
+
+        List<OwnerInfo> response = unassignedOwners.stream()
+                .map(mapper)
+                .toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

@@ -144,4 +144,28 @@ public interface UsersRepository extends JpaRepository<Users, String> {
                 )
             """)
     List<Users> findOwnersByMobileNoOrName(@Param("name") String name);
+
+    @Query("""
+            SELECT usr
+            FROM Users usr
+            WHERE usr.roleId = 1
+                AND usr.parentId not in (:parentIds)
+                AND usr.isActive = true
+                AND usr.isDeleted = false
+                AND (
+                    :name IS NULL OR :name = '' OR
+                    LOWER(REPLACE(COALESCE(usr.firstName, ''), ' ', ''))
+                        LIKE LOWER(CONCAT('%', REPLACE(:name, ' ', ''), '%'))
+                    OR LOWER(REPLACE(COALESCE(usr.lastName, ''), ' ', ''))
+                        LIKE LOWER(CONCAT('%', REPLACE(:name, ' ', ''), '%'))
+                    OR LOWER(CONCAT(
+                        REPLACE(COALESCE(usr.firstName, ''), ' ', ''),
+                        REPLACE(COALESCE(usr.lastName, ''), ' ', '')
+                    ))
+                        LIKE LOWER(CONCAT('%', REPLACE(:name, ' ', ''), '%'))
+                    OR REPLACE(COALESCE(usr.mobileNo, ''), ' ', '')
+                        LIKE CONCAT('%', REPLACE(:name, ' ', ''), '%')
+                )
+            """)
+    List<Users> findOwnersByMobileNoOrNameAndParentIdsNot(String name, Set<String> parentIds);
 }

@@ -30,4 +30,9 @@ public class HostelRelationalAgentController {
     public ResponseEntity<?> getHostelRelationalAgentReasons() {
         return hostelRelationalAgentService.getHostelRelationalAgentReasons();
     }
+
+    @GetMapping("/un-assigned-owners")
+    public ResponseEntity<?> getUnAssignedOwners(@RequestParam(value = "name", required = false) String name) {
+        return hostelRelationalAgentService.getUnAssignedOwners(name);
+    }
 }

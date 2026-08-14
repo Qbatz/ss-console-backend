@@ -896,4 +896,13 @@ public class OwnersService {
 
         return new ResponseEntity<>(responses, HttpStatus.OK);
     }
+
+    public List<Users> getUnAssignedOwners(String name, Set<String> parentIds) {
+        return usersRepository
+                .findOwnersByMobileNoOrNameAndParentIdsNot(name, parentIds);
+    }
+
+    public List<Users> getOwnersByMobileNoOrName(String name) {
+        return usersRepository.findOwnersByMobileNoOrName(name);
+    }
 }
