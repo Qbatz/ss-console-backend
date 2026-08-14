@@ -10,6 +10,7 @@ import com.smartstay.console.dao.InvoiceItems;
 import com.smartstay.console.dto.billing.BillingPeriod;
 import com.smartstay.console.dto.customers.*;
 import com.smartstay.console.dto.hostel.BillingDates;
+import com.smartstay.console.dto.invoice.CancelledInvoice;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.retainer.RetainerItems;
 import com.smartstay.console.dto.settlement.*;
@@ -1563,9 +1564,18 @@ public class CustomersService {
                 advanceInvoice.setDeductions(advInvDeductions);
             }
 
-            List<String> cancelledInvoiceIds = cancelledInvoices.stream()
-                    .map(InvoicesV1::getInvoiceId)
-                    .toList();
+            List<String> cancelledInvoiceIds = new ArrayList<>();
+            List<CancelledInvoice> newCancelledInvoices = new ArrayList<>();
+
+            for (InvoicesV1 cancelledInvoice : cancelledInvoices){
+                if (cancelledInvoice.getInvoiceId() != null){
+                    cancelledInvoiceIds.add(cancelledInvoice.getInvoiceId());
+                }
+                if (cancelledInvoice.getPaymentStatus() != null){
+                    newCancelledInvoices.add(new CancelledInvoice(
+                            cancelledInvoice.getInvoiceId(), cancelledInvoice.getPaymentStatus()));
+                }
+            }
 
             if (settlementInvoice == null) {
                 settlementInvoice = new InvoicesV1();
@@ -1608,6 +1618,7 @@ public class CustomersService {
             settlementInvoice.setCancelled(false);
             settlementInvoice.setDiscounted(false);
             settlementInvoice.setCancelledInvoices(cancelledInvoiceIds);
+            settlementInvoice.setNewCancelledInvoices(newCancelledInvoices);
             settlementInvoice.setDeductions(advInvDeductions);
             settlementInvoice.setInvoiceUrl(null);
             settlementInvoice.setInvoiceGeneratedDate(today);

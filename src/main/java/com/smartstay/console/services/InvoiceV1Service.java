@@ -9,6 +9,7 @@ import com.smartstay.console.dao.InvoiceItems;
 import com.smartstay.console.dto.billTemplates.BillTemplatesDto;
 import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.dto.hostel.BillingDates;
+import com.smartstay.console.dto.invoice.CancelledInvoice;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoice.InvoiceSnapshotWrapper;
 import com.smartstay.console.dto.retainer.RetainerItems;
@@ -228,12 +229,30 @@ public class InvoiceV1Service {
             }
 
             if (InvoiceType.SETTLEMENT.name().equals(invoice.getInvoiceType())) {
+
                 List<String> cIds = invoice.getCancelledInvoices();
+
+                Map<String, String> paymentStatusMap = Optional.ofNullable(invoice.getNewCancelledInvoices())
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .collect(Collectors.toMap(
+                                CancelledInvoice::getInvoiceId,
+                                CancelledInvoice::getPaymentStatus,
+                                (oldValue, newValue) -> newValue
+                        ));
+
                 if (cIds != null && !cIds.isEmpty()) {
+
                     for (String cancelledInvoiceId : cIds) {
+
                         InvoicesV1 cancelledInvoice = cancelledInvoiceMap.getOrDefault(cancelledInvoiceId, null);
                         if (cancelledInvoice == null){
                             throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
+                        }
+
+                        String paymentStatus = paymentStatusMap.getOrDefault(cancelledInvoiceId, null);
+                        if (paymentStatus != null){
+                            cancelledInvoice.setPaymentStatus(paymentStatus);
                         }
 
                         cancelledInvoice.setCancelledDate(null);
@@ -745,12 +764,28 @@ public class InvoiceV1Service {
             }
 
             if (InvoiceType.SETTLEMENT.name().equals(invoice.getInvoiceType())) {
+
                 List<String> cIds = invoice.getCancelledInvoices();
+
+                Map<String, String> paymentStatusMap = Optional.ofNullable(invoice.getNewCancelledInvoices())
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .collect(Collectors.toMap(
+                                CancelledInvoice::getInvoiceId,
+                                CancelledInvoice::getPaymentStatus,
+                                (oldValue, newValue) -> newValue
+                        ));
+
                 if (cIds != null && !cIds.isEmpty()) {
                     for (String cancelledInvoiceId : cIds) {
                         InvoicesV1 cancelledInvoice = cancelledInvoiceMap.getOrDefault(cancelledInvoiceId, null);
                         if (cancelledInvoice == null){
                             return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                        }
+
+                        String paymentStatus = paymentStatusMap.getOrDefault(cancelledInvoiceId, null);
+                        if (paymentStatus != null){
+                            cancelledInvoice.setPaymentStatus(paymentStatus);
                         }
 
                         cancelledInvoice.setCancelledDate(null);
