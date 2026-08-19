@@ -1,10 +1,12 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.dao.BookingsV1;
+import com.smartstay.console.ennum.BookingsStatus;
 import com.smartstay.console.repositories.BookingsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -61,5 +63,15 @@ public class BookingsService {
 
     public void save(BookingsV1 booking) {
         bookingsRepository.save(booking);
+    }
+
+    public BookingsV1 getLatestActiveBookingByBedId(int bedId) {
+
+        Set<String> activeStatuses = new HashSet<>();
+        activeStatuses.add(BookingsStatus.CHECKIN.name());
+        activeStatuses.add(BookingsStatus.NOTICE.name());
+
+        return bookingsRepository
+                .findFirstByBedIdAndCurrentStatusInOrderByCreatedAtDesc(bedId, activeStatuses);
     }
 }

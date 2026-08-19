@@ -3,6 +3,7 @@ package com.smartstay.console.utils;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.agentRoles.AgentRoleSnapshot;
 import com.smartstay.console.dto.agentRoles.RolesPermissionSnapshot;
+import com.smartstay.console.dto.bed.BedSnapshot;
 import com.smartstay.console.dto.demoRequest.DemoRequestActivitySnapshot;
 import com.smartstay.console.dto.hostelRelationalAgent.HostelRelationalAgentSnapshot;
 import com.smartstay.console.dto.agent.AgentSnapshot;
@@ -868,6 +869,28 @@ public class SnapshotUtility {
                 s.getPaymentProof(),
                 s.getInvoiceUrl(),
                 s.getGenerationType()
+        );
+    }
+
+    public static BedSnapshot toSnapshot(Beds b) {
+
+        if (b == null) return null;
+
+        return new BedSnapshot(
+                b.getBedId(),
+                b.getBedName(),
+                b.getIsActive(),
+                b.getIsDeleted(),
+                copyDate(b.getCreatedAt()),
+                copyDate(b.getUpdatedAt()),
+                b.getParentId(),
+                b.getRoomId(),
+                b.getHostelId(),
+                b.isBooked(),
+                b.getRentAmount(),
+                b.getStatus(),
+                b.getCurrentStatus(),
+                copyDate(b.getFreeFrom())
         );
     }
 

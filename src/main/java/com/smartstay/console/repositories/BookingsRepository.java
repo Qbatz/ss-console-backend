@@ -50,4 +50,7 @@ public interface BookingsRepository extends JpaRepository<BookingsV1, String> {
     List<BookingsV1> findAllByCustomerIdIn(Set<String> customerIds);
 
     List<BookingsV1> findAllByBookingIdIn(Set<String> bookingIds);
+
+    BookingsV1 findFirstByBedIdAndCurrentStatusInOrderByCreatedAtDesc(int bedId,
+                                                                      Set<String> activeStatuses);
 }
