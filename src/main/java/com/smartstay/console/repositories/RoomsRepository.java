@@ -15,4 +15,6 @@ public interface RoomsRepository extends JpaRepository<Rooms, Integer> {
     Rooms findByRoomIdAndIsActiveTrueAndIsDeletedFalse(int roomId);
 
     List<Rooms> findAllByRoomIdInAndIsActiveTrueAndIsDeletedFalse(Set<Integer> roomIds);
+
+    List<Rooms> findAllByHostelIdInAndIsActiveTrueAndIsDeletedFalse(Set<String> hostelIds);
 }

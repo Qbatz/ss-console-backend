@@ -22,4 +22,11 @@ public class BedsController {
     public ResponseEntity<?> updateCurrentStatus(@PathVariable("bedId") int bedId) {
         return bedsService.updateBedCurrentStatus(bedId);
     }
+
+    @GetMapping("/hostel-bed-info")
+    public ResponseEntity<?> getHostelsWithBedInfo(@RequestParam(value = "page", defaultValue = "1") int page,
+                                                   @RequestParam(value = "size", defaultValue = "10") int size,
+                                                   @RequestParam(value = "name", required = false) String name){
+        return bedsService.getHostelsWithBedInfo(page, size, name);
+    }
 }

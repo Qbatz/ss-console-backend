@@ -282,4 +282,33 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
               AND h.isDeleted = false
             """)
     List<HostelLiteProjection> findLiteByParentIds(@Param("parentIds") Set<String> parentIds);
+
+    @Query(value = """
+            SELECT h.*
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE (
+                :name IS NULL
+                OR LOWER(REPLACE(COALESCE(h.hostel_name, ''), ' ', ''))
+                    LIKE CONCAT('%', LOWER(REPLACE(:name, ' ', '')), '%')
+            )
+                AND h.is_active = true
+                AND h.is_deleted = false
+            ORDER BY hp.current_plan_ends_at ASC
+            """,
+            countQuery = """
+            SELECT COUNT(*)
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE (
+                :name IS NULL
+                OR LOWER(REPLACE(COALESCE(h.hostel_name, ''), ' ', ''))
+                    LIKE CONCAT('%', LOWER(REPLACE(:name, ' ', '')), '%')
+            )
+                AND h.is_active = true
+                AND h.is_deleted = false
+            """,
+            nativeQuery = true)
+    Page<HostelV1> findAllPagedHostels(@Param("name") String name,
+                                       Pageable pageable);
 }

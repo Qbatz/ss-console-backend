@@ -3544,4 +3544,11 @@ public class HostelsService {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    public Page<HostelV1> getAllPagedHostels(int page, int size, String name) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        return hostelRepository.findAllPagedHostels(name, pageable);
+    }
 }
