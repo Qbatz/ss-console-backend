@@ -13,11 +13,10 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Component
 public class GenerateInvoiceForPostpaid {
@@ -46,6 +45,8 @@ public class GenerateInvoiceForPostpaid {
     private CustomerWalletHistoryService customerWalletHistoryService;
     @Autowired
     private RecurringTrackerService recurringTrackerService;
+    @Autowired
+    private AmenitiesService amenitiesService;
 
     @Async
     @EventListener
@@ -244,6 +245,15 @@ public class GenerateInvoiceForPostpaid {
                     .mapToDouble(CustomersAmenity::getAmenityPrice)
                     .sum();
 
+            Set<String> amenityIds = listCustomersAmenity.stream()
+                    .map(CustomersAmenity::getAmenityId)
+                    .collect(Collectors.toSet());
+            List<AmenitiesV1> listAmenities = amenitiesService
+                    .getAmenitiesByIds(amenityIds);
+            Map<String, AmenitiesV1> amenityMap = listAmenities.stream()
+                    .collect(Collectors.toMap(AmenitiesV1::getAmenityId,
+                            Function.identity(), (a, b) -> a));
+
             double rentEbAmount = rentAmount + ebAmount;
             double rentEbAndAmenity = rentEbAmount + amenityAmount;
             double walletAmount = 0.0;
@@ -349,13 +359,27 @@ public class GenerateInvoiceForPostpaid {
                     invoicesItems.add(item1);
                 }
 
-                if (amenityAmount > 0) {
-                    InvoiceItems item1 = new InvoiceItems();
-                    item1.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.AMENITY.name());
-                    item1.setAmount(amenityAmount);
-                    item1.setInvoice(invoicesV1);
-                    invoicesItems.add(item1);
+                if (listCustomersAmenity != null) {
+                    listCustomersAmenity.forEach(customersAmenity -> {
+                        AmenitiesV1 amenity = amenityMap.getOrDefault(customersAmenity.getAmenityId(), null);
+                        if (amenity != null) {
+                            InvoiceItems item1 = new InvoiceItems();
+                            item1.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.OTHERS.name());
+                            item1.setOtherItem(amenity.getAmenityName());
+                            item1.setAmount(Utils.roundOfDoubleTo2Digits(customersAmenity.getAmenityPrice()));
+                            item1.setInvoice(invoicesV1);
+                            invoicesItems.add(item1);
+                        }
+                    });
                 }
+
+//                if (amenityAmount > 0) {
+//                    InvoiceItems item1 = new InvoiceItems();
+//                    item1.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.AMENITY.name());
+//                    item1.setAmount(amenityAmount);
+//                    item1.setInvoice(invoicesV1);
+//                    invoicesItems.add(item1);
+//                }
 
                 List<CustomerWalletHistory> wh = listCustomerWallets
                         .stream()
@@ -422,6 +446,7 @@ public class GenerateInvoiceForPostpaid {
 
         recurringTrackerService.markAsPostpaidInvoiceGenerated(hostelV1.getHostelId(),
                 postpaidRecurringEvents.getBillingDay(), postpaidRecurringEvents.getBillingDates());
+
         notificationService.addAdminNotificationsForRecurringInvoice(hostelV1.getHostelId());
     }
 
