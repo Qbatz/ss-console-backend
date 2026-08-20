@@ -12,8 +12,8 @@ import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.dto.invoice.CancelledInvoice;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoice.InvoiceSnapshotWrapper;
-import com.smartstay.console.dto.retainer.RetainerItems;
 import com.smartstay.console.dto.settlement.EBItems;
+import com.smartstay.console.dto.settlement.RetainerItems;
 import com.smartstay.console.dto.settlement.WalltetItems;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
@@ -375,7 +375,7 @@ public class InvoiceV1Service {
                                     .getOrDefault(retainerItem.invoiceId(), null);
 
                             if (retainerInvoice != null){
-                                retainerInvoice.setBalanceAmount(retainerItem.availableAmount());
+                                retainerInvoice.setBalanceAmount(retainerItem.amount());
                                 retainerInvoice.setUpdatedBy(authentication.getName());
                                 retainerInvoice.setUpdatedAt(today);
 
@@ -908,7 +908,7 @@ public class InvoiceV1Service {
                                     .getOrDefault(retainerItem.invoiceId(), null);
 
                             if (retainerInvoice != null){
-                                retainerInvoice.setBalanceAmount(retainerItem.availableAmount());
+                                retainerInvoice.setBalanceAmount(retainerItem.amount());
                                 retainerInvoice.setUpdatedBy(authentication.getName());
                                 retainerInvoice.setUpdatedAt(today);
 

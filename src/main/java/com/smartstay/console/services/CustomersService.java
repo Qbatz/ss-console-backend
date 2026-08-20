@@ -12,7 +12,6 @@ import com.smartstay.console.dto.customers.*;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.dto.invoice.CancelledInvoice;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
-import com.smartstay.console.dto.retainer.RetainerItems;
 import com.smartstay.console.dto.settlement.*;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
@@ -1678,7 +1677,7 @@ public class CustomersService {
 
             List<RetainerItems> settlementRetainerItems = retainerInfosRes.stream()
                     .map(i -> new RetainerItems(i.invoiceId(), i.invoiceNumber(), i.invoiceDate(),
-                            i.invoiceDate(), i.invoiceAmount(), i.redeemedAmount(), i.balanceAmount()))
+                            i.invoiceAmount(), i.balanceAmount()))
                     .toList();
 
             SettlementItems settlementItems = settlementItemsService

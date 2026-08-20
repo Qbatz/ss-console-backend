@@ -1,7 +1,6 @@
 package com.smartstay.console.dao;
 
 import com.smartstay.console.converters.*;
-import com.smartstay.console.dto.retainer.RetainerItems;
 import com.smartstay.console.dto.settlement.*;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
