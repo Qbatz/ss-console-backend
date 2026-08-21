@@ -330,23 +330,27 @@ public class Utils {
         return initials.toString();
     }
 
-    public static String getInitials(String name){
+    public static String getInitials(String name) {
+
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+
+        name = name.trim();
+
         StringBuilder initials = new StringBuilder();
 
-        if (name != null) {
-            String[] arrName = name.split(" ");
-            if (arrName.length > 0) {
-                initials.append(arrName[0].toUpperCase().charAt(0));
-            }
-            if (arrName.length > 1) {
-                initials.append(arrName[arrName.length - 1].toUpperCase().charAt(0));
-            }
-            else {
-                String lastPart = arrName[arrName.length - 1].toUpperCase();
+        String[] arrName = name.split("\\s+");
 
-                if (lastPart.length() > 1) {
-                    initials.append(lastPart.charAt(1));
-                }
+        initials.append(arrName[0].toUpperCase().charAt(0));
+
+        if (arrName.length > 1) {
+            initials.append(arrName[arrName.length - 1].toUpperCase().charAt(0));
+        } else {
+            String lastPart = arrName[0].toUpperCase();
+
+            if (lastPart.length() > 1) {
+                initials.append(lastPart.charAt(1));
             }
         }
 
