@@ -192,6 +192,7 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
     @Query("""
             select h
             from hostelv1 h
+            inner join h.hostelPlan hp
             where h.isActive = true
                 and h.isDeleted = false
                 and lower(replace(coalesce(h.hostelName, ''), ' ', ''))

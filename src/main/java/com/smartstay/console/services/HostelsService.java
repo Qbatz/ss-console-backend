@@ -3551,4 +3551,34 @@ public class HostelsService {
 
         return hostelRepository.findAllPagedHostels(name, pageable);
     }
+
+    public ResponseEntity<?> getHostelByName(String name) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(loggedInAgent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        if (name == null || name.isBlank()) {
+            return new ResponseEntity<>("Name is required", HttpStatus.BAD_REQUEST);
+        }
+
+        List<HostelV1> hostels = hostelRepository
+                .findByHostelName(name.trim());
+
+        List<HostelInfoRes> response = hostels.stream()
+                .map(hostel -> new HostelInfoRes(hostel.getHostelId(), hostel.getHostelName(),
+                        Utils.getInitials(hostel.getHostelName()), hostel.getMobile(), hostel.getEmailId(),
+                        hostel.getHouseNo(), hostel.getStreet(), hostel.getLandmark(), hostel.getCity(),
+                        hostel.getState(), hostel.getCountry(), hostel.getPincode(), Utils.buildFullAddress(hostel),
+                        hostel.getMainImage()))
+                .toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }
