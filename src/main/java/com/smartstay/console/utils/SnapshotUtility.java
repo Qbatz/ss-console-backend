@@ -17,6 +17,8 @@ import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
 import com.smartstay.console.dto.plans.SmartstayFeaturesSnapshot;
+import com.smartstay.console.dto.productUpdate.ProductUpdateItemSnapshot;
+import com.smartstay.console.dto.productUpdate.ProductUpdateSnapshot;
 import com.smartstay.console.dto.settlementDetails.SettlementDetailsSnapshot;
 import com.smartstay.console.dto.subscription.SubscriptionSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketActivitySnapshot;
@@ -891,6 +893,60 @@ public class SnapshotUtility {
                 b.getStatus(),
                 b.getCurrentStatus(),
                 copyDate(b.getFreeFrom())
+        );
+    }
+
+    public static ProductUpdateSnapshot toSnapshot(ProductUpdate p) {
+
+        if (p == null) return null;
+
+        return new ProductUpdateSnapshot(
+                p.getProductUpdateId(),
+                p.getTitle(),
+                p.getDescription(),
+                p.getVersion(),
+                copyDate(p.getReleaseDate()),
+                p.getUpdateType(),
+                p.getPlatform(),
+                copyDate(p.getPublishDateTime()),
+                copyDate(p.getExpiryDate()),
+                p.getAudience(),
+                p.getAudienceIds() != null
+                        ? List.copyOf(p.getAudienceIds())
+                        : List.of(),
+                p.getPublishStatus(),
+                p.isActive(),
+                p.isDeleted(),
+                copyDate(p.getCreatedAt()),
+                copyDate(p.getUpdatedAt()),
+                p.getCreatedBy(),
+                p.getUpdatedBy()
+        );
+    }
+
+    public static ProductUpdateItemSnapshot toSnapshot(ProductUpdateItem p) {
+
+        if (p == null) return null;
+
+        return new ProductUpdateItemSnapshot(
+                p.getProductUpdateItemId(),
+                p.getTitle(),
+                p.getDescription(),
+                p.getUpdateType(),
+                p.getModule(),
+                p.getCta(),
+                p.getCtaLink(),
+                p.isShowCtaButton(),
+                p.getItemImages() != null
+                        ? List.copyOf(p.getItemImages())
+                        : List.of(),
+                p.isActive(),
+                p.isDeleted(),
+                copyDate(p.getCreatedAt()),
+                copyDate(p.getUpdatedAt()),
+                p.getCreatedBy(),
+                p.getUpdatedBy(),
+                p.getProductUpdateId()
         );
     }
 

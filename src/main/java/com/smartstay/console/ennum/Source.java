@@ -37,5 +37,6 @@ public enum Source {
     INVOICE_URL,
     SUBSCRIPTION_INVOICE_URL,
     TENANT_JOINING_DATE,
-    BED
+    BED,
+    PRODUCT_UPDATE
 }

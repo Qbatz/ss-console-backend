@@ -1,0 +1,371 @@
+package com.smartstay.console.services;
+
+import com.smartstay.console.config.Authentication;
+import com.smartstay.console.config.FilesConfig;
+import com.smartstay.console.config.S3Service;
+import com.smartstay.console.config.UploadFileToS3;
+import com.smartstay.console.dao.Agent;
+import com.smartstay.console.dao.ProductUpdate;
+import com.smartstay.console.dao.ProductUpdateItem;
+import com.smartstay.console.dto.productUpdate.ProductUpdateSnapshot;
+import com.smartstay.console.ennum.*;
+import com.smartstay.console.payloads.productUpdate.ProductUpdateItemPayload;
+import com.smartstay.console.payloads.productUpdate.ProductUpdatePayload;
+import com.smartstay.console.repositories.ProductUpdateRepository;
+import com.smartstay.console.responses.productUpdate.*;
+import com.smartstay.console.utils.SnapshotUtility;
+import com.smartstay.console.utils.Utils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.*;
+
+@Service
+public class ProductUpdateService {
+
+    @Autowired
+    private ProductUpdateRepository productUpdateRepository;
+    @Autowired
+    private Authentication authentication;
+    @Autowired
+    private AgentService agentService;
+    @Autowired
+    private AgentActivitiesService agentActivitiesService;
+    @Autowired
+    private ProductUpdateItemService productUpdateItemService;
+    @Autowired
+    private UploadFileToS3 uploadFileToS3;
+    @Autowired
+    private S3Service s3Service;
+
+    public ResponseEntity<?> addProductUpdate(ProductUpdatePayload payload,
+                                              MultiValueMap<String, MultipartFile> files) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Date today = new Date();
+
+        ProductUpdate productUpdate = new ProductUpdate();
+
+        Date releaseDate = null;
+        if (payload.releaseDate() != null){
+            releaseDate = Utils.localDateToDate(payload.releaseDate());
+        }
+
+        String updateType;
+        try {
+            updateType = ProductUpdateTypeEnum.valueOf(payload.updateType()).name();
+        } catch (Exception e){
+            return new ResponseEntity<>("Type is invalid", HttpStatus.BAD_REQUEST);
+        }
+
+        String platform;
+        try {
+            platform = ProductUpdatePlatformEnum.valueOf(payload.platform()).name();
+        } catch (Exception e){
+            return new ResponseEntity<>("Platform is invalid", HttpStatus.BAD_REQUEST);
+        }
+
+        String audience;
+        try {
+            audience = ProductUpdateAudienceEnum.valueOf(payload.audience()).name();
+        } catch (Exception e){
+            return new ResponseEntity<>("Audience is invalid", HttpStatus.BAD_REQUEST);
+        }
+
+        if (!ProductUpdateAudienceEnum.ALL_OWNERS.name().equals(audience)) {
+            if (payload.audienceIds() == null || payload.audienceIds().isEmpty()){
+                return new ResponseEntity<>("AudienceIds is required", HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        String publishStatus;
+        try {
+            publishStatus = PublishStatusEnum.valueOf(payload.publishStatus()).name();
+        } catch (Exception e){
+            return new ResponseEntity<>("Publish status is invalid", HttpStatus.BAD_REQUEST);
+        }
+
+        Date publishDateTime = null;
+        if (PublishStatusEnum.PUBLISHED.name().equals(publishStatus)) {
+            publishDateTime = today;
+        } else if (PublishStatusEnum.SCHEDULED.name().equals(publishStatus)) {
+            if (payload.publishDate() == null || payload.publishTime() == null){
+                return new ResponseEntity<>("Publish date time is required", HttpStatus.BAD_REQUEST);
+            }
+            if (!Utils.checkDateIsFromFutureOrPresent(payload.publishDate(), payload.publishTime())) {
+                return new ResponseEntity<>(Utils.DATE_IS_NOT_FROM_FUTURE_OR_PRESENT, HttpStatus.BAD_REQUEST);
+            }
+            publishDateTime = Utils.localDateTimeToDate(payload.publishDate(), payload.publishTime());
+        }
+
+        Date expiryDate = null;
+        if (payload.expiryDate() != null){
+            expiryDate = Utils.localDateToDate(payload.expiryDate());
+        }
+
+        productUpdate.setTitle(payload.title());
+        productUpdate.setDescription(payload.description());
+        productUpdate.setVersion(payload.version());
+        productUpdate.setReleaseDate(releaseDate);
+        productUpdate.setUpdateType(updateType);
+        productUpdate.setPlatform(platform);
+        productUpdate.setAudience(audience);
+        productUpdate.setAudienceIds(payload.audienceIds());
+        productUpdate.setPublishStatus(publishStatus);
+        productUpdate.setPublishDateTime(publishDateTime);
+        productUpdate.setExpiryDate(expiryDate);
+        productUpdate.setActive(true);
+        productUpdate.setDeleted(false);
+        productUpdate.setCreatedAt(today);
+        productUpdate.setCreatedBy(loggedInAgentId);
+
+        List<ProductUpdateItem> productUpdateItems = new ArrayList<>();
+
+        // validation
+        Set<String> clientIds = new HashSet<>();
+
+        for (ProductUpdateItemPayload item : payload.productUpdateItems()) {
+
+            if (!clientIds.add(item.clientId())) {
+                return new ResponseEntity<>(
+                        "Duplicate clientId: " + item.clientId(),
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+        }
+
+        for (String key : files.keySet()) {
+            if (!clientIds.contains(key)) {
+                return new ResponseEntity<>(
+                        "Invalid image clientId: " + key,
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+        }
+
+        ResponseEntity<?> imageValidationResponse = validateImages(payload, files);
+
+        if (imageValidationResponse != null) {
+            return imageValidationResponse;
+        }
+
+        Map<String, ProductUpdateItem> productUpdateItemMap = new HashMap<>();
+
+        for (ProductUpdateItemPayload itemPayload : payload.productUpdateItems()) {
+
+            ProductUpdateItem productUpdateItem = new ProductUpdateItem();
+
+            String itemUpdateType;
+            try {
+                itemUpdateType = ProductUpdateTypeEnum.valueOf(itemPayload.updateType()).name();
+            } catch (Exception e){
+                return new ResponseEntity<>("Item type is invalid", HttpStatus.BAD_REQUEST);
+            }
+
+            String module;
+            try {
+                module = ProductUpdateModuleEnum.valueOf(itemPayload.module()).name();
+            } catch (Exception e){
+                return new ResponseEntity<>("Item module is invalid", HttpStatus.BAD_REQUEST);
+            }
+
+            String cta;
+            try {
+                cta = ProductUpdateCtaEnum.valueOf(itemPayload.cta()).name();
+            } catch (Exception e){
+                return new ResponseEntity<>("Item cta is invalid", HttpStatus.BAD_REQUEST);
+            }
+
+            boolean canShowCtaButton = true;
+            if (ProductUpdateCtaEnum.NO_CTA.name().equals(cta)) {
+                canShowCtaButton = false;
+            }
+
+            if (canShowCtaButton) {
+                if (itemPayload.ctaLink() == null || itemPayload.ctaLink().isBlank()){
+                    return new ResponseEntity<>("Cta link is required", HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            productUpdateItem.setTitle(itemPayload.title());
+            productUpdateItem.setDescription(itemPayload.description());
+            productUpdateItem.setUpdateType(itemUpdateType);
+            productUpdateItem.setModule(module);
+            productUpdateItem.setCta(cta);
+            productUpdateItem.setCtaLink(itemPayload.ctaLink());
+            productUpdateItem.setShowCtaButton(canShowCtaButton);
+            productUpdateItem.setActive(true);
+            productUpdateItem.setDeleted(false);
+            productUpdateItem.setCreatedAt(today);
+            productUpdateItem.setCreatedBy(loggedInAgentId);
+
+            productUpdateItemMap.put(itemPayload.clientId(), productUpdateItem);
+
+            productUpdateItems.add(productUpdateItem);
+        }
+
+        List<String> uploadedImageUrls = new ArrayList<>();
+        for (ProductUpdateItemPayload itemPayload : payload.productUpdateItems()) {
+
+            ProductUpdateItem productUpdateItem = productUpdateItemMap.get(itemPayload.clientId());
+
+            List<MultipartFile> itemImageFiles = files.getOrDefault(itemPayload.clientId(), Collections.emptyList());
+
+            List<String> itemImageUrls = new ArrayList<>();
+
+            if (itemImageFiles.isEmpty()) {
+                itemImageUrls = null;
+            } else {
+
+                for (MultipartFile itemImageFile : itemImageFiles) {
+
+                    String itemImageUrl;
+                    try {
+                        itemImageUrl = uploadFileToS3.uploadFileToS3(
+                                FilesConfig.convertMultipartToFileNew(itemImageFile), "product-update/items");
+
+                        itemImageUrls.add(itemImageUrl);
+                        uploadedImageUrls.add(itemImageUrl);
+
+                    } catch (Exception e) {
+
+                        // delete already uploaded files
+                        for (String url : uploadedImageUrls) {
+                            try {
+                                s3Service.deleteFile(url);
+                            } catch (Exception ignored) {
+                            }
+                        }
+
+                        return new ResponseEntity<>(Utils.FILE_UPLOAD_FAILED, HttpStatus.BAD_REQUEST);
+                    }
+                }
+            }
+
+            productUpdateItem.setItemImages(itemImageUrls);
+        }
+
+        productUpdate = productUpdateRepository.save(productUpdate);
+
+        for (ProductUpdateItem productUpdateItem : productUpdateItems) {
+
+            productUpdateItem.setProductUpdateId(productUpdate.getProductUpdateId());
+        }
+
+        productUpdateItemService.saveAll(productUpdateItems);
+
+        ProductUpdateSnapshot newSnapshot = SnapshotUtility.toSnapshot(productUpdate);
+
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.CREATE, Source.PRODUCT_UPDATE,
+                String.valueOf(productUpdate.getProductUpdateId()), null, newSnapshot);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    private ResponseEntity<?> validateImages(ProductUpdatePayload payload,
+                                             MultiValueMap<String, MultipartFile> files) {
+
+        for (ProductUpdateItemPayload itemPayload : payload.productUpdateItems()) {
+
+            List<MultipartFile> images =
+                    files.getOrDefault(itemPayload.clientId(), Collections.emptyList());
+
+            for (MultipartFile image : images) {
+
+                if (image == null || image.isEmpty()) {
+                    return new ResponseEntity<>(
+                            "Image cannot be empty",
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
+
+                String contentType = image.getContentType();
+
+                if (contentType == null ||
+                        !(contentType.equals("image/jpeg") ||
+                                contentType.equals("image/png") ||
+                                contentType.equals("image/webp"))) {
+
+                    return new ResponseEntity<>(
+                            "Only JPG, PNG and WEBP images are allowed",
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
+
+                if (image.getSize() > 5 * 1024 * 1024) {
+                    return new ResponseEntity<>(
+                            "Image size cannot exceed 5 MB",
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public ResponseEntity<?> getAudience() {
+        List<AudienceResponse> response = Arrays.stream(ProductUpdateAudienceEnum.values())
+                .map(audience -> new AudienceResponse(
+                        audience.name(), audience.getValue(), audience.getDescription()
+                )).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getCta() {
+        List<CtaResponse> response = Arrays.stream(ProductUpdateCtaEnum.values())
+                .map(cta -> new CtaResponse(
+                        cta.name(), cta.getValue()
+                )).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getModule() {
+        List<ModuleResponse> response = Arrays.stream(ProductUpdateModuleEnum.values())
+                .map(module -> new ModuleResponse(
+                        module.name(), module.getValue()
+                )).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getPlatform() {
+        List<PlatformResponse> response = Arrays.stream(ProductUpdatePlatformEnum.values())
+                .map(platform -> new PlatformResponse(
+                        platform.name(), platform.getValue()
+                )).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getType() {
+        List<TypeResponse> response = Arrays.stream(ProductUpdateTypeEnum.values())
+                .map(type -> new TypeResponse(
+                        type.name(), type.getValue()
+                )).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getPublishStatus() {
+        List<PublishStatusResponse> response = Arrays.stream(PublishStatusEnum.values())
+                .filter(publishStatus ->
+                        !PublishStatusEnum.ARCHIVED.name().equals(publishStatus.name()))
+                .map(publishStatus -> new PublishStatusResponse(
+                        publishStatus.name(), publishStatus.getValue(), publishStatus.getDescription()
+                )).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+}
