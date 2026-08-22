@@ -1559,8 +1559,6 @@ public class CustomersService {
                                         d.getPaidAmount() < d.getAmount()
                         )
                         .toList();
-
-                advanceInvoice.setDeductions(advInvDeductions);
             }
 
             List<String> cancelledInvoiceIds = new ArrayList<>();
