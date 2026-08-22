@@ -4006,6 +4006,30 @@ public class CustomersService {
             // add invoice generation logic here
         }
 
+        List<InvoicesV1> advanceInvoices = invoiceV1Service
+                .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.ADVANCE.name());
+
+        InvoicesV1 advanceInvoice = advanceInvoices == null || advanceInvoices.isEmpty()
+                ? null
+                : advanceInvoices.getFirst();
+
+        if (advanceInvoice != null){
+
+            BillingDates newJoiningBillingDates = billingRulesService
+                    .computeBillingDates(billingRules, newJoiningDate);
+
+            if (newJoiningBillingDates != null){
+                advanceInvoice.setInvoiceDueDate(newJoiningBillingDates.dueDate());
+                advanceInvoice.setInvoiceEndDate(newJoiningBillingDates.currentBillEndDate());
+            }
+            advanceInvoice.setInvoiceStartDate(newJoiningDate);
+            advanceInvoice.setInvoiceDate(newJoiningDate);
+            advanceInvoice.setUpdatedBy(authentication.getName());
+            advanceInvoice.setUpdatedAt(today);
+
+            invoiceV1Service.save(advanceInvoice);
+        }
+
         customer.setJoiningDate(newJoiningDate);
         customer.setLastUpdatedAt(today);
         customer.setUpdatedBy(authentication.getName());
@@ -4086,9 +4110,45 @@ public class CustomersService {
         }
 
         JoiningDateInvoiceReconciliation reconciliation = reconcileJoiningDateInvoices(
-                customer, oldJoiningDate, newJoiningDate, today, billingRules);
+            customer, oldJoiningDate, newJoiningDate, today, billingRules);
 
         List<InvoiceImpact> invoiceImpacts = reconciliation.impacts();
+
+        List<InvoicesV1> advanceInvoices = invoiceV1Service
+                .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.ADVANCE.name());
+
+        InvoicesV1 advanceInvoice = advanceInvoices == null || advanceInvoices.isEmpty()
+                ? null
+                : advanceInvoices.getFirst();
+
+        if (advanceInvoice != null) {
+
+            BillingDates newJoiningBillingDates = billingRulesService
+                    .computeBillingDates(billingRules, newJoiningDate);
+
+            String advInvStartDate = null;
+            String advInvEndDate = null;
+            String newStart = null;
+            String newEnd = null;
+
+            if (advanceInvoice.getInvoiceStartDate() != null){
+                advInvStartDate = Utils.dateToString(advanceInvoice.getInvoiceStartDate());
+            }
+            if (advanceInvoice.getInvoiceEndDate() != null){
+                advInvEndDate = Utils.dateToString(advanceInvoice.getInvoiceEndDate());
+            }
+            if (newJoiningDate != null){
+                newStart = Utils.dateToString(newJoiningDate);
+            }
+            if (newJoiningBillingDates != null && newJoiningBillingDates.currentBillEndDate() != null){
+                newEnd = Utils.dateToString(newJoiningBillingDates.currentBillEndDate());
+            }
+
+            invoiceImpacts.add(new InvoiceImpact(advanceInvoice.getInvoiceId(), advanceInvoice.getInvoiceNumber(),
+                    advanceInvoice.getInvoiceType(), advInvStartDate, advInvEndDate, advanceInvoice.getTotalAmount(),
+                    advanceInvoice.getPaidAmount(), advanceInvoice.getPaymentStatus(), InvoiceImpactType.UPDATED,
+                    newStart, newEnd, advanceInvoice.getPaidAmount() != null && advanceInvoice.getPaidAmount() > 0));
+        }
 
         return ResponseEntity.ok(new JoiningDateImpactResponse(invoiceImpacts));
     }

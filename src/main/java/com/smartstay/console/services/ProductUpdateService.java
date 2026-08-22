@@ -151,6 +151,12 @@ public class ProductUpdateService {
         }
 
         for (String key : files.keySet()) {
+
+            // payload is JSON, not an image
+            if ("payload".equals(key)) {
+                continue;
+            }
+
             if (!clientIds.contains(key)) {
                 return new ResponseEntity<>(
                         "Invalid image clientId: " + key,
