@@ -3954,12 +3954,20 @@ public class CustomersService {
         Date today = new Date();
         Date oldJoiningDate = customer.getJoiningDate();
         Date newJoiningDate = Utils.localDateToDate(payload.newJoiningDate());
+        Date bookingDate = booking.getBookingDate();
 
         oldJoiningDate = Utils.getStartOfDay(oldJoiningDate);
         newJoiningDate = Utils.getStartOfDay(newJoiningDate);
+        bookingDate = Utils.getStartOfDay(bookingDate);
 
         if (oldJoiningDate.equals(newJoiningDate)){
             return new ResponseEntity<>("Joining date is not changed", HttpStatus.BAD_REQUEST);
+        }
+
+        if (booking.getIsBooked()){
+            if (newJoiningDate.before(bookingDate)){
+                return new ResponseEntity<>("Joining date can not be before booking date", HttpStatus.BAD_REQUEST);
+            }
         }
 
         BillingRules billingRules = billingRulesService
@@ -4060,9 +4068,16 @@ public class CustomersService {
 
         Date oldJoiningDate = Utils.getStartOfDay(customer.getJoiningDate());
         Date newJoiningDate = Utils.getStartOfDay(Utils.localDateToDate(payload.newJoiningDate()));
+        Date bookingDate = Utils.getStartOfDay(booking.getBookingDate());
 
         if (oldJoiningDate.equals(newJoiningDate)) {
             return ResponseEntity.badRequest().body("Joining date is not changed");
+        }
+
+        if (booking.getIsBooked()){
+            if (newJoiningDate.before(bookingDate)){
+                return new ResponseEntity<>("Joining date can not be before booking date", HttpStatus.BAD_REQUEST);
+            }
         }
 
         BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(customer.getHostelId());
