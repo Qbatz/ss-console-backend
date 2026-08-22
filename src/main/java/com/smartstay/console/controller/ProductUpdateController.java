@@ -29,6 +29,15 @@ public class ProductUpdateController {
         return productUpdateService.addProductUpdate(payload, files);
     }
 
+    @GetMapping
+    public ResponseEntity<?> getProductUpdate(@RequestParam(value = "page", defaultValue = "1") int page,
+                                              @RequestParam(value = "size", defaultValue = "10") int size,
+                                              @RequestParam(value = "name", required = false) String name,
+                                              @RequestParam(defaultValue = "ALL") String publishStatus,
+                                              @RequestParam(defaultValue = "ALL") String type){
+        return productUpdateService.getProductUpdate(page, size, name, publishStatus, type);
+    }
+
     @GetMapping("/audience")
     public ResponseEntity<?> getAudience(){
         return productUpdateService.getAudience();

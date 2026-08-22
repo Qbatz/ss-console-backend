@@ -1,5 +1,6 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.Mapper.productUpdate.ProductUpdateListResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.config.FilesConfig;
 import com.smartstay.console.config.S3Service;
@@ -7,6 +8,7 @@ import com.smartstay.console.config.UploadFileToS3;
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.ProductUpdate;
 import com.smartstay.console.dao.ProductUpdateItem;
+import com.smartstay.console.dto.productUpdate.ProductUpdatePublishStatusCountProjection;
 import com.smartstay.console.dto.productUpdate.ProductUpdateSnapshot;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.payloads.productUpdate.ProductUpdateItemPayload;
@@ -16,6 +18,9 @@ import com.smartstay.console.responses.productUpdate.*;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -23,6 +28,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class ProductUpdateService {
@@ -365,6 +372,98 @@ public class ProductUpdateService {
                 .map(publishStatus -> new PublishStatusResponse(
                         publishStatus.name(), publishStatus.getValue(), publishStatus.getDescription()
                 )).toList();
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getProductUpdate(int page, int size, String name,
+                                              String publishStatus, String type) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        name = (name == null || name.isBlank()) ? null : name.trim();
+        publishStatus = (publishStatus == null || publishStatus.isBlank()) ? null : publishStatus.trim();
+        type = (type == null || type.isBlank()) ? null : type.trim();
+
+        if (publishStatus != null && publishStatus.equals("ALL")){
+            publishStatus = null;
+        }
+        if (type != null && type.equals("ALL")) {
+            type = null;
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<ProductUpdate> pagedProductUpdate = productUpdateRepository
+                .findPagedProductUpdates(name, publishStatus, type, pageable);
+
+        List<ProductUpdate> productUpdates = pagedProductUpdate.getContent();
+
+        Set<String> agentIds = new HashSet<>();
+        for (ProductUpdate productUpdate : productUpdates) {
+            if (productUpdate.getCreatedBy() != null){
+                agentIds.add(productUpdate.getCreatedBy());
+            }
+            if (productUpdate.getUpdatedBy() != null){
+                agentIds.add(productUpdate.getUpdatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        Function.identity()));
+
+        ProductUpdateListResMapper mapper = new ProductUpdateListResMapper(agentMap);
+
+        List<ProductUpdateListRes> productUpdateListRes = productUpdates.stream()
+                .map(mapper)
+                .toList();
+
+        List<PublishStatusResponse> publishStatusFilters = Arrays.stream(PublishStatusEnum.values())
+                .map(i -> new PublishStatusResponse(
+                        i.name(), i.getValue(), i.getDescription()
+                )).toList();
+
+        List<TypeResponse> typeFilters = Arrays.stream(ProductUpdateTypeEnum.values())
+                .map(i -> new TypeResponse(
+                        i.name(), i.getValue()
+                )).toList();
+
+        long totalCount = 0;
+        long draftCount = 0;
+        long scheduledCount = 0;
+        long publishedCount = 0;
+
+        ProductUpdatePublishStatusCountProjection countData = productUpdateRepository
+                .findPublishStatusCountData();
+
+        if (countData != null) {
+            totalCount = countData.getTotalCount();
+            draftCount = countData.getDraftCount();
+            scheduledCount = countData.getScheduledCount();
+            publishedCount = countData.getPublishedCount();
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("productUpdateList", productUpdateListRes);
+        response.put("totalCount", totalCount);
+        response.put("draftCount", draftCount);
+        response.put("scheduledCount", scheduledCount);
+        response.put("publishedCount", publishedCount);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedProductUpdate.getTotalElements());
+        response.put("totalPages", pagedProductUpdate.getTotalPages());
+        response.put("publishStatusFilters", publishStatusFilters);
+        response.put("typeFilters", typeFilters);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
