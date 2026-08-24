@@ -1,5 +1,6 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.productUpdate.ProductUpdateEditPayload;
 import com.smartstay.console.payloads.productUpdate.ProductUpdatePayload;
 import com.smartstay.console.services.ProductUpdateService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -41,6 +42,22 @@ public class ProductUpdateController {
     @GetMapping("/{productUpdateId}")
     public ResponseEntity<?> getProductUpdateById(@PathVariable("productUpdateId") Long productUpdateId){
         return productUpdateService.getProductUpdateById(productUpdateId);
+    }
+
+    @PutMapping("/{productUpdateId}")
+    public ResponseEntity<?> updateProductUpdate(@PathVariable("productUpdateId") Long productUpdateId,
+                                                 @Valid @RequestBody ProductUpdateEditPayload payload){
+        return productUpdateService.updateProductUpdate(productUpdateId, payload);
+    }
+
+    @PutMapping("/archive/{productUpdateId}")
+    public ResponseEntity<?> archiveProductUpdate(@PathVariable("productUpdateId") Long productUpdateId){
+        return productUpdateService.archiveProductUpdate(productUpdateId);
+    }
+
+    @DeleteMapping("/{productUpdateId}")
+    public ResponseEntity<?> deleteProductUpdate(@PathVariable("productUpdateId") Long productUpdateId){
+        return productUpdateService.deleteProductUpdate(productUpdateId);
     }
 
     @GetMapping("/audience")

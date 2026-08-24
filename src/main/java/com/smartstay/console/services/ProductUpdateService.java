@@ -10,6 +10,7 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.productUpdate.ProductUpdatePublishStatusCountProjection;
 import com.smartstay.console.dto.productUpdate.ProductUpdateSnapshot;
 import com.smartstay.console.ennum.*;
+import com.smartstay.console.payloads.productUpdate.ProductUpdateEditPayload;
 import com.smartstay.console.payloads.productUpdate.ProductUpdateItemPayload;
 import com.smartstay.console.payloads.productUpdate.ProductUpdatePayload;
 import com.smartstay.console.repositories.ProductUpdateRepository;
@@ -554,5 +555,177 @@ public class ProductUpdateService {
         ProductUpdateResponse response = mapper.apply(productUpdate);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateProductUpdate(Long productUpdateId, ProductUpdateEditPayload payload) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        ProductUpdate productUpdate = productUpdateRepository
+                .findByProductUpdateIdAndIsActiveTrueAndIsDeletedFalse(productUpdateId);
+        if (productUpdate == null){
+            return new ResponseEntity<>(Utils.PRODUCT_UPDATE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        ProductUpdateSnapshot oldSnapshot = SnapshotUtility.toSnapshot(productUpdate);
+
+        Date today = new Date();
+
+        if (payload.title() != null && !payload.title().isBlank()){
+            productUpdate.setTitle(payload.title());
+        }
+        if (payload.description() != null && !payload.description().isBlank()){
+            productUpdate.setDescription(payload.description());
+        }
+        if (payload.version() != null && !payload.version().isBlank()){
+            productUpdate.setVersion(payload.version());
+        }
+        if (payload.releaseDate() != null){
+            Date releaseDate = Utils.localDateToDate(payload.releaseDate());
+            productUpdate.setReleaseDate(releaseDate);
+        }
+        if (payload.updateType() != null && !payload.updateType().isBlank()){
+            String updateType;
+            try {
+                updateType = ProductUpdateTypeEnum.valueOf(payload.updateType()).name();
+            } catch (Exception e){
+                return new ResponseEntity<>("Type is invalid", HttpStatus.BAD_REQUEST);
+            }
+            productUpdate.setUpdateType(updateType);
+        }
+        if (payload.platform() != null && !payload.platform().isBlank()){
+            String platform;
+            try {
+                platform = ProductUpdatePlatformEnum.valueOf(payload.platform()).name();
+            } catch (Exception e){
+                return new ResponseEntity<>("Platform is invalid", HttpStatus.BAD_REQUEST);
+            }
+            productUpdate.setPlatform(platform);
+        }
+        if (payload.audience() != null && !payload.audience().isBlank()){
+            String audience;
+            try {
+                audience = ProductUpdateAudienceEnum.valueOf(payload.audience()).name();
+            } catch (Exception e){
+                return new ResponseEntity<>("Audience is invalid", HttpStatus.BAD_REQUEST);
+            }
+            productUpdate.setAudience(audience);
+
+            if (!ProductUpdateAudienceEnum.ALL_OWNERS.name().equals(audience)) {
+                if (payload.audienceIds() == null || payload.audienceIds().isEmpty()){
+                    return new ResponseEntity<>("AudienceIds is required", HttpStatus.BAD_REQUEST);
+                }
+
+                productUpdate.setAudienceIds(payload.audienceIds());
+            }
+        }
+        if (payload.publishStatus() != null && !payload.publishStatus().isBlank()){
+            String publishStatus;
+            try {
+                publishStatus = PublishStatusEnum.valueOf(payload.publishStatus()).name();
+            } catch (Exception e){
+                return new ResponseEntity<>("Publish status is invalid", HttpStatus.BAD_REQUEST);
+            }
+            productUpdate.setPublishStatus(publishStatus);
+
+            Date publishDateTime = null;
+            if (PublishStatusEnum.PUBLISHED.name().equals(publishStatus)) {
+                publishDateTime = today;
+            } else if (PublishStatusEnum.SCHEDULED.name().equals(publishStatus)) {
+                if (payload.publishDate() == null || payload.publishTime() == null){
+                    return new ResponseEntity<>("Publish date time is required", HttpStatus.BAD_REQUEST);
+                }
+                if (!Utils.checkDateIsFromFutureOrPresent(payload.publishDate(), payload.publishTime())) {
+                    return new ResponseEntity<>(Utils.DATE_IS_NOT_FROM_FUTURE_OR_PRESENT, HttpStatus.BAD_REQUEST);
+                }
+                publishDateTime = Utils.localDateTimeToDate(payload.publishDate(), payload.publishTime());
+            }
+
+            Date expiryDate = null;
+            if (payload.expiryDate() != null){
+                expiryDate = Utils.localDateToDate(payload.expiryDate());
+            }
+
+            productUpdate.setPublishDateTime(publishDateTime);
+            productUpdate.setExpiryDate(expiryDate);
+        }
+        productUpdate.setUpdatedAt(today);
+        productUpdate.setUpdatedBy(loggedInAgentId);
+
+        productUpdate = productUpdateRepository.save(productUpdate);
+
+        ProductUpdateSnapshot newSnapshot = SnapshotUtility.toSnapshot(productUpdate);
+
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.UPDATE, Source.PRODUCT_UPDATE,
+                String.valueOf(productUpdateId), oldSnapshot, newSnapshot);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> archiveProductUpdate(Long productUpdateId) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        ProductUpdate productUpdate = productUpdateRepository
+                .findByProductUpdateIdAndIsActiveTrueAndIsDeletedFalse(productUpdateId);
+        if (productUpdate == null){
+            return new ResponseEntity<>(Utils.PRODUCT_UPDATE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        ProductUpdateSnapshot oldSnapshot = SnapshotUtility.toSnapshot(productUpdate);
+
+        Date today = new Date();
+
+        productUpdate.setPublishStatus(PublishStatusEnum.ARCHIVED.name());
+        productUpdate.setUpdatedAt(today);
+        productUpdate.setUpdatedBy(loggedInAgentId);
+
+        productUpdate = productUpdateRepository.save(productUpdate);
+
+        ProductUpdateSnapshot newSnapshot = SnapshotUtility.toSnapshot(productUpdate);
+
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.UPDATE, Source.PRODUCT_UPDATE,
+                String.valueOf(productUpdateId), oldSnapshot, newSnapshot);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> deleteProductUpdate(Long productUpdateId) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        ProductUpdate productUpdate = productUpdateRepository
+                .findByProductUpdateIdAndIsActiveTrueAndIsDeletedFalse(productUpdateId);
+        if (productUpdate == null){
+            return new ResponseEntity<>(Utils.PRODUCT_UPDATE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        ProductUpdateSnapshot oldSnapshot = SnapshotUtility.toSnapshot(productUpdate);
+
+        Date today = new Date();
+
+        productUpdate.setActive(false);
+        productUpdate.setDeleted(true);
+        productUpdate.setUpdatedAt(today);
+        productUpdate.setUpdatedBy(loggedInAgentId);
+
+        productUpdate = productUpdateRepository.save(productUpdate);
+
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.DELETE, Source.PRODUCT_UPDATE,
+                String.valueOf(productUpdateId), oldSnapshot, null);
+
+        return new ResponseEntity<>(Utils.DELETED, HttpStatus.OK);
     }
 }

@@ -2,6 +2,7 @@ package com.smartstay.console.Mapper.productUpdate;
 
 import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.ProductUpdate;
+import com.smartstay.console.ennum.PublishStatusEnum;
 import com.smartstay.console.responses.productUpdate.ProductUpdateListRes;
 import com.smartstay.console.utils.Utils;
 
@@ -67,10 +68,17 @@ public class ProductUpdateListResMapper implements Function<ProductUpdate, Produ
             }
         }
 
+        boolean canArchive = false;
+        if (productUpdate.getPublishStatus() != null){
+            if (!PublishStatusEnum.ARCHIVED.name().equals(productUpdate.getPublishStatus())){
+                canArchive = true;
+            }
+        }
+
         return new ProductUpdateListRes(productUpdate.getProductUpdateId(), productUpdate.getTitle(),
                 productUpdate.getDescription(), productUpdate.getVersion(), releaseDate, productUpdate.getUpdateType(),
                 productUpdate.getPlatform(), publishDate, publishTime, expiryDate, productUpdate.getAudience(),
-                productUpdate.getPublishStatus(), createdAtDate, createdAtTime, updatedAtDate, updatedAtTime,
+                productUpdate.getPublishStatus(), canArchive, createdAtDate, createdAtTime, updatedAtDate, updatedAtTime,
                 productUpdate.getCreatedBy(), createdBy, productUpdate.getUpdatedBy(), updatedBy);
     }
 }

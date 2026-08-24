@@ -2,6 +2,7 @@ package com.smartstay.console.Mapper.productUpdate;
 
 import com.smartstay.console.dao.*;
 import com.smartstay.console.ennum.ProductUpdateAudienceEnum;
+import com.smartstay.console.ennum.PublishStatusEnum;
 import com.smartstay.console.responses.productUpdate.*;
 import com.smartstay.console.utils.Utils;
 
@@ -94,43 +95,45 @@ public class ProductUpdateResMapper implements Function<ProductUpdate, ProductUp
         } else if (ProductUpdateAudienceEnum.SELECTED_OWNERS.name().equals(productUpdate.getAudience())) {
             isOwnerAudience = true;
         }
-        for (String audienceId : productUpdate.getAudienceIds()) {
+        if (productUpdate.getAudienceIds() != null && !productUpdate.getAudienceIds().isEmpty()) {
+            for (String audienceId : productUpdate.getAudienceIds()) {
 
-            if (ProductUpdateAudienceEnum.SELECTED_PLANS.name().equals(productUpdate.getAudience())) {
+                if (ProductUpdateAudienceEnum.SELECTED_PLANS.name().equals(productUpdate.getAudience())) {
 
-                Long planId = Long.valueOf(audienceId);
+                    Long planId = Long.valueOf(audienceId);
 
-                if (plansMap != null) {
-                    Plans plan = plansMap.getOrDefault(planId, null);
+                    if (plansMap != null) {
+                        Plans plan = plansMap.getOrDefault(planId, null);
 
-                    if (plan != null) {
-                        planAudiences.add(new PlanAudienceRes(planId, plan.getPlanName(),
-                                plan.getPlanCode(), plan.getPlanType()));
+                        if (plan != null) {
+                            planAudiences.add(new PlanAudienceRes(planId, plan.getPlanName(),
+                                    plan.getPlanCode(), plan.getPlanType()));
+                        }
                     }
-                }
 
-            } else if (ProductUpdateAudienceEnum.SELECTED_HOSTELS.name().equals(productUpdate.getAudience())) {
+                } else if (ProductUpdateAudienceEnum.SELECTED_HOSTELS.name().equals(productUpdate.getAudience())) {
 
-                String hostelId = audienceId;
+                    String hostelId = audienceId;
 
-                if (hostelMap != null) {
-                    HostelV1 hostel = hostelMap.getOrDefault(hostelId, null);
+                    if (hostelMap != null) {
+                        HostelV1 hostel = hostelMap.getOrDefault(hostelId, null);
 
-                    if (hostel != null) {
-                        hostelAudiences.add(new HostelAudienceRes(hostelId, hostel.getHostelName()));
+                        if (hostel != null) {
+                            hostelAudiences.add(new HostelAudienceRes(hostelId, hostel.getHostelName()));
+                        }
                     }
-                }
 
-            } else if (ProductUpdateAudienceEnum.SELECTED_OWNERS.name().equals(productUpdate.getAudience())) {
+                } else if (ProductUpdateAudienceEnum.SELECTED_OWNERS.name().equals(productUpdate.getAudience())) {
 
-                String ownerId = audienceId;
+                    String ownerId = audienceId;
 
-                if (ownerMap != null) {
-                    Users owner = ownerMap.getOrDefault(ownerId, null);
+                    if (ownerMap != null) {
+                        Users owner = ownerMap.getOrDefault(ownerId, null);
 
-                    if (owner != null) {
-                        ownerAudiences.add(new OwnerAudienceRes(ownerId, Utils.getFullName(owner.getFirstName(),
-                                owner.getLastName()), owner.getParentId()));
+                        if (owner != null) {
+                            ownerAudiences.add(new OwnerAudienceRes(ownerId, Utils.getFullName(owner.getFirstName(),
+                                    owner.getLastName()), owner.getParentId()));
+                        }
                     }
                 }
             }
@@ -186,11 +189,18 @@ public class ProductUpdateResMapper implements Function<ProductUpdate, ProductUp
             }
         }
 
+        boolean canArchive = false;
+        if (productUpdate.getPublishStatus() != null){
+            if (!PublishStatusEnum.ARCHIVED.name().equals(productUpdate.getPublishStatus())){
+                canArchive = true;
+            }
+        }
+
         return new ProductUpdateResponse(productUpdate.getProductUpdateId(), productUpdate.getTitle(),
                 productUpdate.getDescription(), productUpdate.getVersion(), releaseDate, productUpdate.getUpdateType(),
                 productUpdate.getPlatform(), publishDate, publishTime, expiryDate, productUpdate.getAudience(),
-                productUpdate.getAudienceIds(), audiences, productUpdate.getPublishStatus(), createdAtDate, createdAtTime,
-                updatedAtDate, updatedAtTime, productUpdate.getCreatedBy(), createdBy, productUpdate.getUpdatedBy(), updatedBy,
-                productUpdateItemResponses);
+                productUpdate.getAudienceIds(), audiences, productUpdate.getPublishStatus(), canArchive,
+                createdAtDate, createdAtTime, updatedAtDate, updatedAtTime, productUpdate.getCreatedBy(),
+                createdBy, productUpdate.getUpdatedBy(), updatedBy, productUpdateItemResponses);
     }
 }

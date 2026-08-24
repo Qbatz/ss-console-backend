@@ -130,6 +130,7 @@ public class AgentActivityUtil {
             case SUBSCRIPTION_INVOICE_URL -> "Updated a subscription invoice url";
             case TENANT_JOINING_DATE -> "Updated a tenant joining date";
             case BED -> "Updated a bed";
+            case PRODUCT_UPDATE -> "Updated a new product update";
             default -> "Updated successfully";
         };
     }
@@ -167,6 +168,7 @@ public class AgentActivityUtil {
             case TRANSACTION_RECEIPT_URL -> "Deleted a transaction receipt";
             case INVOICE_URL -> "Deleted an invoice";
             case SUBSCRIPTION_INVOICE_URL -> "Deleted a subscription invoice";
+            case PRODUCT_UPDATE -> "Deleted a product update";
             default -> "Deleted successfully";
         };
     }
