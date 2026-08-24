@@ -3964,9 +3964,11 @@ public class CustomersService {
             return new ResponseEntity<>("Joining date is not changed", HttpStatus.BAD_REQUEST);
         }
 
-        if (booking.getIsBooked()){
-            if (newJoiningDate.before(bookingDate)){
-                return new ResponseEntity<>("Joining date can not be before booking date", HttpStatus.BAD_REQUEST);
+        if (booking.getIsBooked() != null){
+            if (booking.getIsBooked()){
+                if (newJoiningDate.before(bookingDate)){
+                    return new ResponseEntity<>("Joining date can not be before booking date", HttpStatus.BAD_REQUEST);
+                }
             }
         }
 
@@ -4098,9 +4100,11 @@ public class CustomersService {
             return ResponseEntity.badRequest().body("Joining date is not changed");
         }
 
-        if (booking.getIsBooked()){
-            if (newJoiningDate.before(bookingDate)){
-                return new ResponseEntity<>("Joining date can not be before booking date", HttpStatus.BAD_REQUEST);
+        if (booking.getIsBooked() != null){
+            if (booking.getIsBooked()){
+                if (newJoiningDate.before(bookingDate)){
+                    return new ResponseEntity<>("Joining date can not be before booking date", HttpStatus.BAD_REQUEST);
+                }
             }
         }
 
