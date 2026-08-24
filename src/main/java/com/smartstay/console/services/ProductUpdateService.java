@@ -714,12 +714,24 @@ public class ProductUpdateService {
 
         ProductUpdateSnapshot oldSnapshot = SnapshotUtility.toSnapshot(productUpdate);
 
+        List<ProductUpdateItem> productUpdateItems = productUpdateItemService
+                .getAllByProductUpdateId(productUpdateId);
+
         Date today = new Date();
 
         productUpdate.setActive(false);
         productUpdate.setDeleted(true);
         productUpdate.setUpdatedAt(today);
         productUpdate.setUpdatedBy(loggedInAgentId);
+
+        for (ProductUpdateItem productUpdateItem : productUpdateItems) {
+            productUpdateItem.setActive(false);
+            productUpdateItem.setDeleted(true);
+            productUpdateItem.setUpdatedAt(today);
+            productUpdateItem.setUpdatedBy(loggedInAgentId);
+        }
+
+        productUpdateItemService.saveAll(productUpdateItems);
 
         productUpdate = productUpdateRepository.save(productUpdate);
 

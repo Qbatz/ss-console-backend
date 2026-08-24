@@ -69,6 +69,7 @@ public class AgentActivityUtil {
             case UPDATE -> getUpdateDescription(source);
             case DELETE -> getDeleteDescription(source);
             case LOGIN -> getLoginDescription(source);
+            case SNAPSHOT_CREATE -> getSnapshotCreateDescription(source);
             case SNAPSHOT_UPDATE -> getSnapshotUpdateDescription(source);
             case SNAPSHOT_DELETE -> getSnapshotDeleteDescription(source);
             case DEACTIVATE -> getDeactivateDescription(source);
@@ -135,8 +136,16 @@ public class AgentActivityUtil {
         };
     }
 
+    private static String getSnapshotCreateDescription(Source source) {
+        return switch (source) {
+            case PRODUCT_UPDATE_ITEM -> "Created product update items";
+            default -> "Created successfully";
+        };
+    }
+
     private static String getSnapshotUpdateDescription(Source source) {
         return switch (source){
+            case PRODUCT_UPDATE_ITEM -> "Updated product update items";
             default -> "Updated successfully";
         };
     }
@@ -145,6 +154,7 @@ public class AgentActivityUtil {
         return switch (source){
             case INVOICE -> "Deleted invoices";
             case HOSTEL_EXPENSE -> "Deleted expenses";
+            case PRODUCT_UPDATE_ITEM -> "Deleted product update items";
             default -> "Deleted successfully";
         };
     }
