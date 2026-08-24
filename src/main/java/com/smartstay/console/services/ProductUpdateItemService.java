@@ -16,4 +16,9 @@ public class ProductUpdateItemService {
     public void saveAll(List<ProductUpdateItem> productUpdateItems) {
         productUpdateItemRepository.saveAll(productUpdateItems);
     }
+
+    public List<ProductUpdateItem> getAllByProductUpdateId(Long productUpdateId) {
+        return productUpdateItemRepository
+                .findAllByProductUpdateIdAndIsActiveTrueAndIsDeletedFalse(productUpdateId);
+    }
 }

@@ -1,13 +1,12 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.productUpdate.ProductUpdateListResMapper;
+import com.smartstay.console.Mapper.productUpdate.ProductUpdateResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.config.FilesConfig;
 import com.smartstay.console.config.S3Service;
 import com.smartstay.console.config.UploadFileToS3;
-import com.smartstay.console.dao.Agent;
-import com.smartstay.console.dao.ProductUpdate;
-import com.smartstay.console.dao.ProductUpdateItem;
+import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.productUpdate.ProductUpdatePublishStatusCountProjection;
 import com.smartstay.console.dto.productUpdate.ProductUpdateSnapshot;
 import com.smartstay.console.ennum.*;
@@ -48,6 +47,12 @@ public class ProductUpdateService {
     private UploadFileToS3 uploadFileToS3;
     @Autowired
     private S3Service s3Service;
+    @Autowired
+    private PlansService plansService;
+    @Autowired
+    private HostelService hostelService;
+    @Autowired
+    private UsersService usersService;
 
     public ResponseEntity<?> addProductUpdate(ProductUpdatePayload payload,
                                               MultiValueMap<String, MultipartFile> files) {
@@ -470,6 +475,83 @@ public class ProductUpdateService {
         response.put("totalPages", pagedProductUpdate.getTotalPages());
         response.put("publishStatusFilters", publishStatusFilters);
         response.put("typeFilters", typeFilters);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getProductUpdateById(Long productUpdateId) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        ProductUpdate productUpdate = productUpdateRepository
+                .findByProductUpdateIdAndIsActiveTrueAndIsDeletedFalse(productUpdateId);
+        if (productUpdate == null){
+            return new ResponseEntity<>(Utils.PRODUCT_UPDATE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<ProductUpdateItem> productUpdateItems = productUpdateItemService
+                .getAllByProductUpdateId(productUpdateId);
+
+        Set<String> agentIds = new HashSet<>();
+
+        if (productUpdate.getCreatedBy() != null){
+            agentIds.add(productUpdate.getCreatedBy());
+        }
+        if (productUpdate.getUpdatedBy() != null){
+            agentIds.add(productUpdate.getUpdatedBy());
+        }
+
+        for (ProductUpdateItem productUpdateItem : productUpdateItems) {
+            if (productUpdateItem.getCreatedBy() != null){
+                agentIds.add(productUpdateItem.getCreatedBy());
+            }
+            if (productUpdateItem.getUpdatedBy() != null){
+                agentIds.add(productUpdateItem.getUpdatedBy());
+            }
+        }
+
+        List<Agent> agents = agentService.getAgentsByIds(agentIds);
+        Map<String, Agent> agentMap = agents.stream()
+                .collect(Collectors.toMap(Agent::getAgentId,
+                        Function.identity()));
+
+        Set<Long> planIds = new HashSet<>();
+        Set<String> hostelIds = new HashSet<>();
+        Set<String> ownerIds = new HashSet<>();
+
+        if (ProductUpdateAudienceEnum.SELECTED_PLANS.name().equals(productUpdate.getAudience())) {
+            planIds = productUpdate.getAudienceIds().stream()
+                    .map(Long::valueOf)
+                    .collect(Collectors.toSet());
+        } else if (ProductUpdateAudienceEnum.SELECTED_HOSTELS.name().equals(productUpdate.getAudience())) {
+            hostelIds = new HashSet<>(productUpdate.getAudienceIds());
+        } else if (ProductUpdateAudienceEnum.SELECTED_OWNERS.name().equals(productUpdate.getAudience())) {
+            ownerIds = new HashSet<>(productUpdate.getAudienceIds());
+        }
+
+        List<Plans> plans = plansService.getAllByPlanIds(planIds);
+        Map<Long, Plans> plansMap = plans.stream()
+                .collect(Collectors.toMap(Plans::getPlanId, Function.identity(),
+                        (a, b) -> a));
+
+        List<HostelV1> hostels = hostelService.getHostelsByHostelIds(hostelIds);
+        Map<String, HostelV1> hostelMap = hostels.stream()
+                .collect(Collectors.toMap(HostelV1::getHostelId, Function.identity(),
+                        (a, b) -> a));
+
+        List<Users> owners = usersService.getUsersByIds(ownerIds);
+        Map<String, Users> ownerMap = owners.stream()
+                .collect(Collectors.toMap(Users::getUserId, Function.identity(),
+                        (a, b) -> a));
+
+        ProductUpdateResMapper mapper = new ProductUpdateResMapper(agentMap, productUpdateItems,
+                plansMap, hostelMap, ownerMap);
+
+        ProductUpdateResponse response = mapper.apply(productUpdate);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

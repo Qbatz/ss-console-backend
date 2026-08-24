@@ -38,6 +38,11 @@ public class ProductUpdateController {
         return productUpdateService.getProductUpdate(page, size, name, publishStatus, type);
     }
 
+    @GetMapping("/{productUpdateId}")
+    public ResponseEntity<?> getProductUpdateById(@PathVariable("productUpdateId") Long productUpdateId){
+        return productUpdateService.getProductUpdateById(productUpdateId);
+    }
+
     @GetMapping("/audience")
     public ResponseEntity<?> getAudience(){
         return productUpdateService.getAudience();

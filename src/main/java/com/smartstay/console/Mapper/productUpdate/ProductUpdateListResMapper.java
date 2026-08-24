@@ -16,7 +16,6 @@ public class ProductUpdateListResMapper implements Function<ProductUpdate, Produ
         this.agentMap = agentMap;
     }
 
-
     @Override
     public ProductUpdateListRes apply(ProductUpdate productUpdate) {
 

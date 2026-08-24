@@ -38,4 +38,6 @@ public interface ProductUpdateRepository extends JpaRepository<ProductUpdate, Lo
             """)
     Page<ProductUpdate> findPagedProductUpdates(String name, String publishStatus,
                                                 String type, Pageable pageable);
+
+    ProductUpdate findByProductUpdateIdAndIsActiveTrueAndIsDeletedFalse(Long productUpdateId);
 }

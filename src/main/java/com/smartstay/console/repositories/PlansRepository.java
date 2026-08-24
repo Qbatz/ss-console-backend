@@ -52,4 +52,6 @@ public interface PlansRepository extends JpaRepository<Plans, Long> {
     List<Plans> findAllByPlanTypeNotIn(Set<String> planTypes);
 
     Plans findByPlanId(Long planId);
+
+    List<Plans> findAllByPlanIdIn(Set<Long> planIds);
 }
