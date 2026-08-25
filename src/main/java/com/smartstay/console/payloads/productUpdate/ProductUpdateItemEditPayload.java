@@ -1,5 +1,7 @@
 package com.smartstay.console.payloads.productUpdate;
 
+import java.util.List;
+
 public record ProductUpdateItemEditPayload(Long productUpdateItemId,
                                            String title,
                                            String description,
@@ -7,5 +9,6 @@ public record ProductUpdateItemEditPayload(Long productUpdateItemId,
                                            String module,
                                            String cta,
                                            String ctaLink,
-                                           String clientId) {
+                                           String clientId,
+                                           List<String> existingImageUrls) {
 }

@@ -78,20 +78,20 @@ public class ProductUpdateItemService {
                         HttpStatus.BAD_REQUEST
                 );
             }
+        }
 
-            for (String key : files.keySet()) {
+        for (String key : files.keySet()) {
 
-                // payload is JSON, not an image
-                if ("payload".equals(key)) {
-                    continue;
-                }
+            // payload is JSON, not an image
+            if ("payload".equals(key)) {
+                continue;
+            }
 
-                if (!clientIds.contains(key)) {
-                    return new ResponseEntity<>(
-                            "Invalid image clientId: " + key,
-                            HttpStatus.BAD_REQUEST
-                    );
-                }
+            if (!clientIds.contains(key)) {
+                return new ResponseEntity<>(
+                        "Invalid image clientId: " + key,
+                        HttpStatus.BAD_REQUEST
+                );
             }
         }
 
@@ -216,6 +216,39 @@ public class ProductUpdateItemService {
 
         Date today = new Date();
 
+        ResponseEntity<?> imageValidationResponse = validateEditImages(payloads, files);
+
+        if (imageValidationResponse != null) {
+            return imageValidationResponse;
+        }
+
+        Set<String> clientIds = new HashSet<>();
+
+        for (ProductUpdateItemEditPayload payload : payloads) {
+
+            if (!clientIds.add(payload.clientId())) {
+                return new ResponseEntity<>(
+                        "Duplicate clientId: " + payload.clientId(),
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+        }
+
+        for (String key : files.keySet()) {
+
+            // payload is JSON, not an image
+            if ("payload".equals(key)) {
+                continue;
+            }
+
+            if (!clientIds.contains(key)) {
+                return new ResponseEntity<>(
+                        "Invalid image clientId: " + key,
+                        HttpStatus.BAD_REQUEST
+                );
+            }
+        }
+
         Set<Long> productUpdateItemIds = payloads.stream()
                 .map(ProductUpdateItemEditPayload::productUpdateItemId)
                 .collect(Collectors.toSet());
@@ -232,6 +265,7 @@ public class ProductUpdateItemService {
                 .collect(Collectors.toMap(ProductUpdateItem::getProductUpdateItemId,
                         Function.identity(), (a, b) -> a));
 
+        Map<String, ProductUpdateItem> updatableProductUpdateItemMap = new HashMap<>();
         List<ProductUpdateItem> updatableProductUpdateItems = new ArrayList<>();
 
         for (ProductUpdateItemEditPayload itemPayload : payloads) {
@@ -289,12 +323,87 @@ public class ProductUpdateItemService {
                 productUpdateItem.setUpdatedAt(today);
                 productUpdateItem.setUpdatedBy(loggedInAgentId);
 
+                updatableProductUpdateItemMap.put(itemPayload.clientId(), productUpdateItem);
                 updatableProductUpdateItems.add(productUpdateItem);
             }
         }
 
+        List<String> uploadedImageUrls = new ArrayList<>();
+        List<String> allImagesToDelete = new ArrayList<>();
+        for (ProductUpdateItemEditPayload itemPayload : payloads) {
+
+            ProductUpdateItem productUpdateItem = updatableProductUpdateItemMap.get(itemPayload.clientId());
+
+            List<MultipartFile> itemImageFiles = files.getOrDefault(itemPayload.clientId(), Collections.emptyList());
+
+            List<String> oldImageUrls = productUpdateItem.getItemImages() != null
+                    ? productUpdateItem.getItemImages()
+                    : new ArrayList<>();
+
+            List<String> existingImageUrls = itemPayload.existingImageUrls() != null
+                    ? itemPayload.existingImageUrls().stream()
+                        .filter(oldImageUrls::contains)
+                        .distinct()
+                        .toList()
+                    : Collections.emptyList();
+
+            List<String> imagesToDelete = oldImageUrls.stream()
+                    .filter(url -> !existingImageUrls.contains(url))
+                    .toList();
+
+            List<String> itemImageUrls = new ArrayList<>();
+
+            if (itemImageFiles.isEmpty()) {
+                itemImageUrls = null;
+            } else {
+
+                for (MultipartFile itemImageFile : itemImageFiles) {
+
+                    String itemImageUrl;
+                    try {
+                        itemImageUrl = uploadFileToS3.uploadFileToS3(
+                                FilesConfig.convertMultipartToFileNew(itemImageFile), "product-update/items");
+
+                        itemImageUrls.add(itemImageUrl);
+                        uploadedImageUrls.add(itemImageUrl);
+
+                    } catch (Exception e) {
+
+                        // delete already uploaded files
+                        for (String url : uploadedImageUrls) {
+                            try {
+                                s3Service.deleteFile(url);
+                            } catch (Exception ignored) {
+                            }
+                        }
+
+                        return new ResponseEntity<>(Utils.FILE_UPLOAD_FAILED, HttpStatus.BAD_REQUEST);
+                    }
+                }
+            }
+
+            if (!existingImageUrls.isEmpty()) {
+                if (itemImageUrls == null){
+                    itemImageUrls = existingImageUrls;
+                } else {
+                    itemImageUrls.addAll(existingImageUrls);
+                }
+            }
+
+            allImagesToDelete.addAll(imagesToDelete);
+
+            productUpdateItem.setItemImages(itemImageUrls);
+        }
+
         updatableProductUpdateItems = productUpdateItemRepository
                 .saveAll(updatableProductUpdateItems);
+
+        for (String deleteImageUrl : allImagesToDelete){
+            try {
+                s3Service.deleteFile(deleteImageUrl);
+            } catch (Exception ignored) {
+            }
+        }
 
         List<ProductUpdateItemSnapshot> newSnapshots = SnapshotUtility
                 .toSnapshotList(updatableProductUpdateItems, SnapshotUtility::toSnapshot);
@@ -363,6 +472,48 @@ public class ProductUpdateItemService {
                                              MultiValueMap<String, MultipartFile> files) {
 
         for (ProductUpdateItemAddPayload itemPayload : payloads) {
+
+            List<MultipartFile> images =
+                    files.getOrDefault(itemPayload.clientId(), Collections.emptyList());
+
+            for (MultipartFile image : images) {
+
+                if (image == null || image.isEmpty()) {
+                    return new ResponseEntity<>(
+                            "Image cannot be empty",
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
+
+                String contentType = image.getContentType();
+
+                if (contentType == null ||
+                        !(contentType.equals("image/jpeg") ||
+                                contentType.equals("image/png") ||
+                                contentType.equals("image/webp"))) {
+
+                    return new ResponseEntity<>(
+                            "Only JPG, PNG and WEBP images are allowed",
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
+
+                if (image.getSize() > 5 * 1024 * 1024) {
+                    return new ResponseEntity<>(
+                            "Image size cannot exceed 5 MB",
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private ResponseEntity<?> validateEditImages(List<ProductUpdateItemEditPayload> payloads,
+                                                 MultiValueMap<String, MultipartFile> files) {
+
+        for (ProductUpdateItemEditPayload itemPayload : payloads) {
 
             List<MultipartFile> images =
                     files.getOrDefault(itemPayload.clientId(), Collections.emptyList());
