@@ -399,4 +399,65 @@ public class KycDetailsService {
             throw new BadRequestException("Server error");
         }
     }
+
+//    public ResponseEntity<?> getHostels(int page, int size, String name, Boolean isEnabled,
+//                                        String dateFilter, Date startDate, Date endDate) {
+//
+//        String loggedInAgentId = authentication.getName();
+//        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+//        if (loggedInAgent == null) {
+//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+//        }
+//
+//        page = Math.max(page - 1, 0);
+//        size = Math.max(size, 1);
+//
+//        Pageable pageable = PageRequest.of(page, size);
+//
+//        Set<String> filteredHostelIds = null;
+//        if (name != null && !name.isBlank()) {
+//
+//            List<HostelV1> filteredHostels = hostelService
+//                    .getHostelsByHostelName(name.trim());
+//
+//            filteredHostelIds = filteredHostels.stream()
+//                    .map(HostelV1::getHostelId)
+//                    .collect(Collectors.toSet());
+//
+//            if (filteredHostelIds.isEmpty()) {
+//                Map<String, Object> response = new HashMap<>();
+//                response.put("hostelList", List.of());
+//                response.put("currentPage", page + 1);
+//                response.put("pageSize", size);
+//                response.put("totalItems", 0);
+//                response.put("totalPages", 0);
+//
+//                return new ResponseEntity<>(response, HttpStatus.OK);
+//            }
+//        }
+//
+//        String dateFilterString = null;
+//        try {
+//            dateFilterString = DateFilterEnum.valueOf(dateFilter).name();
+//        } catch (Exception e){
+//            return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+//        }
+//
+//        if (DateFilterEnum.TODAY.name().equalsIgnoreCase(dateFilterString)) {
+//            startDate = ;
+//            endDate = ;
+//        } else if (DateFilterEnum.CUSTOM.name().equals(dateFilterString)) {
+//            startDate = Utils.getStartOfDay(startDate);
+//            endDate = Utils.getEndOfDay(endDate);
+//        }
+//
+//        Map<String, Object> response = new HashMap<>();
+//        response.put("hostelList", responseList);
+//        response.put("currentPage", page + 1);
+//        response.put("pageSize", size);
+//        response.put("totalItems", pagedKycDetails.getTotalElements());
+//        response.put("totalPages", pagedKycDetails.getTotalPages());
+//
+//        return new ResponseEntity<>(response, HttpStatus.OK);
+//    }
 }

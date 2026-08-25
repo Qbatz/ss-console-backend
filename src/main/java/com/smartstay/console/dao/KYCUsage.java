@@ -19,7 +19,10 @@ public class KYCUsage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long usageId;
     private String hostelId;
+    //requested by owner id
     private String latestRequestBy;
+    //requested to is tenant id
+    private String latestRequestTo;
     private String latestCompletionBy;
     private Integer requestCount;
     private Integer verifiedCount;

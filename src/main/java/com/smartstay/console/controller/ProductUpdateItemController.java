@@ -28,13 +28,13 @@ public class ProductUpdateItemController {
     private ProductUpdateItemService productUpdateItemService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> addProductUpdateItems(@Valid @RequestBody List<ProductUpdateItemAddPayload> payloads,
+    public ResponseEntity<?> addProductUpdateItems(@Valid @RequestPart List<ProductUpdateItemAddPayload> payloads,
                                                    @RequestParam MultiValueMap<String, MultipartFile> files){
         return productUpdateItemService.addProductItems(payloads, files);
     }
 
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> updateProductUpdateItems(@Valid @RequestBody List<ProductUpdateItemEditPayload> payloads,
+    public ResponseEntity<?> updateProductUpdateItems(@Valid @RequestPart List<ProductUpdateItemEditPayload> payloads,
                                                       @RequestParam MultiValueMap<String, MultipartFile> files){
         return productUpdateItemService.updateProductUpdateItems(payloads, files);
     }
