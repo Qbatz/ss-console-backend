@@ -1222,4 +1222,12 @@ public class Utils {
             }
         }
     }
+
+    public static String dateToMonthDate(Date date) {
+        if (date == null) {
+            return null;
+        }
+
+        return new SimpleDateFormat("MMM d", Locale.ENGLISH).format(date);
+    }
 }

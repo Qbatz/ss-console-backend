@@ -4648,4 +4648,11 @@ public class CustomersService {
     public List<Customers> getCustomersByHostelIds(Set<String> hostelIds) {
         return customersRepository.findAllByHostelIdIn(hostelIds);
     }
+
+    public Page<Customers> getCustomersByHostelIdNameKycStatus(String hostelId, String name,
+                                                               String kycStatus, Set<String> customerIds,
+                                                               Pageable pageable){
+        return customersRepository.findByHostelIdNameKycStatus(hostelId, name, kycStatus,
+                customerIds, pageable);
+    }
 }

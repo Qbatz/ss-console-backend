@@ -1,6 +1,7 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.Mapper.kyc.KycHostelResMapper;
+import com.smartstay.console.Mapper.kyc.KycTenantResMapper;
 import com.smartstay.console.Mapper.kycDetails.KycDetailsResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.config.FilesConfig;
@@ -15,6 +16,8 @@ import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.repositories.KycDetailsRepository;
 import com.smartstay.console.responses.date.DateFilterRes;
 import com.smartstay.console.responses.kyc.KycHostelRes;
+import com.smartstay.console.responses.kyc.KycStatusResponse;
+import com.smartstay.console.responses.kyc.KycTenantRes;
 import com.smartstay.console.responses.kycDetails.KycDetailsRes;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
@@ -32,6 +35,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.File;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -70,6 +74,8 @@ public class KycDetailsService {
     private UploadFileToS3 uploadFileToS3;
     @Autowired
     private KycUsageService kycUsageService;
+    @Autowired
+    private BillingRulesService billingRulesService;
 
     public ResponseEntity<?> getWaitingApprovalKycDetails(int page, int size, String name) {
 
@@ -501,6 +507,115 @@ public class KycDetailsService {
         response.put("totalItems", pagedHostels.getTotalElements());
         response.put("totalPages", pagedHostels.getTotalPages());
         response.put("dateFilters", dateFilters);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getHostelById(String hostelId, int page, int size, String name,
+                                           String kycStatus, String dateFilter, Date startDate,
+                                           Date endDate) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        HostelV1 hostel = hostelService.getHostelInfo(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        name = (name == null || name.isBlank()) ? null : name.trim();
+        kycStatus = (kycStatus == null || kycStatus.isBlank()) ? null : kycStatus.trim();
+
+        Date today = new Date();
+
+        DateFilterEnum filter;
+        try {
+            filter = DateFilterEnum.valueOf(dateFilter);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<DateFilterRes> dateFilters = Arrays.stream(DateFilterEnum.values())
+                .map(i -> new DateFilterRes(i.name(), i.getValue()))
+                .toList();
+
+        StartEndDateDto dateRange = Utils.getDateRange(filter, startDate, endDate);
+
+        startDate = dateRange.startDate();
+        endDate = dateRange.endDate();
+
+        Set<String> filteredTenantIds = new HashSet<>();
+
+        List<KYCUsage> kycUsagesBetweenDates = kycUsageService
+                .getAllBetweenDates(startDate, endDate);
+
+        for (KYCUsage kycUsage : kycUsagesBetweenDates) {
+            if (kycUsage.getHostelId() != null){
+                filteredTenantIds.add(kycUsage.getLatestRequestTo());
+            }
+        }
+
+        List<KycStatusResponse> kycStatusFilters = Arrays.stream(KycStatus.values())
+                .map(i -> new KycStatusResponse(i.name(), i.getStatus()))
+                .toList();
+
+        if (filteredTenantIds.isEmpty()){
+            Map<String, Object> response = new HashMap<>();
+            response.put("hostel", List.of());
+            response.put("currentPage", page + 1);
+            response.put("pageSize", size);
+            response.put("totalItems", 0);
+            response.put("totalPages", 0);
+            response.put("dateFilters", dateFilters);
+            response.put("kycStatus", kycStatusFilters);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        Page<Customers> pagedTenants = customersService
+                .getCustomersByHostelIdNameKycStatus(hostelId, name, kycStatus,
+                        filteredTenantIds, pageable);
+
+        List<Customers> tenants = pagedTenants.getContent();
+
+        Set<String> tenantIds = tenants.stream()
+                .map(Customers::getCustomerId)
+                .collect(Collectors.toSet());
+
+        List<KYCUsage> kycUsages = kycUsageService.getAllByCustomerIds(tenantIds);
+
+        Map<String, KYCUsage> kycUsageMap = kycUsages.stream()
+                .collect(Collectors.toMap(KYCUsage::getLatestRequestTo,
+                        Function.identity(), (a,b) -> a));
+
+        BillingRules billingRule = billingRulesService.getCurrentMonthTemplate(hostelId);
+        if (billingRule == null) {
+            return new ResponseEntity<>(Utils.BILLING_RULE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<Customers> allTenants = customersService.findCustomersByHostelId(hostelId);
+
+        KycTenantResMapper mapper = new KycTenantResMapper(tenants, kycUsageMap,
+                billingRule, billingRulesService, allTenants);
+
+        KycTenantRes kycTenantRes = mapper.apply(hostel);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("hostel", kycTenantRes);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedTenants.getTotalElements());
+        response.put("totalPages", pagedTenants.getTotalPages());
+        response.put("dateFilters", dateFilters);
+        response.put("kycStatus", kycStatusFilters);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

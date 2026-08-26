@@ -1,6 +1,10 @@
 package com.smartstay.console.ennum;
 
+import lombok.Getter;
+
+@Getter
 public enum KycStatus {
+
     PENDING("Pending"),
     REQUESTED("Requested"),
     VERIFIED("Verified"),
