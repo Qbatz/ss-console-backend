@@ -1,16 +1,20 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.Mapper.kyc.KycHostelResMapper;
 import com.smartstay.console.Mapper.kycDetails.KycDetailsResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.config.FilesConfig;
 import com.smartstay.console.config.UploadFileToS3;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.customers.KycDetailsSnapshot;
+import com.smartstay.console.dto.date.StartEndDateDto;
 import com.smartstay.console.dto.files.UploadFiles;
 import com.smartstay.console.dto.kycDetails.*;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.repositories.KycDetailsRepository;
+import com.smartstay.console.responses.date.DateFilterRes;
+import com.smartstay.console.responses.kyc.KycHostelRes;
 import com.smartstay.console.responses.kycDetails.KycDetailsRes;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
@@ -64,6 +68,8 @@ public class KycDetailsService {
     private HostelService hostelService;
     @Autowired
     private UploadFileToS3 uploadFileToS3;
+    @Autowired
+    private KycUsageService kycUsageService;
 
     public ResponseEntity<?> getWaitingApprovalKycDetails(int page, int size, String name) {
 
@@ -400,64 +406,102 @@ public class KycDetailsService {
         }
     }
 
-//    public ResponseEntity<?> getHostels(int page, int size, String name, Boolean isEnabled,
-//                                        String dateFilter, Date startDate, Date endDate) {
-//
-//        String loggedInAgentId = authentication.getName();
-//        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
-//        if (loggedInAgent == null) {
-//            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
-//        }
-//
-//        page = Math.max(page - 1, 0);
-//        size = Math.max(size, 1);
-//
-//        Pageable pageable = PageRequest.of(page, size);
-//
-//        Set<String> filteredHostelIds = null;
-//        if (name != null && !name.isBlank()) {
-//
-//            List<HostelV1> filteredHostels = hostelService
-//                    .getHostelsByHostelName(name.trim());
-//
-//            filteredHostelIds = filteredHostels.stream()
-//                    .map(HostelV1::getHostelId)
-//                    .collect(Collectors.toSet());
-//
-//            if (filteredHostelIds.isEmpty()) {
-//                Map<String, Object> response = new HashMap<>();
-//                response.put("hostelList", List.of());
-//                response.put("currentPage", page + 1);
-//                response.put("pageSize", size);
-//                response.put("totalItems", 0);
-//                response.put("totalPages", 0);
-//
-//                return new ResponseEntity<>(response, HttpStatus.OK);
-//            }
-//        }
-//
-//        String dateFilterString = null;
-//        try {
-//            dateFilterString = DateFilterEnum.valueOf(dateFilter).name();
-//        } catch (Exception e){
-//            return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
-//        }
-//
-//        if (DateFilterEnum.TODAY.name().equalsIgnoreCase(dateFilterString)) {
-//            startDate = ;
-//            endDate = ;
-//        } else if (DateFilterEnum.CUSTOM.name().equals(dateFilterString)) {
-//            startDate = Utils.getStartOfDay(startDate);
-//            endDate = Utils.getEndOfDay(endDate);
-//        }
-//
-//        Map<String, Object> response = new HashMap<>();
-//        response.put("hostelList", responseList);
-//        response.put("currentPage", page + 1);
-//        response.put("pageSize", size);
-//        response.put("totalItems", pagedKycDetails.getTotalElements());
-//        response.put("totalPages", pagedKycDetails.getTotalPages());
-//
-//        return new ResponseEntity<>(response, HttpStatus.OK);
-//    }
+    public ResponseEntity<?> getHostels(int page, int size, String name, Boolean isEnabled,
+                                        String dateFilter, Date startDate, Date endDate) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        name = (name == null || name.isBlank()) ? null : name.trim();
+
+        DateFilterEnum filter;
+        try {
+            filter = DateFilterEnum.valueOf(dateFilter);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<DateFilterRes> dateFilters = Arrays.stream(DateFilterEnum.values())
+                .map(i -> new DateFilterRes(i.name(), i.getValue()))
+                .toList();
+
+        StartEndDateDto dateRange = Utils.getDateRange(filter, startDate, endDate);
+
+        startDate = dateRange.startDate();
+        endDate = dateRange.endDate();
+
+        Set<String> filteredHostelIds = new HashSet<>();
+
+        List<KYCUsage> kycUsagesBetweenDates = kycUsageService
+                .getAllBetweenDates(startDate, endDate);
+
+        for (KYCUsage kycUsage : kycUsagesBetweenDates) {
+            if (kycUsage.getHostelId() != null){
+                filteredHostelIds.add(kycUsage.getHostelId());
+            }
+        }
+
+        if (filteredHostelIds.isEmpty()){
+            Map<String, Object> response = new HashMap<>();
+            response.put("hostelList", List.of());
+            response.put("currentPage", page + 1);
+            response.put("pageSize", size);
+            response.put("totalItems", 0);
+            response.put("totalPages", 0);
+            response.put("dateFilters", dateFilters);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        if (isEnabled != null) {
+            // enable/disable logic
+        }
+
+        Page<HostelV1> pagedHostels = hostelService
+                .getKycPagedHostels(name, filteredHostelIds, pageable);
+
+        List<HostelV1> hostels = pagedHostels.getContent();
+
+        Set<String> hostelIds = hostels.stream()
+                .map(HostelV1::getHostelId)
+                .collect(Collectors.toSet());
+
+        List<Customers> tenants = customersService
+                .getCustomersByHostelIds(hostelIds);
+        Map<String, List<Customers>> tenantHostelMap = tenants.stream()
+                .collect(Collectors.groupingBy(Customers::getHostelId));
+
+        Set<String> tenantIds = tenants.stream()
+                .map(Customers::getCustomerId)
+                .collect(Collectors.toSet());
+
+        List<KYCUsage> tenantKycUsages = kycUsageService
+                .getAllByCustomerIds(tenantIds);
+        Map<String, List<KYCUsage>> kycUsageHostelMap = tenantKycUsages.stream()
+                .collect(Collectors.groupingBy(KYCUsage::getHostelId));
+
+        KycHostelResMapper mapper = new KycHostelResMapper(tenantHostelMap, kycUsageHostelMap);
+
+        List<KycHostelRes> responseList = hostels.stream()
+                .map(mapper)
+                .toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("hostelList", responseList);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedHostels.getTotalElements());
+        response.put("totalPages", pagedHostels.getTotalPages());
+        response.put("dateFilters", dateFilters);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
 }

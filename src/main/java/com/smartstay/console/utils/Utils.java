@@ -1,6 +1,8 @@
 package com.smartstay.console.utils;
 
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.date.StartEndDateDto;
+import com.smartstay.console.ennum.DateFilterEnum;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -115,6 +117,7 @@ public class Utils {
     public static final String SUBSCRIPTION_NOT_FOUND = "Subscription not found";
     public static final String SUBSCRIPTION_INVOICE_URL_NOT_FOUND = "Subscription invoice url not found";
     public static final String PRODUCT_UPDATE_NOT_FOUND = "Product update not found";
+    public static final String DATE_FILTER_NOT_FOUND = "Date filter not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -1092,5 +1095,131 @@ public class Utils {
         LocalDate localDate = LocalDate.parse(date, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
 
         return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    }
+
+    public static StartEndDateDto getDateRange(DateFilterEnum filter,
+                                                Date startDate, Date endDate) {
+
+        Calendar calendar = Calendar.getInstance();
+
+        switch (filter) {
+
+            case TODAY -> {
+                Date today = new Date();
+
+                return new StartEndDateDto(
+                        Utils.getStartOfDay(today),
+                        Utils.getEndOfDay(today)
+                );
+            }
+
+            case THIS_WEEK -> {
+                calendar.setTime(new Date());
+
+                // Monday = first day of week
+                calendar.setFirstDayOfWeek(Calendar.MONDAY);
+
+                calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
+                Date weekStart = Utils.getStartOfDay(calendar.getTime());
+
+                calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY);
+                Date weekEnd = Utils.getEndOfDay(calendar.getTime());
+
+                return new StartEndDateDto(
+                        weekStart,
+                        weekEnd
+                );
+            }
+
+            case THIS_MONTH -> {
+                calendar.setTime(new Date());
+
+                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                Date monthStart = Utils.getStartOfDay(calendar.getTime());
+
+                calendar.set(Calendar.DAY_OF_MONTH,
+                        calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
+                Date monthEnd = Utils.getEndOfDay(calendar.getTime());
+
+                return new StartEndDateDto(
+                        monthStart,
+                        monthEnd
+                );
+            }
+
+            case LAST_MONTH -> {
+                calendar.setTime(new Date());
+
+                // Move to previous month
+                calendar.add(Calendar.MONTH, -1);
+
+                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                Date lastMonthStart = Utils.getStartOfDay(calendar.getTime());
+
+                calendar.set(Calendar.DAY_OF_MONTH,
+                        calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
+                Date lastMonthEnd = Utils.getEndOfDay(calendar.getTime());
+
+                return new StartEndDateDto(
+                        lastMonthStart,
+                        lastMonthEnd
+                );
+            }
+
+            case LAST_3_MONTHS -> {
+                calendar.setTime(new Date());
+
+                // Start of month, 2 months before current month
+                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                calendar.add(Calendar.MONTH, -2);
+
+                Date start = Utils.getStartOfDay(calendar.getTime());
+
+                // Move to current month
+                calendar.setTime(new Date());
+                calendar.set(Calendar.DAY_OF_MONTH,
+                        calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
+
+                Date end = Utils.getEndOfDay(calendar.getTime());
+
+                return new StartEndDateDto(
+                        start,
+                        end
+                );
+            }
+
+            case LAST_6_MONTHS -> {
+                calendar.setTime(new Date());
+
+                // Start of month, 5 months before current month
+                calendar.set(Calendar.DAY_OF_MONTH, 1);
+                calendar.add(Calendar.MONTH, -5);
+
+                Date start = Utils.getStartOfDay(calendar.getTime());
+
+                // End of current month
+                calendar.setTime(new Date());
+                calendar.set(Calendar.DAY_OF_MONTH,
+                        calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
+
+                Date end = Utils.getEndOfDay(calendar.getTime());
+
+                return new StartEndDateDto(
+                        start,
+                        end
+                );
+            }
+
+            case CUSTOM -> {
+                return new StartEndDateDto(
+                        startDate == null ? null : Utils.getStartOfDay(startDate),
+                        endDate == null ? null : Utils.getEndOfDay(endDate)
+                );
+            }
+
+            default -> {
+                return new StartEndDateDto(null, null);
+            }
+        }
     }
 }

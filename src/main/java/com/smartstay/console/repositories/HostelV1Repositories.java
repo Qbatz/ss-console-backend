@@ -312,4 +312,20 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             nativeQuery = true)
     Page<HostelV1> findAllPagedHostels(@Param("name") String name,
                                        Pageable pageable);
+
+    @Query("""
+            select h
+            from hostelv1 h
+            inner join h.hostelPlan hp
+            where h.isActive = true
+                and h.isDeleted = false
+                and (:hostelIds is null or h.hostelId in :hostelIds)
+                and (:name is null or
+                    lower(replace(coalesce(h.hostelName, ''), ' ', ''))
+                        like lower(concat('%', replace(:name, ' ', ''), '%'))
+                )
+            order by h.createdAt desc
+            """)
+    Page<HostelV1> findKycPagedHostels(String name, Set<String> hostelIds,
+                                       Pageable pageable);
 }

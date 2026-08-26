@@ -83,7 +83,7 @@ public class ProductUpdateItemService {
         for (String key : files.keySet()) {
 
             // payload is JSON, not an image
-            if ("payload".equals(key)) {
+            if ("payloads".equals(key)) {
                 continue;
             }
 
@@ -237,7 +237,7 @@ public class ProductUpdateItemService {
         for (String key : files.keySet()) {
 
             // payload is JSON, not an image
-            if ("payload".equals(key)) {
+            if ("payloads".equals(key)) {
                 continue;
             }
 

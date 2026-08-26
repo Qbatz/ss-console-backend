@@ -33,15 +33,14 @@ public class KycController {
         return kycDetailsService.approveKycRequest(customerId);
     }
 
-//    @GetMapping("/hostels")
-//    public ResponseEntity<?> getHostels(@RequestParam(value = "page", defaultValue = "0") int page,
-//                                        @RequestParam(value = "size", defaultValue = "10") int size,
-//                                        @RequestParam(value = "name", required = false) String name,
-//                                        @RequestParam(value = "isEnabled", required = false) Boolean isEnabled,
-//                                        @RequestParam(defaultValue = "THIS_MONTH") String dateFilter,
-//                                        @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
-//                                        @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate) {
-//        return kycDetailsService.getHostels(page, size, name, isEnabled, dateFilter,
-//                startDate, endDate);
-//    }
+    @GetMapping("/hostels")
+    public ResponseEntity<?> getHostels(@RequestParam(value = "page", defaultValue = "0") int page,
+                                        @RequestParam(value = "size", defaultValue = "10") int size,
+                                        @RequestParam(value = "name", required = false) String name,
+                                        @RequestParam(value = "isEnabled", required = false) Boolean isEnabled,
+                                        @RequestParam(defaultValue = "THIS_MONTH") String dateFilter,
+                                        @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
+                                        @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate) {
+        return kycDetailsService.getHostels(page, size, name, isEnabled, dateFilter, startDate, endDate);
+    }
 }

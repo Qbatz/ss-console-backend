@@ -4644,4 +4644,8 @@ public class CustomersService {
     public void save(Customers customer) {
         customersRepository.save(customer);
     }
+
+    public List<Customers> getCustomersByHostelIds(Set<String> hostelIds) {
+        return customersRepository.findAllByHostelIdIn(hostelIds);
+    }
 }

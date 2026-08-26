@@ -81,4 +81,6 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     Set<String> findConflictingXuids(List<String> xuids, List<String> customerIds);
 
     Customers findByCustomerId(String customerId);
+
+    List<Customers> findAllByHostelIdIn(Set<String> hostelIds);
 }
