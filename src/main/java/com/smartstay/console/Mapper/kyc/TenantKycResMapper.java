@@ -77,6 +77,10 @@ public class TenantKycResMapper implements Function<Customers, TenantKycRes> {
                 kycCompletedDate = Utils.dateToString(kycDetails.getCompletedAt());
                 kycCompletedTime = Utils.dateToTime(kycDetails.getCompletedAt());
             }
+            if (!KycStatus.WAITING_FOR_APPROVAL.name().equals(kycDetailsStatus) &&
+                    !KycStatus.VERIFIED.name().equals(kycDetailsStatus)) {
+                canSendReminder = true;
+            }
         }
 
         return new TenantKycRes(customerId, customer.getFirstName(), customer.getLastName(), fullName,

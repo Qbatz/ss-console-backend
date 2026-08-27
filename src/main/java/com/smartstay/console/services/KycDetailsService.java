@@ -585,10 +585,6 @@ public class KycDetailsService {
 
         List<Customers> tenants = pagedTenants.getContent();
 
-        Set<String> tenantIds = tenants.stream()
-                .map(Customers::getCustomerId)
-                .collect(Collectors.toSet());
-
         BillingRules billingRule = billingRulesService.getCurrentMonthTemplate(hostelId);
         if (billingRule == null) {
             return new ResponseEntity<>(Utils.BILLING_RULE_NOT_FOUND, HttpStatus.BAD_REQUEST);
