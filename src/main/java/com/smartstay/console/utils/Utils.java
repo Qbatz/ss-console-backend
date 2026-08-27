@@ -118,6 +118,8 @@ public class Utils {
     public static final String SUBSCRIPTION_INVOICE_URL_NOT_FOUND = "Subscription invoice url not found";
     public static final String PRODUCT_UPDATE_NOT_FOUND = "Product update not found";
     public static final String DATE_FILTER_NOT_FOUND = "Date filter not found";
+    public static final String SERVER_ERROR = "Server error";
+    public static final String RESPONSE_BODY_NOT_FOUND = "Response body not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -139,6 +141,7 @@ public class Utils {
     public static final String INVALID_PLAN_FEATURE_PRICE = "Invalid plan feature price";
     public static final String INVALID_STATUS_TRANSITION = "Invalid status transition";
     public static final String INVALID_FEATURE_DATE_RANGE = "Invalid plan feature date range";
+    public static final String INVALID_REQUEST = "Invalid request";
 
     public static final String HOSTEL_ID_MISMATCH = "HostelId doesn't match with payload hostelId";
     public static final String TENANT_MOBILE_MISMATCH = "Tenant mobile doesn't match with payload tenant mobile";

@@ -19,7 +19,15 @@ public class KycUsageService {
         return kycUsageRepository.findAllByLatestRequestBetween(startDate, endDate);
     }
 
-    public List<KYCUsage> getAllByCustomerIds(Set<String> tenantIds) {
-        return kycUsageRepository.findAllByLatestRequestToIn(tenantIds);
+    public List<KYCUsage> getAllByCustomerIds(Set<String> customerIds) {
+        return kycUsageRepository.findAllByLatestRequestToIn(customerIds);
+    }
+
+    public KYCUsage getByCustomerId(String customerId) {
+        return kycUsageRepository.findByLatestRequestTo(customerId);
+    }
+
+    public void save(KYCUsage kycUsage) {
+        kycUsageRepository.save(kycUsage);
     }
 }

@@ -56,4 +56,9 @@ public class KycController {
         return kycDetailsService.getHostelById(hostelId, page, size, name, kycStatus,
                 dateFilter, startDate, endDate);
     }
+
+    @PostMapping("/reminder/{customerId}")
+    public ResponseEntity<?> sendReminder(@PathVariable("customerId") String customerId){
+        return kycDetailsService.sendReminder(customerId);
+    }
 }
