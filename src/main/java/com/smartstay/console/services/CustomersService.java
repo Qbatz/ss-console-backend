@@ -4650,9 +4650,9 @@ public class CustomersService {
     }
 
     public Page<Customers> getCustomersByHostelIdNameKycStatus(String hostelId, String name,
-                                                               String kycStatus, Set<String> customerIds,
-                                                               Pageable pageable){
+                                                               String kycStatus, Date startDate,
+                                                               Date endDate, Pageable pageable){
         return customersRepository.findByHostelIdNameKycStatus(hostelId, name, kycStatus,
-                customerIds, pageable);
+                startDate, endDate, pageable);
     }
 }

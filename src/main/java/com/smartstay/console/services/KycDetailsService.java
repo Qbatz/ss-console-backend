@@ -551,37 +551,13 @@ public class KycDetailsService {
         startDate = dateRange.startDate();
         endDate = dateRange.endDate();
 
-        Set<String> filteredTenantIds = new HashSet<>();
-
-        List<KYCUsage> kycUsagesBetweenDates = kycUsageService
-                .getAllBetweenDates(startDate, endDate);
-
-        for (KYCUsage kycUsage : kycUsagesBetweenDates) {
-            if (kycUsage.getHostelId() != null){
-                filteredTenantIds.add(kycUsage.getLatestRequestTo());
-            }
-        }
-
         List<KycStatusResponse> kycStatusFilters = Arrays.stream(KycStatus.values())
                 .map(i -> new KycStatusResponse(i.name(), i.getStatus()))
                 .toList();
 
-        if (filteredTenantIds.isEmpty()){
-            Map<String, Object> response = new HashMap<>();
-            response.put("hostel", List.of());
-            response.put("currentPage", page + 1);
-            response.put("pageSize", size);
-            response.put("totalItems", 0);
-            response.put("totalPages", 0);
-            response.put("dateFilters", dateFilters);
-            response.put("kycStatus", kycStatusFilters);
-
-            return new ResponseEntity<>(response, HttpStatus.OK);
-        }
-
         Page<Customers> pagedTenants = customersService
                 .getCustomersByHostelIdNameKycStatus(hostelId, name, kycStatus,
-                        filteredTenantIds, pageable);
+                        startDate, endDate, pageable);
 
         List<Customers> tenants = pagedTenants.getContent();
 
