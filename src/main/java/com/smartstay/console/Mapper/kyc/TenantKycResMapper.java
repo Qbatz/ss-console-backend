@@ -8,6 +8,7 @@ import com.smartstay.console.ennum.BillingType;
 import com.smartstay.console.ennum.KycStatus;
 import com.smartstay.console.responses.kyc.TenantKycRes;
 import com.smartstay.console.services.BillingRulesService;
+import com.smartstay.console.utils.CustomerUtils;
 import com.smartstay.console.utils.Utils;
 
 import java.util.Date;
@@ -33,6 +34,9 @@ public class TenantKycResMapper implements Function<Customers, TenantKycRes> {
         Date today = new Date();
 
         String fullName = Utils.getFullName(customer.getFirstName(), customer.getLastName());
+        String initials = Utils.getInitials(customer.getFirstName(), customer.getLastName());
+        String profilePic = CustomerUtils.getProfilePic(customer);
+        String mobile = Utils.maskMobileNo(customer.getMobile());
 
         String joiningDate = null;
         if (customer.getJoiningDate() != null) {
@@ -81,10 +85,13 @@ public class TenantKycResMapper implements Function<Customers, TenantKycRes> {
                     !KycStatus.VERIFIED.name().equals(kycDetailsStatus)) {
                 canSendReminder = true;
             }
+        } else {
+            canSendReminder = true;
         }
 
         return new TenantKycRes(customerId, customer.getFirstName(), customer.getLastName(), fullName,
-                joiningDate, billingCycleStart, billingCycleEnd, kycCompletedDate, kycCompletedTime,
-                kycDetailsStatus, canSendReminder, canApproveKyc);
+                initials, profilePic, mobile, customer.getEmailId(), joiningDate, billingCycleStart,
+                billingCycleEnd, kycCompletedDate, kycCompletedTime, kycDetailsStatus, canSendReminder,
+                canApproveKyc);
     }
 }
