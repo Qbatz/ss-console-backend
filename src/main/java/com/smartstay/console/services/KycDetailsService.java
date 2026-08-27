@@ -489,14 +489,11 @@ public class KycDetailsService {
         Map<String, List<Customers>> tenantHostelMap = tenants.stream()
                 .collect(Collectors.groupingBy(Customers::getHostelId));
 
-        Set<String> tenantIds = tenants.stream()
-                .map(Customers::getCustomerId)
-                .collect(Collectors.toSet());
-
-        List<KYCUsage> tenantKycUsages = kycUsageService
-                .getAllByCustomerIds(tenantIds);
-        Map<String, List<KYCUsage>> kycUsageHostelMap = tenantKycUsages.stream()
-                .collect(Collectors.groupingBy(KYCUsage::getHostelId));
+        List<KYCUsage> kycUsages = kycUsageService
+                .getAllByHostelIds(hostelIds);
+        Map<String, KYCUsage> kycUsageHostelMap = kycUsages.stream()
+                .collect(Collectors.toMap(KYCUsage::getHostelId,
+                        Function.identity(), (a, b) -> a));
 
         KycHostelResMapper mapper = new KycHostelResMapper(tenantHostelMap, kycUsageHostelMap);
 
@@ -592,12 +589,6 @@ public class KycDetailsService {
                 .map(Customers::getCustomerId)
                 .collect(Collectors.toSet());
 
-        List<KYCUsage> kycUsages = kycUsageService.getAllByCustomerIds(tenantIds);
-
-        Map<String, KYCUsage> kycUsageMap = kycUsages.stream()
-                .collect(Collectors.toMap(KYCUsage::getLatestRequestTo,
-                        Function.identity(), (a,b) -> a));
-
         BillingRules billingRule = billingRulesService.getCurrentMonthTemplate(hostelId);
         if (billingRule == null) {
             return new ResponseEntity<>(Utils.BILLING_RULE_NOT_FOUND, HttpStatus.BAD_REQUEST);
@@ -605,8 +596,8 @@ public class KycDetailsService {
 
         List<Customers> allTenants = customersService.findCustomersByHostelId(hostelId);
 
-        KycTenantResMapper mapper = new KycTenantResMapper(tenants, kycUsageMap,
-                billingRule, billingRulesService, allTenants);
+        KycTenantResMapper mapper = new KycTenantResMapper(tenants, billingRule,
+                billingRulesService, allTenants);
 
         KycTenantRes kycTenantRes = mapper.apply(hostel);
 
@@ -647,7 +638,7 @@ public class KycDetailsService {
 
         KycDetails kycDetails = tenant.getKycDetails();
 
-        KYCUsage kycUsage = kycUsageService.getByCustomerId(customerId);
+        KYCUsage kycUsage = kycUsageService.getByHostelId(tenant.getHostelId());
 
         if (!CustomerStatus.ACTIVE.name().equals(tenant.getCurrentStatus()) &&
             !CustomerStatus.NOTICE.name().equals(tenant.getCurrentStatus()) &&

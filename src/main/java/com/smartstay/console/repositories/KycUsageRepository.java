@@ -13,7 +13,7 @@ public interface KycUsageRepository extends JpaRepository<KYCUsage, Long> {
 
     List<KYCUsage> findAllByLatestRequestBetween(Date startDate, Date endDate);
 
-    List<KYCUsage> findAllByLatestRequestToIn(Set<String> customerIds);
+    KYCUsage findByHostelId(String hostelId);
 
-    KYCUsage findByLatestRequestTo(String customerId);
+    List<KYCUsage> findAllByHostelIdIn(Set<String> hostelIds);
 }

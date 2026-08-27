@@ -2,7 +2,6 @@ package com.smartstay.console.Mapper.kyc;
 
 import com.smartstay.console.dao.BillingRules;
 import com.smartstay.console.dao.Customers;
-import com.smartstay.console.dao.KYCUsage;
 import com.smartstay.console.dao.KycDetails;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.ennum.BillingType;
@@ -12,19 +11,15 @@ import com.smartstay.console.services.BillingRulesService;
 import com.smartstay.console.utils.Utils;
 
 import java.util.Date;
-import java.util.Map;
 import java.util.function.Function;
 
 public class TenantKycResMapper implements Function<Customers, TenantKycRes> {
 
-    Map<String, KYCUsage> kycUsageMap;
     BillingRules billingRule;
     BillingRulesService billingRulesService;
 
-    public TenantKycResMapper(Map<String, KYCUsage> kycUsageMap,
-                              BillingRules billingRule,
+    public TenantKycResMapper(BillingRules billingRule,
                               BillingRulesService billingRulesService) {
-        this.kycUsageMap = kycUsageMap;
         this.billingRule = billingRule;
         this.billingRulesService = billingRulesService;
     }
@@ -36,11 +31,6 @@ public class TenantKycResMapper implements Function<Customers, TenantKycRes> {
         KycDetails kycDetails = customer.getKycDetails();
 
         Date today = new Date();
-
-        KYCUsage kycUsage = null;
-        if (kycUsageMap != null) {
-            kycUsage = kycUsageMap.getOrDefault(customerId, kycUsage);
-        }
 
         String fullName = Utils.getFullName(customer.getFirstName(), customer.getLastName());
 
@@ -70,22 +60,8 @@ public class TenantKycResMapper implements Function<Customers, TenantKycRes> {
             }
         }
 
-        String latestRequestDate = null;
-        String latestRequestTime = null;
-        String latestCompletionDate = null;
-        String latestCompletionTime = null;
-        if (kycUsage != null) {
-            Date latestRequest = kycUsage.getLatestRequest();
-            Date latestCompletion = kycUsage.getLatestVerified();
-            if (latestRequest != null) {
-                latestRequestDate = Utils.dateToString(latestRequest);
-                latestRequestTime = Utils.dateToTime(latestRequest);
-            }
-            if (latestCompletion != null){
-                latestCompletionDate = Utils.dateToString(latestCompletion);
-                latestCompletionTime = Utils.dateToTime(latestCompletion);
-            }
-        }
+        String kycCompletedDate = null;
+        String kycCompletedTime = null;
 
         String kycDetailsStatus = null;
 
@@ -97,10 +73,14 @@ public class TenantKycResMapper implements Function<Customers, TenantKycRes> {
             if (KycStatus.WAITING_FOR_APPROVAL.name().equals(kycDetailsStatus)) {
                 canApproveKyc = true;
             }
+            if (kycDetails.getCompletedAt() != null){
+                kycCompletedDate = Utils.dateToString(kycDetails.getCompletedAt());
+                kycCompletedTime = Utils.dateToTime(kycDetails.getCompletedAt());
+            }
         }
 
         return new TenantKycRes(customerId, customer.getFirstName(), customer.getLastName(), fullName,
-                joiningDate, billingCycleStart, billingCycleEnd, latestRequestDate, latestRequestTime,
-                latestCompletionDate, latestCompletionTime, kycDetailsStatus, canSendReminder, canApproveKyc);
+                joiningDate, billingCycleStart, billingCycleEnd, kycCompletedDate, kycCompletedTime,
+                kycDetailsStatus, canSendReminder, canApproveKyc);
     }
 }

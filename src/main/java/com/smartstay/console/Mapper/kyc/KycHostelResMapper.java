@@ -3,6 +3,8 @@ package com.smartstay.console.Mapper.kyc;
 import com.smartstay.console.dao.Customers;
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dao.KYCUsage;
+import com.smartstay.console.dao.KycDetails;
+import com.smartstay.console.ennum.KycStatus;
 import com.smartstay.console.responses.kyc.KycHostelRes;
 import com.smartstay.console.utils.Utils;
 
@@ -14,10 +16,10 @@ import java.util.stream.Stream;
 public class KycHostelResMapper implements Function<HostelV1, KycHostelRes> {
 
     Map<String, List<Customers>> tenantHostelMap;
-    Map<String, List<KYCUsage>> kycUsageHostelMap;
+    Map<String, KYCUsage> kycUsageHostelMap;
 
     public KycHostelResMapper(Map<String, List<Customers>> tenantHostelMap,
-                              Map<String, List<KYCUsage>> kycUsageHostelMap) {
+                              Map<String, KYCUsage> kycUsageHostelMap) {
         this.tenantHostelMap = tenantHostelMap;
         this.kycUsageHostelMap = kycUsageHostelMap;
     }
@@ -56,36 +58,36 @@ public class KycHostelResMapper implements Function<HostelV1, KycHostelRes> {
 
             totalTenants = tenants.size();
 
+            for (Customers customer : tenants) {
+                KycDetails kycDetails = customer.getKycDetails();
+
+                if (kycDetails != null){
+                    if (KycStatus.VERIFIED.name().equals(kycDetails.getCurrentStatus())){
+                        totalVerifiedTenant++;
+                    }
+                }
+            }
+
             tenantMap = tenants.stream()
                     .collect(Collectors.toMap(Customers::getCustomerId,
                             Function.identity(), (a, b) -> a));
         }
 
         if (kycUsageHostelMap != null){
-            List<KYCUsage> kycUsages = kycUsageHostelMap.getOrDefault(hostelId, Collections.emptyList());
+            KYCUsage kycUsage = kycUsageHostelMap.getOrDefault(hostelId, null);
 
-            for (KYCUsage kycUsage : kycUsages) {
-                if (kycUsage.getLatestVerified() != null){
-                    totalVerifiedTenant++;
-                }
+            if (kycUsage != null){
 
                 int requestCount = kycUsage.getRequestCount() != null ? kycUsage.getRequestCount() : 0;
                 int verifiedCount = kycUsage.getVerifiedCount() != null ? kycUsage.getVerifiedCount() : 0;
 
-                totalRequests += requestCount;
-                totalCompleted += verifiedCount;
-            }
+                totalRequests = requestCount;
+                totalCompleted = verifiedCount;
 
-            Date lastRequestDate = null;
-            Date lastCompletionDate = null;
+                Date lastRequestDate = null;
+                Date lastCompletionDate = null;
 
-            KYCUsage latestRequestByKycUsage = kycUsages.stream()
-                    .filter(k -> k.getLatestRequest() != null)
-                    .max(Comparator.comparing(KYCUsage::getLatestRequest))
-                    .orElse(null);
-
-            if (latestRequestByKycUsage != null){
-                String latestRequestToId = latestRequestByKycUsage.getLatestRequestTo();
+                String latestRequestToId = kycUsage.getLatestRequestTo();
                 if (latestRequestToId != null){
                     Customers latestRequestToTenant = tenantMap.getOrDefault(latestRequestToId, null);
                     if (latestRequestToTenant != null){
@@ -93,21 +95,14 @@ public class KycHostelResMapper implements Function<HostelV1, KycHostelRes> {
                     }
                 }
 
-                if (latestRequestByKycUsage.getLatestRequest() != null){
-                    latestRequestDate = Utils.dateToString(latestRequestByKycUsage.getLatestRequest());
-                    latestRequestTime = Utils.dateToTime(latestRequestByKycUsage.getLatestRequest());
+                if (kycUsage.getLatestRequest() != null){
+                    latestRequestDate = Utils.dateToString(kycUsage.getLatestRequest());
+                    latestRequestTime = Utils.dateToTime(kycUsage.getLatestRequest());
 
-                    lastRequestDate = latestRequestByKycUsage.getLatestRequest();
+                    lastRequestDate = kycUsage.getLatestRequest();
                 }
-            }
 
-            KYCUsage latestCompletionByKycUsage = kycUsages.stream()
-                    .filter(k -> k.getLatestVerified() != null)
-                    .max(Comparator.comparing(KYCUsage::getLatestVerified))
-                    .orElse(null);
-
-            if (latestCompletionByKycUsage != null){
-                String latestCompletionById = latestCompletionByKycUsage.getLatestCompletionBy();
+                String latestCompletionById = kycUsage.getLatestCompletionBy();
                 if (latestCompletionById != null){
                     Customers latestCompletionByTenant = tenantMap.getOrDefault(latestCompletionById, null);
                     if (latestCompletionByTenant != null){
@@ -115,22 +110,22 @@ public class KycHostelResMapper implements Function<HostelV1, KycHostelRes> {
                     }
                 }
 
-                if (latestCompletionByKycUsage.getLatestVerified() != null){
-                    latestCompletionDate = Utils.dateToString(latestCompletionByKycUsage.getLatestVerified());
-                    latestCompletionTime = Utils.dateToTime(latestCompletionByKycUsage.getLatestVerified());
+                if (kycUsage.getLatestVerified() != null){
+                    latestCompletionDate = Utils.dateToString(kycUsage.getLatestVerified());
+                    latestCompletionTime = Utils.dateToTime(kycUsage.getLatestVerified());
 
-                    lastCompletionDate = latestCompletionByKycUsage.getLatestVerified();
+                    lastCompletionDate = kycUsage.getLatestVerified();
                 }
-            }
 
-            Date lastUpdated = Stream.of(lastRequestDate, lastCompletionDate)
-                    .filter(Objects::nonNull)
-                    .max(Date::compareTo)
-                    .orElse(null);
+                Date lastUpdated = Stream.of(lastRequestDate, lastCompletionDate)
+                        .filter(Objects::nonNull)
+                        .max(Date::compareTo)
+                        .orElse(null);
 
-            if (lastUpdated != null) {
-                lastUpdatedDate = Utils.dateToString(lastUpdated);
-                lastUpdatedTime = Utils.dateToTime(lastUpdated);
+                if (lastUpdated != null) {
+                    lastUpdatedDate = Utils.dateToString(lastUpdated);
+                    lastUpdatedTime = Utils.dateToTime(lastUpdated);
+                }
             }
         }
 

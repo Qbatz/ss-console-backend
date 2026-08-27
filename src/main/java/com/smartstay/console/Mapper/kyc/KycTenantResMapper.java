@@ -9,24 +9,20 @@ import com.smartstay.console.utils.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
 public class KycTenantResMapper implements Function<HostelV1, KycTenantRes> {
 
     List<Customers> tenants;
-    Map<String, KYCUsage> kycUsageMap;
     BillingRules billingRule;
     BillingRulesService billingRulesService;
     List<Customers> allTenants;
 
     public KycTenantResMapper(List<Customers> tenants,
-                              Map<String, KYCUsage> kycUsageMap,
                               BillingRules billingRule,
                               BillingRulesService billingRulesService,
                               List<Customers> allTenants) {
         this.tenants = tenants;
-        this.kycUsageMap = kycUsageMap;
         this.billingRule = billingRule;
         this.billingRulesService = billingRulesService;
         this.allTenants = allTenants;
@@ -46,8 +42,7 @@ public class KycTenantResMapper implements Function<HostelV1, KycTenantRes> {
 
         boolean kycEnableStatus = false;
 
-        TenantKycResMapper tenantKycResMapper = new TenantKycResMapper(kycUsageMap,
-                billingRule, billingRulesService);
+        TenantKycResMapper tenantKycResMapper = new TenantKycResMapper(billingRule, billingRulesService);
 
         long totalTenants = 0;
         long totalRequested = 0;
