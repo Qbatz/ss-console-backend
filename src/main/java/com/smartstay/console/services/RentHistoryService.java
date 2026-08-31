@@ -24,4 +24,8 @@ public class RentHistoryService {
     public List<RentHistory> findByCustomerIds(List<String> customerIds) {
         return rentHistoryRepository.findAllByCustomerIdIn(customerIds);
     }
+
+    public void save(RentHistory rentHistory) {
+        rentHistoryRepository.save(rentHistory);
+    }
 }

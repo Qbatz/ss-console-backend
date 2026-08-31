@@ -1,6 +1,7 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.dao.CustomersBedHistory;
+import com.smartstay.console.ennum.CustomersBedType;
 import com.smartstay.console.repositories.CustomerBedHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -86,5 +87,22 @@ public class CustomerBedHistoryService {
     public List<CustomersBedHistory> getCustomersByRoomIdAndDates(Integer roomId, Date startDate,
                                                                   Date endDate) {
         return customerBedHistoryRepository.findByRoomIdStartAndEndDate(roomId, startDate, endDate);
+    }
+
+    public CustomersBedHistory getCheckInBedHistoryByCustomerId(String customerId) {
+        return customerBedHistoryRepository
+                .findTopByCustomerIdAndTypeOrderByIdAsc(customerId, CustomersBedType.CHECK_IN.name());
+    }
+
+    public List<CustomersBedHistory> getAllByBedIdAndBetweenDatesAndNotCustomer(int bedId, String customerId,
+                                                                                Date startDate, Date endDate) {
+        return customerBedHistoryRepository
+                .findAllByBedIdAndBetweenDatesAndNotCustomer(bedId, customerId, startDate, endDate);
+    }
+
+    public List<CustomersBedHistory> getAllByCustomerAndBetweenDatesAndNotHistory(Long bedHistoryId, String customerId,
+                                                                                  Date startDate, Date endDate) {
+        return customerBedHistoryRepository
+                .findAllByCustomersAndBetweenDatesAndNotHistory(bedHistoryId, customerId, startDate, endDate);
     }
 }

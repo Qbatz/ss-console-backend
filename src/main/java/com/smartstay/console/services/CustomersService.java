@@ -3978,6 +3978,60 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.BILLING_RULE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        CustomersBedHistory oldJoiningDateBedHistory = customerBedHistoryService
+                .getCheckInBedHistoryByCustomerId(customerId);
+        if (oldJoiningDateBedHistory != null){
+            int bedId = oldJoiningDateBedHistory.getBedId();
+
+            // New joining date cannot be after the end of the current check-in bed history.
+            if (oldJoiningDateBedHistory.getEndDate() != null){
+                Date oldJoinDateBedHistoryEndDate = Utils.getStartOfDay(oldJoiningDateBedHistory.getEndDate());
+
+                if (oldJoinDateBedHistoryEndDate != null){
+                    if (newJoiningDate.after(oldJoinDateBedHistoryEndDate)){
+                        return new ResponseEntity<>("New joining date can not be after bed history end date", HttpStatus.BAD_REQUEST);
+                    }
+                }
+            }
+
+            Date rangeStart;
+            Date rangeEnd;
+
+            if (newJoiningDate.before(oldJoiningDate)) {
+                rangeStart = newJoiningDate;
+                rangeEnd = oldJoiningDate;
+            } else {
+                rangeStart = oldJoiningDate;
+                rangeEnd = newJoiningDate;
+            }
+
+            // Check whether another customer occupied this bed during the affected period.
+            List<CustomersBedHistory> otherCustomerHistories = customerBedHistoryService
+                    .getAllByBedIdAndBetweenDatesAndNotCustomer(bedId, customerId,
+                            rangeStart, rangeEnd);
+
+            if (!otherCustomerHistories.isEmpty()){
+                return new ResponseEntity<>("Other customers bed history exists in this date", HttpStatus.BAD_REQUEST);
+            }
+
+            // When moving joining date forward, make sure the current customer
+            // doesn't already have another bed history in the affected period.
+            if (newJoiningDate.after(oldJoiningDate)){
+                List<CustomersBedHistory> customerAfterHistories = customerBedHistoryService
+                        .getAllByCustomerAndBetweenDatesAndNotHistory(oldJoiningDateBedHistory.getId(),
+                                customerId, oldJoiningDate, newJoiningDate);
+
+                if (!customerAfterHistories.isEmpty()){
+                    return new ResponseEntity<>("Customer has other bed histories in this date", HttpStatus.BAD_REQUEST);
+                }
+            }
+
+            oldJoiningDateBedHistory.setStartDate(newJoiningDate);
+            oldJoiningDateBedHistory.setChangedBy(authentication.getName());
+
+            customerBedHistoryService.save(oldJoiningDateBedHistory);
+        }
+
         JoiningDateInvoiceReconciliation reconciliation = reconcileJoiningDateInvoices(
                 customer, oldJoiningDate, newJoiningDate, today, billingRules);
 
@@ -4021,15 +4075,71 @@ public class CustomersService {
                     .computeBillingDates(billingRules, newJoiningDate);
 
             if (newJoiningBillingDates != null){
-                advanceInvoice.setInvoiceDueDate(newJoiningBillingDates.dueDate());
+
+                Date advInvoiceDueDate = Utils.addDaysToDate(newJoiningDate, newJoiningBillingDates.dueDays() - 1);
+
+                advanceInvoice.setInvoiceDueDate(advInvoiceDueDate);
                 advanceInvoice.setInvoiceEndDate(newJoiningBillingDates.currentBillEndDate());
             }
+
             advanceInvoice.setInvoiceStartDate(newJoiningDate);
             advanceInvoice.setInvoiceDate(newJoiningDate);
             advanceInvoice.setUpdatedBy(authentication.getName());
             advanceInvoice.setUpdatedAt(today);
 
             invoiceV1Service.save(advanceInvoice);
+        }
+
+        List<RentHistory> rentHistories = booking.getRentHistory();
+
+        Date finalOldJoiningDate = oldJoiningDate;
+        RentHistory oldJoiningDateRentHistory = rentHistories.stream()
+                .filter(i -> Utils.getStartOfDay(i.getStartsFrom()).equals(finalOldJoiningDate))
+                .findFirst()
+                .orElse(null);
+
+        if (oldJoiningDateRentHistory != null) {
+
+            Date rangeStart;
+            Date rangeEnd;
+
+            if (newJoiningDate.before(oldJoiningDate)) {
+                rangeStart = newJoiningDate;
+                rangeEnd = oldJoiningDate;
+            } else {
+                rangeStart = oldJoiningDate;
+                rangeEnd = newJoiningDate;
+            }
+
+            // If moving joining date forward, make sure there isn't
+            // another rent history belonging to this customer in the
+            // affected period.
+            if (newJoiningDate.after(oldJoiningDate)) {
+
+                boolean hasOverlappingRentHistory = rentHistories.stream()
+                        .filter(rh -> !rh.getId().equals(oldJoiningDateRentHistory.getId()))
+                        .anyMatch(rh -> {
+
+                            Date start = Utils.getStartOfDay(rh.getStartsFrom());
+                            Date end = rh.getEndingAt() != null
+                                    ? Utils.getStartOfDay(rh.getEndingAt())
+                                    : null;
+
+                            return !start.after(rangeEnd)
+                                    && (end == null || !end.before(rangeStart));
+                        });
+
+                if (hasOverlappingRentHistory) {
+                    return new ResponseEntity<>(
+                            "Customer has other rent histories in this date",
+                            HttpStatus.BAD_REQUEST
+                    );
+                }
+            }
+
+            oldJoiningDateRentHistory.setStartsFrom(newJoiningDate);
+
+            rentHistoryService.save(oldJoiningDateRentHistory);
         }
 
         customer.setJoiningDate(newJoiningDate);

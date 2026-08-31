@@ -77,4 +77,38 @@ public interface CustomerBedHistoryRepository extends JpaRepository<CustomersBed
     List<CustomersBedHistory> findByRoomIdStartAndEndDate(@Param("roomId") Integer roomId,
                                                           @Param("startDate") Date startDate,
                                                           @Param("endDate") Date endDate);
+
+    CustomersBedHistory findTopByCustomerIdAndTypeOrderByIdAsc(String customerId, String name);
+
+    @Query("""
+            SELECT cbh
+            FROM CustomersBedHistory cbh
+            WHERE cbh.bedId = :bedId
+              AND cbh.customerId <> :customerId
+              AND DATE(cbh.startDate) <= DATE(:endDate)
+              AND (
+                    cbh.endDate IS NULL
+                    OR DATE(cbh.endDate) >= DATE(:startDate)
+                  )
+            """)
+    List<CustomersBedHistory> findAllByBedIdAndBetweenDatesAndNotCustomer(@Param("bedId") int bedId,
+                                                                          @Param("customerId") String customerId,
+                                                                          @Param("startDate") Date startDate,
+                                                                          @Param("endDate") Date endDate);
+
+    @Query("""
+            SELECT cbh
+            FROM CustomersBedHistory cbh
+            WHERE cbh.customerId = :customerId
+              AND cbh.id <> :bedHistoryId
+              AND DATE(cbh.startDate) <= DATE(:endDate)
+              AND (
+                    cbh.endDate IS NULL
+                    OR DATE(cbh.endDate) >= DATE(:startDate)
+                  )
+            """)
+    List<CustomersBedHistory> findAllByCustomersAndBetweenDatesAndNotHistory(@Param("bedHistoryId") Long bedHistoryId,
+                                                                             @Param("customerId") String customerId,
+                                                                             @Param("startDate") Date startDate,
+                                                                             @Param("endDate") Date endDate);
 }
