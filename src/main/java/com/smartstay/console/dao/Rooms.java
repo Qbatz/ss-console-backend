@@ -28,5 +28,4 @@ public class Rooms {
     private String hostelId;
     private Integer floorId;
     private Integer sharingType;
-
 }

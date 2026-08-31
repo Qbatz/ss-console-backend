@@ -36,6 +36,10 @@ public class AgentActivitiesService {
             throw new IllegalArgumentException("newObject cannot be null for CREATE");
         }
 
+        if (activityType == ActivityType.SNAPSHOT_CREATE && newObject == null) {
+            throw new IllegalArgumentException("newObject cannot be null for CREATE");
+        }
+
         if (activityType == ActivityType.UPDATE && (oldObject == null || newObject == null)) {
             throw new IllegalArgumentException("oldObject and newObject required for UPDATE");
         }
@@ -74,7 +78,7 @@ public class AgentActivitiesService {
 
         switch (activityType) {
 
-            case CREATE, REACTIVATE:
+            case CREATE, REACTIVATE, SNAPSHOT_CREATE:
                 agentActivity.setOldObject(null);
                 agentActivity.setNewObject(AgentActivityUtil.singleObjectMap(newObject));
                 agentActivity.setChangesJson(null);

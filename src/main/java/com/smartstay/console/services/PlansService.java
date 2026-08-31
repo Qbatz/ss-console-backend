@@ -622,6 +622,10 @@ public class PlansService {
         return listPlans;
     }
 
+    public List<Plans> getAllByPlanIds(Set<Long> planIds) {
+        return plansRepository.findAllByPlanIdIn(planIds);
+    }
+
     public ResponseEntity<?> getPlansDropdown() {
 
         if (!authentication.isAuthenticated()) {

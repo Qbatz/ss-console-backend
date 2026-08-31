@@ -150,4 +150,9 @@ public class HostelsController {
     public ResponseEntity<?> getHostelNotes(@PathVariable("hostelId") String hostelId){
         return hostelsService.getHostelNotes(hostelId);
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<?> getHostelByName(@RequestParam String name){
+        return hostelsService.getHostelByName(name);
+    }
 }

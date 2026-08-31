@@ -620,6 +620,7 @@ public class OrderHistoryService {
         }
 
         subscription.setInvoiceUrl(null);
+        subscription.setGenerationType(null);
 
         subscription = subscriptionService.save(subscription);
 

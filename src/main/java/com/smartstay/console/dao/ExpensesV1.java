@@ -40,7 +40,7 @@ public class ExpensesV1 {
     private String expenseNumber;
     //final amount after discount and gst
     private Double transactionAmount;
-    private String vendorId;
+    private Integer vendorId;
     //from expense source
     private String source;
 

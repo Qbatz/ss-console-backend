@@ -17,7 +17,6 @@ public class HostelRelationalAgent {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String hostelId;
     private String parentId;
     private String agentId;
     @Enumerated(EnumType.STRING)

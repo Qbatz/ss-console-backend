@@ -8,13 +8,10 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.InvoiceItems;
 import com.smartstay.console.dto.billing.BillingPeriod;
-import com.smartstay.console.dto.customers.CustomerResetSnapshot;
-import com.smartstay.console.dto.customers.CustomersCredentialsSnapshot;
-import com.smartstay.console.dto.customers.CustomersSnapshot;
-import com.smartstay.console.dto.customers.Deductions;
+import com.smartstay.console.dto.customers.*;
 import com.smartstay.console.dto.hostel.BillingDates;
+import com.smartstay.console.dto.invoice.CancelledInvoice;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
-import com.smartstay.console.dto.retainer.RetainerItems;
 import com.smartstay.console.dto.settlement.*;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
@@ -427,8 +424,11 @@ public class CustomersService {
                         double amount = bankBalances.get(item.getBankId());
                         amount = amount + item.getPaidAmount();
                         bankBalances.put(item.getBankId(), amount);
-                    }
-                    else {
+                    } else if (TransactionType.ADVANCE_HOLDING.name().equals(item.getType())) {
+                        double amount = bankBalances.get(item.getBankId());
+                        amount = amount + item.getPaidAmount();
+                        bankBalances.put(item.getBankId(), amount);
+                    } else {
                         double amount = bankBalances.get(item.getBankId());
                         amount = amount  + (-1 * item.getPaidAmount());
                         bankBalances.put(item.getBankId(), amount);
@@ -437,8 +437,9 @@ public class CustomersService {
                 else {
                     if (item.getType() == null) {
                         bankBalances.put(item.getBankId(), item.getPaidAmount());
-                    }
-                    else {
+                    } else if (TransactionType.ADVANCE_HOLDING.name().equals(item.getType())) {
+                        bankBalances.put(item.getBankId(), item.getPaidAmount());
+                    } else {
                         bankBalances.put(item.getBankId(), item.getPaidAmount() * -1);
                     }
                 }
@@ -447,7 +448,11 @@ public class CustomersService {
                         double amount = bankV2Balances.get(item.getBankId());
                         amount = amount + item.getPaidAmount();
                         bankV2Balances.put(item.getBankId(), amount);
-                    } else {
+                    } else if (TransactionType.ADVANCE_HOLDING.name().equals(item.getType())) {
+                        double amount = bankV2Balances.get(item.getBankId());
+                        amount = amount + item.getPaidAmount();
+                        bankV2Balances.put(item.getBankId(), amount);
+                    }  else {
                         double amount = bankV2Balances.get(item.getBankId());
                         amount = amount  + (-1 * item.getPaidAmount());
                         bankV2Balances.put(item.getBankId(), amount);
@@ -455,7 +460,9 @@ public class CustomersService {
                 } else {
                     if (item.getType() == null) {
                         bankV2Balances.put(item.getBankId(), item.getPaidAmount());
-                    } else {
+                    } else if (TransactionType.ADVANCE_HOLDING.name().equals(item.getType())) {
+                        bankV2Balances.put(item.getBankId(), item.getPaidAmount());
+                    }  else {
                         bankV2Balances.put(item.getBankId(), item.getPaidAmount() * -1);
                     }
                 }
@@ -1552,13 +1559,20 @@ public class CustomersService {
                                         d.getPaidAmount() < d.getAmount()
                         )
                         .toList();
-
-                advanceInvoice.setDeductions(advInvDeductions);
             }
 
-            List<String> cancelledInvoiceIds = cancelledInvoices.stream()
-                    .map(InvoicesV1::getInvoiceId)
-                    .toList();
+            List<String> cancelledInvoiceIds = new ArrayList<>();
+            List<CancelledInvoice> newCancelledInvoices = new ArrayList<>();
+
+            for (InvoicesV1 cancelledInvoice : cancelledInvoices){
+                if (cancelledInvoice.getInvoiceId() != null){
+                    cancelledInvoiceIds.add(cancelledInvoice.getInvoiceId());
+                }
+                if (cancelledInvoice.getPaymentStatus() != null){
+                    newCancelledInvoices.add(new CancelledInvoice(
+                            cancelledInvoice.getInvoiceId(), cancelledInvoice.getPaymentStatus()));
+                }
+            }
 
             if (settlementInvoice == null) {
                 settlementInvoice = new InvoicesV1();
@@ -1601,6 +1615,7 @@ public class CustomersService {
             settlementInvoice.setCancelled(false);
             settlementInvoice.setDiscounted(false);
             settlementInvoice.setCancelledInvoices(cancelledInvoiceIds);
+            settlementInvoice.setNewCancelledInvoices(newCancelledInvoices);
             settlementInvoice.setDeductions(advInvDeductions);
             settlementInvoice.setInvoiceUrl(null);
             settlementInvoice.setInvoiceGeneratedDate(today);
@@ -1660,7 +1675,7 @@ public class CustomersService {
 
             List<RetainerItems> settlementRetainerItems = retainerInfosRes.stream()
                     .map(i -> new RetainerItems(i.invoiceId(), i.invoiceNumber(), i.invoiceDate(),
-                            i.invoiceDate(), i.invoiceAmount(), i.redeemedAmount(), i.balanceAmount()))
+                            i.invoiceAmount(), i.balanceAmount()))
                     .toList();
 
             SettlementItems settlementItems = settlementItemsService
@@ -3932,17 +3947,29 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        CustomersSnapshot oldSnapshot = SnapshotUtility.toSnapshot(customer);
+
         String hostelId = customer.getHostelId();
 
         Date today = new Date();
         Date oldJoiningDate = customer.getJoiningDate();
         Date newJoiningDate = Utils.localDateToDate(payload.newJoiningDate());
+        Date bookingDate = booking.getBookingDate();
 
         oldJoiningDate = Utils.getStartOfDay(oldJoiningDate);
         newJoiningDate = Utils.getStartOfDay(newJoiningDate);
+        bookingDate = Utils.getStartOfDay(bookingDate);
 
         if (oldJoiningDate.equals(newJoiningDate)){
             return new ResponseEntity<>("Joining date is not changed", HttpStatus.BAD_REQUEST);
+        }
+
+        if (booking.getIsBooked() != null){
+            if (booking.getIsBooked()){
+                if (newJoiningDate.before(bookingDate)){
+                    return new ResponseEntity<>("Joining date can not be before booking date", HttpStatus.BAD_REQUEST);
+                }
+            }
         }
 
         BillingRules billingRules = billingRulesService
@@ -3951,219 +3978,58 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.BILLING_RULE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        List<BillingDates> expectedBillingPeriods = billingRulesService
-                .getBillingPeriods(billingRules, newJoiningDate, today);
+        JoiningDateInvoiceReconciliation reconciliation = reconcileJoiningDateInvoices(
+                customer, oldJoiningDate, newJoiningDate, today, billingRules);
 
-        Set<String> invoiceTypes = new HashSet<>();
-        invoiceTypes.add(InvoiceType.RENT.name());
-        invoiceTypes.add(InvoiceType.REASSIGN_RENT.name());
+        for (InvoiceUpdateAction update : reconciliation.updates()) {
 
-        List<InvoicesV1> existingInvoices = invoiceV1Service
-                .getInvoicesByCustomerIdAndInvoiceTypes(customerId, invoiceTypes);
-
-        Map<BillingPeriod, List<InvoicesV1>> grouped = existingInvoices.stream()
-                        .collect(Collectors.groupingBy(i ->
-                                new BillingPeriod(
-                                        Utils.getStartOfDay(i.getInvoiceStartDate()),
-                                        Utils.getStartOfDay(i.getInvoiceEndDate())
-                                )));
-
-        for (Map.Entry<BillingPeriod, List<InvoicesV1>> entry : grouped.entrySet()) {
-            if (entry.getValue().size() > 1) {
-                // Duplicate invoices
-                return ResponseEntity.badRequest()
-                        .body("Duplicate invoices found for billing period.");
-            }
+            invoiceV1Service.updateInvoice(
+                    billingRules,
+                    update.billingDates(),
+                    update.invoice(),
+                    update.joiningDate(),
+                    customer,
+                    booking
+            );
         }
 
-        Map<BillingPeriod, InvoicesV1> billingPeriodInvoiceMap = grouped.entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        e -> e.getValue().getFirst()
-                ));
+        if (!reconciliation.invoicesToDelete().isEmpty()) {
 
-        BillingDates newJoiningBillingDates;
-        if (BillingType.FIXED_DATE.name().equals(billingRules.getTypeOfBilling())) {
-            newJoiningBillingDates = billingRulesService
+            Set<String> invoiceIds = reconciliation.invoicesToDelete()
+                    .stream()
+                    .map(InvoicesV1::getInvoiceId)
+                    .collect(Collectors.toSet());
+
+            invoiceV1Service.deleteInvoices(invoiceIds,
+                    reconciliation.invoicesToDelete());
+        }
+
+        for (BillingDates billingDates : reconciliation.creatableBillingDates()) {
+            // add invoice generation logic here
+        }
+
+        List<InvoicesV1> advanceInvoices = invoiceV1Service
+                .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.ADVANCE.name());
+
+        InvoicesV1 advanceInvoice = advanceInvoices == null || advanceInvoices.isEmpty()
+                ? null
+                : advanceInvoices.getFirst();
+
+        if (advanceInvoice != null){
+
+            BillingDates newJoiningBillingDates = billingRulesService
                     .computeBillingDates(billingRules, newJoiningDate);
-        } else {
-            newJoiningBillingDates = billingRulesService
-                    .computeJoiningBasedBillingDates(
-                            billingRules, newJoiningDate, newJoiningDate);
-        }
 
-        Date finalOldJoiningDate = oldJoiningDate;
-        InvoicesV1 oldJoiningInvoice = existingInvoices.stream()
-                .filter(i -> {
-                    Date start = Utils.getStartOfDay(i.getInvoiceStartDate());
-                    Date end = Utils.getStartOfDay(i.getInvoiceEndDate());
-
-                    return !finalOldJoiningDate.before(start)
-                            && !finalOldJoiningDate.after(end);
-                })
-                .findFirst()
-                .orElse(null);
-
-        Date finalNewJoiningDate = newJoiningDate;
-        InvoicesV1 newJoiningInvoice = existingInvoices.stream()
-                .filter(i -> {
-                    Date start = Utils.getStartOfDay(i.getInvoiceStartDate());
-                    Date end = Utils.getStartOfDay(i.getInvoiceEndDate());
-
-                    return !finalNewJoiningDate.before(start)
-                            && !finalNewJoiningDate.after(end);
-                })
-                .findFirst()
-                .orElse(null);
-
-        boolean movedEarlier = newJoiningDate.before(oldJoiningDate);
-
-        if (Objects.equals(oldJoiningInvoice, newJoiningInvoice)) {
-
-            // Same invoice
-            if (oldJoiningInvoice != null) {
-
-                BillingPeriod expectedKey = new BillingPeriod(
-                        Utils.getStartOfDay(newJoiningBillingDates.currentBillStartDate()),
-                        Utils.getStartOfDay(newJoiningBillingDates.currentBillEndDate())
-                );
-
-                BillingPeriod existingKey = new BillingPeriod(
-                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceStartDate()),
-                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceEndDate())
-                );
-
-                invoiceV1Service.updateInvoice(
-                        billingRules,
-                        newJoiningBillingDates,
-                        oldJoiningInvoice,
-                        newJoiningDate,
-                        customer,
-                        booking);
-
-                if (!expectedKey.equals(existingKey)) {
-                    billingPeriodInvoiceMap.remove(existingKey);
-                    billingPeriodInvoiceMap.put(expectedKey, oldJoiningInvoice);
-                }
+            if (newJoiningBillingDates != null){
+                advanceInvoice.setInvoiceDueDate(newJoiningBillingDates.dueDate());
+                advanceInvoice.setInvoiceEndDate(newJoiningBillingDates.currentBillEndDate());
             }
-        } else {
+            advanceInvoice.setInvoiceStartDate(newJoiningDate);
+            advanceInvoice.setInvoiceDate(newJoiningDate);
+            advanceInvoice.setUpdatedBy(authentication.getName());
+            advanceInvoice.setUpdatedAt(today);
 
-            //----------------------------------------------------
-            // Update invoice containing NEW joining date
-            //----------------------------------------------------
-
-            if (newJoiningInvoice != null) {
-
-                BillingPeriod expectedKey = new BillingPeriod(
-                        Utils.getStartOfDay(newJoiningBillingDates.currentBillStartDate()),
-                        Utils.getStartOfDay(newJoiningBillingDates.currentBillEndDate())
-                );
-
-                BillingPeriod existingKey = new BillingPeriod(
-                        Utils.getStartOfDay(newJoiningInvoice.getInvoiceStartDate()),
-                                Utils.getStartOfDay(newJoiningInvoice.getInvoiceEndDate())
-                );
-
-                invoiceV1Service.updateInvoice(
-                        billingRules,
-                        newJoiningBillingDates,
-                        newJoiningInvoice,
-                        newJoiningDate,
-                        customer,
-                        booking);
-
-                if (!expectedKey.equals(existingKey)) {
-                    billingPeriodInvoiceMap.remove(existingKey);
-                    billingPeriodInvoiceMap.put(expectedKey, newJoiningInvoice);
-                }
-            }
-
-            //----------------------------------------------------
-            // Moving earlier:
-            // update old invoice as it now becomes a full period.
-            //----------------------------------------------------
-
-            if (movedEarlier && oldJoiningInvoice != null) {
-
-                BillingDates recalculatedBillingDates;
-
-                if (BillingType.FIXED_DATE.name().equals(billingRules.getTypeOfBilling())) {
-
-                    recalculatedBillingDates = billingRulesService
-                            .computeBillingDates(billingRules, oldJoiningInvoice.getInvoiceStartDate());
-
-                } else {
-
-                    recalculatedBillingDates = billingRulesService
-                            .computeJoiningBasedBillingDates(
-                                    billingRules, newJoiningDate,
-                                    oldJoiningInvoice.getInvoiceStartDate());
-                }
-
-                BillingPeriod updatedKey = new BillingPeriod(
-                        Utils.getStartOfDay(recalculatedBillingDates.currentBillStartDate()),
-                        Utils.getStartOfDay(recalculatedBillingDates.currentBillEndDate())
-                );
-
-                BillingPeriod existingKey = new BillingPeriod(
-                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceStartDate()),
-                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceEndDate())
-                );
-
-                invoiceV1Service.updateInvoice(
-                        billingRules,
-                        recalculatedBillingDates,
-                        oldJoiningInvoice,
-                        newJoiningDate,
-                        customer,
-                        booking);
-
-                if (!existingKey.equals(updatedKey)) {
-                    billingPeriodInvoiceMap.remove(existingKey);
-                }
-                billingPeriodInvoiceMap.put(updatedKey, oldJoiningInvoice);
-            }
-
-            //----------------------------------------------------
-            // Moving later:
-            // do nothing with old invoice.
-            // reconciliation will delete it.
-            //----------------------------------------------------
-        }
-
-        Set<BillingPeriod> expectedKeys = new HashSet<>();
-        Set<String> deletableInvoiceIds = new HashSet<>();
-        List<InvoicesV1> deletableInvoices = new ArrayList<>();
-
-        for (BillingDates billingDates : expectedBillingPeriods){
-
-            BillingPeriod key = new BillingPeriod(
-                    Utils.getStartOfDay(billingDates.currentBillStartDate()),
-                    Utils.getStartOfDay(billingDates.currentBillEndDate())
-            );
-
-            expectedKeys.add(key);
-
-            InvoicesV1 invoice = billingPeriodInvoiceMap.get(key);
-
-            if (invoice != null){
-                // invoice exists
-            } else {
-                // create invoice
-            }
-        }
-
-        for (InvoicesV1 invoice : existingInvoices){
-
-            BillingPeriod key = new BillingPeriod(
-                    Utils.getStartOfDay(invoice.getInvoiceStartDate()),
-                    Utils.getStartOfDay(invoice.getInvoiceEndDate())
-            );
-
-            if (!expectedKeys.contains(key)) {
-                deletableInvoiceIds.add(invoice.getInvoiceId());
-                deletableInvoices.add(invoice);
-            }
+            invoiceV1Service.save(advanceInvoice);
         }
 
         customer.setJoiningDate(newJoiningDate);
@@ -4174,12 +4040,13 @@ public class CustomersService {
         booking.setUpdatedAt(today);
         booking.setUpdatedBy(authentication.getName());
 
-        if (!deletableInvoiceIds.isEmpty() && !deletableInvoices.isEmpty()){
-            invoiceV1Service.deleteInvoices(deletableInvoiceIds, deletableInvoices);
-        }
-
-        customersRepository.save(customer);
+        customer = customersRepository.save(customer);
         bookingsService.save(booking);
+
+        CustomersSnapshot newSnapshot = SnapshotUtility.toSnapshot(customer);
+
+        agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.TENANT_JOINING_DATE,
+                customerId, oldSnapshot, newSnapshot);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
@@ -4227,9 +4094,18 @@ public class CustomersService {
 
         Date oldJoiningDate = Utils.getStartOfDay(customer.getJoiningDate());
         Date newJoiningDate = Utils.getStartOfDay(Utils.localDateToDate(payload.newJoiningDate()));
+        Date bookingDate = Utils.getStartOfDay(booking.getBookingDate());
 
         if (oldJoiningDate.equals(newJoiningDate)) {
             return ResponseEntity.badRequest().body("Joining date is not changed");
+        }
+
+        if (booking.getIsBooked() != null){
+            if (booking.getIsBooked()){
+                if (newJoiningDate.before(bookingDate)){
+                    return new ResponseEntity<>("Joining date can not be before booking date", HttpStatus.BAD_REQUEST);
+                }
+            }
         }
 
         BillingRules billingRules = billingRulesService.getCurrentMonthTemplate(customer.getHostelId());
@@ -4237,223 +4113,434 @@ public class CustomersService {
             return new ResponseEntity<>(Utils.BILLING_RULE_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        List<BillingDates> expectedBillingPeriods = billingRulesService
-                .getBillingPeriods(billingRules, newJoiningDate, today);
+        JoiningDateInvoiceReconciliation reconciliation = reconcileJoiningDateInvoices(
+            customer, oldJoiningDate, newJoiningDate, today, billingRules);
 
-        Set<String> invoiceTypes = Set.of(InvoiceType.RENT.name(), InvoiceType.REASSIGN_RENT.name());
+        List<InvoiceImpact> invoiceImpacts = reconciliation.impacts();
+
+        List<InvoicesV1> advanceInvoices = invoiceV1Service
+                .getInvoicesByCustomerIdAndInvoiceType(customerId, InvoiceType.ADVANCE.name());
+
+        InvoicesV1 advanceInvoice = advanceInvoices == null || advanceInvoices.isEmpty()
+                ? null
+                : advanceInvoices.getFirst();
+
+        if (advanceInvoice != null) {
+
+            BillingDates newJoiningBillingDates = billingRulesService
+                    .computeBillingDates(billingRules, newJoiningDate);
+
+            String advInvStartDate = null;
+            String advInvEndDate = null;
+            String newStart = null;
+            String newEnd = null;
+
+            if (advanceInvoice.getInvoiceStartDate() != null){
+                advInvStartDate = Utils.dateToString(advanceInvoice.getInvoiceStartDate());
+            }
+            if (advanceInvoice.getInvoiceEndDate() != null){
+                advInvEndDate = Utils.dateToString(advanceInvoice.getInvoiceEndDate());
+            }
+            if (newJoiningDate != null){
+                newStart = Utils.dateToString(newJoiningDate);
+            }
+            if (newJoiningBillingDates != null && newJoiningBillingDates.currentBillEndDate() != null){
+                newEnd = Utils.dateToString(newJoiningBillingDates.currentBillEndDate());
+            }
+
+            invoiceImpacts.add(new InvoiceImpact(advanceInvoice.getInvoiceId(), advanceInvoice.getInvoiceNumber(),
+                    advanceInvoice.getInvoiceType(), advInvStartDate, advInvEndDate, advanceInvoice.getTotalAmount(),
+                    advanceInvoice.getPaidAmount(), advanceInvoice.getPaymentStatus(), InvoiceImpactType.UPDATED,
+                    newStart, newEnd, advanceInvoice.getPaidAmount() != null && advanceInvoice.getPaidAmount() > 0));
+        }
+
+        return ResponseEntity.ok(new JoiningDateImpactResponse(invoiceImpacts));
+    }
+
+    private JoiningDateInvoiceReconciliation reconcileJoiningDateInvoices(Customers customer,
+                                                                          Date oldJoiningDate, Date newJoiningDate,
+                                                                          Date today, BillingRules billingRules) {
+
+        String customerId = customer.getCustomerId();
+
+        Set<String> invoiceTypes = Set.of(
+                InvoiceType.RENT.name(),
+                InvoiceType.REASSIGN_RENT.name()
+        );
 
         List<InvoicesV1> existingInvoices = invoiceV1Service
                 .getInvoicesByCustomerIdAndInvoiceTypes(customerId, invoiceTypes);
 
+        /*
+         * ---------------------------------------------------------
+         * 1. Calculate expected billing periods for NEW joining date
+         * ---------------------------------------------------------
+         */
+        List<BillingDates> expectedBillingPeriods = billingRulesService
+                .getExpectedBillingPeriodsForJoiningDateChange(billingRules, newJoiningDate, today);
+
+        /*
+         * ---------------------------------------------------------
+         * 2. Detect duplicate invoices
+         * ---------------------------------------------------------
+         */
         Map<BillingPeriod, List<InvoicesV1>> grouped = existingInvoices.stream()
-                .collect(Collectors.groupingBy(i ->
+                .collect(Collectors.groupingBy(invoice ->
                         new BillingPeriod(
-                                Utils.getStartOfDay(i.getInvoiceStartDate()),
-                                Utils.getStartOfDay(i.getInvoiceEndDate())
-                        )));
+                                Utils.getStartOfDay(invoice.getInvoiceStartDate()),
+                                Utils.getStartOfDay(invoice.getInvoiceEndDate())
+                        )
+                ));
 
         for (Map.Entry<BillingPeriod, List<InvoicesV1>> entry : grouped.entrySet()) {
+
             if (entry.getValue().size() > 1) {
-                // Duplicate invoices
-                return ResponseEntity.badRequest()
-                        .body("Duplicate invoices found for billing period.");
+                throw new BadRequestException("Duplicate invoices found for billing period.");
             }
         }
 
-        BillingDates newJoiningBillingDates;
-        if (BillingType.FIXED_DATE.name().equals(billingRules.getTypeOfBilling())) {
-            newJoiningBillingDates = billingRulesService.computeBillingDates(
-                    billingRules, newJoiningDate);
-        } else {
-            newJoiningBillingDates = billingRulesService.computeJoiningBasedBillingDates(
-                    billingRules, newJoiningDate, newJoiningDate);
+        /*
+         * ---------------------------------------------------------
+         * 3. Expected billing periods
+         * ---------------------------------------------------------
+         */
+        Map<BillingPeriod, BillingDates> expectedPeriodMap = expectedBillingPeriods.stream()
+                .collect(Collectors.toMap(
+                        billingDates -> new BillingPeriod(
+                                Utils.getStartOfDay(billingDates.currentBillStartDate()),
+                                Utils.getStartOfDay(billingDates.currentBillEndDate())
+                        ),
+                        Function.identity(),
+                        (a, b) -> a,
+                        LinkedHashMap::new
+                ));
+
+        /*
+         * ---------------------------------------------------------------------
+         * 4. Unchanged invoices should be included in occupied expected periods
+         * ---------------------------------------------------------------------
+         */
+        Set<BillingPeriod> occupiedExpectedPeriods = new HashSet<>();
+
+        for (InvoicesV1 invoice : existingInvoices) {
+
+            BillingPeriod existingPeriod = new BillingPeriod(
+                    Utils.getStartOfDay(invoice.getInvoiceStartDate()),
+                    Utils.getStartOfDay(invoice.getInvoiceEndDate())
+            );
+
+            if (expectedPeriodMap.containsKey(existingPeriod)) {
+                occupiedExpectedPeriods.add(existingPeriod);
+            }
         }
 
-        InvoicesV1 oldJoiningInvoice = existingInvoices.stream()
-                .filter(i ->
-                        !oldJoiningDate.before(Utils.getStartOfDay(i.getInvoiceStartDate()))
-                                &&
-                                !oldJoiningDate.after(Utils.getStartOfDay(i.getInvoiceEndDate())))
+        /*
+         * ---------------------------------------------------------
+         * 5. Calculate billing period for NEW joining date
+         * ---------------------------------------------------------
+         */
+        BillingDates newJoiningBillingDates = expectedBillingPeriods.stream()
+                .filter(billingDates ->
+                        !newJoiningDate.before(Utils
+                                .getStartOfDay(billingDates.currentBillStartDate()))
+                                && !newJoiningDate.after(Utils
+                                .getStartOfDay(billingDates.currentBillEndDate())))
                 .findFirst()
                 .orElse(null);
 
+        /*
+         * ---------------------------------------------------------
+         * 6. Find invoice containing OLD joining date
+         * ---------------------------------------------------------
+         */
+        InvoicesV1 oldJoiningInvoice = existingInvoices.stream()
+                .filter(invoice -> {
+
+                    Date start = Utils.getStartOfDay(invoice.getInvoiceStartDate());
+                    Date end = Utils.getStartOfDay(invoice.getInvoiceEndDate());
+
+                    return !oldJoiningDate.before(start)
+                            && !oldJoiningDate.after(end);
+                })
+                .findFirst()
+                .orElse(null);
+
+        /*
+         * ---------------------------------------------------------
+         * 7. Find invoice containing NEW joining date
+         * ---------------------------------------------------------
+         */
         InvoicesV1 newJoiningInvoice = existingInvoices.stream()
-                .filter(i ->
-                        !newJoiningDate.before(Utils.getStartOfDay(i.getInvoiceStartDate()))
-                                &&
-                                !newJoiningDate.after(Utils.getStartOfDay(i.getInvoiceEndDate())))
+                .filter(invoice -> {
+
+                    Date start = Utils.getStartOfDay(invoice.getInvoiceStartDate());
+                    Date end = Utils.getStartOfDay(invoice.getInvoiceEndDate());
+
+                    return !newJoiningDate.before(start)
+                            && !newJoiningDate.after(end);
+                })
                 .findFirst()
                 .orElse(null);
 
         boolean movedEarlier = newJoiningDate.before(oldJoiningDate);
 
+        /*
+         * ---------------------------------------------------------
+         * 8. Track invoice actions
+         *
+         * IMPORTANT:
+         *
+         * Once an invoice is UPDATED, it is matched.
+         * It must NEVER subsequently become DELETED.
+         * ---------------------------------------------------------
+         */
         Map<String, InvoiceImpact> impacts = new LinkedHashMap<>();
+        Map<String, InvoiceUpdateAction> updates = new LinkedHashMap<>();
+        List<BillingDates> creatableBillingDates = new ArrayList<>();
+        Set<String> matchedInvoiceIds = new HashSet<>();
 
+        /*
+         * ---------------------------------------------------------
+         * 9. Start with all invoices as UNCHANGED
+         * ---------------------------------------------------------
+         */
         for (InvoicesV1 invoice : existingInvoices) {
 
-            impacts.put(invoice.getInvoiceId(),
-
+            impacts.put(
+                    invoice.getInvoiceId(),
                     new InvoiceImpact(
                             invoice.getInvoiceId(),
                             invoice.getInvoiceNumber(),
                             invoice.getInvoiceType(),
-
                             Utils.dateToString(invoice.getInvoiceStartDate()),
                             Utils.dateToString(invoice.getInvoiceEndDate()),
-
                             invoice.getTotalAmount(),
                             invoice.getPaidAmount(),
                             invoice.getPaymentStatus(),
-
                             InvoiceImpactType.UNCHANGED,
-
                             Utils.dateToString(invoice.getInvoiceStartDate()),
                             Utils.dateToString(invoice.getInvoiceEndDate()),
-
-                            invoice.getPaidAmount() != null &&
-                                    invoice.getPaidAmount() > 0
-                    ));
+                            invoice.getPaidAmount() != null && invoice.getPaidAmount() > 0
+                    )
+            );
         }
 
+        /*
+         * ---------------------------------------------------------
+         * 10. SAME invoice contains old + new joining date
+         * ---------------------------------------------------------
+         */
         if (Objects.equals(oldJoiningInvoice, newJoiningInvoice)) {
 
             if (oldJoiningInvoice != null) {
 
-                impacts.put(oldJoiningInvoice.getInvoiceId(),
+                BillingPeriod expectedKey = new BillingPeriod(
+                        Utils.getStartOfDay(newJoiningBillingDates.currentBillStartDate()),
+                        Utils.getStartOfDay(newJoiningBillingDates.currentBillEndDate())
+                );
 
-                        new InvoiceImpact(
-                                oldJoiningInvoice.getInvoiceId(),
-                                oldJoiningInvoice.getInvoiceNumber(),
-                                oldJoiningInvoice.getInvoiceType(),
+                BillingPeriod existingKey = new BillingPeriod(
+                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceStartDate()),
+                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceEndDate())
+                );
 
-                                Utils.dateToString(oldJoiningInvoice.getInvoiceStartDate()),
-                                Utils.dateToString(oldJoiningInvoice.getInvoiceEndDate()),
+                /*
+                 * If the invoice period actually changes,
+                 * mark it as UPDATE.
+                 */
+                if (!expectedKey.equals(existingKey)) {
 
-                                oldJoiningInvoice.getTotalAmount(),
-                                oldJoiningInvoice.getPaidAmount(),
-                                oldJoiningInvoice.getPaymentStatus(),
+                    occupiedExpectedPeriods.add(expectedKey);
 
-                                InvoiceImpactType.UPDATED,
+                    matchedInvoiceIds.add(
+                            oldJoiningInvoice.getInvoiceId()
+                    );
 
-                                Utils.dateToString(newJoiningBillingDates.currentBillStartDate()),
-                                Utils.dateToString(newJoiningBillingDates.currentBillEndDate()),
+                    updates.put(
+                            oldJoiningInvoice.getInvoiceId(),
+                            new InvoiceUpdateAction(oldJoiningInvoice, newJoiningBillingDates, newJoiningDate)
+                    );
 
-                                oldJoiningInvoice.getPaidAmount() != null &&
-                                        oldJoiningInvoice.getPaidAmount() > 0
-                        ));
+                    impacts.put(
+                            oldJoiningInvoice.getInvoiceId(),
+                            createInvoiceImpact(oldJoiningInvoice, InvoiceImpactType.UPDATED, newJoiningBillingDates)
+                    );
+                }
             }
 
         } else {
 
+            /*
+             * -----------------------------------------------------
+             * 11. NEW joining date belongs to another invoice
+             * -----------------------------------------------------
+             */
             if (newJoiningInvoice != null) {
 
-                impacts.put(newJoiningInvoice.getInvoiceId(),
+                BillingPeriod expectedKey = new BillingPeriod(
+                        Utils.getStartOfDay(newJoiningBillingDates.currentBillStartDate()),
+                        Utils.getStartOfDay(newJoiningBillingDates.currentBillEndDate())
+                );
 
-                        new InvoiceImpact(
-                                newJoiningInvoice.getInvoiceId(),
-                                newJoiningInvoice.getInvoiceNumber(),
-                                newJoiningInvoice.getInvoiceType(),
+                BillingPeriod existingKey = new BillingPeriod(
+                        Utils.getStartOfDay(newJoiningInvoice.getInvoiceStartDate()),
+                        Utils.getStartOfDay(newJoiningInvoice.getInvoiceEndDate())
+                );
 
-                                Utils.dateToString(newJoiningInvoice.getInvoiceStartDate()),
-                                Utils.dateToString(newJoiningInvoice.getInvoiceEndDate()),
+                if (!expectedKey.equals(existingKey)) {
 
-                                newJoiningInvoice.getTotalAmount(),
-                                newJoiningInvoice.getPaidAmount(),
-                                newJoiningInvoice.getPaymentStatus(),
+                    occupiedExpectedPeriods.add(expectedKey);
 
-                                InvoiceImpactType.UPDATED,
+                    matchedInvoiceIds.add(newJoiningInvoice.getInvoiceId());
 
-                                Utils.dateToString(newJoiningBillingDates.currentBillStartDate()),
-                                Utils.dateToString(newJoiningBillingDates.currentBillEndDate()),
+                    updates.put(
+                            newJoiningInvoice.getInvoiceId(),
+                            new InvoiceUpdateAction(newJoiningInvoice, newJoiningBillingDates, newJoiningDate)
+                    );
 
-                                newJoiningInvoice.getPaidAmount() != null &&
-                                        newJoiningInvoice.getPaidAmount() > 0
-                        ));
+                    impacts.put(
+                            newJoiningInvoice.getInvoiceId(),
+                            createInvoiceImpact(newJoiningInvoice, InvoiceImpactType.UPDATED, newJoiningBillingDates)
+                    );
+                }
             }
 
+            /*
+             * -----------------------------------------------------
+             * 12. Moving joining date EARLIER
+             *
+             * Old invoice becomes a full billing period.
+             * -----------------------------------------------------
+             */
             if (movedEarlier && oldJoiningInvoice != null) {
 
                 BillingDates recalculatedBillingDates;
 
                 if (BillingType.FIXED_DATE.name().equals(billingRules.getTypeOfBilling())) {
+
                     recalculatedBillingDates = billingRulesService.computeBillingDates(
-                            billingRules, oldJoiningInvoice.getInvoiceStartDate());
+                            billingRules,
+                            oldJoiningInvoice.getInvoiceStartDate()
+                    );
+
                 } else {
-                    recalculatedBillingDates = billingRulesService.computeJoiningBasedBillingDates(
-                            billingRules, newJoiningDate, oldJoiningInvoice.getInvoiceStartDate());
+
+                    recalculatedBillingDates = billingRulesService
+                            .computeJoiningBasedBillingDates(
+                                    billingRules,
+                                    newJoiningDate,
+                                    oldJoiningInvoice.getInvoiceStartDate()
+                            );
                 }
 
-                impacts.put(oldJoiningInvoice.getInvoiceId(),
+                BillingPeriod updatedKey = new BillingPeriod(
+                        Utils.getStartOfDay(recalculatedBillingDates.currentBillStartDate()),
+                        Utils.getStartOfDay(recalculatedBillingDates.currentBillEndDate())
+                );
 
-                        new InvoiceImpact(
-                                oldJoiningInvoice.getInvoiceId(),
-                                oldJoiningInvoice.getInvoiceNumber(),
-                                oldJoiningInvoice.getInvoiceType(),
+                BillingPeriod existingKey = new BillingPeriod(
+                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceStartDate()),
+                        Utils.getStartOfDay(oldJoiningInvoice.getInvoiceEndDate())
+                );
 
-                                Utils.dateToString(oldJoiningInvoice.getInvoiceStartDate()),
-                                Utils.dateToString(oldJoiningInvoice.getInvoiceEndDate()),
+                /*
+                 * Only update the invoice if its billing period
+                 * actually changes.
+                 */
+                if (!updatedKey.equals(existingKey)) {
 
-                                oldJoiningInvoice.getTotalAmount(),
-                                oldJoiningInvoice.getPaidAmount(),
-                                oldJoiningInvoice.getPaymentStatus(),
+                    occupiedExpectedPeriods.add(updatedKey);
 
-                                InvoiceImpactType.UPDATED,
+                    matchedInvoiceIds.add(oldJoiningInvoice.getInvoiceId());
 
-                                Utils.dateToString(recalculatedBillingDates.currentBillStartDate()),
-                                Utils.dateToString(recalculatedBillingDates.currentBillEndDate()),
+                    updates.put(
+                            oldJoiningInvoice.getInvoiceId(),
+                            new InvoiceUpdateAction(oldJoiningInvoice, recalculatedBillingDates, newJoiningDate)
+                    );
 
-                                oldJoiningInvoice.getPaidAmount() != null &&
-                                        oldJoiningInvoice.getPaidAmount() > 0
-                        ));
+                    impacts.put(
+                            oldJoiningInvoice.getInvoiceId(),
+                            createInvoiceImpact(oldJoiningInvoice, InvoiceImpactType.UPDATED, recalculatedBillingDates)
+                    );
+                }
             }
         }
 
-        Set<BillingPeriod> expectedPeriods = expectedBillingPeriods.stream()
-                        .map(b -> new BillingPeriod(
-                                Utils.getStartOfDay(b.currentBillStartDate()),
-                                Utils.getStartOfDay(b.currentBillEndDate())))
-                        .collect(Collectors.toSet());
+        /*
+         * ---------------------------------------------------------
+         * 13. Calculate CREATED invoices
+         *
+         * Any expected billing period that does not have
+         * an existing/matched invoice needs to be created.
+         *
+         * ---------------------------------------------------------
+         */
+        for (Map.Entry<BillingPeriod, BillingDates> entry : expectedPeriodMap.entrySet()) {
+
+            BillingPeriod period = entry.getKey();
+
+            if (!occupiedExpectedPeriods.contains(period)) {
+
+                BillingDates billingDates = entry.getValue();
+
+                creatableBillingDates.add(billingDates);
+
+                impacts.put(
+                        "NEW:" + period.hashCode(),
+                        createCreatedInvoiceImpact(billingDates)
+                );
+            }
+        }
+
+        /*
+         * ---------------------------------------------------------
+         * 14. Calculate DELETED invoices
+         *
+         * VERY IMPORTANT:
+         *
+         * Never delete an invoice that has already been matched
+         * for UPDATE.
+         * ---------------------------------------------------------
+         */
+        List<InvoicesV1> invoicesToDelete = new ArrayList<>();
 
         for (InvoicesV1 invoice : existingInvoices) {
 
-            BillingPeriod key = new BillingPeriod(
+            if (matchedInvoiceIds.contains(invoice.getInvoiceId())) {
+                continue;
+            }
+
+            BillingPeriod existingPeriod = new BillingPeriod(
                     Utils.getStartOfDay(invoice.getInvoiceStartDate()),
-                    Utils.getStartOfDay(invoice.getInvoiceEndDate()));
+                    Utils.getStartOfDay(invoice.getInvoiceEndDate())
+            );
 
-            if (!expectedPeriods.contains(key)) {
+            if (!expectedPeriodMap.containsKey(existingPeriod)) {
 
-                impacts.computeIfPresent(invoice.getInvoiceId(),
+                invoicesToDelete.add(invoice);
 
-                        (k, current) -> new InvoiceImpact(
-                                current.invoiceId(),
-                                current.invoiceNumber(),
-                                current.invoiceType(),
-
-                                current.invoiceStartDate(),
-                                current.invoiceEndDate(),
-
-                                current.totalAmount(),
-                                current.paidAmount(),
-                                current.paymentStatus(),
-
-                                InvoiceImpactType.DELETED,
-
-                                current.newInvoiceStartDate(),
-                                current.newInvoiceEndDate(),
-
-                                current.paid()
-                        ));
+                impacts.put(
+                        invoice.getInvoiceId(),
+                        createInvoiceImpact(invoice, InvoiceImpactType.DELETED, null)
+                );
             }
         }
 
-        boolean includeUnchanged = false;
+        /*
+         * ---------------------------------------------------------
+         * 15. Remove UNCHANGED if desired
+         * ---------------------------------------------------------
+         */
+        impacts.values().removeIf(impact ->
+                impact.action() == InvoiceImpactType.UNCHANGED ||
+                        impact.action() == InvoiceImpactType.CREATED
+        );
 
-        List<InvoiceImpact> invoices = new ArrayList<>(impacts.values());
-
-        if (!includeUnchanged) {
-            invoices.removeIf(i -> i.action() == InvoiceImpactType.UNCHANGED);
-        }
-
+        /*
+         * ---------------------------------------------------------
+         * 16. Sort impacts
+         * ---------------------------------------------------------
+         */
         Map<InvoiceImpactType, Integer> actionPriority = Map.of(
                 InvoiceImpactType.UPDATED, 1,
                 InvoiceImpactType.DELETED, 2,
@@ -4461,15 +4548,74 @@ public class CustomersService {
                 InvoiceImpactType.UNCHANGED, 4
         );
 
-        invoices.sort(
-                Comparator
-                        .comparingInt((InvoiceImpact i) ->
-                                actionPriority.getOrDefault(i.action(), Integer.MAX_VALUE))
-                        .thenComparing(i -> Utils.stringToDate(i.newInvoiceStartDate()))
-                        .thenComparing(i -> Utils.stringToDate(i.invoiceStartDate()))
+        List<InvoiceImpact> impactList = new ArrayList<>(impacts.values());
+
+        impactList.sort(
+                Comparator.comparingInt((InvoiceImpact impact) ->
+                                actionPriority.getOrDefault(
+                                        impact.action(),
+                                        Integer.MAX_VALUE
+                                )
+                        )
+                        .thenComparing(
+                                impact -> Utils.stringToDate(impact.newInvoiceStartDate()),
+                                Comparator.nullsLast(Comparator.naturalOrder())
+                        )
+                        .thenComparing(
+                                impact -> Utils.stringToDate(impact.invoiceStartDate()),
+                                Comparator.nullsLast(Comparator.naturalOrder())
+                        )
         );
 
-        return ResponseEntity.ok(new JoiningDateImpactResponse(invoices));
+        return new JoiningDateInvoiceReconciliation(impactList,
+                new ArrayList<>(updates.values()), creatableBillingDates, invoicesToDelete);
+    }
+
+    private InvoiceImpact createInvoiceImpact(InvoicesV1 invoice,
+                                              InvoiceImpactType action,
+                                              BillingDates newBillingDates) {
+
+        String newStart = null;
+        String newEnd = null;
+
+        if (newBillingDates != null) {
+
+            newStart = Utils.dateToString(newBillingDates.currentBillStartDate());
+            newEnd = Utils.dateToString(newBillingDates.currentBillEndDate());
+        }
+
+        return new InvoiceImpact(
+                invoice.getInvoiceId(),
+                invoice.getInvoiceNumber(),
+                invoice.getInvoiceType(),
+                Utils.dateToString(invoice.getInvoiceStartDate()),
+                Utils.dateToString(invoice.getInvoiceEndDate()),
+                invoice.getTotalAmount(),
+                invoice.getPaidAmount(),
+                invoice.getPaymentStatus(),
+                action,
+                newStart,
+                newEnd,
+                invoice.getPaidAmount() != null && invoice.getPaidAmount() > 0
+        );
+    }
+
+    private InvoiceImpact createCreatedInvoiceImpact(BillingDates billingDates) {
+
+        return new InvoiceImpact(
+                null,
+                null,
+                InvoiceType.RENT.name(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                InvoiceImpactType.CREATED,
+                Utils.dateToString(billingDates.currentBillStartDate()),
+                Utils.dateToString(billingDates.currentBillEndDate()),
+                false
+        );
     }
 
     public ResponseEntity<?> verifyMobile(String customerId, CustomerMobilePayload payload) {
@@ -4497,5 +4643,16 @@ public class CustomersService {
 
     public void save(Customers customer) {
         customersRepository.save(customer);
+    }
+
+    public List<Customers> getCustomersByHostelIds(Set<String> hostelIds) {
+        return customersRepository.findAllByHostelIdIn(hostelIds);
+    }
+
+    public Page<Customers> getCustomersByHostelIdNameKycStatus(String hostelId, String name,
+                                                               String kycStatus, Date startDate,
+                                                               Date endDate, Pageable pageable){
+        return customersRepository.findByHostelIdNameKycStatus(hostelId, name, kycStatus,
+                startDate, endDate, pageable);
     }
 }

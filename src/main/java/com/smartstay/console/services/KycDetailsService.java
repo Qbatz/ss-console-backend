@@ -1,16 +1,23 @@
 package com.smartstay.console.services;
 
+import com.smartstay.console.Mapper.kyc.KycHostelResMapper;
+import com.smartstay.console.Mapper.kyc.KycTenantResMapper;
 import com.smartstay.console.Mapper.kycDetails.KycDetailsResMapper;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.config.FilesConfig;
 import com.smartstay.console.config.UploadFileToS3;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.customers.KycDetailsSnapshot;
+import com.smartstay.console.dto.date.StartEndDateDto;
 import com.smartstay.console.dto.files.UploadFiles;
 import com.smartstay.console.dto.kycDetails.*;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.repositories.KycDetailsRepository;
+import com.smartstay.console.responses.date.DateFilterRes;
+import com.smartstay.console.responses.kyc.KycHostelRes;
+import com.smartstay.console.responses.kyc.KycStatusResponse;
+import com.smartstay.console.responses.kyc.KycTenantRes;
 import com.smartstay.console.responses.kycDetails.KycDetailsRes;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
@@ -28,6 +35,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.File;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -64,6 +72,14 @@ public class KycDetailsService {
     private HostelService hostelService;
     @Autowired
     private UploadFileToS3 uploadFileToS3;
+    @Autowired
+    private KycUsageService kycUsageService;
+    @Autowired
+    private BillingRulesService billingRulesService;
+    @Autowired
+    private CustomerNotificationsService customerNotificationsService;
+    @Autowired
+    private UsersService usersService;
 
     public ResponseEntity<?> getWaitingApprovalKycDetails(int page, int size, String name) {
 
@@ -397,6 +413,304 @@ public class KycDetailsService {
             return null;
         }  catch (HttpClientErrorException | HttpServerErrorException ex) {
             throw new BadRequestException("Server error");
+        }
+    }
+
+    public ResponseEntity<?> getHostels(int page, int size, String name, Boolean isEnabled,
+                                        String dateFilter, Date startDate, Date endDate) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        name = (name == null || name.isBlank()) ? null : name.trim();
+
+        DateFilterEnum filter;
+        try {
+            filter = DateFilterEnum.valueOf(dateFilter);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<DateFilterRes> dateFilters = Arrays.stream(DateFilterEnum.values())
+                .map(i -> new DateFilterRes(i.name(), i.getValue()))
+                .toList();
+
+        StartEndDateDto dateRange = Utils.getDateRange(filter, startDate, endDate);
+
+        startDate = dateRange.startDate();
+        endDate = dateRange.endDate();
+
+        Set<String> filteredHostelIds = new HashSet<>();
+
+        List<KYCUsage> kycUsagesBetweenDates = kycUsageService
+                .getAllBetweenDates(startDate, endDate);
+
+        for (KYCUsage kycUsage : kycUsagesBetweenDates) {
+            if (kycUsage.getHostelId() != null){
+                filteredHostelIds.add(kycUsage.getHostelId());
+            }
+        }
+
+        if (filteredHostelIds.isEmpty()){
+            Map<String, Object> response = new HashMap<>();
+            response.put("hostelList", List.of());
+            response.put("currentPage", page + 1);
+            response.put("pageSize", size);
+            response.put("totalItems", 0);
+            response.put("totalPages", 0);
+            response.put("dateFilters", dateFilters);
+
+            return new ResponseEntity<>(response, HttpStatus.OK);
+        }
+
+        if (isEnabled != null) {
+            // enable/disable logic
+        }
+
+        Page<HostelV1> pagedHostels = hostelService
+                .getKycPagedHostels(name, filteredHostelIds, pageable);
+
+        List<HostelV1> hostels = pagedHostels.getContent();
+
+        Set<String> hostelIds = hostels.stream()
+                .map(HostelV1::getHostelId)
+                .collect(Collectors.toSet());
+
+        List<Customers> tenants = customersService
+                .getCustomersByHostelIds(hostelIds);
+        Map<String, List<Customers>> tenantHostelMap = tenants.stream()
+                .collect(Collectors.groupingBy(Customers::getHostelId));
+
+        List<KYCUsage> kycUsages = kycUsageService
+                .getAllByHostelIds(hostelIds);
+        Map<String, KYCUsage> kycUsageHostelMap = kycUsages.stream()
+                .collect(Collectors.toMap(KYCUsage::getHostelId,
+                        Function.identity(), (a, b) -> a));
+
+        KycHostelResMapper mapper = new KycHostelResMapper(tenantHostelMap, kycUsageHostelMap);
+
+        List<KycHostelRes> responseList = hostels.stream()
+                .map(mapper)
+                .toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("hostelList", responseList);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedHostels.getTotalElements());
+        response.put("totalPages", pagedHostels.getTotalPages());
+        response.put("dateFilters", dateFilters);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getHostelById(String hostelId, int page, int size, String name,
+                                           String kycStatus, String dateFilter, Date startDate,
+                                           Date endDate) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        HostelV1 hostel = hostelService.getHostelInfo(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        name = (name == null || name.isBlank()) ? null : name.trim();
+        kycStatus = (kycStatus == null || kycStatus.isBlank()) ? null : kycStatus.trim();
+
+        DateFilterEnum filter;
+        try {
+            filter = DateFilterEnum.valueOf(dateFilter);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<DateFilterRes> dateFilters = Arrays.stream(DateFilterEnum.values())
+                .map(i -> new DateFilterRes(i.name(), i.getValue()))
+                .toList();
+
+        StartEndDateDto dateRange = Utils.getDateRange(filter, startDate, endDate);
+
+        startDate = dateRange.startDate();
+        endDate = dateRange.endDate();
+
+        List<KycStatusResponse> kycStatusFilters = Arrays.stream(KycStatus.values())
+                .map(i -> new KycStatusResponse(i.name(), i.getStatus()))
+                .toList();
+
+        Page<Customers> pagedTenants = customersService
+                .getCustomersByHostelIdNameKycStatus(hostelId, name, kycStatus,
+                        startDate, endDate, pageable);
+
+        List<Customers> tenants = pagedTenants.getContent();
+
+        BillingRules billingRule = billingRulesService.getCurrentMonthTemplate(hostelId);
+        if (billingRule == null) {
+            return new ResponseEntity<>(Utils.BILLING_RULE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        List<Customers> allTenants = customersService.findCustomersByHostelId(hostelId);
+
+        KycTenantResMapper mapper = new KycTenantResMapper(tenants, billingRule,
+                billingRulesService, allTenants);
+
+        KycTenantRes kycTenantRes = mapper.apply(hostel);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("hostel", kycTenantRes);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedTenants.getTotalElements());
+        response.put("totalPages", pagedTenants.getTotalPages());
+        response.put("dateFilters", dateFilters);
+        response.put("kycStatus", kycStatusFilters);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> sendReminder(String customerId) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        Customers tenant = customersService.getCustomerInformation(customerId);
+        if (tenant == null) {
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        HostelV1 hostel = hostelService.getHostelInfo(tenant.getHostelId());
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Users owner = usersService.getOwner(hostel.getParentId());
+        if (owner == null){
+            return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        KycDetails kycDetails = tenant.getKycDetails();
+
+        KYCUsage kycUsage = kycUsageService.getByHostelId(tenant.getHostelId());
+
+        if (!CustomerStatus.ACTIVE.name().equals(tenant.getCurrentStatus()) &&
+            !CustomerStatus.NOTICE.name().equals(tenant.getCurrentStatus()) &&
+            !CustomerStatus.CHECK_IN.name().equals(tenant.getCurrentStatus()) &&
+            !CustomerStatus.WALKED_IN.name().equals(tenant.getCurrentStatus())) {
+            return new ResponseEntity<>(Utils.CUSTOMER_NOT_ACTIVE, HttpStatus.BAD_REQUEST);
+        }
+
+        if (kycDetails != null && kycDetails.getCurrentStatus() != null){
+            if (!KycStatus.REQUESTED.name().equals(kycDetails.getCurrentStatus())){
+                if (KycStatus.WAITING_FOR_APPROVAL.name().equals(kycDetails.getCurrentStatus())){
+                    return new ResponseEntity<>("Kyc status is waiting for approval", HttpStatus.BAD_REQUEST);
+                } else if (KycStatus.VERIFIED.name().equals(kycDetails.getCurrentStatus())) {
+                    return new ResponseEntity<>("Kyc status is verified already", HttpStatus.BAD_REQUEST);
+                } else {
+                    return new ResponseEntity<>("Kyc status is not requested", HttpStatus.BAD_REQUEST);
+                }
+            }
+        }
+
+        Date today = new Date();
+
+        String tenantFullName = Utils.getFullName(tenant.getFirstName(), tenant.getLastName());
+
+        DigioInitiateKycRequest initiateKycRequest = new DigioInitiateKycRequest(tenant.getMobile(),
+                true, "SMS", tenantFullName,
+                "SMARTSTAY-WORKFLOW", true);
+
+        DigioInitiateKycResponse digioInitiateKycResponse = initiateKycApiCall(initiateKycRequest);
+
+        DigioInitiateKycResponse.AccessToken kycAccessToken = digioInitiateKycResponse.accessToken();
+        if (kycDetails == null) {
+            kycDetails = new KycDetails();
+            kycDetails.setCustomers(tenant);
+            kycDetails.setCreatedAt(today);
+            kycDetails.setCreatedBy(authentication.getName());
+        }
+        kycDetails.setCurrentStatus(KycStatus.REQUESTED.name());
+        kycDetails.setTransactionId(digioInitiateKycResponse.transactionId());
+        kycDetails.setTemplateId(digioInitiateKycResponse.templateId());
+        kycDetails.setReferenceId(digioInitiateKycResponse.referenceId());
+
+        if (kycAccessToken != null) {
+            kycDetails.setEntityId(kycAccessToken.entityId());
+            kycDetails.setAccessTokenId(kycAccessToken.id());
+            kycDetails.setExpireAt(Utils.stringDateToDate(kycAccessToken.validTill()));
+        }
+
+        if (kycUsage == null){
+            kycUsage = new KYCUsage();
+
+            kycUsage.setHostelId(tenant.getHostelId());
+            kycUsage.setRequestCount(1);
+        } else {
+            int existingRequestCount = 0;
+            if (kycUsage.getRequestCount() != null) {
+                existingRequestCount = kycUsage.getRequestCount();
+            }
+            kycUsage.setRequestCount(existingRequestCount + 1);
+        }
+        kycUsage.setLatestRequest(today);
+        kycUsage.setLatestRequestTo(customerId);
+
+        kycDetailsRepository.save(kycDetails);
+        kycUsageService.save(kycUsage);
+        customerNotificationsService.sendKycReminderNotification(owner, tenant, kycDetails);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    private DigioInitiateKycResponse initiateKycApiCall(DigioInitiateKycRequest initiateKycRequest) {
+
+        String digioInitiateUrl = digioRequestUrl + "with_template";
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBasicAuth(digioUserName, digioPassword);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<DigioInitiateKycRequest> request = new HttpEntity<>(initiateKycRequest, headers);
+
+            ResponseEntity<DigioInitiateKycResponse> response = restTemplate.exchange(
+                    digioInitiateUrl,
+                    HttpMethod.POST,
+                    request,
+                    DigioInitiateKycResponse.class
+            );
+
+            DigioInitiateKycResponse digioInitiateKycResponse = response.getBody();
+            if (digioInitiateKycResponse == null) {
+                throw new BadRequestException(Utils.RESPONSE_BODY_NOT_FOUND);
+            }
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                return digioInitiateKycResponse;
+            }  else {
+                throw new BadRequestException(Utils.INVALID_REQUEST);
+            }
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
+            throw new BadRequestException(Utils.SERVER_ERROR);
         }
     }
 }

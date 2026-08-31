@@ -33,4 +33,8 @@ public class FloorsService {
     public List<Floors> getByFloorIds(Set<Integer> floorIds) {
         return floorsRepository.findAllByFloorIdInAndIsActiveTrueAndIsDeletedFalse(floorIds);
     }
+
+    public List<Floors> getAllByHostelIds(Set<String> hostelIds) {
+        return floorsRepository.findAllByHostelIdIn(hostelIds);
+    }
 }

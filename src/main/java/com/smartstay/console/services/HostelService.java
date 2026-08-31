@@ -10,6 +10,8 @@ import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.utils.Utils;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -122,5 +124,10 @@ public class HostelService {
 
     public List<HostelV1> getAllHostels(){
         return hostelRepository.findAllHostels();
+    }
+
+    public Page<HostelV1> getKycPagedHostels(String name, Set<String> hostelIds,
+                                             Pageable pageable) {
+        return hostelRepository.findKycPagedHostels(name, hostelIds, pageable);
     }
 }

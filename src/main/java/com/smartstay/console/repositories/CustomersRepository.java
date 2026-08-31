@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -81,4 +82,31 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
     Set<String> findConflictingXuids(List<String> xuids, List<String> customerIds);
 
     Customers findByCustomerId(String customerId);
+
+    List<Customers> findAllByHostelIdIn(Set<String> hostelIds);
+
+    @Query("""
+            select c
+            from Customers c
+            left join c.kycDetails kd
+            where (
+                :name is null or :name = '' or
+                lower(replace(coalesce(c.firstName, ''), ' ', ''))
+                    like lower(concat('%', replace(:name, ' ', ''), '%')) or
+                lower(replace(coalesce(c.lastName, ''), ' ', ''))
+                    like lower(concat('%', replace(:name, ' ', ''), '%')) or
+                lower(concat(
+                    replace(coalesce(c.firstName, ''), ' ', ''),
+                    replace(coalesce(c.lastName, ''), ' ', '')
+                ))
+                    like lower(concat('%', replace(:name, ' ', ''), '%'))
+            )
+            and c.hostelId = :hostelId
+            and (:kycStatus is null or kd.currentStatus = :kycStatus)
+            and (:startDate is null or c.createdAt >= :startDate)
+            and (:endDate is null or c.createdAt < :endDate)
+            order by c.createdAt desc
+            """)
+    Page<Customers> findByHostelIdNameKycStatus(String hostelId, String name, String kycStatus,
+                                                Date startDate, Date endDate, Pageable pageable);
 }

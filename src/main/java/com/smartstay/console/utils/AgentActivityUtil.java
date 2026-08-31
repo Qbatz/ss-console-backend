@@ -69,6 +69,7 @@ public class AgentActivityUtil {
             case UPDATE -> getUpdateDescription(source);
             case DELETE -> getDeleteDescription(source);
             case LOGIN -> getLoginDescription(source);
+            case SNAPSHOT_CREATE -> getSnapshotCreateDescription(source);
             case SNAPSHOT_UPDATE -> getSnapshotUpdateDescription(source);
             case SNAPSHOT_DELETE -> getSnapshotDeleteDescription(source);
             case DEACTIVATE -> getDeactivateDescription(source);
@@ -97,6 +98,7 @@ public class AgentActivityUtil {
             case SMARTSTAY_FEATURES -> "Created a new smartstay feature";
             case SETTLEMENT_DETAILS -> "Generated settlement details";
             case SETTLEMENT_GENERATED -> "Generated a settlement invoice";
+            case PRODUCT_UPDATE -> "Created a new product update";
             default -> "Created successfully";
         };
     }
@@ -127,12 +129,23 @@ public class AgentActivityUtil {
             case INVOICE -> "Updated an invoice";
             case KYC_DETAILS -> "Approved a kyc request";
             case SUBSCRIPTION_INVOICE_URL -> "Updated a subscription invoice url";
+            case TENANT_JOINING_DATE -> "Updated a tenant joining date";
+            case BED -> "Updated a bed";
+            case PRODUCT_UPDATE -> "Updated a new product update";
             default -> "Updated successfully";
+        };
+    }
+
+    private static String getSnapshotCreateDescription(Source source) {
+        return switch (source) {
+            case PRODUCT_UPDATE_ITEM -> "Created product update items";
+            default -> "Created successfully";
         };
     }
 
     private static String getSnapshotUpdateDescription(Source source) {
         return switch (source){
+            case PRODUCT_UPDATE_ITEM -> "Updated product update items";
             default -> "Updated successfully";
         };
     }
@@ -141,6 +154,7 @@ public class AgentActivityUtil {
         return switch (source){
             case INVOICE -> "Deleted invoices";
             case HOSTEL_EXPENSE -> "Deleted expenses";
+            case PRODUCT_UPDATE_ITEM -> "Deleted product update items";
             default -> "Deleted successfully";
         };
     }
@@ -164,6 +178,7 @@ public class AgentActivityUtil {
             case TRANSACTION_RECEIPT_URL -> "Deleted a transaction receipt";
             case INVOICE_URL -> "Deleted an invoice";
             case SUBSCRIPTION_INVOICE_URL -> "Deleted a subscription invoice";
+            case PRODUCT_UPDATE -> "Deleted a product update";
             default -> "Deleted successfully";
         };
     }

@@ -3,6 +3,7 @@ package com.smartstay.console.utils;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.agentRoles.AgentRoleSnapshot;
 import com.smartstay.console.dto.agentRoles.RolesPermissionSnapshot;
+import com.smartstay.console.dto.bed.BedSnapshot;
 import com.smartstay.console.dto.demoRequest.DemoRequestActivitySnapshot;
 import com.smartstay.console.dto.hostelRelationalAgent.HostelRelationalAgentSnapshot;
 import com.smartstay.console.dto.agent.AgentSnapshot;
@@ -16,6 +17,8 @@ import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
 import com.smartstay.console.dto.plans.SmartstayFeaturesSnapshot;
+import com.smartstay.console.dto.productUpdate.ProductUpdateItemSnapshot;
+import com.smartstay.console.dto.productUpdate.ProductUpdateSnapshot;
 import com.smartstay.console.dto.settlementDetails.SettlementDetailsSnapshot;
 import com.smartstay.console.dto.subscription.SubscriptionSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketActivitySnapshot;
@@ -868,6 +871,82 @@ public class SnapshotUtility {
                 s.getPaymentProof(),
                 s.getInvoiceUrl(),
                 s.getGenerationType()
+        );
+    }
+
+    public static BedSnapshot toSnapshot(Beds b) {
+
+        if (b == null) return null;
+
+        return new BedSnapshot(
+                b.getBedId(),
+                b.getBedName(),
+                b.getIsActive(),
+                b.getIsDeleted(),
+                copyDate(b.getCreatedAt()),
+                copyDate(b.getUpdatedAt()),
+                b.getParentId(),
+                b.getRoomId(),
+                b.getHostelId(),
+                b.isBooked(),
+                b.getRentAmount(),
+                b.getStatus(),
+                b.getCurrentStatus(),
+                copyDate(b.getFreeFrom())
+        );
+    }
+
+    public static ProductUpdateSnapshot toSnapshot(ProductUpdate p) {
+
+        if (p == null) return null;
+
+        return new ProductUpdateSnapshot(
+                p.getProductUpdateId(),
+                p.getTitle(),
+                p.getDescription(),
+                p.getVersion(),
+                copyDate(p.getReleaseDate()),
+                p.getUpdateType(),
+                p.getPlatform(),
+                copyDate(p.getPublishDateTime()),
+                copyDate(p.getExpiryDate()),
+                p.getAudience(),
+                p.getAudienceIds() != null
+                        ? List.copyOf(p.getAudienceIds())
+                        : List.of(),
+                p.getPublishStatus(),
+                p.isActive(),
+                p.isDeleted(),
+                copyDate(p.getCreatedAt()),
+                copyDate(p.getUpdatedAt()),
+                p.getCreatedBy(),
+                p.getUpdatedBy()
+        );
+    }
+
+    public static ProductUpdateItemSnapshot toSnapshot(ProductUpdateItem p) {
+
+        if (p == null) return null;
+
+        return new ProductUpdateItemSnapshot(
+                p.getProductUpdateItemId(),
+                p.getTitle(),
+                p.getDescription(),
+                p.getUpdateType(),
+                p.getModule(),
+                p.getCta(),
+                p.getCtaLink(),
+                p.isShowCtaButton(),
+                p.getItemImages() != null
+                        ? List.copyOf(p.getItemImages())
+                        : List.of(),
+                p.isActive(),
+                p.isDeleted(),
+                copyDate(p.getCreatedAt()),
+                copyDate(p.getUpdatedAt()),
+                p.getCreatedBy(),
+                p.getUpdatedBy(),
+                p.getProductUpdateId()
         );
     }
 

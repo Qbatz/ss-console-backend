@@ -29,4 +29,8 @@ public class RoomsService {
     public List<Rooms> getRoomsByRoomIds(Set<Integer> roomIds) {
         return roomsRepository.findAllByRoomIdInAndIsActiveTrueAndIsDeletedFalse(roomIds);
     }
+
+    public List<Rooms> getAllByHostelIds(Set<String> hostelIds) {
+        return roomsRepository.findAllByHostelIdInAndIsActiveTrueAndIsDeletedFalse(hostelIds);
+    }
 }

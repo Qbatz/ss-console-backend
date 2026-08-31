@@ -9,10 +9,11 @@ import com.smartstay.console.dao.InvoiceItems;
 import com.smartstay.console.dto.billTemplates.BillTemplatesDto;
 import com.smartstay.console.dto.customers.Deductions;
 import com.smartstay.console.dto.hostel.BillingDates;
+import com.smartstay.console.dto.invoice.CancelledInvoice;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoice.InvoiceSnapshotWrapper;
-import com.smartstay.console.dto.retainer.RetainerItems;
 import com.smartstay.console.dto.settlement.EBItems;
+import com.smartstay.console.dto.settlement.RetainerItems;
 import com.smartstay.console.dto.settlement.WalltetItems;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
@@ -95,6 +96,8 @@ public class InvoiceV1Service {
     private CustomersAmenityService customersAmenityService;
     @Autowired
     private S3Service s3Service;
+    @Autowired
+    private BillingRulesService billingRulesService;
 
     public List<InvoicesV1> findByListOfCustomers(String hostelId, List<String> customerIds) {
         return invoiceV1Repository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
@@ -226,12 +229,30 @@ public class InvoiceV1Service {
             }
 
             if (InvoiceType.SETTLEMENT.name().equals(invoice.getInvoiceType())) {
+
                 List<String> cIds = invoice.getCancelledInvoices();
+
+                Map<String, String> paymentStatusMap = Optional.ofNullable(invoice.getNewCancelledInvoices())
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .collect(Collectors.toMap(
+                                CancelledInvoice::getInvoiceId,
+                                CancelledInvoice::getPaymentStatus,
+                                (oldValue, newValue) -> newValue
+                        ));
+
                 if (cIds != null && !cIds.isEmpty()) {
+
                     for (String cancelledInvoiceId : cIds) {
+
                         InvoicesV1 cancelledInvoice = cancelledInvoiceMap.getOrDefault(cancelledInvoiceId, null);
                         if (cancelledInvoice == null){
                             throw new BadRequestException(Utils.INVOICE_NOT_FOUND);
+                        }
+
+                        String paymentStatus = paymentStatusMap.getOrDefault(cancelledInvoiceId, null);
+                        if (paymentStatus != null){
+                            cancelledInvoice.setPaymentStatus(paymentStatus);
                         }
 
                         cancelledInvoice.setCancelledDate(null);
@@ -354,7 +375,7 @@ public class InvoiceV1Service {
                                     .getOrDefault(retainerItem.invoiceId(), null);
 
                             if (retainerInvoice != null){
-                                retainerInvoice.setBalanceAmount(retainerItem.availableAmount());
+                                retainerInvoice.setBalanceAmount(retainerItem.amount());
                                 retainerInvoice.setUpdatedBy(authentication.getName());
                                 retainerInvoice.setUpdatedAt(today);
 
@@ -743,12 +764,28 @@ public class InvoiceV1Service {
             }
 
             if (InvoiceType.SETTLEMENT.name().equals(invoice.getInvoiceType())) {
+
                 List<String> cIds = invoice.getCancelledInvoices();
+
+                Map<String, String> paymentStatusMap = Optional.ofNullable(invoice.getNewCancelledInvoices())
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .collect(Collectors.toMap(
+                                CancelledInvoice::getInvoiceId,
+                                CancelledInvoice::getPaymentStatus,
+                                (oldValue, newValue) -> newValue
+                        ));
+
                 if (cIds != null && !cIds.isEmpty()) {
                     for (String cancelledInvoiceId : cIds) {
                         InvoicesV1 cancelledInvoice = cancelledInvoiceMap.getOrDefault(cancelledInvoiceId, null);
                         if (cancelledInvoice == null){
                             return new ResponseEntity<>(Utils.INVOICE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                        }
+
+                        String paymentStatus = paymentStatusMap.getOrDefault(cancelledInvoiceId, null);
+                        if (paymentStatus != null){
+                            cancelledInvoice.setPaymentStatus(paymentStatus);
                         }
 
                         cancelledInvoice.setCancelledDate(null);
@@ -871,7 +908,7 @@ public class InvoiceV1Service {
                                     .getOrDefault(retainerItem.invoiceId(), null);
 
                             if (retainerInvoice != null){
-                                retainerInvoice.setBalanceAmount(retainerItem.availableAmount());
+                                retainerInvoice.setBalanceAmount(retainerItem.amount());
                                 retainerInvoice.setUpdatedBy(authentication.getName());
                                 retainerInvoice.setUpdatedAt(today);
 
@@ -1314,7 +1351,7 @@ public class InvoiceV1Service {
                               InvoicesV1 invoice, Date newJoiningDate, Customers customer,
                               BookingsV1 booking) {
 
-        if (billingRules == null || billingDates == null ||
+        if (billingRules == null || billingDates == null || billingDates.currentBillStartDate() == null ||
                 invoice == null || newJoiningDate == null) {
             return;
         }
@@ -1328,15 +1365,22 @@ public class InvoiceV1Service {
         
         if (BillingType.FIXED_DATE.name().equals(billingRules.getTypeOfBilling())){
 
+            Date billingDatesStartDate = Utils.getStartOfDay(billingDates.currentBillStartDate());
+
+            // need to recalculate as we change billing period to set for joining date
+            // when getting billing periods for fixed date hostels
+            BillingDates recalculatedBillingDates = billingRulesService
+                    .computeBillingDates(billingRules, billingDatesStartDate);
+
             if (BillingModel.PREPAID.name().equals(billingRules.getBillingModel())){
 
-                updateFixedDatePrepaidInvoice(ebConfig, invoice, billingDates, customer, booking,
-                        newJoiningDate);
+                updateFixedDatePrepaidInvoice(ebConfig, invoice, recalculatedBillingDates, customer,
+                        booking, newJoiningDate);
 
             } else if (BillingModel.POSTPAID.name().equals(billingRules.getBillingModel())) {
 
-                updateFixedDatePostpaidInvoice(ebConfig, invoice, billingDates, customer, booking,
-                        newJoiningDate);
+                updateFixedDatePostpaidInvoice(ebConfig, invoice, recalculatedBillingDates, customer,
+                        booking, newJoiningDate);
             }
         } else if (BillingType.JOINING_DATE_BASED.name().equals(billingRules.getTypeOfBilling())) {
 
@@ -1385,7 +1429,6 @@ public class InvoiceV1Service {
         }
 
         Date invoiceStartDate;
-
         if (Utils.compareWithTwoDates(newJoiningDate, billingDates.currentBillStartDate()) <= 0) {
             invoiceStartDate = billingDates.currentBillStartDate();
         } else {

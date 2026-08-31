@@ -192,6 +192,7 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
     @Query("""
             select h
             from hostelv1 h
+            inner join h.hostelPlan hp
             where h.isActive = true
                 and h.isDeleted = false
                 and lower(replace(coalesce(h.hostelName, ''), ' ', ''))
@@ -282,4 +283,49 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
               AND h.isDeleted = false
             """)
     List<HostelLiteProjection> findLiteByParentIds(@Param("parentIds") Set<String> parentIds);
+
+    @Query(value = """
+            SELECT h.*
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE (
+                :name IS NULL
+                OR LOWER(REPLACE(COALESCE(h.hostel_name, ''), ' ', ''))
+                    LIKE CONCAT('%', LOWER(REPLACE(:name, ' ', '')), '%')
+            )
+                AND h.is_active = true
+                AND h.is_deleted = false
+            ORDER BY hp.current_plan_ends_at ASC
+            """,
+            countQuery = """
+            SELECT COUNT(*)
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE (
+                :name IS NULL
+                OR LOWER(REPLACE(COALESCE(h.hostel_name, ''), ' ', ''))
+                    LIKE CONCAT('%', LOWER(REPLACE(:name, ' ', '')), '%')
+            )
+                AND h.is_active = true
+                AND h.is_deleted = false
+            """,
+            nativeQuery = true)
+    Page<HostelV1> findAllPagedHostels(@Param("name") String name,
+                                       Pageable pageable);
+
+    @Query("""
+            select h
+            from hostelv1 h
+            inner join h.hostelPlan hp
+            where h.isActive = true
+                and h.isDeleted = false
+                and (:hostelIds is null or h.hostelId in :hostelIds)
+                and (:name is null or
+                    lower(replace(coalesce(h.hostelName, ''), ' ', ''))
+                        like lower(concat('%', replace(:name, ' ', ''), '%'))
+                )
+            order by h.createdAt desc
+            """)
+    Page<HostelV1> findKycPagedHostels(String name, Set<String> hostelIds,
+                                       Pageable pageable);
 }
