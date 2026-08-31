@@ -1435,7 +1435,7 @@ public class InvoiceV1Service {
             invoiceStartDate = newJoiningDate;
         }
 
-        Date invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, billingDates.dueDays());
+        Date invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, billingDates.dueDays() - 1);
 
         // EB
         List<ElectricityReadings> newReadings = new ArrayList<>();
@@ -1601,6 +1601,7 @@ public class InvoiceV1Service {
             }
         }
 
+        invoice.setInvoiceDate(invoiceStartDate);
         invoice.setInvoiceStartDate(invoiceStartDate);
         invoice.setInvoiceEndDate(billingDates.currentBillEndDate());
         invoice.setInvoiceDueDate(invoiceDueDate);
@@ -1671,7 +1672,7 @@ public class InvoiceV1Service {
             invoiceStartDate = newJoiningDate;
         }
 
-        Date invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, billingDates.dueDays());
+        Date invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, billingDates.dueDays() - 1);
 
         //--------------------------------------------------------
         // Rent
@@ -1879,6 +1880,7 @@ public class InvoiceV1Service {
             }
         }
 
+        invoice.setInvoiceDate(invoiceStartDate);
         invoice.setInvoiceStartDate(invoiceStartDate);
         invoice.setInvoiceEndDate(billingDates.currentBillEndDate());
         invoice.setInvoiceDueDate(invoiceDueDate);
@@ -1947,7 +1949,7 @@ public class InvoiceV1Service {
             invoiceStartDate = newJoiningDate;
         }
 
-        Date invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, billingDates.dueDays());
+        Date invoiceDueDate = Utils.addDaysToDate(invoiceStartDate, billingDates.dueDays() - 1);
 
         // EB
         List<ElectricityReadings> newReadings = new ArrayList<>();
@@ -2113,6 +2115,7 @@ public class InvoiceV1Service {
             }
         }
 
+        invoice.setInvoiceDate(invoiceStartDate);
         invoice.setInvoiceStartDate(invoiceStartDate);
         invoice.setInvoiceEndDate(billingDates.currentBillEndDate());
         invoice.setInvoiceDueDate(invoiceDueDate);
