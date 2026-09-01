@@ -438,7 +438,7 @@ public class KycDetailsService {
                 .map(i -> new DateFilterRes(i.name(), i.getValue()))
                 .toList());
 
-        Set<String> activeHostelIds = hostelService.getActiveHostelIds();
+        Set<String> kycUsedHostelIds = kycUsageService.getKycUsedHostelIds();
 
         if (!dateFilter.equals("ALL")){
             DateFilterEnum filter;
@@ -476,7 +476,7 @@ public class KycDetailsService {
                 return new ResponseEntity<>(response, HttpStatus.OK);
             }
 
-            activeHostelIds = filteredHostelIds;
+            kycUsedHostelIds = filteredHostelIds;
         }
 
         if (isEnabled != null) {
@@ -484,7 +484,7 @@ public class KycDetailsService {
         }
 
         Page<HostelV1> pagedHostels = hostelService
-                .getKycPagedHostels(name, activeHostelIds, pageable);
+                .getKycPagedHostels(name, kycUsedHostelIds, pageable);
 
         List<HostelV1> hostels = pagedHostels.getContent();
 
