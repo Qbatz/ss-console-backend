@@ -80,8 +80,8 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
     @Query("""
             SELECT coalesce(sum(o.totalAmount), 0) FROM OrderHistory o
             WHERE o.isActive = true
-              AND o.createdAt >= :startDate
-              AND o.createdAt < :endDate
+              AND COALESCE(o.paidAt, o.createdAt) >= :startDate
+              AND COALESCE(o.paidAt, o.createdAt) < :endDate
               AND o.orderStatus IN :orderStatuses
             """)
     double findTotalRevenueBetween(@Param("startDate") Date startDate,
