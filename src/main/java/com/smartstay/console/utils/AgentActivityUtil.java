@@ -132,6 +132,7 @@ public class AgentActivityUtil {
             case TENANT_JOINING_DATE -> "Updated a tenant joining date";
             case BED -> "Updated a bed";
             case PRODUCT_UPDATE -> "Updated a new product update";
+            case FILTER_OPTIONS -> "Updated a filter option";
             default -> "Updated successfully";
         };
     }

@@ -25,6 +25,7 @@ import com.smartstay.console.dto.supportTicket.SupportTicketActivitySnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketNotesSnapshot;
 import com.smartstay.console.dto.supportTicket.SupportTicketSnapshot;
 import com.smartstay.console.dto.tableColumns.ColumnFiltersSnapshot;
+import com.smartstay.console.dto.tableColumns.FilterOptionsSnapshot;
 import com.smartstay.console.dto.tableColumns.TableColumnsSnapshot;
 import com.smartstay.console.dto.transaction.TransactionSnapshot;
 import com.smartstay.console.dto.users.AddressSnapshot;
@@ -947,6 +948,19 @@ public class SnapshotUtility {
                 p.getCreatedBy(),
                 p.getUpdatedBy(),
                 p.getProductUpdateId()
+        );
+    }
+
+    public static FilterOptionsSnapshot toSnapshot(FilterOptions f) {
+
+        if (f == null) return null;
+
+        return new FilterOptionsSnapshot(
+                f.getFilterOptionId(),
+                f.getModuleName(),
+                toSnapshotList(f.getFilterOptions(), SnapshotUtility::toSnapshot),
+                f.getIsActive(),
+                copyDate(f.getCreatedAt())
         );
     }
 
