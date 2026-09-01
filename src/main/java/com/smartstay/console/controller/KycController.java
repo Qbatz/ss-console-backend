@@ -38,7 +38,7 @@ public class KycController {
                                         @RequestParam(value = "size", defaultValue = "10") int size,
                                         @RequestParam(value = "name", required = false) String name,
                                         @RequestParam(value = "isEnabled", required = false) Boolean isEnabled,
-                                        @RequestParam(defaultValue = "THIS_MONTH") String dateFilter,
+                                        @RequestParam(defaultValue = "ALL") String dateFilter,
                                         @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
                                         @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate) {
         return kycDetailsService.getHostels(page, size, name, isEnabled, dateFilter, startDate, endDate);
@@ -50,7 +50,7 @@ public class KycController {
                                            @RequestParam(value = "size", defaultValue = "10") int size,
                                            @RequestParam(value = "name", required = false) String name,
                                            @RequestParam(value = "kycStatus", required = false) String kycStatus,
-                                           @RequestParam(defaultValue = "THIS_MONTH") String dateFilter,
+                                           @RequestParam(defaultValue = "ALL") String dateFilter,
                                            @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
                                            @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate){
         return kycDetailsService.getHostelById(hostelId, page, size, name, kycStatus,
