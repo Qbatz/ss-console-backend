@@ -40,5 +40,6 @@ public enum Source {
     BED,
     PRODUCT_UPDATE,
     PRODUCT_UPDATE_ITEM,
-    FILTER_OPTIONS
+    FILTER_OPTIONS,
+    KYC_SEND_REMINDER
 }

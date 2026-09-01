@@ -99,6 +99,7 @@ public class AgentActivityUtil {
             case SETTLEMENT_DETAILS -> "Generated settlement details";
             case SETTLEMENT_GENERATED -> "Generated a settlement invoice";
             case PRODUCT_UPDATE -> "Created a new product update";
+            case KYC_SEND_REMINDER -> "Reminder successfully send to customer";
             default -> "Created successfully";
         };
     }
@@ -133,6 +134,7 @@ public class AgentActivityUtil {
             case BED -> "Updated a bed";
             case PRODUCT_UPDATE -> "Updated a new product update";
             case FILTER_OPTIONS -> "Updated a filter option";
+            case KYC_SEND_REMINDER -> "Reminder successfully send to customer";
             default -> "Updated successfully";
         };
     }

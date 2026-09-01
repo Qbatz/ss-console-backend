@@ -646,7 +646,7 @@ public class KycDetailsService {
                     return new ResponseEntity<>("Kyc status is not requested", HttpStatus.BAD_REQUEST);
                 }
             } else {
-                return regenerateAccessToken(kycDetails, kycUsage, tenant, owner);
+                return regenerateAccessToken(kycDetails, kycUsage, tenant, owner, loggedInAgent);
             }
         }
 
@@ -693,15 +693,20 @@ public class KycDetailsService {
         kycUsage.setLatestRequest(today);
         kycUsage.setLatestRequestTo(customerId);
 
-        kycDetailsRepository.save(kycDetails);
+        kycDetails = kycDetailsRepository.save(kycDetails);
         kycUsageService.save(kycUsage);
         customerNotificationsService.sendKycReminderNotification(owner, tenant, kycDetails);
+
+        KycDetailsSnapshot newSnapshot = SnapshotUtility.toSnapshot(kycDetails);
+
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.CREATE, Source.KYC_SEND_REMINDER,
+                String.valueOf(kycDetails.getId()), null, newSnapshot);
 
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
     private ResponseEntity<?> regenerateAccessToken(KycDetails kycDetails, KYCUsage kycUsage,
-                                                    Customers tenant, Users owner) {
+                                                    Customers tenant, Users owner, Agent loggedInAgent) {
 
         if (tenant == null) {
             return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
@@ -715,6 +720,8 @@ public class KycDetailsService {
         if (kycDetails.getEntityId() == null || kycDetails.getEntityId().isBlank()){
             return new ResponseEntity<>("Kyc entity id not found", HttpStatus.BAD_REQUEST);
         }
+
+        KycDetailsSnapshot oldSnapshot = SnapshotUtility.toSnapshot(kycDetails);
 
         Date today = new Date();
 
@@ -770,9 +777,14 @@ public class KycDetailsService {
                 kycUsage.setLatestRequest(today);
                 kycUsage.setLatestRequestTo(customerId);
 
-                kycDetailsRepository.save(kycDetails);
+                kycDetails = kycDetailsRepository.save(kycDetails);
                 kycUsageService.save(kycUsage);
                 customerNotificationsService.sendKycReminderNotification(owner, tenant, kycDetails);
+
+                KycDetailsSnapshot newSnapshot = SnapshotUtility.toSnapshot(kycDetails);
+
+                agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.UPDATE, Source.KYC_SEND_REMINDER,
+                        String.valueOf(kycDetails.getId()), oldSnapshot, newSnapshot);
 
                 return new ResponseEntity<>(HttpStatus.OK);
             }  else {
