@@ -2,14 +2,17 @@ package com.smartstay.console.services;
 
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.tableColumns.FilterOptionsSnapshot;
 import com.smartstay.console.dto.tableColumns.TableColumnsSnapshot;
 import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.FilterOptionsModule;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.Source;
+import com.smartstay.console.payloads.tableColumns.EditFilterOptionsPayload;
 import com.smartstay.console.payloads.tableColumns.EditTableColumnsPayload;
 import com.smartstay.console.payloads.tableColumns.ResetTableColumnsPayload;
 import com.smartstay.console.repositories.TableColumnsRepository;
+import com.smartstay.console.responses.tableColumns.FilterOptionsResponse;
 import com.smartstay.console.responses.tableColumns.TableColumnsHostelResponse;
 import com.smartstay.console.responses.tableColumns.TableColumnsResponse;
 import com.smartstay.console.responses.tableColumns.TableColumnsUserResponse;
@@ -379,5 +382,90 @@ public class TableColumnsService {
         if (!hasSelectedColumn) {
             throw new IllegalArgumentException(Utils.AT_LEAST_ONE_COLUMN_NEEDS_TO_BE_SELECTED);
         }
+    }
+
+    public ResponseEntity<?> getFilterOptions(int page, int size, String name) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+        name = name == null || name.isBlank() ? null : name.trim();
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<FilterOptions> pagedFilterOptions = filterOptionsService
+                .getPaginatedFilterOptions(name, pageable);
+
+        List<FilterOptions> filterOptions = pagedFilterOptions.getContent();
+
+        List<FilterOptionsResponse> responseList = filterOptions.stream()
+                .map(i -> new FilterOptionsResponse(i.getFilterOptionId(),
+                        i.getModuleName(), i.getFilterOptions(), i.getCreatedAt() != null ?
+                        Utils.dateToString(i.getCreatedAt()) : null, i.getCreatedAt() != null ?
+                        Utils.dateToTime(i.getCreatedAt()) : null))
+                .toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("filterOptions", responseList);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedFilterOptions.getTotalElements());
+        response.put("totalPages", pagedFilterOptions.getTotalPages());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateFilterOptions(long filterOptionId, EditFilterOptionsPayload payload) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        List<ColumnFilters> columns = payload.columns();
+        if (columns == null || columns.isEmpty()) {
+            return new ResponseEntity<>(Utils.COLUMNS_CAN_NOT_BE_EMPTY, HttpStatus.BAD_REQUEST);
+        }
+
+        try {
+            validateColumns(columns);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
+        }
+
+        String moduleName;
+        try {
+            moduleName = FilterOptionsModule.valueOf(payload.moduleName()).name();
+        } catch (IllegalArgumentException | NullPointerException e) {
+            return new ResponseEntity<>("Invalid module name: " + payload.moduleName(), HttpStatus.BAD_REQUEST);
+        }
+
+        FilterOptions filterOptions = filterOptionsService.getById(filterOptionId);
+        if (filterOptions == null){
+            return new ResponseEntity<>(Utils.FILTER_OPTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        if (!moduleName.equals(filterOptions.getModuleName())) {
+            return new ResponseEntity<>("Module name does not match", HttpStatus.BAD_REQUEST);
+        }
+
+        FilterOptionsSnapshot oldSnapshot = SnapshotUtility.toSnapshot(filterOptions);
+
+        filterOptions.setFilterOptions(columns);
+
+        filterOptions = filterOptionsService.save(filterOptions);
+
+        FilterOptionsSnapshot newSnapshot = SnapshotUtility.toSnapshot(filterOptions);
+
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.UPDATE, Source.FILTER_OPTIONS,
+                String.valueOf(filterOptions.getFilterOptionId()), oldSnapshot, newSnapshot);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
     }
 }

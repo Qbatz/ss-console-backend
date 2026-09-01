@@ -1,5 +1,6 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.tableColumns.EditFilterOptionsPayload;
 import com.smartstay.console.payloads.tableColumns.EditTableColumnsPayload;
 import com.smartstay.console.payloads.tableColumns.ResetTableColumnsPayload;
 import com.smartstay.console.services.TableColumnsService;
@@ -36,5 +37,18 @@ public class TableColumnsController {
     @PutMapping("/reset")
     public ResponseEntity<?> resetTableColumns(@RequestBody @Valid ResetTableColumnsPayload payload) {
         return tableColumnsService.resetTableColumns(payload);
+    }
+
+    @GetMapping("/filter-options")
+    public ResponseEntity<?> getFilterOptions(@RequestParam(value = "page", defaultValue = "0") int page,
+                                              @RequestParam(value = "size", defaultValue = "10") int size,
+                                              @RequestParam(value = "name", required = false) String name){
+        return tableColumnsService.getFilterOptions(page, size, name);
+    }
+
+    @PutMapping("/filter-options/{filterOptionId}")
+    public ResponseEntity<?> updateFilterOptions(@PathVariable("filterOptionId") long filterOptionId,
+                                                 @RequestBody @Valid EditFilterOptionsPayload payload){
+        return tableColumnsService.updateFilterOptions(filterOptionId, payload);
     }
 }

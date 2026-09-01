@@ -27,23 +27,24 @@ public class FcmNotificationService {
             CustomerCredentials customerCredential = customersCredentialService
                     .findByXuid(customer.getXuid());
 
-            if (customerCredential != null && customerCredential.getFcmToken() != null) {
-
-                HashMap<String, String> payload = new HashMap<>();
-                payload.put("title", "KYC request");
-                payload.put("type", NotificationMessage.KYC_REQUESTS.name());
-                payload.put("request_id", kycDetails.getEntityId());
-                payload.put("token_id", kycDetails.getAccessTokenId());
-                payload.put("mobile", customer.getMobile());
-                payload.put("description", "Your hostel owner wants to complete the KYC verifications. " +
-                        "Please finish it at your earliest convenience");
-
-                Message message = Message.builder()
-                        .setToken(customerCredential.getFcmToken())
-                        .putAllData(payload)
-                        .build();
+            if (customerCredential != null && customerCredential.getFcmToken() != null
+                    && !customerCredential.getFcmToken().isBlank()) {
 
                 try {
+                    HashMap<String, String> payload = new HashMap<>();
+                    payload.put("title", "KYC request");
+                    payload.put("type", NotificationMessage.KYC_REQUESTS.name());
+                    payload.put("request_id", kycDetails.getEntityId());
+                    payload.put("token_id", kycDetails.getAccessTokenId());
+                    payload.put("mobile", customer.getMobile());
+                    payload.put("description", "Your hostel owner wants to complete the KYC verifications. " +
+                            "Please finish it at your earliest convenience");
+
+                    Message message = Message.builder()
+                            .setToken(customerCredential.getFcmToken())
+                            .putAllData(payload)
+                            .build();
+
                     firebaseMessaging.send(message);
                 } catch (FirebaseMessagingException ignored) {
 

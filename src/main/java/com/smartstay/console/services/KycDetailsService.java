@@ -432,43 +432,51 @@ public class KycDetailsService {
 
         name = (name == null || name.isBlank()) ? null : name.trim();
 
-        DateFilterEnum filter;
-        try {
-            filter = DateFilterEnum.valueOf(dateFilter);
-        } catch (Exception e) {
-            return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
-        }
-
-        List<DateFilterRes> dateFilters = Arrays.stream(DateFilterEnum.values())
+        List<DateFilterRes> dateFilters = new ArrayList<>();
+        dateFilters.add(new DateFilterRes("ALL", "All"));
+        dateFilters.addAll(Arrays.stream(DateFilterEnum.values())
                 .map(i -> new DateFilterRes(i.name(), i.getValue()))
-                .toList();
+                .toList());
 
-        StartEndDateDto dateRange = Utils.getDateRange(filter, startDate, endDate);
+        Set<String> activeHostelIds = hostelService.getActiveHostelIds();
 
-        startDate = dateRange.startDate();
-        endDate = dateRange.endDate();
-
-        Set<String> filteredHostelIds = new HashSet<>();
-
-        List<KYCUsage> kycUsagesBetweenDates = kycUsageService
-                .getAllBetweenDates(startDate, endDate);
-
-        for (KYCUsage kycUsage : kycUsagesBetweenDates) {
-            if (kycUsage.getHostelId() != null){
-                filteredHostelIds.add(kycUsage.getHostelId());
+        if (!dateFilter.equals("ALL")){
+            DateFilterEnum filter;
+            try {
+                filter = DateFilterEnum.valueOf(dateFilter);
+            } catch (Exception e) {
+                return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
-        }
 
-        if (filteredHostelIds.isEmpty()){
-            Map<String, Object> response = new HashMap<>();
-            response.put("hostelList", List.of());
-            response.put("currentPage", page + 1);
-            response.put("pageSize", size);
-            response.put("totalItems", 0);
-            response.put("totalPages", 0);
-            response.put("dateFilters", dateFilters);
+            StartEndDateDto dateRange = Utils.getDateRange(filter, startDate, endDate);
 
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            startDate = dateRange.startDate();
+            endDate = dateRange.endDate();
+
+            Set<String> filteredHostelIds = new HashSet<>();
+
+            List<KYCUsage> kycUsagesBetweenDates = kycUsageService
+                    .getAllBetweenDates(startDate, endDate);
+
+            for (KYCUsage kycUsage : kycUsagesBetweenDates) {
+                if (kycUsage.getHostelId() != null){
+                    filteredHostelIds.add(kycUsage.getHostelId());
+                }
+            }
+
+            if (filteredHostelIds.isEmpty()){
+                Map<String, Object> response = new HashMap<>();
+                response.put("hostelList", List.of());
+                response.put("currentPage", page + 1);
+                response.put("pageSize", size);
+                response.put("totalItems", 0);
+                response.put("totalPages", 0);
+                response.put("dateFilters", dateFilters);
+
+                return new ResponseEntity<>(response, HttpStatus.OK);
+            }
+
+            activeHostelIds = filteredHostelIds;
         }
 
         if (isEnabled != null) {
@@ -476,7 +484,7 @@ public class KycDetailsService {
         }
 
         Page<HostelV1> pagedHostels = hostelService
-                .getKycPagedHostels(name, filteredHostelIds, pageable);
+                .getKycPagedHostels(name, activeHostelIds, pageable);
 
         List<HostelV1> hostels = pagedHostels.getContent();
 
@@ -535,25 +543,32 @@ public class KycDetailsService {
         name = (name == null || name.isBlank()) ? null : name.trim();
         kycStatus = (kycStatus == null || kycStatus.isBlank()) ? null : kycStatus.trim();
 
-        DateFilterEnum filter;
-        try {
-            filter = DateFilterEnum.valueOf(dateFilter);
-        } catch (Exception e) {
-            return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
-        }
-
-        List<DateFilterRes> dateFilters = Arrays.stream(DateFilterEnum.values())
+        List<DateFilterRes> dateFilters = new ArrayList<>();
+        dateFilters.add(new DateFilterRes("ALL", "All"));
+        dateFilters.addAll(Arrays.stream(DateFilterEnum.values())
                 .map(i -> new DateFilterRes(i.name(), i.getValue()))
-                .toList();
-
-        StartEndDateDto dateRange = Utils.getDateRange(filter, startDate, endDate);
-
-        startDate = dateRange.startDate();
-        endDate = dateRange.endDate();
+                .toList());
 
         List<KycStatusResponse> kycStatusFilters = Arrays.stream(KycStatus.values())
                 .map(i -> new KycStatusResponse(i.name(), i.getStatus()))
                 .toList();
+
+        if (!dateFilter.equals("ALL")){
+            DateFilterEnum filter;
+            try {
+                filter = DateFilterEnum.valueOf(dateFilter);
+            } catch (Exception e) {
+                return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            StartEndDateDto dateRange = Utils.getDateRange(filter, startDate, endDate);
+
+            startDate = dateRange.startDate();
+            endDate = dateRange.endDate();
+        } else {
+            startDate = null;
+            endDate = null;
+        }
 
         Page<Customers> pagedTenants = customersService
                 .getCustomersByHostelIdNameKycStatus(hostelId, name, kycStatus,
