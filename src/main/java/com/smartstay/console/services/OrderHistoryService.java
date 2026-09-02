@@ -128,13 +128,12 @@ public class OrderHistoryService {
         if (name != null && !name.trim().isEmpty()
                 && filteredHostelIds.isEmpty() && filteredUserIds.isEmpty()) {
 
-            OrderHistoryPagedResponse response = new OrderHistoryPagedResponse(totalRevenue, page + 1,
-                    size, 0, 0, Collections.emptyList(), null, null);
+            OrderHistoryPagedResponse response = new OrderHistoryPagedResponse(totalRevenue,
+                    null, null);
 
             return ResponseEntity.ok(response);
         }
 
-        Page<OrderHistory> paginatedAllOrderHistory;
         Page<OrderHistory> paginatedPaidOrderHistory;
         Page<OrderHistory> paginatedCreatedOrderHistory;
 
@@ -146,9 +145,6 @@ public class OrderHistoryService {
             filteredHostelIds = filteredHostelIds.isEmpty() ? null : filteredHostelIds;
             filteredUserIds = filteredUserIds.isEmpty() ? null : filteredUserIds;
 
-            paginatedAllOrderHistory = orderHistoryRepository
-                    .findFilteredOrderHistory(filteredHostelIds, filteredUserIds, startDate, endDate,
-                            pageable);
             paginatedPaidOrderHistory = orderHistoryRepository
                     .findStatusFilteredOrderHistory(filteredHostelIds, filteredUserIds, startDate, endDate,
                             paidOrderStatus, pageable);
@@ -157,20 +153,16 @@ public class OrderHistoryService {
                             createdOrderStatus, pageable);
 
         } else {
-            paginatedAllOrderHistory = orderHistoryRepository
-                    .findAllByPaidOrCreatedDate(startDate, endDate, pageable);
             paginatedPaidOrderHistory = orderHistoryRepository
                     .findStatusAllByPaidOrCreatedDate(startDate, endDate, paidOrderStatus, pageable);
             paginatedCreatedOrderHistory = orderHistoryRepository
                     .findStatusAllByPaidOrCreatedDate(startDate, endDate, createdOrderStatus, pageable);
         }
 
-        List<OrderHistory> allOrderHistories = paginatedAllOrderHistory.getContent();
         List<OrderHistory> paidOrderHistories = paginatedPaidOrderHistory.getContent();
         List<OrderHistory> createdOrderHistories = paginatedCreatedOrderHistory.getContent();
 
         List<OrderHistory> orderHistories = new ArrayList<>();
-        orderHistories.addAll(allOrderHistories);
         orderHistories.addAll(paidOrderHistories);
         orderHistories.addAll(createdOrderHistories);
 
@@ -238,9 +230,6 @@ public class OrderHistoryService {
         Map<String, Users> ownerMap = owners.stream()
                 .collect(Collectors.toMap(Users::getParentId, user -> user, (a, b) -> a));
 
-        List<OrderHistoryResponse> orderHistoriesRes = mapOrderHistories(allOrderHistories,
-                hostelMap, hotelTypeMap, plansMap, usersMap, agentMap, ownerMap, subscriptionMap);
-
         List<OrderHistoryResponse> paidOrderHistoriesRes = mapOrderHistories(paidOrderHistories,
                 hostelMap, hotelTypeMap, plansMap, usersMap, agentMap, ownerMap, subscriptionMap);
 
@@ -258,9 +247,7 @@ public class OrderHistoryService {
         );
 
         OrderHistoryPagedResponse response = new OrderHistoryPagedResponse(
-                totalRevenue, page + 1, size, paginatedAllOrderHistory.getTotalElements(),
-                paginatedAllOrderHistory.getTotalPages(), orderHistoriesRes, paidHistories,
-                createdHistories
+                totalRevenue, paidHistories, createdHistories
         );
 
         return new ResponseEntity<>(response, HttpStatus.OK);
