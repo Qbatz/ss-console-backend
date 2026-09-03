@@ -18,23 +18,6 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
     @Query("""
             SELECT o FROM OrderHistory o
             WHERE o.isActive = true
-              AND COALESCE(o.paidAt, o.createdAt) >= :startDate
-              AND COALESCE(o.paidAt, o.createdAt) < :endDate
-              AND (
-                   (:hostelIds IS NOT NULL AND o.hostelId IN :hostelIds)
-                OR (:userIds IS NOT NULL AND o.paidBy IN :userIds)
-              )
-            ORDER BY COALESCE(o.paidAt, o.createdAt) DESC
-            """)
-    Page<OrderHistory> findFilteredOrderHistory(@Param("hostelIds") Set<String> hostelIds,
-                                                @Param("userIds") Set<String> userIds,
-                                                @Param("startDate") Date startDate,
-                                                @Param("endDate") Date endDate,
-                                                Pageable pageable);
-
-    @Query("""
-            SELECT o FROM OrderHistory o
-            WHERE o.isActive = true
               AND o.orderStatus = :orderStatus
               AND COALESCE(o.paidAt, o.createdAt) >= :startDate
               AND COALESCE(o.paidAt, o.createdAt) < :endDate
@@ -55,18 +38,6 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
             SELECT o
             FROM OrderHistory o
             WHERE o.isActive = true
-              AND COALESCE(o.paidAt, o.createdAt) >= :startDate
-              AND COALESCE(o.paidAt, o.createdAt) < :endDate
-            ORDER BY COALESCE(o.paidAt, o.createdAt) DESC
-            """)
-    Page<OrderHistory> findAllByPaidOrCreatedDate(@Param("startDate") Date startDate,
-                                                  @Param("endDate") Date endDate,
-                                                  Pageable pageable);
-
-    @Query("""
-            SELECT o
-            FROM OrderHistory o
-            WHERE o.isActive = true
               AND o.orderStatus = :orderStatus
               AND COALESCE(o.paidAt, o.createdAt) >= :startDate
               AND COALESCE(o.paidAt, o.createdAt) < :endDate
@@ -80,8 +51,8 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
     @Query("""
             SELECT coalesce(sum(o.totalAmount), 0) FROM OrderHistory o
             WHERE o.isActive = true
-              AND o.createdAt >= :startDate
-              AND o.createdAt < :endDate
+              AND COALESCE(o.paidAt, o.createdAt) >= :startDate
+              AND COALESCE(o.paidAt, o.createdAt) < :endDate
               AND o.orderStatus IN :orderStatuses
             """)
     double findTotalRevenueBetween(@Param("startDate") Date startDate,

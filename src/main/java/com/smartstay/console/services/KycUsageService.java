@@ -30,4 +30,8 @@ public class KycUsageService {
     public void save(KYCUsage kycUsage) {
         kycUsageRepository.save(kycUsage);
     }
+
+    public Set<String> getKycUsedHostelIds() {
+        return kycUsageRepository.findAllHostelIds();
+    }
 }

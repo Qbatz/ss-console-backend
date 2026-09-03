@@ -3959,9 +3959,14 @@ public class CustomersService {
         oldJoiningDate = Utils.getStartOfDay(oldJoiningDate);
         newJoiningDate = Utils.getStartOfDay(newJoiningDate);
         bookingDate = Utils.getStartOfDay(bookingDate);
+        Date todayStart = Utils.getStartOfDay(today);
 
         if (oldJoiningDate.equals(newJoiningDate)){
             return new ResponseEntity<>("Joining date is not changed", HttpStatus.BAD_REQUEST);
+        }
+
+        if (newJoiningDate.after(todayStart)){
+            return new ResponseEntity<>("Joining date can not be in the future", HttpStatus.BAD_REQUEST);
         }
 
         if (booking.getIsBooked() != null){
@@ -4205,9 +4210,14 @@ public class CustomersService {
         Date oldJoiningDate = Utils.getStartOfDay(customer.getJoiningDate());
         Date newJoiningDate = Utils.getStartOfDay(Utils.localDateToDate(payload.newJoiningDate()));
         Date bookingDate = Utils.getStartOfDay(booking.getBookingDate());
+        Date todayStart = Utils.getStartOfDay(today);
 
         if (oldJoiningDate.equals(newJoiningDate)) {
             return ResponseEntity.badRequest().body("Joining date is not changed");
+        }
+
+        if (newJoiningDate.after(todayStart)){
+            return new ResponseEntity<>("Joining date can not be in the future", HttpStatus.BAD_REQUEST);
         }
 
         if (booking.getIsBooked() != null){

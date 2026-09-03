@@ -41,6 +41,8 @@ import java.util.stream.Collectors;
 @Service
 public class KycDetailsService {
 
+    @Value("${DIGIO_BASE_URL}")
+    private String digioBaseUrl;
     @Value("${DIGIO_URL}")
     private String digioUrl;
     @Value("${DIGIO_REQUEST_URL}")
@@ -438,7 +440,7 @@ public class KycDetailsService {
                 .map(i -> new DateFilterRes(i.name(), i.getValue()))
                 .toList());
 
-        Set<String> activeHostelIds = hostelService.getActiveHostelIds();
+        Set<String> kycUsedHostelIds = kycUsageService.getKycUsedHostelIds();
 
         if (!dateFilter.equals("ALL")){
             DateFilterEnum filter;
@@ -476,7 +478,7 @@ public class KycDetailsService {
                 return new ResponseEntity<>(response, HttpStatus.OK);
             }
 
-            activeHostelIds = filteredHostelIds;
+            kycUsedHostelIds = filteredHostelIds;
         }
 
         if (isEnabled != null) {
@@ -484,7 +486,7 @@ public class KycDetailsService {
         }
 
         Page<HostelV1> pagedHostels = hostelService
-                .getKycPagedHostels(name, activeHostelIds, pageable);
+                .getKycPagedHostels(name, kycUsedHostelIds, pageable);
 
         List<HostelV1> hostels = pagedHostels.getContent();
 
@@ -643,6 +645,8 @@ public class KycDetailsService {
                 } else {
                     return new ResponseEntity<>("Kyc status is not requested", HttpStatus.BAD_REQUEST);
                 }
+            } else {
+                return regenerateAccessToken(kycDetails, kycUsage, tenant, owner, loggedInAgent);
             }
         }
 
@@ -689,11 +693,106 @@ public class KycDetailsService {
         kycUsage.setLatestRequest(today);
         kycUsage.setLatestRequestTo(customerId);
 
-        kycDetailsRepository.save(kycDetails);
+        kycDetails = kycDetailsRepository.save(kycDetails);
         kycUsageService.save(kycUsage);
         customerNotificationsService.sendKycReminderNotification(owner, tenant, kycDetails);
 
+        KycDetailsSnapshot newSnapshot = SnapshotUtility.toSnapshot(kycDetails);
+
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.CREATE, Source.KYC_SEND_REMINDER,
+                String.valueOf(kycDetails.getId()), null, newSnapshot);
+
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    private ResponseEntity<?> regenerateAccessToken(KycDetails kycDetails, KYCUsage kycUsage,
+                                                    Customers tenant, Users owner, Agent loggedInAgent) {
+
+        if (tenant == null) {
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (owner == null){
+            return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (kycDetails == null){
+            return new ResponseEntity<>(Utils.KYC_DETAILS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+        if (kycDetails.getEntityId() == null || kycDetails.getEntityId().isBlank()){
+            return new ResponseEntity<>("Kyc entity id not found", HttpStatus.BAD_REQUEST);
+        }
+
+        KycDetailsSnapshot oldSnapshot = SnapshotUtility.toSnapshot(kycDetails);
+
+        Date today = new Date();
+
+        String customerId = tenant.getCustomerId();
+
+        String digioRegenerateUrl = digioBaseUrl + "user/auth/generate_token";
+
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBasicAuth(digioUserName, digioPassword);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            Map<String, String> requestBody = new HashMap<>();
+            requestBody.put("entity_id", kycDetails.getEntityId());
+
+            HttpEntity<Map<String, String>> request = new HttpEntity<>(requestBody, headers);
+
+            ResponseEntity<DigioKycAccessTokenWrapper> response = restTemplate.exchange(
+                    digioRegenerateUrl,
+                    HttpMethod.POST,
+                    request,
+                    DigioKycAccessTokenWrapper.class
+            );
+
+            DigioKycAccessTokenWrapper accessTokenRes = response.getBody();
+            if (accessTokenRes == null) {
+                throw new BadRequestException(Utils.RESPONSE_BODY_NOT_FOUND);
+            }
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+
+                DigioKycAccessToken accessToken = accessTokenRes.response();
+                if (accessToken == null) {
+                    throw new BadRequestException(Utils.RESPONSE_BODY_NOT_FOUND);
+                }
+
+                kycDetails.setEntityId(accessToken.entityId());
+                kycDetails.setAccessTokenId(accessToken.id());
+                kycDetails.setExpireAt(Utils.stringDateToDate(accessToken.validTill()));
+
+                if (kycUsage == null){
+                    kycUsage = new KYCUsage();
+
+                    kycUsage.setHostelId(tenant.getHostelId());
+                    kycUsage.setRequestCount(1);
+                } else {
+                    int existingRequestCount = 0;
+                    if (kycUsage.getRequestCount() != null) {
+                        existingRequestCount = kycUsage.getRequestCount();
+                    }
+                    kycUsage.setRequestCount(existingRequestCount + 1);
+                }
+                kycUsage.setLatestRequest(today);
+                kycUsage.setLatestRequestTo(customerId);
+
+                kycDetails = kycDetailsRepository.save(kycDetails);
+                kycUsageService.save(kycUsage);
+                customerNotificationsService.sendKycReminderNotification(owner, tenant, kycDetails);
+
+                KycDetailsSnapshot newSnapshot = SnapshotUtility.toSnapshot(kycDetails);
+
+                agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.UPDATE, Source.KYC_SEND_REMINDER,
+                        String.valueOf(kycDetails.getId()), oldSnapshot, newSnapshot);
+
+                return new ResponseEntity<>(HttpStatus.OK);
+            }  else {
+                throw new BadRequestException(Utils.INVALID_REQUEST);
+            }
+        } catch (HttpClientErrorException | HttpServerErrorException ex) {
+            return new ResponseEntity<>(Utils.SERVER_ERROR, HttpStatus.BAD_REQUEST);
+        }
     }
 
     private DigioInitiateKycResponse initiateKycApiCall(DigioInitiateKycRequest initiateKycRequest) {
