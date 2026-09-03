@@ -135,6 +135,7 @@ public class AgentActivityUtil {
             case PRODUCT_UPDATE -> "Updated a new product update";
             case FILTER_OPTIONS -> "Updated a filter option";
             case KYC_SEND_REMINDER -> "Reminder successfully send to customer";
+            case TENANT_EB_RECALCULATE -> "EB recalculated successfully";
             default -> "Updated successfully";
         };
     }
