@@ -55,6 +55,11 @@ public class ProductUpdateController {
         return productUpdateService.archiveProductUpdate(productUpdateId);
     }
 
+    @PutMapping("/un-archive/{productUpdateId}")
+    public ResponseEntity<?> unArchiveProductUpdate(@PathVariable("productUpdateId") Long productUpdateId){
+        return productUpdateService.unArchiveProductUpdate(productUpdateId);
+    }
+
     @DeleteMapping("/{productUpdateId}")
     public ResponseEntity<?> deleteProductUpdate(@PathVariable("productUpdateId") Long productUpdateId){
         return productUpdateService.deleteProductUpdate(productUpdateId);

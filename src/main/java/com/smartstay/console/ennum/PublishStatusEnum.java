@@ -8,7 +8,7 @@ public enum PublishStatusEnum {
     DRAFT("Save as draft", "Don't publish yet, continue editing"),
     SCHEDULED("Schedule", "Choose a future date and time"),
     PUBLISHED("Publish now", "Immediately visible to owners"),
-    ARCHIVED("Archive", "Archive update");
+    ARCHIVED("Archive", "Product update will be archived");
 
     private final String value;
     private final String description;
