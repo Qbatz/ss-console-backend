@@ -166,17 +166,4 @@ public class SmartstayConsoleApplication {
         };
     }
 
-    @Bean
-    CommandLineRunner deleteRecurringInvoice(InvoiceV1Repository invoiceV1Repository) {
-       return args -> {
-           Calendar calendar = Calendar.getInstance();
-           calendar.set(Calendar.DAY_OF_MONTH, 1);
-           Date startDate = calendar.getTime();
-
-//           List<InvoicesV1> listInvoices = invoiceV1Repository.findByHostelIdAndInvoiceMode("a44e3277-3c14-41cf-bef0-fb0ef97f56de", startDate);
-//
-//           invoiceV1Repository.deleteAll(listInvoices);
-
-       };
-    }
 }
