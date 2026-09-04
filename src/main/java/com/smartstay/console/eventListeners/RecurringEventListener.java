@@ -67,14 +67,12 @@ public class RecurringEventListener {
                     flatEbAmount = ebConfig.getFlatCharge();
                     isFlatRate = true;
                     shouldIncludeEb = false;
-                }
-                else {
+                } else {
                     shouldIncludeEb = false;
                     isFlatRate = false;
                     flatEbAmount = 0.0;
                 }
-            }
-            else {
+            } else {
                 flatEbAmount = 0.0;
                 isFlatRate = false;
                 shouldIncludeEb = true;
@@ -113,9 +111,28 @@ public class RecurringEventListener {
             listElectricityForAHostel = new ArrayList<>();
         }
         List<ElectricityReadings> finalListElectricityForAHostel = listElectricityForAHostel;
+        List<InvoicesV1> thisMonthInvoiceGenerated = invoicesV1Repository.findThisMonthInvoiceGenerated(hostelV1.getHostelId(), recurringEvents.getBillingCycleStartDate(), customerIds);
+        List<String> generatedCustoemerIds;
+        if (thisMonthInvoiceGenerated != null && !thisMonthInvoiceGenerated.isEmpty()) {
+            generatedCustoemerIds = thisMonthInvoiceGenerated
+                    .stream()
+                    .map(InvoicesV1::getCustomerId)
+                    .toList();
+        } else {
+            generatedCustoemerIds = new ArrayList<>();
+        }
 
         customersList.forEach(item -> {
-
+            if (!generatedCustoemerIds.isEmpty()) {
+                String invoiceGenerated = generatedCustoemerIds
+                        .stream()
+                        .filter(i -> i.equalsIgnoreCase(item.getCustomerId()))
+                        .findFirst()
+                        .orElse(null);
+                if (invoiceGenerated != null) {
+                    return;
+                }
+            }
             Date joiningDate = item.getJoiningDate();
             Date billingCycleStartDate = recurringEvents.getBillingCycleStartDate();
 
@@ -127,7 +144,13 @@ public class RecurringEventListener {
                 return;
             }
 
-            Double rentAmount = item.getRentAmount();
+            Double rentAmount = 0.0;
+            if (item.getRentAmount() == null) {
+                System.out.println(item.getCustomerId());
+            }
+            else {
+                rentAmount = item.getRentAmount();
+            }
             Double ebAmount = 0.0;
 
             if (shouldIncludeEb) {
@@ -147,8 +170,7 @@ public class RecurringEventListener {
                 if (ebAmount > 0) {
                     ebAmount = Utils.roundOfDouble(ebAmount);
                 }
-            }
-            else if (isFlatRate) {
+            } else if (isFlatRate) {
                 ebAmount = flatEbAmount;
             }
 
@@ -217,17 +239,14 @@ public class RecurringEventListener {
                         if (suffix < 10) {
                             prefixSuffix.append("00");
                             prefixSuffix.append(suffix);
-                        }
-                        else if (suffix < 100) {
+                        } else if (suffix < 100) {
                             prefixSuffix.append("0");
                             prefixSuffix.append(suffix);
-                        }
-                        else {
+                        } else {
                             prefixSuffix.append(suffix);
                         }
                     }
-                }
-                else {
+                } else {
                     //this is going to be the first invoice
                     prefixSuffix.append("-");
                     prefixSuffix.append("001");
@@ -308,11 +327,9 @@ public class RecurringEventListener {
                         InvoiceItems itms = new InvoiceItems();
                         if (it.getSourceType().equalsIgnoreCase(com.smartstay.console.ennum.InvoiceItems.EB.name())) {
                             itms.setInvoiceItem(it.getSourceType());
-                        }
-                        else if (it.getSourceType().equalsIgnoreCase(com.smartstay.console.ennum.InvoiceItems.AMENITY.name())) {
+                        } else if (it.getSourceType().equalsIgnoreCase(com.smartstay.console.ennum.InvoiceItems.AMENITY.name())) {
                             itms.setInvoiceItem(it.getSourceType());
-                        }
-                        else {
+                        } else {
                             itms.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.OTHERS.name());
                             itms.setOtherItem(it.getSourceType());
                         }
