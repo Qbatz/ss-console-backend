@@ -71,6 +71,9 @@ public class ProductUpdateService {
         Date releaseDate = null;
         if (payload.releaseDate() != null){
             releaseDate = Utils.localDateToDate(payload.releaseDate());
+            if (releaseDate.before(today)){
+                return new ResponseEntity<>(Utils.RELEASE_DATE_MUST_BE_IN_FUTURE, HttpStatus.BAD_REQUEST);
+            }
         }
 
         String updateType;
@@ -591,6 +594,9 @@ public class ProductUpdateService {
         }
         if (payload.releaseDate() != null){
             Date releaseDate = Utils.localDateToDate(payload.releaseDate());
+            if (releaseDate.before(today)){
+                return new ResponseEntity<>(Utils.RELEASE_DATE_MUST_BE_IN_FUTURE, HttpStatus.BAD_REQUEST);
+            }
             productUpdate.setReleaseDate(releaseDate);
         }
         if (payload.updateType() != null && !payload.updateType().isBlank()){
