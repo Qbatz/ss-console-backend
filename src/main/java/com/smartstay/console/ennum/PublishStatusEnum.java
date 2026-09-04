@@ -17,4 +17,24 @@ public enum PublishStatusEnum {
         this.value = value;
         this.description = description;
     }
+
+    public boolean canTransitionTo(PublishStatusEnum newStatus) {
+
+        if (newStatus == null) {
+            return false;
+        }
+
+        return switch (this) {
+            case DRAFT -> newStatus == DRAFT
+                    || newStatus == SCHEDULED
+                    || newStatus == PUBLISHED;
+
+            case SCHEDULED -> newStatus == SCHEDULED
+                    || newStatus == PUBLISHED;
+
+            case PUBLISHED -> false;
+
+            case ARCHIVED -> false;
+        };
+    }
 }

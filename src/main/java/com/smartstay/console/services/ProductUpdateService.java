@@ -630,11 +630,28 @@ public class ProductUpdateService {
         }
         if (payload.publishStatus() != null && !payload.publishStatus().isBlank()){
             String publishStatus;
+            PublishStatusEnum publishStatusEnum;
             try {
-                publishStatus = PublishStatusEnum.valueOf(payload.publishStatus()).name();
+                publishStatusEnum = PublishStatusEnum.valueOf(payload.publishStatus());
+                publishStatus = publishStatusEnum.name();
             } catch (Exception e){
                 return new ResponseEntity<>("Publish status is invalid", HttpStatus.BAD_REQUEST);
             }
+
+            String oldPublishStatus = productUpdate.getPublishStatus();
+            PublishStatusEnum oldPublishStatusEnum;
+            try {
+                oldPublishStatusEnum = PublishStatusEnum.valueOf(oldPublishStatus);
+            } catch (Exception e){
+                return new ResponseEntity<>("Publish status is invalid", HttpStatus.BAD_REQUEST);
+            }
+
+            if (!oldPublishStatusEnum.canTransitionTo(publishStatusEnum)) {
+                return new ResponseEntity<>("Cannot change publish status from "
+                        + oldPublishStatus + " to " + publishStatus, HttpStatus.BAD_REQUEST
+                );
+            }
+
             productUpdate.setPublishStatus(publishStatus);
 
             Date publishDateTime = null;
