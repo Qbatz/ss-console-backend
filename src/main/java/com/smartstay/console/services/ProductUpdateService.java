@@ -123,6 +123,11 @@ public class ProductUpdateService {
         Date expiryDate = null;
         if (payload.expiryDate() != null){
             expiryDate = Utils.localDateToDate(payload.expiryDate());
+            if (publishDateTime != null){
+                if (expiryDate.before(publishDateTime)){
+                    return new ResponseEntity<>(Utils.EXPIRY_DATE_CAN_NOT_BE_BEFORE_PUBLISH_DATE, HttpStatus.BAD_REQUEST);
+                }
+            }
         }
 
         productUpdate.setTitle(payload.title());
@@ -648,6 +653,11 @@ public class ProductUpdateService {
             Date expiryDate = null;
             if (payload.expiryDate() != null){
                 expiryDate = Utils.localDateToDate(payload.expiryDate());
+                if (publishDateTime != null){
+                    if (expiryDate.before(publishDateTime)){
+                        return new ResponseEntity<>(Utils.EXPIRY_DATE_CAN_NOT_BE_BEFORE_PUBLISH_DATE, HttpStatus.BAD_REQUEST);
+                    }
+                }
             }
 
             productUpdate.setPublishDateTime(publishDateTime);

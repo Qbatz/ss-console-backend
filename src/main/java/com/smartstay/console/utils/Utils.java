@@ -208,6 +208,7 @@ public class Utils {
     public static final String COMMON_FEATURE_CAN_NOT_BE_DELETED = "Common feature can not be deleted";
     public static final String INVOICE_HAS_DEDUCTIONS_ALREADY = "Invoice has deductions already";
     public static final String DATE_IS_NULL = "Date is null";
+    public static final String EXPIRY_DATE_CAN_NOT_BE_BEFORE_PUBLISH_DATE = "Expiry date can not be before publish date";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {
