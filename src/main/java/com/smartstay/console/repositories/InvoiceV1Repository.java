@@ -107,14 +107,19 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
     List<InvoicesV1> findAvailableRetainerInvoicesByCustomerIdAndInvoiceTypes(String customerId, Set<String> invoiceTypes);
 
     @Query("""
-            SELECT i FROM invoicesv1 i WHERE i.hostelId=:hostelId AND i.invoiceMode='RECURRING' AND 
-            DATE(i.invoiceStartDate) >= DATE(:startDate) 
+            SELECT i FROM invoicesv1 i
+            WHERE i.hostelId = :hostelId
+                AND i.invoiceMode = 'RECURRING'
+                AND DATE(i.invoiceStartDate) >= DATE(:startDate)
             """)
     List<InvoicesV1> findByHostelIdAndInvoiceMode(String hostelId, Date startDate);
 
     @Query("""
-            SELECT i FROM invoicesv1 i WHERE i.hostelId=:hostelId AND DATE(i.invoiceStartDate) >= Date(:invoiceStartDate) 
-            AND i.invoiceType='RENT' AND i.customerId IN :customerIds
+            SELECT i FROM invoicesv1 i
+            WHERE i.hostelId = :hostelId
+                AND DATE(i.invoiceStartDate) >= Date(:invoiceStartDate)
+                AND i.invoiceType = 'RENT'
+                AND i.customerId IN :customerIds
             """)
     List<InvoicesV1> findThisMonthInvoiceGenerated(String hostelId, Date invoiceStartDate, List<String> customerIds);
 }

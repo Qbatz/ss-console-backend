@@ -2,7 +2,6 @@ package com.smartstay.console;
 
 import com.smartstay.console.dao.*;
 import com.smartstay.console.repositories.AgentModulesRepository;
-import com.smartstay.console.repositories.InvoiceV1Repository;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.boot.CommandLineRunner;
@@ -165,5 +164,4 @@ public class SmartstayConsoleApplication {
             }
         };
     }
-
 }

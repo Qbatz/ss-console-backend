@@ -120,6 +120,7 @@ public class Utils {
     public static final String DATE_FILTER_NOT_FOUND = "Date filter not found";
     public static final String SERVER_ERROR = "Server error";
     public static final String RESPONSE_BODY_NOT_FOUND = "Response body not found";
+    public static final String PRODUCT_UPDATE_STATUS_NOT_FOUND = "Product update status not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -189,6 +190,7 @@ public class Utils {
     public static final String PAID_AMOUNT_GOES_NEGATIVE = "Target paid amount goes negative";
     public static final String DATE_IS_NOT_FROM_FUTURE_OR_PRESENT = "Date is not from future or present";
     public static final String MINIMUM_1_PERMISSION_ENABLED = "At least one module must have read permission enabled";
+    public static final String RELEASE_DATE_MUST_BE_IN_FUTURE = "Release date must be in future";
 
     public static final String ROLE_NAME_CANNOT_EDIT = "This role cannot be edited";
     public static final String CANNOT_USE_BILLING_CYCLE_FILTER_WITH_DATE_FILTER = "Cannot use billingCycleStartDay with filterBy";
@@ -208,6 +210,7 @@ public class Utils {
     public static final String COMMON_FEATURE_CAN_NOT_BE_DELETED = "Common feature can not be deleted";
     public static final String INVOICE_HAS_DEDUCTIONS_ALREADY = "Invoice has deductions already";
     public static final String DATE_IS_NULL = "Date is null";
+    public static final String EXPIRY_DATE_CAN_NOT_BE_BEFORE_PUBLISH_DATE = "Expiry date can not be before publish date";
 
 
     public static int compareWithTwoDates(Date date1, Date date2) {

@@ -105,4 +105,10 @@ public class CustomerBedHistoryService {
         return customerBedHistoryRepository
                 .findAllByCustomersAndBetweenDatesAndNotHistory(bedHistoryId, customerId, startDate, endDate);
     }
+
+    public List<CustomersBedHistory> getCustomersByHostelIdAndDates(String hostelId, Date billStartDate,
+                                                                    Date billEndDate) {
+        return customerBedHistoryRepository
+                .findByHostelIdAndDateOverlap(hostelId, billStartDate, billEndDate, CustomersBedType.BOOKED.name());
+    }
 }

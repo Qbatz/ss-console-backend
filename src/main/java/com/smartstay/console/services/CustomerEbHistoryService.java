@@ -36,4 +36,8 @@ public class CustomerEbHistoryService {
     public List<CustomersEbHistory> getAllByReadingIds(List<Integer> readingIds) {
         return customerEbHistoryRepository.findAllByReadingIdIn(readingIds);
     }
+
+    public void deleteByReadingId(Integer readingId) {
+         customerEbHistoryRepository.deleteByReadingId(readingId);
+    }
 }

@@ -24,4 +24,6 @@ public interface CustomerEbHistoryRepository extends JpaRepository<CustomersEbHi
                                                            @Param("readings") List<Integer> readings);
 
     List<CustomersEbHistory> findAllByReadingIdIn(List<Integer> readingIds);
+
+    void deleteByReadingId(Integer readingId);
 }
