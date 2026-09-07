@@ -1,9 +1,11 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.kyc.EnableKycPayload;
 import com.smartstay.console.services.KycDetailsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -60,5 +62,11 @@ public class KycController {
     @PostMapping("/reminder/{customerId}")
     public ResponseEntity<?> sendReminder(@PathVariable("customerId") String customerId){
         return kycDetailsService.sendReminder(customerId);
+    }
+
+    @PostMapping("/enable/{hostelId}")
+    public ResponseEntity<?> enableKyc(@PathVariable("hostelId") String hostelId,
+                                       @Valid @RequestBody EnableKycPayload payload){
+        return kycDetailsService.enableKyc(hostelId, payload);
     }
 }

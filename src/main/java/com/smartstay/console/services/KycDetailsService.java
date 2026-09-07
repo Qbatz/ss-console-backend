@@ -13,6 +13,7 @@ import com.smartstay.console.dto.files.UploadFiles;
 import com.smartstay.console.dto.kycDetails.*;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
+import com.smartstay.console.payloads.kyc.EnableKycPayload;
 import com.smartstay.console.repositories.KycDetailsRepository;
 import com.smartstay.console.responses.date.DateFilterRes;
 import com.smartstay.console.responses.kyc.KycHostelRes;
@@ -82,6 +83,10 @@ public class KycDetailsService {
     private CustomerNotificationsService customerNotificationsService;
     @Autowired
     private UsersService usersService;
+    @Autowired
+    private KycConfigService kycConfigService;
+    @Autowired
+    private KycHistoryService kycHistoryService;
 
     public ResponseEntity<?> getWaitingApprovalKycDetails(int page, int size, String name) {
 
@@ -826,5 +831,64 @@ public class KycDetailsService {
         } catch (HttpClientErrorException | HttpServerErrorException ex) {
             throw new BadRequestException(Utils.SERVER_ERROR);
         }
+    }
+
+    public ResponseEntity<?> enableKyc(String hostelId, EnableKycPayload payload) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        HostelV1 hostel = hostelService.getHostelInfo(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        KycConfig kycConfig = kycConfigService.getByHostelId(hostelId);
+
+        KycHistory latestKycHistory = kycHistoryService.getLatestByHostelId(hostelId);
+
+        if (latestKycHistory != null) {
+            if (latestKycHistory.getEndDate() == null){
+                return new ResponseEntity<>("Kyc is already enabled", HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        Date today = new Date();
+
+        KycHistory kycHistory = new KycHistory();
+
+        String activationReason = null;
+        if (payload != null) {
+            activationReason = payload.activationReason();
+        }
+
+        kycHistory.setHostelId(hostelId);
+        kycHistory.setStartDate(today);
+        kycHistory.setEndDate(null);
+        kycHistory.setIsCancelledDueToPlan(false);
+        kycHistory.setCancellationReason(null);
+        kycHistory.setActivationReason(activationReason);
+        kycHistory.setCancelledBy(null);
+        kycHistory.setCreatedBy(loggedInAgentId);
+        kycHistory.setCreatedAt(today);
+
+        if (kycConfig == null){
+            kycConfig = new KycConfig();
+
+            kycConfig.setHostelId(hostelId);
+            kycConfig.setLimitPerMonth(-1);
+            kycConfig.setCreatedBy(loggedInAgentId);
+            kycConfig.setCreatedAt(today);
+        } else {
+            kycConfig.setUpdatedBy(loggedInAgentId);
+            kycConfig.setUpdatedAt(today);
+        }
+
+        kycConfig.setCanRequest(true);
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }

@@ -36,6 +36,7 @@ public class KycDetails {
     private String createdBy;
     private Date updatedAt;
     private Date expireAt;
+    private String hostelId;
 
     @OneToOne(mappedBy = "kycDetails",  cascade = CascadeType.ALL, orphanRemoval = true)
     private KycAddressDetails addressDetails;
