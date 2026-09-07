@@ -98,6 +98,8 @@ public class InvoiceV1Service {
     private S3Service s3Service;
     @Autowired
     private BillingRulesService billingRulesService;
+    @Autowired
+    private AmenitiesService amenitiesService;
 
     public List<InvoicesV1> findByListOfCustomers(String hostelId, List<String> customerIds) {
         return invoiceV1Repository.findByHostelIdAndCustomerIdIn(hostelId, customerIds);
@@ -1481,6 +1483,17 @@ public class InvoiceV1Service {
                 .getAllCustomerAmenitiesForRecurring(customer.getCustomerId(),
                         billingDates.currentBillStartDate());
 
+        Set<String> amenityIds = amenities.stream()
+                .map(CustomersAmenity::getAmenityId)
+                .collect(Collectors.toSet());
+
+        List<AmenitiesV1> actualAmenities = amenitiesService
+                .getAmenitiesByIds(amenityIds);
+
+        Map<String, AmenitiesV1> actualAmenityMap = actualAmenities.stream()
+                .collect(Collectors.toMap(AmenitiesV1::getAmenityId,
+                        Function.identity()));
+
         amenityAmount = amenities.stream()
                 .mapToDouble(CustomersAmenity::getAmenityPrice)
                 .sum();
@@ -1561,11 +1574,22 @@ public class InvoiceV1Service {
         }
 
         if (amenityAmount > 0) {
-            InvoiceItems item = new InvoiceItems();
-            item.setInvoice(invoice);
-            item.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.AMENITY.name());
-            item.setAmount(amenityAmount);
-            items.add(item);
+//            InvoiceItems item = new InvoiceItems();
+//            item.setInvoice(invoice);
+//            item.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.AMENITY.name());
+//            item.setAmount(amenityAmount);
+//            items.add(item);
+            amenities.forEach(customersAmenity -> {
+                AmenitiesV1 amenity = actualAmenityMap.getOrDefault(customersAmenity.getAmenityId(), null);
+                if (amenity != null) {
+                    InvoiceItems amenityItem = new InvoiceItems();
+                    amenityItem.setInvoiceItem(com.smartstay.console.ennum.InvoiceItems.OTHERS.name());
+                    amenityItem.setOtherItem(amenity.getAmenityName());
+                    amenityItem.setAmount(Utils.roundOfDoubleTo2Digits(customersAmenity.getAmenityPrice()));
+                    amenityItem.setInvoice(invoice);
+                    items.add(amenityItem);
+                }
+            });
         }
 
         invoice.setBasePrice(total);
