@@ -51,14 +51,21 @@ public class KycTenantResMapper implements Function<HostelV1, KycTenantRes> {
         Date todayEnd = Utils.getEndOfDay(today);
 
         boolean kycEnableStatus = false;
+        String kycHistoryStartDate = null;
+        String kycHistoryEndDate = null;
         if (latestKycHistory != null){
             if (latestKycHistory.getEndDate() != null){
                 Date endDateStart = Utils.getStartOfDay(latestKycHistory.getEndDate());
                 if (!endDateStart.before(todayEnd)){
                     kycEnableStatus = true;
                 }
+                kycHistoryEndDate = Utils.dateToString(latestKycHistory.getEndDate());
             } else {
                 kycEnableStatus = true;
+            }
+
+            if (latestKycHistory.getStartDate() != null){
+                kycHistoryStartDate = Utils.dateToString(latestKycHistory.getStartDate());
             }
         }
 
@@ -105,7 +112,7 @@ public class KycTenantResMapper implements Function<HostelV1, KycTenantRes> {
 
         return new KycTenantRes(hostelId, hostel.getHostelName(), initials, hostel.getMainImage(),
                 hostel.getMobile(), hostel.getEmailId(), fullAddress, totalTenants, totalKycRequestedTenants,
-                totalRequested, totalVerified, totalWaitingForApproval, kycEnableStatus, kycLimitPerMonth,
-                tenantsRes);
+                totalRequested, totalVerified, totalWaitingForApproval, kycEnableStatus, kycHistoryStartDate,
+                kycHistoryEndDate, kycLimitPerMonth, tenantsRes);
     }
 }
