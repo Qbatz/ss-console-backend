@@ -8,6 +8,7 @@ import com.smartstay.console.services.BillingRulesService;
 import com.smartstay.console.utils.Utils;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
 
@@ -17,15 +18,21 @@ public class KycTenantResMapper implements Function<HostelV1, KycTenantRes> {
     BillingRules billingRule;
     BillingRulesService billingRulesService;
     List<Customers> allTenants;
+    KycConfig kycConfig;
+    KycHistory latestKycHistory;
 
     public KycTenantResMapper(List<Customers> tenants,
                               BillingRules billingRule,
                               BillingRulesService billingRulesService,
-                              List<Customers> allTenants) {
+                              List<Customers> allTenants,
+                              KycConfig kycConfig,
+                              KycHistory latestKycHistory) {
         this.tenants = tenants;
         this.billingRule = billingRule;
         this.billingRulesService = billingRulesService;
         this.allTenants = allTenants;
+        this.kycConfig = kycConfig;
+        this.latestKycHistory = latestKycHistory;
     }
 
     @Override
@@ -40,7 +47,27 @@ public class KycTenantResMapper implements Function<HostelV1, KycTenantRes> {
 
         String fullAddress = Utils.buildFullAddress(hostel);
 
+        Date today = new Date();
+        Date todayStart = Utils.getStartOfDay(today);
+
         boolean kycEnableStatus = false;
+        if (latestKycHistory != null){
+            if (latestKycHistory.getEndDate() != null){
+                Date endDateStart = Utils.getStartOfDay(latestKycHistory.getEndDate());
+                if (!endDateStart.before(todayStart)){
+                    kycEnableStatus = true;
+                }
+            } else {
+                kycEnableStatus = true;
+            }
+        }
+
+        int kycLimitPerMonth = -1;
+        if (kycConfig != null){
+            if (kycConfig.getLimitPerMonth() != null){
+                kycLimitPerMonth = kycConfig.getLimitPerMonth();
+            }
+        }
 
         TenantKycResMapper tenantKycResMapper = new TenantKycResMapper(billingRule, billingRulesService);
 
@@ -76,6 +103,6 @@ public class KycTenantResMapper implements Function<HostelV1, KycTenantRes> {
 
         return new KycTenantRes(hostelId, hostel.getHostelName(), initials, hostel.getMainImage(),
                 hostel.getMobile(), hostel.getEmailId(), fullAddress, totalTenants, totalRequested,
-                totalVerified, totalWaitingForApproval, kycEnableStatus, tenantsRes);
+                totalVerified, totalWaitingForApproval, kycEnableStatus, kycLimitPerMonth, tenantsRes);
     }
 }

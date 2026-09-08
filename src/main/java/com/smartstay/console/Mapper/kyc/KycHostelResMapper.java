@@ -1,9 +1,6 @@
 package com.smartstay.console.Mapper.kyc;
 
-import com.smartstay.console.dao.Customers;
-import com.smartstay.console.dao.HostelV1;
-import com.smartstay.console.dao.KYCUsage;
-import com.smartstay.console.dao.KycDetails;
+import com.smartstay.console.dao.*;
 import com.smartstay.console.ennum.KycStatus;
 import com.smartstay.console.responses.kyc.KycHostelRes;
 import com.smartstay.console.utils.Utils;
@@ -17,11 +14,17 @@ public class KycHostelResMapper implements Function<HostelV1, KycHostelRes> {
 
     Map<String, List<Customers>> tenantHostelMap;
     Map<String, KYCUsage> kycUsageHostelMap;
+    Map<String, KycConfig> kycConfigMap;
+    Map<String, KycHistory> latestKycHistoryMap;
 
     public KycHostelResMapper(Map<String, List<Customers>> tenantHostelMap,
-                              Map<String, KYCUsage> kycUsageHostelMap) {
+                              Map<String, KYCUsage> kycUsageHostelMap,
+                              Map<String, KycConfig> kycConfigMap,
+                              Map<String, KycHistory> latestKycHistoryMap) {
         this.tenantHostelMap = tenantHostelMap;
         this.kycUsageHostelMap = kycUsageHostelMap;
+        this.kycConfigMap = kycConfigMap;
+        this.latestKycHistoryMap = latestKycHistoryMap;
     }
 
     @Override
@@ -36,7 +39,33 @@ public class KycHostelResMapper implements Function<HostelV1, KycHostelRes> {
 
         String fullAddress = Utils.buildFullAddress(hostel);
 
+        Date today = new Date();
+        Date todayStart = Utils.getStartOfDay(today);
+
         boolean kycEnableStatus = false;
+        if (latestKycHistoryMap != null) {
+            KycHistory latestKycHistory = latestKycHistoryMap.getOrDefault(hostelId, null);
+            if (latestKycHistory != null){
+                if (latestKycHistory.getEndDate() != null){
+                    Date endDateStart = Utils.getStartOfDay(latestKycHistory.getEndDate());
+                    if (!endDateStart.before(todayStart)){
+                        kycEnableStatus = true;
+                    }
+                } else {
+                    kycEnableStatus = true;
+                }
+            }
+        }
+
+        int kycLimitPerMonth = -1;
+        if (kycConfigMap != null) {
+            KycConfig kycConfig = kycConfigMap.getOrDefault(hostelId, null);
+            if (kycConfig != null){
+                if (kycConfig.getLimitPerMonth() != null){
+                    kycLimitPerMonth = kycConfig.getLimitPerMonth();
+                }
+            }
+        }
 
         Map<String, Customers> tenantMap = new HashMap<>();
 
@@ -131,7 +160,7 @@ public class KycHostelResMapper implements Function<HostelV1, KycHostelRes> {
 
         return new KycHostelRes(hostelId, hostel.getHostelName(), initials, hostel.getMainImage(),
                 hostel.getMobile(), hostel.getEmailId(), fullAddress, totalTenants, totalVerifiedTenant, latestRequestTo,
-                latestCompletionBy, totalRequests, totalCompleted, kycEnableStatus, latestRequestDate,
+                latestCompletionBy, totalRequests, totalCompleted, kycEnableStatus, kycLimitPerMonth, latestRequestDate,
                 latestRequestTime, latestCompletionDate, latestCompletionTime, lastUpdatedDate, lastUpdatedTime);
     }
 }

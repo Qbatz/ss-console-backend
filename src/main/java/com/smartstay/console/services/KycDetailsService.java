@@ -10,10 +10,14 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.customers.KycDetailsSnapshot;
 import com.smartstay.console.dto.date.StartEndDateDto;
 import com.smartstay.console.dto.files.UploadFiles;
+import com.smartstay.console.dto.kyc.KycConfigSnapshot;
+import com.smartstay.console.dto.kyc.KycHistorySnapshot;
 import com.smartstay.console.dto.kycDetails.*;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.exceptions.BadRequestException;
+import com.smartstay.console.payloads.kyc.DisableKycPayload;
 import com.smartstay.console.payloads.kyc.EnableKycPayload;
+import com.smartstay.console.payloads.kyc.KycMonthLimitPayload;
 import com.smartstay.console.repositories.KycDetailsRepository;
 import com.smartstay.console.responses.date.DateFilterRes;
 import com.smartstay.console.responses.kyc.KycHostelRes;
@@ -35,6 +39,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.File;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -510,7 +515,19 @@ public class KycDetailsService {
                 .collect(Collectors.toMap(KYCUsage::getHostelId,
                         Function.identity(), (a, b) -> a));
 
-        KycHostelResMapper mapper = new KycHostelResMapper(tenantHostelMap, kycUsageHostelMap);
+        List<KycConfig> kycConfigs = kycConfigService
+                .getAllByHostelIds(hostelIds);
+        Map<String, KycConfig> kycConfigMap = kycConfigs.stream()
+                .collect(Collectors.toMap(KycConfig::getHostelId, Function.identity(),
+                        (a, b) -> a));
+
+        List<KycHistory> latestKycHistories = kycHistoryService
+                .getAllLatestByHostelIds(hostelIds);
+        Map<String, KycHistory> latestKycHistoryMap = latestKycHistories.stream()
+                .collect(Collectors.toMap(KycHistory::getHostelId, Function.identity()));
+
+        KycHostelResMapper mapper = new KycHostelResMapper(tenantHostelMap, kycUsageHostelMap,
+                kycConfigMap, latestKycHistoryMap);
 
         List<KycHostelRes> responseList = hostels.stream()
                 .map(mapper)
@@ -590,8 +607,12 @@ public class KycDetailsService {
 
         List<Customers> allTenants = customersService.findCustomersByHostelId(hostelId);
 
+        KycConfig kycConfig = kycConfigService.getByHostelId(hostelId);
+
+        KycHistory latestKycHistory = kycHistoryService.getLatestByHostelId(hostelId);
+
         KycTenantResMapper mapper = new KycTenantResMapper(tenants, billingRule,
-                billingRulesService, allTenants);
+                billingRulesService, allTenants, kycConfig, latestKycHistory);
 
         KycTenantRes kycTenantRes = mapper.apply(hostel);
 
@@ -630,7 +651,46 @@ public class KycDetailsService {
             return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        Date today = new Date();
+        Date todayStart = Utils.getStartOfDay(today);
+
         KycDetails kycDetails = tenant.getKycDetails();
+
+//        KycConfig kycConfig = kycConfigService.getByHostelId(tenant.getHostelId());
+//        KycHistory latestKycHistory = kycHistoryService.getLatestByHostelId(tenant.getHostelId());
+//
+//        if (kycConfig == null || latestKycHistory == null) {
+//            return new ResponseEntity<>(Utils.KYC_NOT_ENABLED, HttpStatus.BAD_REQUEST);
+//        }
+//
+//        if (latestKycHistory.getEndDate() != null){
+//            Date historyEndDate = latestKycHistory.getEndDate();
+//            Date historyEndDateStart = Utils.getStartOfDay(historyEndDate);
+//
+//            if (historyEndDateStart.before(todayStart)) {
+//                return new ResponseEntity<>(Utils.KYC_NOT_ENABLED, HttpStatus.BAD_REQUEST);
+//            }
+//        }
+//
+//        int limitPerMonth = kycConfig.getLimitPerMonth() != null ? kycConfig.getLimitPerMonth() : -1;
+//
+//        LocalDate todayLocalDate = Utils.dateToLocalDate(today);
+//        Date monthStartDate = Utils.getStartDateOfMonth(todayLocalDate);
+//
+//        long kycDetailsCount = kycDetailsRepository
+//                .findCountByHostelIdAndAfterDate(tenant.getHostelId(), monthStartDate);
+//
+//        if (kycDetails == null){
+//            if (limitPerMonth != -1 && kycDetailsCount >= limitPerMonth) {
+//                return new ResponseEntity<>(Utils.KYC_LIMIT_REACHED, HttpStatus.BAD_REQUEST);
+//            }
+//        } else if (kycDetails.getCurrentStatus() != null
+//                && !KycStatus.REQUESTED.name().equals(kycDetails.getCurrentStatus())){
+//
+//            if (limitPerMonth != -1 && kycDetailsCount > limitPerMonth) {
+//                return new ResponseEntity<>(Utils.KYC_LIMIT_REACHED, HttpStatus.BAD_REQUEST);
+//            }
+//        }
 
         KYCUsage kycUsage = kycUsageService.getByHostelId(tenant.getHostelId());
 
@@ -654,8 +714,6 @@ public class KycDetailsService {
                 return regenerateAccessToken(kycDetails, kycUsage, tenant, owner, loggedInAgent);
             }
         }
-
-        Date today = new Date();
 
         String tenantFullName = Utils.getFullName(tenant.getFirstName(), tenant.getLastName());
 
@@ -850,13 +908,16 @@ public class KycDetailsService {
 
         KycHistory latestKycHistory = kycHistoryService.getLatestByHostelId(hostelId);
 
+        Date today = new Date();
+        Date todayStart = Utils.getStartOfDay(today);
+
         if (latestKycHistory != null) {
-            if (latestKycHistory.getEndDate() == null){
-                return new ResponseEntity<>("Kyc is already enabled", HttpStatus.BAD_REQUEST);
+            if (latestKycHistory.getEndDate() == null ||
+                    Utils.getStartOfDay(latestKycHistory.getEndDate())
+                            .after(todayStart)) {
+                return new ResponseEntity<>(Utils.KYC_ALREADY_ENABLED, HttpStatus.BAD_REQUEST);
             }
         }
-
-        Date today = new Date();
 
         KycHistory kycHistory = new KycHistory();
 
@@ -888,6 +949,181 @@ public class KycDetailsService {
         }
 
         kycConfig.setCanRequest(true);
+
+        kycHistory = kycHistoryService.save(kycHistory);
+        kycConfigService.save(kycConfig);
+
+        KycHistorySnapshot newSnapshot = SnapshotUtility.toSnapshot(latestKycHistory);
+
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.CREATE, Source.KYC_HISTORY,
+                String.valueOf(kycHistory.getHistoryId()), null, newSnapshot);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> disableKyc(String hostelId, DisableKycPayload payload) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        HostelV1 hostel = hostelService.getHostelInfo(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        KycConfig kycConfig = kycConfigService.getByHostelId(hostelId);
+
+        KycHistory latestKycHistory = kycHistoryService.getLatestByHostelId(hostelId);
+        if (latestKycHistory == null){
+            return new ResponseEntity<>(Utils.KYC_NOT_ENABLED, HttpStatus.BAD_REQUEST);
+        }
+
+        KycHistorySnapshot oldSnapshot = SnapshotUtility.toSnapshot(latestKycHistory);
+
+        Date today = new Date();
+        Date todayStart = Utils.getStartOfDay(today);
+
+        Date endDate = latestKycHistory.getEndDate() != null ? latestKycHistory.getEndDate() : todayStart;
+        boolean isCancelledDueToPlan = false;
+        String cancellationReason = null;
+        if (payload != null) {
+            if (payload.endDate() != null){
+                endDate = Utils.localDateToDate(payload.endDate());
+            }
+            isCancelledDueToPlan = payload.cancelledDueToPlan();
+            cancellationReason = payload.cancellationReason();
+        }
+
+        if (endDate.before(todayStart)){
+            return new ResponseEntity<>("End date can not be in past", HttpStatus.BAD_REQUEST);
+        }
+
+        Date startDate = latestKycHistory.getStartDate();
+        if (startDate != null){
+            if (endDate.before(startDate)){
+                return new ResponseEntity<>("End date can not be before start date", HttpStatus.BAD_REQUEST);
+            }
+        } else {
+            return new ResponseEntity<>("Start date is null", HttpStatus.BAD_REQUEST);
+        }
+
+        latestKycHistory.setEndDate(endDate);
+        latestKycHistory.setIsCancelledDueToPlan(isCancelledDueToPlan);
+        latestKycHistory.setCancellationReason(cancellationReason);
+        latestKycHistory.setCancelledBy(loggedInAgentId);
+        latestKycHistory.setUpdatedBy(loggedInAgentId);
+
+        int limitPerMonth = -1;
+        if (kycConfig == null){
+            kycConfig = new KycConfig();
+
+            kycConfig.setHostelId(hostelId);
+            kycConfig.setLimitPerMonth(-1);
+            kycConfig.setCreatedBy(loggedInAgentId);
+            kycConfig.setCreatedAt(today);
+        } else {
+            kycConfig.setUpdatedBy(loggedInAgentId);
+            kycConfig.setUpdatedAt(today);
+
+            if (kycConfig.getLimitPerMonth() != null){
+                limitPerMonth = kycConfig.getLimitPerMonth();
+            }
+        }
+
+        boolean canRequest = false;
+        if (!endDate.before(todayStart)){
+
+            LocalDate todayLocalDate = Utils.dateToLocalDate(today);
+            Date monthStartDate = Utils.getStartDateOfMonth(todayLocalDate);
+
+            long kycDetailsCount = kycDetailsRepository
+                    .findCountByHostelIdAndAfterDate(hostelId, monthStartDate);
+
+            if (limitPerMonth < 0){
+                canRequest = true;
+            } else if (kycDetailsCount < limitPerMonth){
+                canRequest = true;
+            }
+        }
+
+        kycConfig.setCanRequest(canRequest);
+
+        latestKycHistory = kycHistoryService.save(latestKycHistory);
+        kycConfigService.save(kycConfig);
+
+        KycHistorySnapshot newSnapshot = SnapshotUtility.toSnapshot(latestKycHistory);
+
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.UPDATE, Source.KYC_HISTORY,
+                String.valueOf(latestKycHistory.getHistoryId()), oldSnapshot, newSnapshot);
+
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> setMonthLimit(String hostelId, KycMonthLimitPayload payload) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        HostelV1 hostel = hostelService.getHostelInfo(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        KycConfig kycConfig = kycConfigService.getByHostelId(hostelId);
+
+        KycHistory latestKycHistory = kycHistoryService.getLatestByHostelId(hostelId);
+        if (latestKycHistory == null){
+            return new ResponseEntity<>(Utils.KYC_NOT_ENABLED, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        int limitPerMonth = -1;
+        if (payload != null) {
+            if (payload.perMonthLimit() < 0 && payload.perMonthLimit() != -1){
+                return new ResponseEntity<>("Per month limit can not be less than 0", HttpStatus.BAD_REQUEST);
+            }
+            limitPerMonth = payload.perMonthLimit();
+        }
+
+        boolean isCreated = false;
+        KycConfigSnapshot oldSnapshot = null;
+
+        if (kycConfig == null){
+            kycConfig = new KycConfig();
+
+            kycConfig.setHostelId(hostelId);
+            kycConfig.setCanRequest(false);
+            kycConfig.setCreatedBy(loggedInAgentId);
+            kycConfig.setCreatedAt(today);
+
+            isCreated = true;
+        } else {
+            kycConfig.setUpdatedBy(loggedInAgentId);
+            kycConfig.setUpdatedAt(today);
+
+            oldSnapshot = SnapshotUtility.toSnapshot(kycConfig);
+        }
+
+        kycConfig.setLimitPerMonth(limitPerMonth);
+
+        kycConfig = kycConfigService.save(kycConfig);
+
+        KycConfigSnapshot newSnapshot = SnapshotUtility.toSnapshot(kycConfig);
+
+        if (isCreated) {
+            agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.CREATE, Source.KYC_CONFIG,
+                    String.valueOf(kycConfig.getConfigId()), null, newSnapshot);
+        } else {
+            agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.UPDATE, Source.KYC_CONFIG,
+                    String.valueOf(kycConfig.getConfigId()), oldSnapshot, newSnapshot);
+        }
 
         return new ResponseEntity<>(HttpStatus.OK);
     }

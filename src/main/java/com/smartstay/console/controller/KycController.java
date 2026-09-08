@@ -1,6 +1,8 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.payloads.kyc.DisableKycPayload;
 import com.smartstay.console.payloads.kyc.EnableKycPayload;
+import com.smartstay.console.payloads.kyc.KycMonthLimitPayload;
 import com.smartstay.console.services.KycDetailsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -68,5 +70,17 @@ public class KycController {
     public ResponseEntity<?> enableKyc(@PathVariable("hostelId") String hostelId,
                                        @Valid @RequestBody EnableKycPayload payload){
         return kycDetailsService.enableKyc(hostelId, payload);
+    }
+
+    @PostMapping("/disable/{hostelId}")
+    public ResponseEntity<?> disableKyc(@PathVariable("hostelId") String hostelId,
+                                        @Valid @RequestBody DisableKycPayload payload){
+        return kycDetailsService.disableKyc(hostelId, payload);
+    }
+
+    @PostMapping("/month-limit/{hostelId}")
+    public ResponseEntity<?> setMonthLimit(@PathVariable("hostelId") String hostelId,
+                                           @Valid @RequestBody KycMonthLimitPayload payload){
+        return kycDetailsService.setMonthLimit(hostelId, payload);
     }
 }

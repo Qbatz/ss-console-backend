@@ -14,5 +14,6 @@ public record KycTenantRes(String hostelId,
                            long totalVerified,
                            long totalWaitingForApproval,
                            boolean kycEnableStatus,
+                           int kycLimitPerMonth,
                            List<TenantKycRes> tenants) {
 }

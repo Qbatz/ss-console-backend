@@ -69,6 +69,9 @@ public class Utils {
     public static final String BED_IS_OCCUPIED = "Bed is occupied";
     public static final String INVOICE_IS_NOT_ADVANCE = "Invoice is not an advance invoice";
     public static final String INVOICE_NOT_PAID = "Invoice is not paid";
+    public static final String KYC_ALREADY_ENABLED = "Kyc is already enabled";
+    public static final String KYC_NOT_ENABLED = "Kyc is not enabled";
+    public static final String KYC_LIMIT_REACHED = "Kyc limit reached";
 
     public static final String NO_ROLES_FOUND = "No roles found";
     public static final String NO_HOSTEL_FOUND = "No hostel found";
@@ -717,6 +720,13 @@ public class Utils {
         return Date.from(
                 localDate.atStartOfDay(ZoneId.systemDefault()).toInstant()
         );
+    }
+
+    public static LocalDate dateToLocalDate(Date date) {
+
+        if (date == null) return null;
+
+        return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
     }
 
     public static Set<Integer> getAllDaysOfMonth(Date date) {

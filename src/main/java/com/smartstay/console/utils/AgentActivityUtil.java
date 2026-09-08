@@ -100,6 +100,8 @@ public class AgentActivityUtil {
             case SETTLEMENT_GENERATED -> "Generated a settlement invoice";
             case PRODUCT_UPDATE -> "Created a new product update";
             case KYC_SEND_REMINDER -> "Reminder successfully send to customer";
+            case KYC_CONFIG -> "Created a new kyc configuration";
+            case KYC_HISTORY -> "Created a new kyc history";
             default -> "Created successfully";
         };
     }
@@ -132,10 +134,12 @@ public class AgentActivityUtil {
             case SUBSCRIPTION_INVOICE_URL -> "Updated a subscription invoice url";
             case TENANT_JOINING_DATE -> "Updated a tenant joining date";
             case BED -> "Updated a bed";
-            case PRODUCT_UPDATE -> "Updated a new product update";
+            case PRODUCT_UPDATE -> "Updated a product update";
             case FILTER_OPTIONS -> "Updated a filter option";
             case KYC_SEND_REMINDER -> "Reminder successfully send to customer";
             case TENANT_EB_RECALCULATE -> "EB recalculated successfully";
+            case KYC_CONFIG -> "Updated a kyc configuration";
+            case KYC_HISTORY -> "Updated a kyc history";
             default -> "Updated successfully";
         };
     }
