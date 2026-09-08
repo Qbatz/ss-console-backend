@@ -48,13 +48,13 @@ public class KycTenantResMapper implements Function<HostelV1, KycTenantRes> {
         String fullAddress = Utils.buildFullAddress(hostel);
 
         Date today = new Date();
-        Date todayStart = Utils.getStartOfDay(today);
+        Date todayEnd = Utils.getEndOfDay(today);
 
         boolean kycEnableStatus = false;
         if (latestKycHistory != null){
             if (latestKycHistory.getEndDate() != null){
                 Date endDateStart = Utils.getStartOfDay(latestKycHistory.getEndDate());
-                if (!endDateStart.before(todayStart)){
+                if (!endDateStart.before(todayEnd)){
                     kycEnableStatus = true;
                 }
             } else {
@@ -72,6 +72,7 @@ public class KycTenantResMapper implements Function<HostelV1, KycTenantRes> {
         TenantKycResMapper tenantKycResMapper = new TenantKycResMapper(billingRule, billingRulesService);
 
         long totalTenants = 0;
+        long totalKycRequestedTenants = 0;
         long totalRequested = 0;
         long totalVerified = 0;
         long totalWaitingForApproval = 0;
@@ -90,6 +91,7 @@ public class KycTenantResMapper implements Function<HostelV1, KycTenantRes> {
                     } else if (KycStatus.WAITING_FOR_APPROVAL.name().equals(kycDetails.getCurrentStatus())) {
                         totalWaitingForApproval++;
                     }
+                    totalKycRequestedTenants++;
                 }
             }
         }
@@ -102,7 +104,8 @@ public class KycTenantResMapper implements Function<HostelV1, KycTenantRes> {
         }
 
         return new KycTenantRes(hostelId, hostel.getHostelName(), initials, hostel.getMainImage(),
-                hostel.getMobile(), hostel.getEmailId(), fullAddress, totalTenants, totalRequested,
-                totalVerified, totalWaitingForApproval, kycEnableStatus, kycLimitPerMonth, tenantsRes);
+                hostel.getMobile(), hostel.getEmailId(), fullAddress, totalTenants, totalKycRequestedTenants,
+                totalRequested, totalVerified, totalWaitingForApproval, kycEnableStatus, kycLimitPerMonth,
+                tenantsRes);
     }
 }

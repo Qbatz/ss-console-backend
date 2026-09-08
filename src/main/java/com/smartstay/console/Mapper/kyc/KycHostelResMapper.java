@@ -40,7 +40,7 @@ public class KycHostelResMapper implements Function<HostelV1, KycHostelRes> {
         String fullAddress = Utils.buildFullAddress(hostel);
 
         Date today = new Date();
-        Date todayStart = Utils.getStartOfDay(today);
+        Date todayEnd = Utils.getEndOfDay(today);
 
         boolean kycEnableStatus = false;
         if (latestKycHistoryMap != null) {
@@ -48,7 +48,7 @@ public class KycHostelResMapper implements Function<HostelV1, KycHostelRes> {
             if (latestKycHistory != null){
                 if (latestKycHistory.getEndDate() != null){
                     Date endDateStart = Utils.getStartOfDay(latestKycHistory.getEndDate());
-                    if (!endDateStart.before(todayStart)){
+                    if (!endDateStart.before(todayEnd)){
                         kycEnableStatus = true;
                     }
                 } else {

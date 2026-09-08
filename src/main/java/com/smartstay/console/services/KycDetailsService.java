@@ -491,8 +491,43 @@ public class KycDetailsService {
             kycUsedHostelIds = filteredHostelIds;
         }
 
+        Date today = new Date();
+        Date todayEnd = Utils.getEndOfDay(today);
+
         if (isEnabled != null) {
-            // enable/disable logic
+
+            List<KycHistory> allLatestKycHistories = kycHistoryService
+                    .getAllLatestByHostelIds(kycUsedHostelIds);
+            Map<String, KycHistory> allLatestKycHistoryMap = allLatestKycHistories.stream()
+                    .collect(Collectors.toMap(KycHistory::getHostelId, Function.identity()));
+
+            Set<String> filteredHostelIds = new HashSet<>();
+            for (String hostelId : kycUsedHostelIds) {
+
+                KycHistory latestKycHistory = allLatestKycHistoryMap
+                        .getOrDefault(hostelId, null);
+
+                boolean enabled = false;
+
+                if (latestKycHistory != null) {
+                    if (latestKycHistory.getEndDate() != null){
+                        Date historyEndDate = latestKycHistory.getEndDate();
+                        Date historyEndDateStart = Utils.getStartOfDay(historyEndDate);
+
+                        if (!historyEndDateStart.before(todayEnd)) {
+                            enabled = true;
+                        }
+                    } else {
+                        enabled = true;
+                    }
+                }
+
+                if (enabled == isEnabled) {
+                    filteredHostelIds.add(hostelId);
+                }
+            }
+
+            kycUsedHostelIds = filteredHostelIds;
         }
 
         Page<HostelV1> pagedHostels = hostelService
@@ -985,8 +1020,9 @@ public class KycDetailsService {
 
         Date today = new Date();
         Date todayStart = Utils.getStartOfDay(today);
+        Date todayEnd = Utils.getEndOfDay(today);
 
-        Date endDate = latestKycHistory.getEndDate() != null ? latestKycHistory.getEndDate() : todayStart;
+        Date endDate = latestKycHistory.getEndDate() != null ? latestKycHistory.getEndDate() : today;
         boolean isCancelledDueToPlan = false;
         String cancellationReason = null;
         if (payload != null) {
@@ -1034,7 +1070,7 @@ public class KycDetailsService {
         }
 
         boolean canRequest = false;
-        if (!endDate.before(todayStart)){
+        if (!endDate.before(todayEnd)){
 
             LocalDate todayLocalDate = Utils.dateToLocalDate(today);
             Date monthStartDate = Utils.getStartDateOfMonth(todayLocalDate);
