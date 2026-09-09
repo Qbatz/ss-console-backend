@@ -487,6 +487,19 @@ public class Utils {
         return localDate.getDayOfMonth();
     }
 
+    public static Date getYesterday(Date date) {
+        if (date == null) return null;
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .minusDays(1);
+
+        return Date.from(
+                localDate.atStartOfDay(ZoneId.systemDefault()).toInstant()
+        );
+    }
+
     public static Integer getTwoDaysAgoDayOfMonth(Date date) {
         if (date == null) return null;
 

@@ -492,7 +492,7 @@ public class KycDetailsService {
         }
 
         Date today = new Date();
-        Date todayEnd = Utils.getEndOfDay(today);
+        Date todayStart = Utils.getStartOfDay(today);
 
         if (isEnabled != null) {
 
@@ -514,7 +514,7 @@ public class KycDetailsService {
                         Date historyEndDate = latestKycHistory.getEndDate();
                         Date historyEndDateStart = Utils.getStartOfDay(historyEndDate);
 
-                        if (!historyEndDateStart.before(todayEnd)) {
+                        if (!historyEndDateStart.before(todayStart)) {
                             enabled = true;
                         }
                     } else {
@@ -948,8 +948,8 @@ public class KycDetailsService {
 
         if (latestKycHistory != null) {
             if (latestKycHistory.getEndDate() == null ||
-                    Utils.getStartOfDay(latestKycHistory.getEndDate())
-                            .after(todayStart)) {
+                    !Utils.getStartOfDay(latestKycHistory.getEndDate())
+                            .before(todayStart)) {
                 return new ResponseEntity<>(Utils.KYC_ALREADY_ENABLED, HttpStatus.BAD_REQUEST);
             }
         }
@@ -1020,7 +1020,6 @@ public class KycDetailsService {
 
         Date today = new Date();
         Date todayStart = Utils.getStartOfDay(today);
-        Date todayEnd = Utils.getEndOfDay(today);
 
         Date endDate = latestKycHistory.getEndDate() != null ? latestKycHistory.getEndDate() : today;
         boolean isCancelledDueToPlan = false;
@@ -1070,7 +1069,7 @@ public class KycDetailsService {
         }
 
         boolean canRequest = false;
-        if (!endDate.before(todayEnd)){
+        if (!endDate.before(todayStart)){
 
             LocalDate todayLocalDate = Utils.dateToLocalDate(today);
             Date monthStartDate = Utils.getStartDateOfMonth(todayLocalDate);
