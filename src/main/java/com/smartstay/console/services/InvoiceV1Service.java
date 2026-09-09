@@ -2205,4 +2205,16 @@ public class InvoiceV1Service {
                                                                                     Set<String> invoiceTypes) {
         return invoiceV1Repository.findAvailableRetainerInvoicesByCustomerIdAndInvoiceTypes(customerId, invoiceTypes);
     }
+
+    public List<InvoicesV1> getAdditionalAdvanceInvoicesByCustomerId(String customerId) {
+        String invoiceType = InvoiceType.ADDITIONAL_ADVANCE.name();
+        return invoiceV1Repository.findAllInvoicesByCustomerIdAndInvoiceType(customerId, invoiceType);
+    }
+
+    public List<InvoicesV1> getOtherInvoicesByCustomerIdAndBetweenDates(String customerId, Date startDate,
+                                                                        Date endDate) {
+        String invoiceType = InvoiceType.OTHER.name();
+        return invoiceV1Repository.findAllByCustomerIdAndInvoiceTypeAndBetweenDates(customerId, invoiceType,
+                startDate, endDate);
+    }
 }

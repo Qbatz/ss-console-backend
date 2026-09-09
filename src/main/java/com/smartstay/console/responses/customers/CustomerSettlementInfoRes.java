@@ -10,5 +10,6 @@ public record CustomerSettlementInfoRes(CustomerInfoRes customerInfo,
                                         CustomerAdvanceInfoRes customerAdvanceInfo,
                                         CustomerRetainerInfoRes customerRetainerInfo,
                                         CustomerDeductionsInfoRes customerDeductionsInfo,
+                                        AdditionalAdvanceInfoRes additionalAdvanceInfo,
                                         CustomerFinalSettlementInfoRes customerFinalSettlementInfo) {
 }

@@ -1026,7 +1026,8 @@ public class KycDetailsService {
         String cancellationReason = null;
         if (payload != null) {
             if (payload.endDate() != null){
-                endDate = Utils.localDateToDate(payload.endDate());
+                Date payloadEndDate = Utils.localDateToDate(payload.endDate());
+                endDate = Utils.getEndOfDay(payloadEndDate);
             }
             isCancelledDueToPlan = payload.cancelledDueToPlan();
             cancellationReason = payload.cancellationReason();

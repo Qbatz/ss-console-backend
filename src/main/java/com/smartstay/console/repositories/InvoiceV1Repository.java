@@ -122,4 +122,24 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
                 AND i.customerId IN :customerIds
             """)
     List<InvoicesV1> findThisMonthInvoiceGenerated(String hostelId, Date invoiceStartDate, List<String> customerIds);
+
+    @Query("""
+            select i from invoicesv1 i
+            where i.customerId = :customerId
+                and i.invoiceType = :invoiceType
+            """)
+    List<InvoicesV1> findAllInvoicesByCustomerIdAndInvoiceType(String customerId, String invoiceType);
+
+    @Query("""
+            select i from invoicesv1 i
+            where i.customerId = :customerId
+                and i.invoiceType = :invoiceType
+                and DATE(i.invoiceStartDate) <= DATE(:endDate)
+                and DATE(i.invoiceEndDate) >= DATE(:startDate)
+                and i.isCancelled = false
+            """)
+    List<InvoicesV1> findAllByCustomerIdAndInvoiceTypeAndBetweenDates(String customerId,
+                                                                      String invoiceType,
+                                                                      Date startDate,
+                                                                      Date endDate);
 }
