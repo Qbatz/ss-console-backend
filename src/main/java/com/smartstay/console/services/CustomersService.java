@@ -1493,6 +1493,8 @@ public class CustomersService {
                         finalSettlementInfoRes.otherItemAmount() : 0;
                 double currentMonthOtherInvPendingAmount = finalSettlementInfoRes.currentMonthOtherInvoicePendingAmount()
                         != null ? finalSettlementInfoRes.currentMonthOtherInvoicePendingAmount() : 0;
+                double additionalAdvanceBalanceAmount = finalSettlementInfoRes.additionalAdvanceBalanceAmount()
+                        != null ? finalSettlementInfoRes.additionalAdvanceBalanceAmount() : 0;
 
                 if (isCustomRent){
 //                    if (customRentAmount < currentMonthPaidRent) {
@@ -1530,7 +1532,7 @@ public class CustomersService {
                 totalAmountToBePaid = unpaidInvoicesAmount + currentMonthPayableRent - currentMonthPaidRent
                         + otherItemAmount + finalDeductionPendingAmount + ebAmount + walletAmount
                         - retainerBalanceAmount - discountAmount - refundableAdvanceAmount
-                        + currentMonthOtherInvPendingAmount;
+                        + currentMonthOtherInvPendingAmount - additionalAdvanceBalanceAmount;
 
                 totalAmountToBePaid = Utils.roundOfDouble(totalAmountToBePaid);
             }
@@ -1833,7 +1835,7 @@ public class CustomersService {
 
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
                 customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
-                customerInfoRes, customerRetainerInfoRes);
+                customerInfoRes, customerRetainerInfoRes, additionalAdvanceInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
@@ -1882,7 +1884,7 @@ public class CustomersService {
 
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
                 customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
-                customerInfoRes, customerRetainerInfoRes);
+                customerInfoRes, customerRetainerInfoRes, additionalAdvanceInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
@@ -1931,7 +1933,7 @@ public class CustomersService {
 
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
                 customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
-                customerInfoRes, customerRetainerInfoRes);
+                customerInfoRes, customerRetainerInfoRes, additionalAdvanceInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
@@ -1982,7 +1984,7 @@ public class CustomersService {
 
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
                 customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
-                customerInfoRes, customerRetainerInfoRes);
+                customerInfoRes, customerRetainerInfoRes, additionalAdvanceInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
@@ -1996,7 +1998,8 @@ public class CustomersService {
                                                                        CustomerRentInfoRes customerRentInfoRes,
                                                                        CustomerDeductionsInfoRes customerDeductionsInfoRes,
                                                                        CustomerInfoRes customerInfoRes,
-                                                                       CustomerRetainerInfoRes customerRetainerInfoRes) {
+                                                                       CustomerRetainerInfoRes customerRetainerInfoRes,
+                                                                       AdditionalAdvanceInfoRes additionalAdvanceInfoRes) {
 
         boolean isBookingOrAdvancePaid = false;
         double availableAmountToRedeem = 0;
@@ -2090,6 +2093,12 @@ public class CustomersService {
                     customerRetainerInfoRes.totalBalanceAmount() : 0.0;
         }
 
+        double additionalAdvanceBalanceAmount = 0;
+        if (additionalAdvanceInfoRes != null){
+            additionalAdvanceBalanceAmount = additionalAdvanceInfoRes.advanceBalance() != null ?
+                    additionalAdvanceInfoRes.advanceBalance() : 0.0;
+        }
+
         double totalRefundableAdvance = 0.0;
         double totalAmountToBePaid = unpaidInvoicesTotalAmount + ebAmount +
                 walletAmount + currentMonthTotalAmount - retainerBalanceAmount;
@@ -2102,6 +2111,7 @@ public class CustomersService {
             totalAmountToBePaid = totalAmountToBePaid - availableAmountToRedeem;
             totalRefundableAdvance = availableAmountToRedeem;
         }
+        totalAmountToBePaid = totalAmountToBePaid + currentMonthOtherInvPendingAmount - additionalAdvanceBalanceAmount;
         boolean isRefundable = totalAmountToBePaid < 0;
 
         return new CustomerFinalSettlementInfoRes(label,
@@ -2112,8 +2122,8 @@ public class CustomersService {
                 Utils.roundOfDoubleTo2Digits(pendingAmount), Utils.roundOfDoubleTo2Digits(pendingDeductionAmount),
                 Utils.roundOfDoubleTo2Digits(ebAmount), Utils.roundOfDoubleTo2Digits(walletAmount),
                 Utils.roundOfDoubleTo2Digits(retainerBalanceAmount), Utils.roundOfDoubleTo2Digits(discountAmount),
-                Utils.roundOfDoubleTo2Digits(totalRefundableAdvance), isRefundable,
-                Utils.roundOfDoubleTo2Digits(totalRefundableRent)
+                Utils.roundOfDoubleTo2Digits(totalRefundableAdvance), Utils.roundOfDoubleTo2Digits(additionalAdvanceBalanceAmount),
+                isRefundable, Utils.roundOfDoubleTo2Digits(totalRefundableRent)
         );
     }
 

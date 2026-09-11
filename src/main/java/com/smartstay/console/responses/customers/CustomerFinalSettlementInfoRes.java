@@ -16,6 +16,7 @@ public record CustomerFinalSettlementInfoRes(String label,
                                              Double retainerBalanceAmount,
                                              Double discountAmount,
                                              Double refundableAdvance,
+                                             Double additionalAdvanceBalanceAmount,
                                              boolean isRefundable,
                                              Double refundableRent) {
 }
