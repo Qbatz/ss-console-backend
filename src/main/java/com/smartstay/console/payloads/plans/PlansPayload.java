@@ -26,5 +26,6 @@ public record PlansPayload(@NotBlank(message = "Plan name is required")
                            @NotNull(message = "Can customize is required")
                            Boolean canCustomize,
                            @Valid
-                           List<PlanFeaturesPayload> planFeatures) {
+                           List<PlanFeaturesPayload> planFeatures,
+                           Integer kycPerMonthLimit) {
 }

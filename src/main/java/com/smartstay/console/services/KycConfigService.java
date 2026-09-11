@@ -25,4 +25,8 @@ public class KycConfigService {
     public List<KycConfig> getAllByHostelIds(Set<String> hostelIds) {
         return kycConfigRepository.findAllByHostelIdIn(hostelIds);
     }
+
+    public void saveAll(List<KycConfig> kycConfigs) {
+        kycConfigRepository.saveAll(kycConfigs);
+    }
 }

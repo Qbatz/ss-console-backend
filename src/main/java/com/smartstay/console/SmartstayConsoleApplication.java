@@ -2,6 +2,7 @@ package com.smartstay.console;
 
 import com.smartstay.console.dao.*;
 import com.smartstay.console.repositories.AgentModulesRepository;
+import com.smartstay.console.repositories.PlansRepository;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.boot.CommandLineRunner;
@@ -164,4 +165,19 @@ public class SmartstayConsoleApplication {
             }
         };
     }
+
+//    @Bean
+//    CommandLineRunner setKycDefaultLimitForPlans(PlansRepository plansRepository) {
+//        return (args) -> {
+//            List<Plans> plans = plansRepository.findAll();
+//
+//            for (Plans plan : plans) {
+//                if (plan.getKycPerMonthLimit() == 0){
+//                    plan.setKycPerMonthLimit(-1);
+//                }
+//            }
+//
+//            plansRepository.saveAll(plans);
+//        };
+//    }
 }

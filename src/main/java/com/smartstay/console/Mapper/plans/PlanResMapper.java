@@ -63,8 +63,8 @@ public class PlanResMapper implements Function<Plans, PlansResponse> {
         yearlyPrice = Utils.roundOfDoubleTo2Digits(yearlyPrice);
 
         return new PlansResponse(plans.getPlanId(), plans.getPlanName(), plans.getPlanCode(),
-                plans.getPlanType(), plans.getDuration(), plans.getPrice(), plans.getDiscounts(),
-                plans.getGst(), plans.getCgst(), plans.getSgst(), plans.getGstAmount(),
+                plans.getPlanType(), plans.getKycPerMonthLimit(), plans.getDuration(), plans.getPrice(),
+                plans.getDiscounts(), plans.getGst(), plans.getCgst(), plans.getSgst(), plans.getGstAmount(),
                 plans.getCgstAmount(), plans.getSgstAmount(), plans.getFinalPrice(), yearlyPrice,
                 plans.isShouldShow(), plans.isCanCustomize(), createdAtDate, createdAtTime,
                 updatedAtDate, updatedAtTime, planFeaturesRes);
