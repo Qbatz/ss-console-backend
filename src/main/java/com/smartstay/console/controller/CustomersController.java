@@ -84,4 +84,9 @@ public class CustomersController {
                                           @Valid @RequestBody CustomerMobilePayload payload){
         return customersService.verifyMobile(customerId, payload);
     }
+
+    @PutMapping("/eb/recalculate/{customerId}")
+    public ResponseEntity<?> ebRecalculate(@PathVariable("customerId") String customerId){
+        return customersService.ebRecalculate(customerId);
+    }
 }

@@ -14,6 +14,8 @@ import com.smartstay.console.dto.hostel.*;
 import com.smartstay.console.dto.invoice.InvoiceItemSnapshot;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
+import com.smartstay.console.dto.kyc.KycConfigSnapshot;
+import com.smartstay.console.dto.kyc.KycHistorySnapshot;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
 import com.smartstay.console.dto.plans.SmartstayFeaturesSnapshot;
@@ -961,6 +963,40 @@ public class SnapshotUtility {
                 toSnapshotList(f.getFilterOptions(), SnapshotUtility::toSnapshot),
                 f.getIsActive(),
                 copyDate(f.getCreatedAt())
+        );
+    }
+
+    public static KycConfigSnapshot toSnapshot(KycConfig k) {
+
+        if (k == null) return null;
+
+        return new KycConfigSnapshot(
+                k.getConfigId(),
+                k.getHostelId(),
+                k.getLimitPerMonth(),
+                k.getCanRequest(),
+                k.getCreatedBy(),
+                k.getUpdatedBy(),
+                copyDate(k.getCreatedAt()),
+                copyDate(k.getUpdatedAt())
+        );
+    }
+
+    public static KycHistorySnapshot toSnapshot(KycHistory k) {
+        if (k == null) return null;
+
+        return new KycHistorySnapshot(
+                k.getHistoryId(),
+                k.getHostelId(),
+                copyDate(k.getStartDate()),
+                copyDate(k.getEndDate()),
+                k.getIsCancelledDueToPlan(),
+                k.getCancellationReason(),
+                k.getActivationReason(),
+                k.getCancelledBy(),
+                copyDate(k.getCreatedAt()),
+                k.getCreatedBy(),
+                k.getUpdatedBy()
         );
     }
 

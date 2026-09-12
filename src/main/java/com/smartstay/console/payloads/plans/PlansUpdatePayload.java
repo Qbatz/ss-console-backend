@@ -11,5 +11,6 @@ public record PlansUpdatePayload(String planName,
                                  Double gstPercentage,
                                  Boolean shouldShow,
                                  Boolean canCustomize,
-                                 List<PlanFeaturesUpdatePayload> planFeatures) {
+                                 List<PlanFeaturesUpdatePayload> planFeatures,
+                                 Integer kycPerMonthLimit) {
 }

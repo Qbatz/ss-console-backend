@@ -124,7 +124,7 @@ public class GenerateInvoiceForPostpaid {
         }
 
         customersList.forEach(item -> {
-            Double rentAmount = item.getRentAmount();
+            Double rentAmount = item.getRentAmount() != null ? item.getRentAmount() : 0.0;
 
             List<CustomersBedHistory> currentHistory = listCustomerBedHistory.stream()
                     .filter(i -> i.getCustomerId().equalsIgnoreCase(item.getCustomerId()))
@@ -132,7 +132,7 @@ public class GenerateInvoiceForPostpaid {
             //No bed change happens
             if (currentHistory.size() < 2) {
                 if (Utils.compareWithTwoDates(item.getJoiningDate(), currentBillingInvoiceStartDate) <= 0) {
-                    rentAmount = item.getRentAmount();
+                    rentAmount = item.getRentAmount() != null ? item.getRentAmount() : 0.0;
                     invoiceStartDate.set(currentBillingInvoiceStartDate);
                     invoiceDueDate.set(Utils.addDaysToDate(newMonthBillDate.currentBillStartDate(),
                             invoiceMonthBillingDates.dueDays()));
@@ -144,7 +144,7 @@ public class GenerateInvoiceForPostpaid {
                         Date dateAfterGracePeriod = Utils.addDaysToDate(currentBillingInvoiceStartDate,
                                 invoiceMonthBillingDates.gracePeriodDays());
                         if (Utils.compareWithTwoDates(item.getJoiningDate(), dateAfterGracePeriod) <= 0) {
-                            rentAmount = item.getRentAmount();
+                            rentAmount = item.getRentAmount() != null ? item.getRentAmount() : 0.0;
                         }
                         else {
                             rentAmount = calculateRentAmount(item.getJoiningDate(),

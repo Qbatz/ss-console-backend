@@ -54,6 +54,8 @@ public class SubscriptionService {
     private TrialDaysExtensionService trialDaysExtensionService;
     @Autowired
     private Environment environment;
+    @Autowired
+    private KycConfigService kycConfigService;
 
     @Transactional
     public ResponseEntity<?> subscribeHostel(String hostelId, Subscription payload, MultipartFile paymentProof) {
@@ -75,6 +77,10 @@ public class SubscriptionService {
         if (hostelV1 == null) {
             return new ResponseEntity<>(Utils.INVALID_HOSTEL_ID, HttpStatus.BAD_REQUEST);
         }
+
+        HostelPlan hostelPlan = hostelV1.getHostelPlan();
+
+        KycConfig kycConfig = kycConfigService.getByHostelId(hostelId);
 
         com.smartstay.console.dao.Subscription latestSubscription = subscriptionRepository
                 .findTopByHostelIdOrderByPlanStartsAtDesc(hostelId);
@@ -102,6 +108,7 @@ public class SubscriptionService {
         double discountPercentage = 100.0;
         String paymentProofUrl = null;
         int duration = 1;
+        int kycPerMonthLimit = -1;
         TrialDaysExtReason trialDaysExtReason = null;
         Date today = new Date();
 
@@ -266,6 +273,8 @@ public class SubscriptionService {
             }
 
             duration = plans.getDuration().intValue();
+
+            kycPerMonthLimit = plans.getKycPerMonthLimit();
         }
 
         Date startsAt = today;
@@ -276,6 +285,15 @@ public class SubscriptionService {
         }
 
         duration = duration - 1;
+
+        if (startsAt != today) {
+            if (hostelPlan != null && hostelPlan.getCurrentPlanCode() != null){
+                Plans currentPlan = plansService.findPlanByPlanCode(hostelPlan.getCurrentPlanCode());
+                if (currentPlan != null) {
+                    kycPerMonthLimit = currentPlan.getKycPerMonthLimit();
+                }
+            }
+        }
 
         OrderHistory newOrder = null;
         if (!plans.getPlanType().equalsIgnoreCase(PlanType.TRIAL.name()) &&
@@ -300,6 +318,22 @@ public class SubscriptionService {
             newOrder.setCreatedBy(agent.getAgentId());
 
             newOrder = orderHistoryService.save(newOrder);
+
+            if (kycConfig == null){
+                kycConfig = new KycConfig();
+
+                kycConfig.setHostelId(hostelId);
+                kycConfig.setCanRequest(true);
+                kycConfig.setCreatedBy(agent.getAgentId());
+                kycConfig.setCreatedAt(today);
+            } else {
+                kycConfig.setUpdatedBy(agent.getAgentId());
+                kycConfig.setUpdatedAt(today);
+            }
+
+            kycConfig.setLimitPerMonth(kycPerMonthLimit);
+
+            kycConfigService.save(kycConfig);
         }
 
         newSubscription.setPlanStartsAt(startsAt);
@@ -342,7 +376,6 @@ public class SubscriptionService {
 
         if (latestSubscription.getPlanEndsAt() != null) {
             if (Utils.compareWithTwoDates(latestSubscription.getPlanEndsAt(), today) < 0) {
-                HostelPlan hostelPlan = hostelV1.getHostelPlan();
                 if (hostelPlan == null) {
                     hostelPlan = new HostelPlan();
                     hostelPlan.setHostel(hostelV1);

@@ -9,6 +9,8 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dao.InvoiceItems;
 import com.smartstay.console.dto.billing.BillingPeriod;
 import com.smartstay.console.dto.customers.*;
+import com.smartstay.console.dto.eb.HostelEbAllocation;
+import com.smartstay.console.dto.eb.RoomEbAllocation;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.dto.invoice.CancelledInvoice;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
@@ -21,6 +23,7 @@ import com.smartstay.console.responses.customers.*;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
 import com.smartstay.console.responses.invoiceRedemption.InvoiceRedemptionRes;
 import com.smartstay.console.responses.transaction.TransactionResponse;
+import com.smartstay.console.utils.DateUtil;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
 import jakarta.transaction.Transactional;
@@ -120,7 +123,7 @@ public class CustomersService {
     @Autowired
     private ElectricityReadingsService electricityReadingsService;
     @Autowired
-    private AmenitiesService amenitiesService;
+    private HostelReadingService hostelReadingService;
     @Autowired
     private CustomerJobDetailsService customerJobDetailsService;
     @Autowired
@@ -1411,6 +1414,7 @@ public class CustomersService {
             List<CustomerWalletHistory> customerWalletHistories = new ArrayList<>();
             List<RetainerInfoRes> retainerInfosRes = new ArrayList<>();
             List<InvoicesV1> retainerInvoices = new ArrayList<>();
+            List<AdditionalAdvanceInvoicesRes> additionalAdvInvoices = new ArrayList<>();
 
             CustomerFinalSettlementInfoRes finalSettlementInfoRes = response.customerFinalSettlementInfo();
             UnpaidInvoicesInfoRes unpaidInvoicesInfoRes = response.unpaidInvoicesInfo();
@@ -1419,6 +1423,7 @@ public class CustomersService {
             CustomerAdvanceInfoRes advanceInfoRes = response.customerAdvanceInfo();
             CustomerWalletInfoRes walletInfoRes = response.customerWalletInfo();
             CustomerRetainerInfoRes retainerInfoRes = response.customerRetainerInfo();
+            AdditionalAdvanceInfoRes additionalAdvanceInfoRes = response.additionalAdvanceInfo();
 
             if (unpaidInvoicesInfoRes != null){
                 unpaidInvoicesRes = unpaidInvoicesInfoRes.unpaidInvoices() != null ?
@@ -1456,6 +1461,14 @@ public class CustomersService {
                 cancelledInvoices.add(unpaidInvoice);
             }
 
+            if (rentInfoRes != null) {
+                currentMonthTotalAmount = rentInfoRes.currentMonthTotalAmount() != null ?
+                        rentInfoRes.currentMonthTotalAmount() : 0;
+
+                rentBreakUpsRes = rentInfoRes.rentBreakUpInfo() != null ? rentInfoRes.rentBreakUpInfo() : new ArrayList<>();
+                otherItemsRes = rentInfoRes.otherItems() != null ? rentInfoRes.otherItems() : new ArrayList<>();
+            }
+
             if (finalSettlementInfoRes != null){
 
                 double currentMonthPayableRent = finalSettlementInfoRes.currentMonthPayableRent() != null ?
@@ -1478,6 +1491,10 @@ public class CustomersService {
                         finalSettlementInfoRes.unpaidInvoiceAmount() : 0;
                 double otherItemAmount = finalSettlementInfoRes.otherItemAmount() != null ?
                         finalSettlementInfoRes.otherItemAmount() : 0;
+                double currentMonthOtherInvPendingAmount = finalSettlementInfoRes.currentMonthOtherInvoicePendingAmount()
+                        != null ? finalSettlementInfoRes.currentMonthOtherInvoicePendingAmount() : 0;
+                double additionalAdvanceBalanceAmount = finalSettlementInfoRes.additionalAdvanceBalanceAmount()
+                        != null ? finalSettlementInfoRes.additionalAdvanceBalanceAmount() : 0;
 
                 if (isCustomRent){
 //                    if (customRentAmount < currentMonthPaidRent) {
@@ -1514,17 +1531,10 @@ public class CustomersService {
 
                 totalAmountToBePaid = unpaidInvoicesAmount + currentMonthPayableRent - currentMonthPaidRent
                         + otherItemAmount + finalDeductionPendingAmount + ebAmount + walletAmount
-                        - retainerBalanceAmount - discountAmount - refundableAdvanceAmount;
+                        - retainerBalanceAmount - discountAmount - refundableAdvanceAmount
+                        + currentMonthOtherInvPendingAmount - additionalAdvanceBalanceAmount;
 
                 totalAmountToBePaid = Utils.roundOfDouble(totalAmountToBePaid);
-            }
-
-            if (rentInfoRes != null) {
-                currentMonthTotalAmount = rentInfoRes.currentMonthTotalAmount() != null ?
-                        rentInfoRes.currentMonthTotalAmount() : 0;
-
-                rentBreakUpsRes = rentInfoRes.rentBreakUpInfo();
-                otherItemsRes = rentInfoRes.otherItems();
             }
 
             if (bookingInfoRes != null){
@@ -1538,18 +1548,23 @@ public class CustomersService {
             }
 
             if (walletInfoRes != null){
-                walletHistoriesRes = walletInfoRes.walletHistory();
+                walletHistoriesRes = walletInfoRes.walletHistory() != null ? walletInfoRes.walletHistory() : new ArrayList<>();
             }
 
             if (retainerInfoRes != null){
-                retainerInfosRes = retainerInfoRes.retainerInfos();
-                retainerInvoices = retainerInfoRes.retainerInvoices();
+                retainerInfosRes = retainerInfoRes.retainerInfos() != null ? retainerInfoRes.retainerInfos() : new ArrayList<>();
+                retainerInvoices = retainerInfoRes.retainerInvoices() != null ? retainerInfoRes.retainerInvoices() : new ArrayList<>();
             }
 
             for (InvoicesV1 retainerInvoice : retainerInvoices){
                 retainerInvoice.setBalanceAmount(0.0);
                 retainerInvoice.setUpdatedBy(authentication.getName());
                 retainerInvoice.setUpdatedAt(today);
+            }
+
+            if (additionalAdvanceInfoRes != null){
+                additionalAdvInvoices = additionalAdvanceInfoRes.advanceInvoices() != null ?
+                        additionalAdvanceInfoRes.advanceInvoices() : new ArrayList<>();
             }
 
             if (advanceInvoice != null) {
@@ -1678,6 +1693,18 @@ public class CustomersService {
                             i.invoiceAmount(), i.balanceAmount()))
                     .toList();
 
+            List<AdditionalAdvance> additionalAdvanceItems = additionalAdvInvoices.stream()
+                    .map(i -> {
+                        double totalAmount = i.invoiceAmount() != null ? i.invoiceAmount() : 0;
+                        double paidAmount = i.paidAmount() != null ? i.paidAmount() : 0;
+                        double pendingAmount = totalAmount - paidAmount;
+                        pendingAmount = Utils.roundOfDoubleTo2Digits(pendingAmount);
+                        double balanceAmount = i.invoiceBalance() != null ? i.invoiceBalance() : 0;
+
+                        return new AdditionalAdvance(i.invoiceNumber(), i.invoiceId(), paidAmount,
+                                totalAmount, pendingAmount, balanceAmount);
+                    }).toList();
+
             SettlementItems settlementItems = settlementItemsService
                     .getByInvoiceId(settlementInvoice.getInvoiceId());
             if (settlementItems == null){
@@ -1701,6 +1728,7 @@ public class CustomersService {
             settlementItems.setCurrentMonthOtherItems(settlementItemsCurrentOtherItems);
             settlementItems.setEbItems(settlementItemsEbItems);
             settlementItems.setRetainerItems(settlementRetainerItems);
+            settlementItems.setAdditionalAdvanceItems(additionalAdvanceItems);
 
             if (customerWallet != null){
                 customerWallet.setAmount(0.0);
@@ -1803,14 +1831,16 @@ public class CustomersService {
 
         CustomerRetainerInfoRes customerRetainerInfoRes = buildCustomerRetainerInfoRes(customer.getCustomerId());
 
+        AdditionalAdvanceInfoRes additionalAdvanceInfoRes = buildAdditionalAdvanceInfoRes(customer.getCustomerId());
+
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
                 customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
-                customerInfoRes, customerRetainerInfoRes);
+                customerInfoRes, customerRetainerInfoRes, additionalAdvanceInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
                 customerAdvanceInfoRes, customerRetainerInfoRes, customerDeductionsInfoRes,
-                finalSettlementInfoRes);
+                additionalAdvanceInfoRes, finalSettlementInfoRes);
     }
 
     private CustomerSettlementInfoRes buildFixedDateBasedPrepaidSettlementInfo(Customers customer, BookingsV1 booking,
@@ -1850,14 +1880,16 @@ public class CustomersService {
 
         CustomerRetainerInfoRes customerRetainerInfoRes = buildCustomerRetainerInfoRes(customer.getCustomerId());
 
+        AdditionalAdvanceInfoRes additionalAdvanceInfoRes = buildAdditionalAdvanceInfoRes(customer.getCustomerId());
+
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
                 customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
-                customerInfoRes, customerRetainerInfoRes);
+                customerInfoRes, customerRetainerInfoRes, additionalAdvanceInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
                 customerAdvanceInfoRes, customerRetainerInfoRes, customerDeductionsInfoRes,
-                finalSettlementInfoRes);
+                additionalAdvanceInfoRes, finalSettlementInfoRes);
     }
 
     private CustomerSettlementInfoRes buildFixedDateBasedPostpaidSettlementInfo(Customers customer, BookingsV1 booking,
@@ -1897,14 +1929,16 @@ public class CustomersService {
 
         CustomerRetainerInfoRes customerRetainerInfoRes = buildCustomerRetainerInfoRes(customer.getCustomerId());
 
+        AdditionalAdvanceInfoRes additionalAdvanceInfoRes = buildAdditionalAdvanceInfoRes(customer.getCustomerId());
+
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
                 customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
-                customerInfoRes, customerRetainerInfoRes);
+                customerInfoRes, customerRetainerInfoRes, additionalAdvanceInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
                 customerAdvanceInfoRes, customerRetainerInfoRes, customerDeductionsInfoRes,
-                finalSettlementInfoRes);
+                additionalAdvanceInfoRes, finalSettlementInfoRes);
     }
 
     private CustomerSettlementInfoRes buildJoiningBasedPrepaidSettlementInfo(Customers customer,
@@ -1946,14 +1980,16 @@ public class CustomersService {
 
         CustomerRetainerInfoRes customerRetainerInfoRes = buildCustomerRetainerInfoRes(customer.getCustomerId());
 
+        AdditionalAdvanceInfoRes additionalAdvanceInfoRes = buildAdditionalAdvanceInfoRes(customer.getCustomerId());
+
         CustomerFinalSettlementInfoRes finalSettlementInfoRes = buildFinalSettlementInfoRes(customerEbInfoRes,
                 customerWalletInfoRes, unpaidInvoicesInfoRes, customerRentInfoRes, customerDeductionsInfoRes,
-                customerInfoRes, customerRetainerInfoRes);
+                customerInfoRes, customerRetainerInfoRes, additionalAdvanceInfoRes);
 
         return new CustomerSettlementInfoRes(customerInfoRes, customerStayInfoRes, customerEbInfoRes,
                 unpaidInvoicesInfoRes, customerRentInfoRes, customerWalletInfoRes, customerBookingInfoRes,
                 customerAdvanceInfoRes, customerRetainerInfoRes, customerDeductionsInfoRes,
-                finalSettlementInfoRes);
+                additionalAdvanceInfoRes, finalSettlementInfoRes);
     }
 
     private CustomerFinalSettlementInfoRes buildFinalSettlementInfoRes(CustomerEbInfoRes customerEbInfoRes,
@@ -1962,7 +1998,8 @@ public class CustomersService {
                                                                        CustomerRentInfoRes customerRentInfoRes,
                                                                        CustomerDeductionsInfoRes customerDeductionsInfoRes,
                                                                        CustomerInfoRes customerInfoRes,
-                                                                       CustomerRetainerInfoRes customerRetainerInfoRes) {
+                                                                       CustomerRetainerInfoRes customerRetainerInfoRes,
+                                                                       AdditionalAdvanceInfoRes additionalAdvanceInfoRes) {
 
         boolean isBookingOrAdvancePaid = false;
         double availableAmountToRedeem = 0;
@@ -2003,6 +2040,7 @@ public class CustomersService {
         double currentMonthTotalAmount = 0;
         double currentRentPaidAmount = 0;
         double currentMonthPendingAmount = 0;
+        double currentMonthOtherInvPendingAmount = 0;
         String label = null;
         double pendingAmount = 0.0;
         double totalRefundableRent = 0.0;
@@ -2035,6 +2073,12 @@ public class CustomersService {
                 label = "Payable rent";
                 pendingAmount = currentMonthPendingAmount;
             }
+
+            OtherInvoicesInfoRes otherInvoicesInfoRes = customerRentInfoRes.otherInvoicesInfo();
+            if (otherInvoicesInfoRes != null) {
+                currentMonthOtherInvPendingAmount = otherInvoicesInfoRes.totalPendingAmount() != null
+                        ? otherInvoicesInfoRes.totalPendingAmount() : 0;
+            }
         }
 
         double walletAmount = 0;
@@ -2049,6 +2093,12 @@ public class CustomersService {
                     customerRetainerInfoRes.totalBalanceAmount() : 0.0;
         }
 
+        double additionalAdvanceBalanceAmount = 0;
+        if (additionalAdvanceInfoRes != null){
+            additionalAdvanceBalanceAmount = additionalAdvanceInfoRes.advanceBalance() != null ?
+                    additionalAdvanceInfoRes.advanceBalance() : 0.0;
+        }
+
         double totalRefundableAdvance = 0.0;
         double totalAmountToBePaid = unpaidInvoicesTotalAmount + ebAmount +
                 walletAmount + currentMonthTotalAmount - retainerBalanceAmount;
@@ -2061,16 +2111,18 @@ public class CustomersService {
             totalAmountToBePaid = totalAmountToBePaid - availableAmountToRedeem;
             totalRefundableAdvance = availableAmountToRedeem;
         }
+        totalAmountToBePaid = totalAmountToBePaid + currentMonthOtherInvPendingAmount - additionalAdvanceBalanceAmount;
         boolean isRefundable = totalAmountToBePaid < 0;
 
         return new CustomerFinalSettlementInfoRes(label,
                 Utils.roundOfDoubleTo2Digits(totalAmountToBePaid), Utils.roundOfDoubleTo2Digits(fullRent),
                 Utils.roundOfDoubleTo2Digits(unpaidInvoicesUnPaidAmount), Utils.roundOfDoubleTo2Digits(otherItemAmount),
-                Utils.roundOfDoubleTo2Digits(pendingRent), Utils.roundOfDoubleTo2Digits(currentPayableRent),
-                Utils.roundOfDoubleTo2Digits(currentRentPaidAmount), Utils.roundOfDoubleTo2Digits(pendingAmount),
-                Utils.roundOfDoubleTo2Digits(pendingDeductionAmount), Utils.roundOfDoubleTo2Digits(ebAmount),
-                Utils.roundOfDoubleTo2Digits(walletAmount), Utils.roundOfDoubleTo2Digits(retainerBalanceAmount),
-                Utils.roundOfDoubleTo2Digits(discountAmount), Utils.roundOfDoubleTo2Digits(totalRefundableAdvance),
+                Utils.roundOfDoubleTo2Digits(currentMonthOtherInvPendingAmount), Utils.roundOfDoubleTo2Digits(pendingRent),
+                Utils.roundOfDoubleTo2Digits(currentPayableRent), Utils.roundOfDoubleTo2Digits(currentRentPaidAmount),
+                Utils.roundOfDoubleTo2Digits(pendingAmount), Utils.roundOfDoubleTo2Digits(pendingDeductionAmount),
+                Utils.roundOfDoubleTo2Digits(ebAmount), Utils.roundOfDoubleTo2Digits(walletAmount),
+                Utils.roundOfDoubleTo2Digits(retainerBalanceAmount), Utils.roundOfDoubleTo2Digits(discountAmount),
+                Utils.roundOfDoubleTo2Digits(totalRefundableAdvance), Utils.roundOfDoubleTo2Digits(additionalAdvanceBalanceAmount),
                 isRefundable, Utils.roundOfDoubleTo2Digits(totalRefundableRent)
         );
     }
@@ -2270,6 +2322,8 @@ public class CustomersService {
         if (billingDates != null && billingDates.currentBillStartDate() != null
                 && billingDates.currentBillEndDate() != null) {
 
+            OtherInvoicesInfoRes otherInvoicesInfoRes = buildOtherInvoicesInfoRes(customerId, billingDates);
+
             List<InvoicesV1> currentMonthInvoices = invoiceV1Service
                     .getCurrentMonthInvoices(customerId, hostelId, billingDates.currentBillStartDate());
 
@@ -2424,12 +2478,77 @@ public class CustomersService {
                         Utils.roundOfDoubleTo2Digits(fullRent),
                         Utils.roundOfDoubleTo2Digits(rentDifference),
                         otherItems,
-                        rentBreakUpInfoRes
+                        rentBreakUpInfoRes,
+                        otherInvoicesInfoRes
                 );
             }
         }
 
         return customerRentInfoRes;
+    }
+
+    private OtherInvoicesInfoRes buildOtherInvoicesInfoRes(String customerId, BillingDates billingDates) {
+
+        OtherInvoicesInfoRes otherInvoicesInfoRes = null;
+
+        if (customerId != null && billingDates != null && billingDates.currentBillStartDate() != null
+                && billingDates.currentBillEndDate() != null) {
+
+            List<InvoicesV1> otherInvoices = invoiceV1Service
+                    .getOtherInvoicesByCustomerIdAndBetweenDates(customerId,
+                            billingDates.currentBillStartDate(), billingDates.currentBillEndDate());
+
+            if (otherInvoices != null && !otherInvoices.isEmpty()){
+
+                double totalInvoiceAmount = 0;
+                double totalPaidAmount = 0;
+                double totalPendingAmount = 0;
+
+                List<OtherInvoicesRes> otherInvoicesRes = new ArrayList<>();
+
+                for (InvoicesV1 otherInvoice : otherInvoices) {
+                    double invoiceAmount = otherInvoice.getTotalAmount() != null ? otherInvoice.getTotalAmount() : 0;
+                    double paidAmount = otherInvoice.getPaidAmount() != null ? otherInvoice.getPaidAmount() : 0;
+                    double pendingAmount = invoiceAmount - paidAmount;
+
+                    totalInvoiceAmount += invoiceAmount;
+                    totalPaidAmount += paidAmount;
+                    totalPendingAmount += pendingAmount;
+
+                    String invoiceDate = null;
+                    if (otherInvoice.getInvoiceDate() != null){
+                        invoiceDate = Utils.dateToString(otherInvoice.getInvoiceDate());
+                    } else if (otherInvoice.getInvoiceStartDate() != null) {
+                        invoiceDate = Utils.dateToString(otherInvoice.getInvoiceStartDate());
+                    }
+
+                    List<OtherInvoiceItemsRes> otherInvoiceItemsRes = new ArrayList<>();
+
+                    if (otherInvoice.getInvoiceItems() != null && !otherInvoice.getInvoiceItems().isEmpty()) {
+                        otherInvoiceItemsRes = otherInvoice.getInvoiceItems().stream()
+                                .map(i -> new OtherInvoiceItemsRes(i.getInvoiceItemId(),
+                                        i.getInvoiceItem(), i.getOtherItem(), i.getAmount()))
+                                .toList();
+                    }
+
+                    invoiceAmount = Utils.roundOfDoubleTo2Digits(invoiceAmount);
+                    paidAmount = Utils.roundOfDoubleTo2Digits(paidAmount);
+                    pendingAmount = Utils.roundOfDoubleTo2Digits(pendingAmount);
+
+                    otherInvoicesRes.add(new OtherInvoicesRes(otherInvoice.getInvoiceId(), otherInvoice.getInvoiceNumber(),
+                            invoiceDate, invoiceAmount, paidAmount, pendingAmount, otherInvoiceItemsRes));
+                }
+
+                otherInvoicesInfoRes = new OtherInvoicesInfoRes(Utils.roundOfDoubleTo2Digits(totalInvoiceAmount),
+                        Utils.roundOfDoubleTo2Digits(totalPaidAmount), Utils.roundOfDoubleTo2Digits(totalPendingAmount),
+                        otherInvoices.size(), otherInvoicesRes);
+            } else {
+                otherInvoicesInfoRes = new OtherInvoicesInfoRes(0.0, 0.0, 0.0,
+                        0, null);
+            }
+        }
+
+        return otherInvoicesInfoRes;
     }
 
     private CustomerRentInfoRes buildPostpaidRentInfoRes(BillingDates billingDates, Customers customer,
@@ -2449,6 +2568,8 @@ public class CustomersService {
 
         if (billingDates != null && billingDates.currentBillStartDate() != null
                 && billingDates.currentBillEndDate() != null && leavingDate != null) {
+
+            OtherInvoicesInfoRes otherInvoicesInfoRes = buildOtherInvoicesInfoRes(customerId, billingDates);
 
             List<InvoicesV1> currentMonthInvoices = invoiceV1Service
                     .getCurrentMonthInvoices(customerId, hostelId, billingDates.currentBillStartDate());
@@ -2637,7 +2758,8 @@ public class CustomersService {
                     Utils.roundOfDoubleTo2Digits(fullRent),
                     Utils.roundOfDoubleTo2Digits(rentDifference),
                     otherItems,
-                    rentBreakUpInfoRes
+                    rentBreakUpInfoRes,
+                    otherInvoicesInfoRes
             );
         }
 
@@ -3907,6 +4029,53 @@ public class CustomersService {
                 retainerInfoRes, retainerInvoices);
     }
 
+    private AdditionalAdvanceInfoRes buildAdditionalAdvanceInfoRes(String customerId) {
+
+        AdditionalAdvanceInfoRes additionalAdvanceInfoRes = null;
+
+        List<InvoicesV1> additionalAdvanceInvoices = invoiceV1Service
+                .getAdditionalAdvanceInvoicesByCustomerId(customerId);
+
+        if (additionalAdvanceInvoices == null || additionalAdvanceInvoices.isEmpty()){
+            additionalAdvanceInfoRes = new AdditionalAdvanceInfoRes(0.0, 0.0,
+                    0.0, 0, null);
+        } else {
+            double totalAmount = 0;
+            double paidAmount = 0;
+            double balanceAmount = 0;
+
+            List<AdditionalAdvanceInvoicesRes> advanceInvoicesRes = new ArrayList<>();
+
+            for (InvoicesV1 additionalAdvInvoice : additionalAdvanceInvoices){
+                double invTotalAmount = 0;
+                double invPaidAmount = 0;
+                double invBalanceAmount = 0;
+
+                if (additionalAdvInvoice.getTotalAmount() != null){
+                    invTotalAmount = additionalAdvInvoice.getTotalAmount();
+                    totalAmount += additionalAdvInvoice.getTotalAmount();
+                }
+                if (additionalAdvInvoice.getPaidAmount() != null){
+                    invPaidAmount = additionalAdvInvoice.getPaidAmount();
+                    paidAmount += additionalAdvInvoice.getPaidAmount();
+                }
+                if (additionalAdvInvoice.getBalanceAmount() != null){
+                    invBalanceAmount = additionalAdvInvoice.getBalanceAmount();
+                    balanceAmount += additionalAdvInvoice.getBalanceAmount();
+                }
+                advanceInvoicesRes.add(new AdditionalAdvanceInvoicesRes(additionalAdvInvoice.getInvoiceId(),
+                        additionalAdvInvoice.getInvoiceNumber(), Utils.roundOfDoubleTo2Digits(invTotalAmount),
+                        Utils.roundOfDoubleTo2Digits(invPaidAmount), Utils.roundOfDoubleTo2Digits(invBalanceAmount)));
+            }
+
+            additionalAdvanceInfoRes = new AdditionalAdvanceInfoRes(Utils.roundOfDoubleTo2Digits(totalAmount),
+                    Utils.roundOfDoubleTo2Digits(paidAmount), Utils.roundOfDoubleTo2Digits(balanceAmount),
+                    additionalAdvanceInvoices.size(), advanceInvoicesRes);
+        }
+
+        return additionalAdvanceInfoRes;
+    }
+
     @Transactional
     public ResponseEntity<?> editJoiningDate(CustomerJoiningDatePayload payload) {
 
@@ -4774,5 +4943,606 @@ public class CustomersService {
                                                                Date endDate, Pageable pageable){
         return customersRepository.findByHostelIdNameKycStatus(hostelId, name, kycStatus,
                 startDate, endDate, pageable);
+    }
+
+    @Transactional
+    public ResponseEntity<?> ebRecalculate(String customerId) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(loggedInAgent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Customers customer = customersRepository.findByCustomerId(customerId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_TENANT_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        CustomersSnapshot oldSnapshot = SnapshotUtility.toSnapshot(customer);
+
+        BookingsV1 booking = bookingsService.getBookingInfoByCustomerId(customerId);
+        if (booking == null){
+            return new ResponseEntity<>(Utils.BOOKING_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        String hostelId = customer.getHostelId();
+        HostelV1 hostel = hostelService.getHostelInfo(hostelId);
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        ElectricityConfig ebConfig = hostel.getElectricityConfig();
+        if (ebConfig == null){
+            return new ResponseEntity<>(Utils.EB_CONFIG_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        /*
+         * Determine the date until which the customer's room history
+         * should be considered.
+         */
+        Date readingDate = today;
+
+        if (CustomerStatus.VACATED.name().equals(customer.getCurrentStatus()) ||
+            CustomerStatus.SETTLEMENT_GENERATED.name().equals(customer.getCurrentStatus())){
+            if (booking.getCheckoutDate() != null){
+                readingDate = booking.getCheckoutDate();
+            } else if (booking.getLeavingDate() != null) {
+                readingDate = booking.getLeavingDate();
+            }
+        } else if (CustomerStatus.NOTICE.name().equals(customer.getCurrentStatus())) {
+            if (booking.getLeavingDate() != null) {
+                readingDate = booking.getLeavingDate();
+            }
+        }
+
+        if (EBReadingType.ROOM_READING.name().equals(ebConfig.getTypeOfReading())){
+
+            /*
+             * Find all room readings which are still invoice-not-generated
+             * and are relevant to this customer's room occupancy.
+             */
+            List<ElectricityReadings> pendingReadings = collectPendingElectricityReadings(
+                    hostelId, customerId, readingDate);
+
+            if (pendingReadings.isEmpty()) {
+                return new ResponseEntity<>("Pending readings not found", HttpStatus.BAD_REQUEST);
+            }
+
+            /*
+             * Recalculate each reading.
+             */
+            for (ElectricityReadings reading : pendingReadings) {
+                recalculateRoomElectricityReading(reading, ebConfig, customerId, readingDate);
+            }
+
+        } else if (EBReadingType.HOSTEL_READING.name().equals(ebConfig.getTypeOfReading())) {
+
+            List<HostelReadings> pendingReadings = hostelReadingService
+                    .getAllInvoiceNotGeneratedReadings(hostelId);
+
+            if (pendingReadings.isEmpty()) {
+                return new ResponseEntity<>("Pending readings not found", HttpStatus.BAD_REQUEST);
+            }
+
+            /*
+             * Get the customer's bed histories once.
+             *
+             * These histories are used only to determine
+             * which hostel readings are relevant to this customer.
+             */
+            List<CustomersBedHistory> customerBedHistories = customerBedHistoryService
+                    .getBedHistoriesByCustomerIdAndTypeNotIn(customerId, CustomersBedType.BOOKED.name());
+
+            if (customerBedHistories == null || customerBedHistories.isEmpty()) {
+                return new ResponseEntity<>("Customer bed history not found", HttpStatus.BAD_REQUEST);
+            }
+
+            /*
+             * Recalculate only hostel readings which overlap
+             * the customer's occupancy period.
+             */
+            boolean recalculated = false;
+
+            for (HostelReadings hostelReading : pendingReadings) {
+
+                if (hostelReading == null
+                        || hostelReading.getBillStartDate() == null
+                        || hostelReading.getBillEndDate() == null) {
+
+                    continue;
+                }
+
+                Date billStartDate = hostelReading.getBillStartDate();
+                Date billEndDate = hostelReading.getBillEndDate();
+
+                /*
+                 * Ignore hostel readings which are completely
+                 * outside the customer's occupancy.
+                 */
+                boolean customerWasPresentDuringReading = false;
+
+                for (CustomersBedHistory history : customerBedHistories) {
+
+                    if (history == null || history.getStartDate() == null) {
+                        continue;
+                    }
+
+                    Date historyStart = history.getStartDate();
+                    Date historyEnd = history.getEndDate();
+
+                    /*
+                     * For an open-ended history, the customer is
+                     * considered occupied until readingDate.
+                     */
+                    if (historyEnd == null) {
+                        historyEnd = readingDate;
+                    }
+
+                    /*
+                     * Check whether:
+                     *
+                     * customer history overlaps
+                     * hostel reading period.
+                     */
+                    boolean startsBeforeReadingEnds = Utils
+                            .compareWithTwoDates(historyStart, billEndDate) <= 0;
+
+                    boolean endsAfterReadingStarts = Utils
+                            .compareWithTwoDates(historyEnd, billStartDate) >= 0;
+
+                    if (startsBeforeReadingEnds && endsAfterReadingStarts) {
+                        customerWasPresentDuringReading = true;
+                        break;
+                    }
+                }
+
+                if (!customerWasPresentDuringReading) {
+                    continue;
+                }
+
+                /*
+                 * Recalculate the COMPLETE hostel reading
+                 * allocation.
+                 *
+                 * This includes all customers in the hostel,
+                 * because changing one customer's occupancy
+                 * changes total person-days and therefore
+                 * potentially changes everybody's allocation.
+                 */
+                recalculateHostelElectricityReading(hostelReading, ebConfig, customerId, readingDate);
+
+                recalculated = true;
+            }
+
+            if (!recalculated) {
+                return new ResponseEntity<>("No pending hostel readings found for customer", HttpStatus.BAD_REQUEST);
+            }
+
+        } else if (EBReadingType.FLAT_RATE.name().equals(ebConfig.getTypeOfReading())) {
+
+            return new ResponseEntity<>("Recalculation is not needed for flat rate hostels", HttpStatus.BAD_REQUEST);
+        }
+
+        CustomersSnapshot newSnapshot = SnapshotUtility.toSnapshot(customer);
+
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.UPDATE, Source.TENANT_EB_RECALCULATE,
+                customerId, oldSnapshot, newSnapshot);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    private void recalculateRoomElectricityReading(ElectricityReadings electricityReading, ElectricityConfig electricityConfig,
+                                                   String recalculatingCustomerId, Date leavingDate) {
+
+        if (electricityReading == null || electricityConfig == null || electricityConfig.getCharge() == null) {
+            return;
+        }
+
+        /*
+         * Recalculate only readings for which invoice has not
+         * been generated yet.
+         */
+        if (!ElectricityBillStatus.INVOICE_NOT_GENERATED.name().equalsIgnoreCase(electricityReading.getBillStatus())) {
+            return;
+        }
+
+        Date electricityStartDate = electricityReading.getBillStartDate();
+        Date electricityEndDate = electricityReading.getBillEndDate();
+
+        if (electricityStartDate == null || electricityEndDate == null) {
+            return;
+        }
+
+        /*
+         * Get all customers who occupied this room during
+         * this electricity reading period.
+         */
+        List<CustomersBedHistory> roomBedHistories = customerBedHistoryService
+                .getCustomersByRoomIdAndDates(electricityReading.getRoomId(), electricityStartDate, electricityEndDate);
+
+        if (roomBedHistories == null || roomBedHistories.isEmpty()) {
+            return;
+        }
+
+        /*
+         * Calculate effective occupancy periods and total
+         * person-days.
+         */
+        List<RoomEbAllocation> allocations = new ArrayList<>();
+
+        long totalPersonDays = 0;
+
+        for (CustomersBedHistory history : roomBedHistories) {
+
+            if (history.getStartDate() == null) {
+                continue;
+            }
+
+            /*
+             * Occupancy cannot start before the reading starts.
+             */
+            Date effectiveStart = DateUtil.maxDate(history.getStartDate(), electricityStartDate);
+
+            /*
+             * Normally use the bed history end date.
+             *
+             * For the customer being recalculated, use the
+             * current leaving date because this is the value
+             * that triggered the recalculation.
+             */
+            Date historyEnd = history.getEndDate();
+
+            if (Objects.equals(history.getCustomerId(), recalculatingCustomerId)
+                    && leavingDate != null
+                    && (historyEnd == null || leavingDate.before(historyEnd))) {
+
+                historyEnd = leavingDate;
+            }
+
+            /*
+             * Open-ended occupancy continues until the reading ends.
+             */
+            Date effectiveEnd;
+
+            if (historyEnd == null) {
+                effectiveEnd = electricityEndDate;
+            } else {
+                effectiveEnd = DateUtil.minDate(historyEnd, electricityEndDate);
+            }
+
+            /*
+             * Ignore invalid periods.
+             */
+            if (Utils.compareWithTwoDates(effectiveStart, effectiveEnd) >= 0) {
+                continue;
+            }
+
+            CustomersBedHistory adjustedHistory = new CustomersBedHistory();
+
+            adjustedHistory.setStartDate(effectiveStart);
+            adjustedHistory.setEndDate(effectiveEnd);
+
+            long overlapDays = getOverlapDays(adjustedHistory, electricityStartDate, electricityEndDate);
+
+            if (overlapDays <= 0) {
+                continue;
+            }
+
+            allocations.add(new RoomEbAllocation(history, effectiveStart, effectiveEnd, overlapDays));
+
+            totalPersonDays += overlapDays;
+        }
+
+        if (totalPersonDays <= 0) {
+            return;
+        }
+
+        /*
+         * Distribute total consumption based on person-days.
+         */
+        double unitsPerPersonDay = electricityReading.getConsumption() / totalPersonDays;
+
+        double charge = electricityConfig.getCharge();
+
+        Date now = new Date();
+        String createdBy = authentication.getName();
+
+        /*
+         * Build completely new EB histories based on the
+         * current room occupancy.
+         */
+        List<CustomersEbHistory> newHistories = new ArrayList<>();
+
+        for (RoomEbAllocation allocation : allocations) {
+
+            CustomersBedHistory bedHistory = allocation.bedHistory();
+
+            double units = allocation.overlapDays() * unitsPerPersonDay;
+
+            double amount = units * charge;
+
+            CustomersEbHistory ebHistory = new CustomersEbHistory();
+
+            ebHistory.setReadingId(electricityReading.getId());
+            ebHistory.setCustomerId(bedHistory.getCustomerId());
+            ebHistory.setRoomId(bedHistory.getRoomId());
+            ebHistory.setFloorId(bedHistory.getFloorId());
+            ebHistory.setBedId(bedHistory.getBedId());
+            ebHistory.setUnits(units);
+            ebHistory.setAmount(amount);
+            ebHistory.setStartDate(allocation.startDate());
+            ebHistory.setEndDate(allocation.endDate());
+            ebHistory.setCreatedAt(now);
+            ebHistory.setCreatedBy(createdBy);
+
+            newHistories.add(ebHistory);
+        }
+
+        if (newHistories.isEmpty()) {
+            return;
+        }
+
+        /*
+         * Remove the old allocation for this reading.
+         */
+        customerEbHistoryService.deleteByReadingId(electricityReading.getId());
+
+        /*
+         * Insert the freshly calculated allocation.
+         */
+        customerEbHistoryService.saveAll(newHistories);
+    }
+
+    private void recalculateHostelElectricityReading(HostelReadings hostelReading, ElectricityConfig electricityConfig,
+                                                     String recalculatingCustomerId, Date leavingDate) {
+
+        if (hostelReading == null
+                || electricityConfig == null
+                || electricityConfig.getCharge() == null
+                || hostelReading.getConsumption() == null) {
+            return;
+        }
+
+        // Only pending hostel readings can be recalculated.
+        if (!ElectricityBillStatus.INVOICE_NOT_GENERATED.name().equalsIgnoreCase(hostelReading.getBillStatus())) {
+            return;
+        }
+
+        Date billStartDate = hostelReading.getBillStartDate();
+        Date billEndDate = hostelReading.getBillEndDate();
+
+        if (billStartDate == null || billEndDate == null) {
+            return;
+        }
+
+
+        // =========================================================
+        // 1. GET ALL BED HISTORIES FOR THIS HOSTEL AND BILL PERIOD
+        // =========================================================
+
+        List<CustomersBedHistory> bedHistories = customerBedHistoryService
+                .getCustomersByHostelIdAndDates(hostelReading.getHostelId(), billStartDate, billEndDate);
+
+        if (bedHistories == null || bedHistories.isEmpty()) {
+            return;
+        }
+
+
+        // =========================================================
+        // 2. CALCULATE EFFECTIVE OCCUPANCY + TOTAL PERSON DAYS
+        // =========================================================
+
+        List<HostelEbAllocation> allocations = new ArrayList<>();
+
+        long totalPersonDays = 0;
+
+        for (CustomersBedHistory history : bedHistories) {
+
+            if (history == null || history.getStartDate() == null) {
+                continue;
+            }
+
+            // Customer cannot be considered before the reading starts.
+            Date effectiveStart = DateUtil.maxDate(
+                    history.getStartDate(),
+                    billStartDate
+            );
+
+            Date historyEnd = history.getEndDate();
+
+            /*
+             * If this is the customer being recalculated and the
+             * new leaving date is earlier than the existing end date,
+             * use the new leaving date.
+             */
+            if (Objects.equals(history.getCustomerId(), recalculatingCustomerId)
+                    && leavingDate != null
+                    && (historyEnd == null
+                    || leavingDate.before(historyEnd))) {
+
+                historyEnd = leavingDate;
+            }
+
+            /*
+             * If the customer has no end date, consider them occupied
+             * until the hostel reading ends.
+             */
+            Date effectiveEnd;
+
+            if (historyEnd == null) {
+                effectiveEnd = billEndDate;
+            } else {
+                effectiveEnd = DateUtil.minDate(historyEnd, billEndDate);
+            }
+
+            // Ignore invalid/zero-day occupancy.
+            if (Utils.compareWithTwoDates(effectiveStart, effectiveEnd) >= 0) {
+                continue;
+            }
+
+            CustomersBedHistory adjustedHistory = new CustomersBedHistory();
+
+            adjustedHistory.setStartDate(effectiveStart);
+            adjustedHistory.setEndDate(effectiveEnd);
+
+            long overlapDays = getOverlapDays(adjustedHistory, billStartDate, billEndDate);
+
+            if (overlapDays <= 0) {
+                continue;
+            }
+
+            allocations.add(new HostelEbAllocation(history, effectiveStart, effectiveEnd, overlapDays));
+
+            totalPersonDays += overlapDays;
+        }
+
+        if (totalPersonDays <= 0) {
+            return;
+        }
+
+        // =========================================================
+        // 3. CALCULATE UNITS PER PERSON DAY
+        // =========================================================
+
+        double unitsPerPersonDay = hostelReading.getConsumption() / totalPersonDays;
+
+        double charge = electricityConfig.getCharge();
+
+        Date now = new Date();
+
+        String createdBy = authentication.getName();
+
+        // =========================================================
+        // 4. CALCULATE UNITS PER ROOM
+        // =========================================================
+
+        Map<Integer, List<HostelEbAllocation>> roomAllocations = new HashMap<>();
+
+        for (HostelEbAllocation allocation : allocations) {
+
+            CustomersBedHistory bedHistory = allocation.bedHistory();
+
+            double units = allocation.overlapDays() * unitsPerPersonDay;
+
+            roomAllocations.computeIfAbsent(bedHistory.getRoomId(),
+                            key -> new ArrayList<>())
+                    .add(allocation);
+        }
+
+
+        // =========================================================
+        // 5. GET EXISTING ROOM ELECTRICITY READINGS
+        //
+        // IMPORTANT:
+        // We DO NOT delete these readings.
+        //
+        // They represent the room-level electricity reading.
+        // We only rebuild CustomersEbHistory against them.
+        // =========================================================
+
+        List<ElectricityReadings> existingRoomReadings = electricityReadingsService
+                .getInvoiceNotGeneratedReadingsByHostelAndDates(hostelReading.getHostelId(),
+                        billStartDate, billEndDate);
+
+
+        if (existingRoomReadings == null || existingRoomReadings.isEmpty()) {
+            return;
+        }
+
+        Map<Integer, ElectricityReadings> roomReadingMap = existingRoomReadings.stream()
+                        .filter(Objects::nonNull)
+                        .filter(reading -> reading.getRoomId() != null)
+                        .collect(Collectors.toMap(
+                                ElectricityReadings::getRoomId,
+                                Function.identity(),
+                                (first, second) -> first
+                        ));
+
+        // =========================================================
+        // 6. DELETE OLD CUSTOMER EB HISTORIES
+        //
+        // Only CustomersEbHistory is deleted.
+        // ElectricityReadings remains untouched.
+        // =========================================================
+
+        for (ElectricityReadings roomReading : existingRoomReadings) {
+
+            if (roomReading == null || roomReading.getId() == null) {
+                continue;
+            }
+
+            customerEbHistoryService.deleteByReadingId(roomReading.getId());
+        }
+
+        // =========================================================
+        // 7. CREATE FRESH CUSTOMER EB HISTORIES
+        // =========================================================
+
+        List<CustomersEbHistory> newHistories = new ArrayList<>();
+
+        for (Map.Entry<Integer, List<HostelEbAllocation>> entry : roomAllocations.entrySet()) {
+
+            Integer roomId = entry.getKey();
+
+            ElectricityReadings roomReading = roomReadingMap.get(roomId);
+
+            /*
+             * There may be a room allocation but no corresponding
+             * ElectricityReading. In that case we cannot create
+             * CustomersEbHistory because readingId must reference
+             * ElectricityReadings.id.
+             */
+            if (roomReading == null || roomReading.getId() == null) {
+                continue;
+            }
+
+            for (HostelEbAllocation allocation : entry.getValue()) {
+
+                CustomersBedHistory bedHistory = allocation.bedHistory();
+
+                double units = allocation.overlapDays() * unitsPerPersonDay;
+
+                double amount = units * charge;
+
+                CustomersEbHistory ebHistory = new CustomersEbHistory();
+
+                /*
+                 * IMPORTANT:
+                 *
+                 * CustomersEbHistory.readingId points to
+                 * ElectricityReadings.id.
+                 *
+                 * Do NOT use HostelReadings.id here.
+                 */
+                ebHistory.setReadingId(roomReading.getId());
+                ebHistory.setCustomerId(bedHistory.getCustomerId());
+                ebHistory.setRoomId(bedHistory.getRoomId());
+                ebHistory.setFloorId(bedHistory.getFloorId());
+                ebHistory.setBedId(bedHistory.getBedId());
+                ebHistory.setUnits(units);
+                ebHistory.setAmount(amount);
+                ebHistory.setStartDate(allocation.startDate());
+                ebHistory.setEndDate(allocation.endDate());
+                ebHistory.setCreatedAt(now);
+                ebHistory.setCreatedBy(createdBy);
+
+                newHistories.add(ebHistory);
+            }
+        }
+
+        // =========================================================
+        // 8. SAVE FRESH CUSTOMER EB HISTORIES
+        // =========================================================
+
+        if (!newHistories.isEmpty()) {
+            customerEbHistoryService.saveAll(newHistories);
+        }
     }
 }

@@ -111,20 +111,25 @@ public class RecurringEventListener {
             listElectricityForAHostel = new ArrayList<>();
         }
         List<ElectricityReadings> finalListElectricityForAHostel = listElectricityForAHostel;
-        List<InvoicesV1> thisMonthInvoiceGenerated = invoicesV1Repository.findThisMonthInvoiceGenerated(hostelV1.getHostelId(), recurringEvents.getBillingCycleStartDate(), customerIds);
-        List<String> generatedCustoemerIds;
+
+        List<InvoicesV1> thisMonthInvoiceGenerated = invoicesV1Repository
+                .findThisMonthInvoiceGenerated(hostelV1.getHostelId(),
+                        recurringEvents.getBillingCycleStartDate(), customerIds);
+
+        List<String> generatedCustomerIds;
         if (thisMonthInvoiceGenerated != null && !thisMonthInvoiceGenerated.isEmpty()) {
-            generatedCustoemerIds = thisMonthInvoiceGenerated
+            generatedCustomerIds = thisMonthInvoiceGenerated
                     .stream()
                     .map(InvoicesV1::getCustomerId)
                     .toList();
         } else {
-            generatedCustoemerIds = new ArrayList<>();
+            generatedCustomerIds = new ArrayList<>();
         }
 
         customersList.forEach(item -> {
-            if (!generatedCustoemerIds.isEmpty()) {
-                String invoiceGenerated = generatedCustoemerIds
+
+            if (!generatedCustomerIds.isEmpty()) {
+                String invoiceGenerated = generatedCustomerIds
                         .stream()
                         .filter(i -> i.equalsIgnoreCase(item.getCustomerId()))
                         .findFirst()
@@ -133,6 +138,7 @@ public class RecurringEventListener {
                     return;
                 }
             }
+
             Date joiningDate = item.getJoiningDate();
             Date billingCycleStartDate = recurringEvents.getBillingCycleStartDate();
 
@@ -145,12 +151,10 @@ public class RecurringEventListener {
             }
 
             Double rentAmount = 0.0;
-            if (item.getRentAmount() == null) {
-                System.out.println(item.getCustomerId());
-            }
-            else {
+            if (item.getRentAmount() != null) {
                 rentAmount = item.getRentAmount();
             }
+
             Double ebAmount = 0.0;
 
             if (shouldIncludeEb) {

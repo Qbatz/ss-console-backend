@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.Set;
 
 @Repository
@@ -22,4 +23,12 @@ public interface KycDetailsRepository extends JpaRepository<KycDetails, Long> {
     Page<KycDetails> findPaginatedKycDetailsAndKycStatusIn(Set<String> customerIds,
                                                            String status,
                                                            Pageable pageable);
+
+    @Query("""
+            select count(kd)
+            from KycDetails kd
+            where kd.hostelId = :hostelId
+                and Date(kd.createdAt) >= Date(:afterDate)
+            """)
+    long findCountByHostelIdAndAfterDate(String hostelId, Date afterDate);
 }

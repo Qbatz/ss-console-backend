@@ -51,4 +51,19 @@ public class ElectricityReadingsService {
     public List<ElectricityReadings> getElectricityReadingsBetweenDates(String hostelId, Date startDate, Date endDate) {
         return electricityReadingRepository.findPendingReadingsBetweenDates(hostelId, startDate, endDate);
     }
+
+    public ElectricityReadings save(ElectricityReadings electricityReading) {
+        return electricityReadingRepository.save(electricityReading);
+    }
+
+    public ElectricityReadings getRoomCurrentReading(Integer roomId) {
+        return electricityReadingRepository.findLatestByRoomId(roomId);
+    }
+
+    public List<ElectricityReadings> getInvoiceNotGeneratedReadingsByHostelAndDates(String hostelId,
+                                                                                    Date billStartDate,
+                                                                                    Date billEndDate) {
+        return electricityReadingRepository
+                .findInvoiceNotGeneratedReadingsByHostelAndDates(hostelId, billStartDate, billEndDate);
+    }
 }
