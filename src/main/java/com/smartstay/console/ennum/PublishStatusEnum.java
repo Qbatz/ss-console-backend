@@ -32,7 +32,7 @@ public enum PublishStatusEnum {
             case SCHEDULED -> newStatus == SCHEDULED
                     || newStatus == PUBLISHED;
 
-            case PUBLISHED -> false;
+            case PUBLISHED -> newStatus == PUBLISHED;
 
             case ARCHIVED -> false;
         };
