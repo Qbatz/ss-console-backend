@@ -124,6 +124,7 @@ public class Utils {
     public static final String SERVER_ERROR = "Server error";
     public static final String RESPONSE_BODY_NOT_FOUND = "Response body not found";
     public static final String PRODUCT_UPDATE_STATUS_NOT_FOUND = "Product update status not found";
+    public static final String DATA_ARCHIVE_NOT_FOUND = "Data archive not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";

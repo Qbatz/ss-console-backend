@@ -44,5 +44,6 @@ public enum Source {
     KYC_SEND_REMINDER,
     TENANT_EB_RECALCULATE,
     KYC_CONFIG,
-    KYC_HISTORY
+    KYC_HISTORY,
+    DATA_ARCHIVE
 }

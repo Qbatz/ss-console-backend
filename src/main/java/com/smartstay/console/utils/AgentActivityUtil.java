@@ -102,6 +102,7 @@ public class AgentActivityUtil {
             case KYC_SEND_REMINDER -> "Reminder successfully send to customer";
             case KYC_CONFIG -> "Created a new kyc configuration";
             case KYC_HISTORY -> "Created a new kyc history";
+            case DATA_ARCHIVE -> "Created a new data archive";
             default -> "Created successfully";
         };
     }
@@ -140,6 +141,7 @@ public class AgentActivityUtil {
             case TENANT_EB_RECALCULATE -> "EB recalculated successfully";
             case KYC_CONFIG -> "Updated a kyc configuration";
             case KYC_HISTORY -> "Updated a kyc history";
+            case DATA_ARCHIVE -> "Updated s data archive";
             default -> "Updated successfully";
         };
     }

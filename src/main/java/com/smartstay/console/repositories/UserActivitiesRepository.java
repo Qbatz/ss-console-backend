@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -47,4 +48,13 @@ public interface UserActivitiesRepository extends JpaRepository<UserActivities, 
     Page<UserActivities> findByHostelIdAndUserIdInOrderByCreatedAtDesc(String hostelId, Set<String> userIds, Pageable pageable);
 
     List<UserActivities> findAllByUserIdInOrderByCreatedAtDesc(Set<String> userIds);
+
+    @Query("""
+            select ua
+            from UserActivities ua
+            where ua.hostelId = :hostelId
+                and Date(ua.createdAt) < Date(:cutOffDate)
+            order by ua.activityId
+            """)
+    Page<UserActivities> findAllByHostelIdAndCreatedAtBefore(String hostelId, Date cutOffDate, Pageable pageable);
 }

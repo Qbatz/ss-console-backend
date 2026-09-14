@@ -4,6 +4,7 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.agentRoles.AgentRoleSnapshot;
 import com.smartstay.console.dto.agentRoles.RolesPermissionSnapshot;
 import com.smartstay.console.dto.bed.BedSnapshot;
+import com.smartstay.console.dto.dataArchive.DataArchiveSnapshot;
 import com.smartstay.console.dto.demoRequest.DemoRequestActivitySnapshot;
 import com.smartstay.console.dto.hostelRelationalAgent.HostelRelationalAgentSnapshot;
 import com.smartstay.console.dto.agent.AgentSnapshot;
@@ -997,6 +998,34 @@ public class SnapshotUtility {
                 copyDate(k.getCreatedAt()),
                 k.getCreatedBy(),
                 k.getUpdatedBy()
+        );
+    }
+
+    public static DataArchiveSnapshot toSnapshot(DataArchive d) {
+        if (d == null) return null;
+
+        return new DataArchiveSnapshot(
+                d.getArchiveId(),
+                d.getTableName(),
+                d.getType(),
+                d.getSource(),
+                d.getSourceId(),
+                d.getCriteria(),
+                copyDate(d.getCutOffDate()),
+                d.getRowCount(),
+                d.getS3Bucket(),
+                d.getS3Key(),
+                d.getS3Url(),
+                d.getFileFormat(),
+                d.getCompression(),
+                d.getChecksum(),
+                d.getSchemaVersion(),
+                d.getStatus(),
+                d.getErrorMessage(),
+                copyDate(d.getCreatedAt()),
+                d.getCreatedBy(),
+                copyDate(d.getRestoredAt()),
+                d.getRestoredBy()
         );
     }
 

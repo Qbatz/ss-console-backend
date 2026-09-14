@@ -73,4 +73,11 @@ public class S3Service {
     private String getKey(String fileUrl) {
         return URI.create(fileUrl).getPath().substring(1);
     }
+
+    public S3Object getS3Object(String s3Bucket, String s3Key) {
+
+        AmazonS3 s3 = AWSConfig.setupS3Client(accessKey, secretKey);
+
+        return s3.getObject(s3Bucket, s3Key);
+    }
 }

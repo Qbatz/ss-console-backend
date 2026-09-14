@@ -1,8 +1,10 @@
 package com.smartstay.console.config;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.smartstay.console.dto.files.S3UploadResult;
 import com.smartstay.console.dto.files.UploadFiles;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,7 @@ public class UploadFileToS3 {
     }
 
     public UploadFiles uploadFilesToS3(File file, String folderName) {
+
         AmazonS3 s3 = AWSConfig.setupS3Client(accessKey, secretKey);
 
         PutObjectRequest request = new PutObjectRequest(bucketName, folderName + "/" + file.getName(), file);
@@ -59,5 +62,26 @@ public class UploadFileToS3 {
         }
 
         return new UploadFiles(fileName, mimeType);
+    }
+
+    public S3UploadResult uploadArchiveToS3(File file, String folderName) {
+
+        AmazonS3 s3 = AWSConfig.setupS3Client(accessKey, secretKey);
+
+        String key = folderName + "/" + file.getName();
+
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentType("application/gzip");
+        metadata.setContentLength(file.length());
+
+        PutObjectRequest request = new PutObjectRequest(bucketName, key, file);
+
+        request.setMetadata(metadata);
+
+        s3.putObject(request);
+
+        String url = s3.getUrl(bucketName, key).toString();
+
+        return new S3UploadResult(bucketName, key, url);
     }
 }
