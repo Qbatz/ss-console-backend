@@ -125,6 +125,10 @@ public class DataArchiveService {
             }
         }
 
+        if (rowCount == 0){
+            return new ResponseEntity<>("No records over 60 days", HttpStatus.BAD_REQUEST);
+        }
+
         DataArchive dataArchive = new DataArchive();
 
         dataArchive.setTableName("user_activities");
