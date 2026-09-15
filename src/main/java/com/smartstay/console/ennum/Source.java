@@ -45,5 +45,6 @@ public enum Source {
     TENANT_EB_RECALCULATE,
     KYC_CONFIG,
     KYC_HISTORY,
-    DATA_ARCHIVE
+    DATA_ARCHIVE,
+    CREDENTIALS
 }

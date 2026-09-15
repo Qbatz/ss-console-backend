@@ -103,6 +103,7 @@ public class AgentActivityUtil {
             case KYC_CONFIG -> "Created a new kyc configuration";
             case KYC_HISTORY -> "Created a new kyc history";
             case DATA_ARCHIVE -> "Created a new data archive";
+            case CREDENTIALS -> "Created a new credential";
             default -> "Created successfully";
         };
     }
@@ -141,7 +142,8 @@ public class AgentActivityUtil {
             case TENANT_EB_RECALCULATE -> "EB recalculated successfully";
             case KYC_CONFIG -> "Updated a kyc configuration";
             case KYC_HISTORY -> "Updated a kyc history";
-            case DATA_ARCHIVE -> "Updated s data archive";
+            case DATA_ARCHIVE -> "Updated a data archive";
+            case CREDENTIALS -> "Updated a credential";
             default -> "Updated successfully";
         };
     }

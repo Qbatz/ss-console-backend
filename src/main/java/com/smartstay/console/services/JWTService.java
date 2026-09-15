@@ -25,6 +25,11 @@ public class JWTService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
+    private Key getKeyBySecret(String secret) {
+        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
     public String generateToken(String username, Map<String, Object> claims, Date date) {
         return Jwts.builder()
                 .setClaims(claims)
@@ -34,6 +39,32 @@ public class JWTService {
                 .setExpiration(Date.from(Instant.now().plusSeconds(14400)))
                 .signWith(getKey(), SignatureAlgorithm.HS256).compact();
 
+    }
+
+    public String generateTokenByDate(String username, String secret, Map<String, Object> claims,
+                                      Date issuedAt, Date expiryAt) {
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(username)
+                .setIssuedAt(issuedAt)
+                .setExpiration(expiryAt)
+                .signWith(getKeyBySecret(secret), SignatureAlgorithm.HS256).compact();
+    }
+
+    public Date getExpiryDate(String token, String secret) {
+
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getKeyBySecret(secret))
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            return claims.getExpiration();
+
+        } catch (ExpiredJwtException e) {
+            return e.getClaims().getExpiration();
+        }
     }
 
     public String extractUserName(String token) {
@@ -61,7 +92,6 @@ public class JWTService {
         } catch (Exception e) {
             throw new SmartStayException("Invalid token. Please login again.");
         }
-
     }
 
     public boolean validateToken(String token, UserDetails userDetails) {
@@ -79,5 +109,4 @@ public class JWTService {
     private Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
-
 }

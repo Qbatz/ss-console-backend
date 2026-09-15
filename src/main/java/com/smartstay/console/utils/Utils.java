@@ -125,6 +125,7 @@ public class Utils {
     public static final String RESPONSE_BODY_NOT_FOUND = "Response body not found";
     public static final String PRODUCT_UPDATE_STATUS_NOT_FOUND = "Product update status not found";
     public static final String DATA_ARCHIVE_NOT_FOUND = "Data archive not found";
+    public static final String CREDENTIALS_NOT_FOUND = "Credentials not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -1259,5 +1260,11 @@ public class Utils {
         }
 
         return new SimpleDateFormat("MMM d", Locale.ENGLISH).format(date);
+    }
+
+    public static String normalizeName(String value) {
+        return value == null
+                ? ""
+                : value.replace(" ", "").toLowerCase();
     }
 }

@@ -4,6 +4,7 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.agentRoles.AgentRoleSnapshot;
 import com.smartstay.console.dto.agentRoles.RolesPermissionSnapshot;
 import com.smartstay.console.dto.bed.BedSnapshot;
+import com.smartstay.console.dto.credentials.CredentialsSnapshot;
 import com.smartstay.console.dto.dataArchive.DataArchiveSnapshot;
 import com.smartstay.console.dto.demoRequest.DemoRequestActivitySnapshot;
 import com.smartstay.console.dto.hostelRelationalAgent.HostelRelationalAgentSnapshot;
@@ -1026,6 +1027,19 @@ public class SnapshotUtility {
                 d.getCreatedBy(),
                 copyDate(d.getRestoredAt()),
                 d.getRestoredBy()
+        );
+    }
+
+    public static CredentialsSnapshot toSnapshot(Credentials c) {
+        if (c == null) return null;
+
+        return new CredentialsSnapshot(
+                c.getService(),
+                c.getClientId(),
+                c.getAuthToken(),
+                c.getSecretValue(),
+                c.getRefreshToken(),
+                c.getOtherSecrets()
         );
     }
 
