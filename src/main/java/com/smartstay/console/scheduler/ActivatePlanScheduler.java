@@ -52,8 +52,8 @@ public class ActivatePlanScheduler {
                     .collect(Collectors.toMap(KycConfig::getHostelId, kyc -> kyc,
                             (a, b) -> a));
 
-            Set<String> hostelPlanCodes = listHostelPlans.stream()
-                    .map(com.smartstay.console.dao.HostelPlan::getCurrentPlanCode)
+            Set<String> hostelPlanCodes = hostelPlanDtoList.stream()
+                    .map(HostelPlan::planCode)
                     .collect(Collectors.toSet());
 
             List<Plans> plans = plansService.getAllPlansByPlanCodes(hostelPlanCodes);
