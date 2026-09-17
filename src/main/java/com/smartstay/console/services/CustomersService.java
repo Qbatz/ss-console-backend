@@ -1439,6 +1439,8 @@ public class CustomersService {
             Set<String> invoicesTypes = new HashSet<>();
             invoicesTypes.add(InvoiceType.RENT.name());
             invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
+            invoicesTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
+            invoicesTypes.add(InvoiceType.OTHER.name());
 
             List<InvoicesV1> currentUnpaidInvoices = invoiceV1Service
                     .getCurrentUnpaidInvoicesByInvoiceTypes(customerId, invoicesTypes,

@@ -19,12 +19,16 @@ import java.io.IOException;
 
 @Configuration
 public class JWTFilter extends OncePerRequestFilter {
+
     @Autowired
     JWTService jwtService;
     @Autowired
     private MyUserDetailService userDetailService;
+
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+
         String authHeader = request.getHeader("Authorization");
         String token = null;
         String userName = null;
@@ -75,6 +79,5 @@ public class JWTFilter extends OncePerRequestFilter {
             response.setContentType("application/json");
             response.getWriter().write("{\"error\": \"Please login again\"}");
         }
-
     }
 }
