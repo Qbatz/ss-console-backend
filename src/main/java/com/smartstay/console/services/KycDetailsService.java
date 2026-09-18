@@ -234,6 +234,8 @@ public class KycDetailsService {
                                 String.valueOf(kycDetails.getId()), oldSnapshot, newSnapshot);
                     } else if (KycStatus.REQUESTED.name().equalsIgnoreCase(status)) {
                         return new ResponseEntity<>("Can not approve requested kyc status", HttpStatus.BAD_REQUEST);
+                    } else if (KycStatus.EXPIRED.name().equalsIgnoreCase(status)) {
+                        return new ResponseEntity<>("Can not approve expired kyc", HttpStatus.BAD_REQUEST);
                     } else {
                         return manageApproval(kycDetails, customerId, agent, oldSnapshot);
                     }
@@ -367,7 +369,6 @@ public class KycDetailsService {
 
             if (approvalResponse.getStatusCode() == HttpStatus.OK) {
                 if (approvalStatus != null){
-
                     if (KycStatus.APPROVED.name().equalsIgnoreCase(approvalStatus)) {
                         buildKycDetails(kycDetails, approvalDigioKycResponse, customerId);
                         kycDetails = kycDetailsRepository.save(kycDetails);
@@ -376,9 +377,11 @@ public class KycDetailsService {
 
                         agentActivitiesService.createAgentActivity(agent, ActivityType.UPDATE, Source.KYC_DETAILS,
                                 String.valueOf(kycDetails.getId()), oldSnapshot, newSnapshot);
-                    }
 
-                    return new ResponseEntity<>(Utils.APPROVED, HttpStatus.OK);
+                        return new ResponseEntity<>(Utils.APPROVED, HttpStatus.OK);
+                    } else {
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Status is not approved");
+                    }
                 } else {
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No status found");
                 }
@@ -736,17 +739,63 @@ public class KycDetailsService {
             return new ResponseEntity<>(Utils.CUSTOMER_NOT_ACTIVE, HttpStatus.BAD_REQUEST);
         }
 
+        boolean kycDetailsExist = false;
         if (kycDetails != null && kycDetails.getCurrentStatus() != null){
-            if (!KycStatus.REQUESTED.name().equals(kycDetails.getCurrentStatus())){
-                if (KycStatus.WAITING_FOR_APPROVAL.name().equals(kycDetails.getCurrentStatus())){
-                    return new ResponseEntity<>("Kyc status is waiting for approval", HttpStatus.BAD_REQUEST);
-                } else if (KycStatus.VERIFIED.name().equals(kycDetails.getCurrentStatus())) {
-                    return new ResponseEntity<>("Kyc status is verified already", HttpStatus.BAD_REQUEST);
-                } else {
-                    return new ResponseEntity<>("Kyc status is not requested", HttpStatus.BAD_REQUEST);
+            kycDetailsExist = true;
+            if (KycStatus.VERIFIED.name().equalsIgnoreCase(kycDetails.getCurrentStatus())) {
+                return new ResponseEntity<>("Kyc already verified", HttpStatus.OK);
+            }
+            if (KycStatus.WAITING_FOR_APPROVAL.name().equalsIgnoreCase(kycDetails.getCurrentStatus())){
+                return new ResponseEntity<>("Kyc status is waiting for approval", HttpStatus.BAD_REQUEST);
+            }
+        }
+
+        String verifyStatus = null;
+
+        if (kycDetails != null && kycDetails.getEntityId() != null) {
+
+            String digioVerifyUrl = digioUrl + kycDetails.getEntityId() + "/response";
+
+            try {
+                HttpHeaders headers = new HttpHeaders();
+                headers.setBasicAuth(digioUserName, digioPassword);
+                headers.setContentType(MediaType.APPLICATION_JSON);
+
+                HttpEntity<String> request = new HttpEntity<>("{}", headers);
+
+                ResponseEntity<DigioKycResponse> response = restTemplate.exchange(
+                        digioVerifyUrl,
+                        HttpMethod.POST,
+                        request,
+                        DigioKycResponse.class
+                );
+
+                DigioKycResponse digioKycResponse = response.getBody();
+                if (digioKycResponse == null) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("No response body found");
                 }
-            } else {
+
+                String status = digioKycResponse.status();
+
+                if (response.getStatusCode() == HttpStatus.OK) {
+                    verifyStatus = status;
+                } else {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid request");
+                }
+            } catch (HttpClientErrorException | HttpServerErrorException ex) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Server error");
+            }
+        }
+
+        if (verifyStatus != null){
+            if (KycStatus.REQUESTED.name().equalsIgnoreCase(verifyStatus)){
                 return regenerateAccessToken(kycDetails, kycUsage, tenant, owner, loggedInAgent);
+            }
+            if (KycStatus.VERIFIED.name().equalsIgnoreCase(verifyStatus)) {
+                return new ResponseEntity<>("Kyc already verified", HttpStatus.OK);
+            }
+            if (KycStatus.APPROVED.name().equalsIgnoreCase(verifyStatus)) {
+                return new ResponseEntity<>("Kyc status is approved", HttpStatus.BAD_REQUEST);
             }
         }
 
@@ -780,13 +829,17 @@ public class KycDetailsService {
             kycUsage = new KYCUsage();
 
             kycUsage.setHostelId(tenant.getHostelId());
-            kycUsage.setRequestCount(1);
-        } else {
-            int existingRequestCount = 0;
-            if (kycUsage.getRequestCount() != null) {
-                existingRequestCount = kycUsage.getRequestCount();
+            if (!kycDetailsExist){
+                kycUsage.setRequestCount(1);
             }
-            kycUsage.setRequestCount(existingRequestCount + 1);
+        } else {
+            if (!kycDetailsExist){
+                int existingRequestCount = 0;
+                if (kycUsage.getRequestCount() != null) {
+                    existingRequestCount = kycUsage.getRequestCount();
+                }
+                kycUsage.setRequestCount(existingRequestCount + 1);
+            }
         }
         kycUsage.setLatestRequest(today);
         kycUsage.setLatestRequestTo(customerId);
