@@ -864,13 +864,6 @@ public class KycDetailsService {
                     kycUsage = new KYCUsage();
 
                     kycUsage.setHostelId(tenant.getHostelId());
-                    kycUsage.setRequestCount(1);
-                } else {
-                    int existingRequestCount = 0;
-                    if (kycUsage.getRequestCount() != null) {
-                        existingRequestCount = kycUsage.getRequestCount();
-                    }
-                    kycUsage.setRequestCount(existingRequestCount + 1);
                 }
                 kycUsage.setLatestRequest(today);
                 kycUsage.setLatestRequestTo(customerId);

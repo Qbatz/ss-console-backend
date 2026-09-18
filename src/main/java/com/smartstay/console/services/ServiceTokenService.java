@@ -77,27 +77,11 @@ public class ServiceTokenService {
             return new ResponseEntity<>("Service already exists", HttpStatus.BAD_REQUEST);
         }
 
-        String secret = null;
-        if (payload.secret() != null && !payload.secret().isBlank()){
-            secret = payload.secret();
-        } else {
-            secret = generateSecret();
-        }
+        String secret = generateSecret();
 
         Date today = new Date();
 
-        Date expiryDate = null;
-        if (payload.expiryDate() != null && payload.expiryTime() != null){
-            expiryDate = Utils.localDateTimeToDate(payload.expiryDate(), payload.expiryTime());
-        }
-
-        if (expiryDate != null && !expiryDate.after(today)) {
-            return new ResponseEntity<>("Expiry date must be in the future", HttpStatus.BAD_REQUEST);
-        }
-
-        if (expiryDate == null){
-            expiryDate = Date.from(today.toInstant().plus(Duration.ofDays(7)));
-        }
+        Date expiryDate = Date.from(today.toInstant().plus(Duration.ofDays(7)));
 
         HashMap<String, Object> claims = new HashMap<>();
 
@@ -143,27 +127,11 @@ public class ServiceTokenService {
 
         CredentialsSnapshot oldSnapshot = SnapshotUtility.toSnapshot(credentials);
 
-        String secret = null;
-        if (payload.secret() != null && !payload.secret().isBlank()){
-            secret = payload.secret();
-        } else {
-            secret = generateSecret();
-        }
+        String secret = generateSecret();
 
         Date today = new Date();
 
-        Date expiryDate = null;
-        if (payload.expiryDate() != null && payload.expiryTime() != null){
-            expiryDate = Utils.localDateTimeToDate(payload.expiryDate(), payload.expiryTime());
-        }
-
-        if (expiryDate != null && !expiryDate.after(today)) {
-            return new ResponseEntity<>("Expiry date must be in the future", HttpStatus.BAD_REQUEST);
-        }
-
-        if (expiryDate == null){
-            expiryDate = Date.from(today.toInstant().plus(Duration.ofDays(7)));
-        }
+        Date expiryDate = Date.from(today.toInstant().plus(Duration.ofDays(7)));
 
         HashMap<String, Object> claims = new HashMap<>();
 
