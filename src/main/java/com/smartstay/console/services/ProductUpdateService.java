@@ -54,6 +54,8 @@ public class ProductUpdateService {
     private HostelService hostelService;
     @Autowired
     private UsersService usersService;
+    @Autowired
+    private ProductUpdatePublishStatusService productUpdatePublishStatusService;
 
     public ResponseEntity<?> addProductUpdate(ProductUpdatePayload payload,
                                               MultiValueMap<String, MultipartFile> files) {
@@ -71,6 +73,9 @@ public class ProductUpdateService {
         Date releaseDate = null;
         if (payload.releaseDate() != null){
             releaseDate = Utils.localDateToDate(payload.releaseDate());
+            if (releaseDate.before(today)){
+                return new ResponseEntity<>(Utils.RELEASE_DATE_MUST_BE_IN_FUTURE, HttpStatus.BAD_REQUEST);
+            }
         }
 
         String updateType;
@@ -123,6 +128,11 @@ public class ProductUpdateService {
         Date expiryDate = null;
         if (payload.expiryDate() != null){
             expiryDate = Utils.localDateToDate(payload.expiryDate());
+            if (publishDateTime != null){
+                if (expiryDate.before(publishDateTime)){
+                    return new ResponseEntity<>(Utils.EXPIRY_DATE_CAN_NOT_BE_BEFORE_PUBLISH_DATE, HttpStatus.BAD_REQUEST);
+                }
+            }
         }
 
         productUpdate.setTitle(payload.title());
@@ -586,6 +596,9 @@ public class ProductUpdateService {
         }
         if (payload.releaseDate() != null){
             Date releaseDate = Utils.localDateToDate(payload.releaseDate());
+            if (releaseDate.before(today)){
+                return new ResponseEntity<>(Utils.RELEASE_DATE_MUST_BE_IN_FUTURE, HttpStatus.BAD_REQUEST);
+            }
             productUpdate.setReleaseDate(releaseDate);
         }
         if (payload.updateType() != null && !payload.updateType().isBlank()){
@@ -625,11 +638,28 @@ public class ProductUpdateService {
         }
         if (payload.publishStatus() != null && !payload.publishStatus().isBlank()){
             String publishStatus;
+            PublishStatusEnum publishStatusEnum;
             try {
-                publishStatus = PublishStatusEnum.valueOf(payload.publishStatus()).name();
+                publishStatusEnum = PublishStatusEnum.valueOf(payload.publishStatus());
+                publishStatus = publishStatusEnum.name();
             } catch (Exception e){
                 return new ResponseEntity<>("Publish status is invalid", HttpStatus.BAD_REQUEST);
             }
+
+            String oldPublishStatus = productUpdate.getPublishStatus();
+            PublishStatusEnum oldPublishStatusEnum;
+            try {
+                oldPublishStatusEnum = PublishStatusEnum.valueOf(oldPublishStatus);
+            } catch (Exception e){
+                return new ResponseEntity<>("Publish status is invalid", HttpStatus.BAD_REQUEST);
+            }
+
+            if (!oldPublishStatusEnum.canTransitionTo(publishStatusEnum)) {
+                return new ResponseEntity<>("Cannot change publish status from "
+                        + oldPublishStatus + " to " + publishStatus, HttpStatus.BAD_REQUEST
+                );
+            }
+
             productUpdate.setPublishStatus(publishStatus);
 
             Date publishDateTime = null;
@@ -648,6 +678,11 @@ public class ProductUpdateService {
             Date expiryDate = null;
             if (payload.expiryDate() != null){
                 expiryDate = Utils.localDateToDate(payload.expiryDate());
+                if (publishDateTime != null){
+                    if (expiryDate.before(publishDateTime)){
+                        return new ResponseEntity<>(Utils.EXPIRY_DATE_CAN_NOT_BE_BEFORE_PUBLISH_DATE, HttpStatus.BAD_REQUEST);
+                    }
+                }
             }
 
             productUpdate.setPublishDateTime(publishDateTime);
@@ -684,11 +719,76 @@ public class ProductUpdateService {
 
         Date today = new Date();
 
+        String oldPublishStatus = productUpdate.getPublishStatus();
+
+        if (PublishStatusEnum.ARCHIVED.name().equals(oldPublishStatus)) {
+            return new ResponseEntity<>("Product update is already archived", HttpStatus.BAD_REQUEST);
+        }
+
         productUpdate.setPublishStatus(PublishStatusEnum.ARCHIVED.name());
         productUpdate.setUpdatedAt(today);
         productUpdate.setUpdatedBy(loggedInAgentId);
 
+        ProductUpdatePublishStatus productUpdatePublishStatus = new ProductUpdatePublishStatus();
+
+        productUpdatePublishStatus.setProductUpdateId(productUpdateId);
+        productUpdatePublishStatus.setPublishStatus(oldPublishStatus);
+        productUpdatePublishStatus.setCreatedAt(today);
+
         productUpdate = productUpdateRepository.save(productUpdate);
+        productUpdatePublishStatusService.save(productUpdatePublishStatus);
+
+        ProductUpdateSnapshot newSnapshot = SnapshotUtility.toSnapshot(productUpdate);
+
+        agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.UPDATE, Source.PRODUCT_UPDATE,
+                String.valueOf(productUpdateId), oldSnapshot, newSnapshot);
+
+        return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> unArchiveProductUpdate(Long productUpdateId) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        ProductUpdate productUpdate = productUpdateRepository
+                .findByProductUpdateIdAndIsActiveTrueAndIsDeletedFalse(productUpdateId);
+        if (productUpdate == null){
+            return new ResponseEntity<>(Utils.PRODUCT_UPDATE_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        ProductUpdateSnapshot oldSnapshot = SnapshotUtility.toSnapshot(productUpdate);
+
+        Date today = new Date();
+
+        String oldPublishStatus = productUpdate.getPublishStatus();
+
+        if (!PublishStatusEnum.ARCHIVED.name().equals(oldPublishStatus)) {
+            return new ResponseEntity<>("Product update is not archived", HttpStatus.BAD_REQUEST);
+        }
+
+        ProductUpdatePublishStatus productUpdatePublishStatus = productUpdatePublishStatusService
+                .getByProductUpdateId(productUpdateId);
+        if (productUpdatePublishStatus == null || productUpdatePublishStatus.getPublishStatus() == null){
+            return new ResponseEntity<>(Utils.PRODUCT_UPDATE_STATUS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        String publishStatus = productUpdatePublishStatus.getPublishStatus();
+        try {
+            PublishStatusEnum publishStatusEnum = PublishStatusEnum.valueOf(publishStatus);
+        } catch (Exception e){
+            return new ResponseEntity<>("Publish status is invalid", HttpStatus.BAD_REQUEST);
+        }
+
+        productUpdate.setPublishStatus(publishStatus);
+        productUpdate.setUpdatedAt(today);
+        productUpdate.setUpdatedBy(loggedInAgentId);
+
+        productUpdate = productUpdateRepository.save(productUpdate);
+        productUpdatePublishStatusService.delete(productUpdatePublishStatus);
 
         ProductUpdateSnapshot newSnapshot = SnapshotUtility.toSnapshot(productUpdate);
 

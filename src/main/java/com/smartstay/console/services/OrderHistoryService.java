@@ -63,6 +63,8 @@ public class OrderHistoryService {
     private S3Service s3Service;
     @Autowired
     private PdfService pdfService;
+    @Autowired
+    private CredentialsService credentialsService;
 
     @Value("${PAYMENT_URL}")
     private String paymentUrl;
@@ -311,22 +313,34 @@ public class OrderHistoryService {
         VerifyResponse verifyResponse;
 
         try {
+            Credentials credential = credentialsService.getByService(ServiceEnum.payments.name());
+
+            if (credential == null || credential.getAuthToken() == null) {
+                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+            //headers.setBearerAuth(credential.getAuthToken());
+
             HttpEntity<Void> request = new HttpEntity<>(headers);
 
             String verifyPaymentUrl = paymentUrl + "/v2/payments/" + paymentId ;
 
-            restTemplate.exchange(
+            ResponseEntity<String> paymentResponse = restTemplate.exchange(
                     verifyPaymentUrl,
                     HttpMethod.GET,
                     request,
                     String.class
             );
 
-            verifyResponse = new VerifyResponse(true, "SUCCESS");
+            if (HttpStatus.OK.equals(paymentResponse.getStatusCode())) {
+                verifyResponse = new VerifyResponse(true, "SUCCESS");
+            } else {
+                verifyResponse = new VerifyResponse(false, "FAILED");
+            }
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            verifyResponse = new VerifyResponse(false, "FAILED");
+            return new ResponseEntity<>(Utils.UNABLE_TO_VERIFY_PAYMENT, HttpStatus.BAD_REQUEST);
         } catch (Exception e){
             return new ResponseEntity<>(Utils.UNABLE_TO_VERIFY_PAYMENT, HttpStatus.BAD_REQUEST);
         }
@@ -393,10 +407,17 @@ public class OrderHistoryService {
         payableAmount = Utils.roundOfDoubleTo2Digits(payableAmount);
 
         try {
+            Credentials credential = credentialsService.getByService(ServiceEnum.payments.name());
+
+            if (credential == null || credential.getAuthToken() == null) {
+                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
             String generatePaymentLink = paymentUrl + "/v2/payments/generate/" + hostelId ;
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            //headers.setBearerAuth(credential.getAuthToken());
 
             PaymentLinkGenerateDto requestPayload = new PaymentLinkGenerateDto(payableAmount, "INR",
                     null, planCode, discountAmount, finalPrice, agent.getAgentId());

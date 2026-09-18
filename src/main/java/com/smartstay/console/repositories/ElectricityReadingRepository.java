@@ -65,4 +65,25 @@ public interface ElectricityReadingRepository extends JpaRepository<ElectricityR
                                                                     @Param("roomIds") Set<Integer> roomIds);
 
     List<ElectricityReadings> findAllByIdIn(List<Integer> missingReadingIds);
+
+    @Query("""
+            SELECT er
+            FROM ElectricityReadings er
+            WHERE er.roomId = :roomId
+            ORDER BY er.billEndDate DESC, er.id DESC
+            LIMIT 1
+            """)
+    ElectricityReadings findLatestByRoomId(@Param("roomId") Integer roomId);
+
+    @Query("""
+            SELECT er
+            FROM ElectricityReadings er
+            WHERE er.hostelId = :hostelId
+                AND er.billStartDate = :billStartDate
+                AND er.billEndDate = :billEndDate
+                AND er.billStatus = 'INVOICE_NOT_GENERATED'
+            """)
+    List<ElectricityReadings> findInvoiceNotGeneratedReadingsByHostelAndDates(@Param("hostelId") String hostelId,
+                                                                              @Param("billStartDate") Date billStartDate,
+                                                                              @Param("billEndDate") Date billEndDate);
 }

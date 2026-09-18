@@ -85,13 +85,11 @@ public class TenantKycResMapper implements Function<Customers, TenantKycRes> {
                     !KycStatus.VERIFIED.name().equals(kycDetailsStatus)) {
                 canSendReminder = true;
             }
-        } else {
-            canSendReminder = true;
         }
 
         return new TenantKycRes(customerId, customer.getFirstName(), customer.getLastName(), fullName,
-                initials, profilePic, mobile, customer.getEmailId(), joiningDate, billingCycleStart,
-                billingCycleEnd, kycCompletedDate, kycCompletedTime, kycDetailsStatus, canSendReminder,
-                canApproveKyc);
+                initials, profilePic, mobile, customer.getEmailId(), customer.getCurrentStatus(), joiningDate,
+                billingCycleStart, billingCycleEnd, kycCompletedDate, kycCompletedTime, kycDetailsStatus,
+                canSendReminder, canApproveKyc);
     }
 }

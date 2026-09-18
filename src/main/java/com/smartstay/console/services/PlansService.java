@@ -69,6 +69,10 @@ public class PlansService {
         return plansRepository.findByPlanCodeInAndIsActiveTrue(planCodes);
     }
 
+    public List<Plans> getAllPlansByPlanCodes(Set<String> planCodes) {
+        return plansRepository.findAllByPlanCodeIn(planCodes);
+    }
+
     public ResponseEntity<?> getAllPlans() {
 
         if (!authentication.isAuthenticated()) {
@@ -210,6 +214,13 @@ public class PlansService {
             }
             plan.setPlanType(payload.planType());
         }
+        if (payload.kycPerMonthLimit() != null){
+            if (payload.kycPerMonthLimit() < -1){
+                return new ResponseEntity<>("Kyc limit can not be negative", HttpStatus.BAD_REQUEST);
+            }
+            plan.setKycPerMonthLimit(payload.kycPerMonthLimit());
+        }
+
         if (payload.duration() != null){
             if (payload.duration() <= 0){
                 return new ResponseEntity<>(Utils.DURATION_NEED_TO_BE_HIGHER_THAN_ZERO, HttpStatus.BAD_REQUEST);
@@ -417,6 +428,15 @@ public class PlansService {
         plan.setDuration(payload.duration());
         plan.setDiscounts(payload.discountPercentage());
         plan.setPlanType(payload.planType());
+
+        int kycPerMonthLimit = -1;
+        if (payload.kycPerMonthLimit() != null){
+            if (payload.kycPerMonthLimit() < -1){
+                return new ResponseEntity<>("Kyc limit can not be negative", HttpStatus.BAD_REQUEST);
+            }
+            kycPerMonthLimit = payload.kycPerMonthLimit();
+        }
+        plan.setKycPerMonthLimit(kycPerMonthLimit);
 
         String planCode;
         if (payload.planCode() != null && !payload.planCode().isBlank()) {

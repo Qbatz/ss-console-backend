@@ -55,7 +55,7 @@ public class RecurringSetupForJoiningBasedPrepaid {
             List<CustomerWalletHistory> listCustomerWallets = customerWalletHistoryService
                     .getAllInvoiceNotGeneratedWallets(customerId);
 
-            double rentAmount = bookingsV1.getRentAmount();
+            double rentAmount = bookingsV1.getRentAmount() != null ? bookingsV1.getRentAmount() : 0.0;
 
             List<CustomersAmenity> listCustomersAmenity = customersAmenityService
                     .getAllCustomerAmenitiesForRecurring(customerId, new Date());

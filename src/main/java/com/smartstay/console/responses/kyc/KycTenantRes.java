@@ -10,9 +10,13 @@ public record KycTenantRes(String hostelId,
                            String emailId,
                            String fullAddress,
                            long totalTenants,
+                           long totalKycRequestedTenants,
                            long totalRequested,
                            long totalVerified,
                            long totalWaitingForApproval,
                            boolean kycEnableStatus,
+                           String kycHistoryStartDate,
+                           String kycHistoryEndDate,
+                           int kycLimitPerMonth,
                            List<TenantKycRes> tenants) {
 }

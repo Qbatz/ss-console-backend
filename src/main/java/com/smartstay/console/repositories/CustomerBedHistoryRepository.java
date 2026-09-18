@@ -111,4 +111,21 @@ public interface CustomerBedHistoryRepository extends JpaRepository<CustomersBed
                                                                              @Param("customerId") String customerId,
                                                                              @Param("startDate") Date startDate,
                                                                              @Param("endDate") Date endDate);
+
+    @Query("""
+            SELECT cbh
+            FROM CustomersBedHistory cbh
+            WHERE cbh.hostelId = :hostelId
+              AND cbh.type <> :bookedType
+              AND cbh.startDate <= :billEndDate
+              AND (
+                  cbh.endDate IS NULL
+                  OR cbh.endDate >= :billStartDate
+              )
+            ORDER BY cbh.startDate ASC
+            """)
+    List<CustomersBedHistory> findByHostelIdAndDateOverlap(@Param("hostelId") String hostelId,
+                                                           @Param("billStartDate") Date billStartDate,
+                                                           @Param("billEndDate") Date billEndDate,
+                                                           @Param("bookedType") String bookedType);
 }

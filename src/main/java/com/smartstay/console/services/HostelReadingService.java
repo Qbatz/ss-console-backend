@@ -20,4 +20,8 @@ public class HostelReadingService {
     public void deleteAll(List<HostelReadings> listHostelReadings) {
         hostelReadingRepository.deleteAll(listHostelReadings);
     }
+
+    public List<HostelReadings> getAllInvoiceNotGeneratedReadings(String hostelId) {
+        return hostelReadingRepository.findAllInvoiceNotGeneratedReadings(hostelId);
+    }
 }

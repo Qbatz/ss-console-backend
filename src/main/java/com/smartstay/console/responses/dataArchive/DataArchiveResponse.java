@@ -1,0 +1,28 @@
+package com.smartstay.console.responses.dataArchive;
+
+public record DataArchiveResponse(Long archiveId,
+                                  String tableName,
+                                  String type,
+                                  String source,
+                                  String sourceId,
+                                  String criteria,
+                                  String cutOffDate,
+                                  Long rowCount,
+                                  String s3Bucket,
+                                  String s3Key,
+                                  String s3Url,
+                                  String fileFormat,
+                                  String compression,
+                                  String checksum,
+                                  String schemaVersion,
+                                  String status,
+                                  String errorMessage,
+                                  String createdById,
+                                  String createdBy,
+                                  String createdAtDate,
+                                  String createdAtTime,
+                                  String restoredById,
+                                  String restoredBy,
+                                  String restoredAtDate,
+                                  String restoredAtTime) {
+}
