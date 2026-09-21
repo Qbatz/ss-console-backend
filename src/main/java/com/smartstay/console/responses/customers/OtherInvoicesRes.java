@@ -5,6 +5,7 @@ import java.util.List;
 public record OtherInvoicesRes(String invoiceId,
                                String invoiceNumber,
                                String invoiceDate,
+                               String invoiceType,
                                Double invoiceAmount,
                                Double paidAmount,
                                Double pendingAmount,
