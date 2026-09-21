@@ -13,6 +13,8 @@ import com.smartstay.console.dto.customers.*;
 import com.smartstay.console.dto.demoRequest.DemoRequestCommentsSnapshot;
 import com.smartstay.console.dto.demoRequest.DemoRequestSnapshot;
 import com.smartstay.console.dto.hostel.*;
+import com.smartstay.console.dto.invoice.CancelledInvoice;
+import com.smartstay.console.dto.invoice.CancelledInvoiceSnapshot;
 import com.smartstay.console.dto.invoice.InvoiceItemSnapshot;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
@@ -37,7 +39,6 @@ import com.smartstay.console.dto.users.UserSnapshot;
 import com.smartstay.console.dto.users.UsersConfigSnapshot;
 import com.smartstay.console.dto.users.UsersNotesSnapshot;
 
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
@@ -609,14 +610,16 @@ public class SnapshotUtility {
         );
     }
 
+    public static CancelledInvoiceSnapshot toSnapshot(CancelledInvoice c){
+
+        if (c == null) return null;
+
+        return new CancelledInvoiceSnapshot(c.getInvoiceId(), c.getPaymentStatus());
+    }
+
     public static InvoiceSnapshot toSnapshot(InvoicesV1 i) {
 
         if (i == null) return null;
-
-        List<DeductionsSnapshot> deductions = new ArrayList<>();
-        if (i.getDeductions() != null){
-            deductions = toSnapshotList(i.getDeductions(), SnapshotUtility::toSnapshot);
-        }
 
         return new InvoiceSnapshot(
                 i.getInvoiceId(),
@@ -644,17 +647,29 @@ public class SnapshotUtility {
                 i.getCancelledInvoices() != null
                         ? List.copyOf(i.getCancelledInvoices())
                         : List.of(),
-                deductions,
+                toSnapshotList(
+                        i.getNewCancelledInvoices(),
+                        SnapshotUtility::toSnapshot
+                ),
+                toSnapshotList(
+                        i.getDeductions(),
+                        SnapshotUtility::toSnapshot
+                ),
                 i.getInvoiceUrl(),
                 i.getCreatedBy(),
                 i.getUpdatedBy(),
                 copyDate(i.getInvoiceGeneratedDate()),
+                copyDate(i.getCancelledDate()),
                 copyDate(i.getInvoiceDueDate()),
+                copyDate(i.getInvoiceDate()),
                 copyDate(i.getInvoiceStartDate()),
                 copyDate(i.getInvoiceEndDate()),
                 copyDate(i.getCreatedAt()),
                 copyDate(i.getUpdatedAt()),
-                toSnapshotList(i.getInvoiceItems(), SnapshotUtility::toSnapshot)
+                toSnapshotList(
+                        i.getInvoiceItems(),
+                        SnapshotUtility::toSnapshot
+                )
         );
     }
 
