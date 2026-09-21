@@ -20,6 +20,7 @@ public interface ProductUpdateRepository extends JpaRepository<ProductUpdate, Lo
             from ProductUpdate pu
             where pu.isActive = true
               and pu.isDeleted = false
+              and pu.publishStatus <> 'ARCHIVED'
             """)
     ProductUpdatePublishStatusCountProjection findPublishStatusCountData();
 
@@ -28,7 +29,11 @@ public interface ProductUpdateRepository extends JpaRepository<ProductUpdate, Lo
             from ProductUpdate pu
             where pu.isActive = true
               and pu.isDeleted = false
-              and (:publishStatus is null or pu.publishStatus = :publishStatus)
+              and (
+                  (:publishStatus is null and pu.publishStatus <> 'ARCHIVED')
+                  or
+                  (:publishStatus is not null and pu.publishStatus = :publishStatus)
+              )
               and (:type is null or pu.updateType = :type)
               and (:name is null or
                   lower(replace(coalesce(pu.title, ''), ' ', ''))

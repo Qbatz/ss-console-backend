@@ -17,5 +17,6 @@ public record CustomerRentInfoRes(Double currentPayableRent,
                                   Double fullRent,
                                   Double rentDifference,
                                   List<OtherItemsRes> otherItems,
-                                  List<RentBreakUpInfoRes> rentBreakUpInfo) {
+                                  List<RentBreakUpInfoRes> rentBreakUpInfo,
+                                  OtherInvoicesInfoRes otherInvoicesInfo) {
 }

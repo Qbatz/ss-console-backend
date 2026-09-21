@@ -54,4 +54,6 @@ public interface PlansRepository extends JpaRepository<Plans, Long> {
     Plans findByPlanId(Long planId);
 
     List<Plans> findAllByPlanIdIn(Set<Long> planIds);
+
+    List<Plans> findAllByPlanCodeIn(Set<String> planCodes);
 }

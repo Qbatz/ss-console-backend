@@ -26,6 +26,7 @@ public class Plans {
     //basic or premium or affordable
     private String planType;
     private String planCode;
+    private int kycPerMonthLimit;
     private boolean shouldShow;
     private boolean canCustomize;
     private boolean isActive;

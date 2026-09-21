@@ -4,6 +4,8 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.agentRoles.AgentRoleSnapshot;
 import com.smartstay.console.dto.agentRoles.RolesPermissionSnapshot;
 import com.smartstay.console.dto.bed.BedSnapshot;
+import com.smartstay.console.dto.credentials.CredentialsSnapshot;
+import com.smartstay.console.dto.dataArchive.DataArchiveSnapshot;
 import com.smartstay.console.dto.demoRequest.DemoRequestActivitySnapshot;
 import com.smartstay.console.dto.hostelRelationalAgent.HostelRelationalAgentSnapshot;
 import com.smartstay.console.dto.agent.AgentSnapshot;
@@ -14,6 +16,8 @@ import com.smartstay.console.dto.hostel.*;
 import com.smartstay.console.dto.invoice.InvoiceItemSnapshot;
 import com.smartstay.console.dto.invoice.InvoiceSnapshot;
 import com.smartstay.console.dto.invoiceRedemption.InvoiceRedemptionSnapshot;
+import com.smartstay.console.dto.kyc.KycConfigSnapshot;
+import com.smartstay.console.dto.kyc.KycHistorySnapshot;
 import com.smartstay.console.dto.plans.PlanFeatureSnapshot;
 import com.smartstay.console.dto.plans.PlanSnapshot;
 import com.smartstay.console.dto.plans.SmartstayFeaturesSnapshot;
@@ -961,6 +965,81 @@ public class SnapshotUtility {
                 toSnapshotList(f.getFilterOptions(), SnapshotUtility::toSnapshot),
                 f.getIsActive(),
                 copyDate(f.getCreatedAt())
+        );
+    }
+
+    public static KycConfigSnapshot toSnapshot(KycConfig k) {
+
+        if (k == null) return null;
+
+        return new KycConfigSnapshot(
+                k.getConfigId(),
+                k.getHostelId(),
+                k.getLimitPerMonth(),
+                k.getCanRequest(),
+                k.getCreatedBy(),
+                k.getUpdatedBy(),
+                copyDate(k.getCreatedAt()),
+                copyDate(k.getUpdatedAt())
+        );
+    }
+
+    public static KycHistorySnapshot toSnapshot(KycHistory k) {
+        if (k == null) return null;
+
+        return new KycHistorySnapshot(
+                k.getHistoryId(),
+                k.getHostelId(),
+                copyDate(k.getStartDate()),
+                copyDate(k.getEndDate()),
+                k.getIsCancelledDueToPlan(),
+                k.getCancellationReason(),
+                k.getActivationReason(),
+                k.getCancelledBy(),
+                copyDate(k.getCreatedAt()),
+                k.getCreatedBy(),
+                k.getUpdatedBy()
+        );
+    }
+
+    public static DataArchiveSnapshot toSnapshot(DataArchive d) {
+        if (d == null) return null;
+
+        return new DataArchiveSnapshot(
+                d.getArchiveId(),
+                d.getTableName(),
+                d.getType(),
+                d.getSource(),
+                d.getSourceId(),
+                d.getCriteria(),
+                copyDate(d.getCutOffDate()),
+                d.getRowCount(),
+                d.getS3Bucket(),
+                d.getS3Key(),
+                d.getS3Url(),
+                d.getFileFormat(),
+                d.getCompression(),
+                d.getChecksum(),
+                d.getSchemaVersion(),
+                d.getStatus(),
+                d.getErrorMessage(),
+                copyDate(d.getCreatedAt()),
+                d.getCreatedBy(),
+                copyDate(d.getRestoredAt()),
+                d.getRestoredBy()
+        );
+    }
+
+    public static CredentialsSnapshot toSnapshot(Credentials c) {
+        if (c == null) return null;
+
+        return new CredentialsSnapshot(
+                c.getService(),
+                c.getClientId(),
+                c.getAuthToken(),
+                c.getSecretValue(),
+                c.getRefreshToken(),
+                c.getOtherSecrets()
         );
     }
 
