@@ -1,9 +1,11 @@
 package com.smartstay.console.controller;
 
+import com.smartstay.console.dao.RecurringConfiguration;
 import com.smartstay.console.payloads.billingRules.UpdateBillingRulesPayload;
 import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.payloads.hostel.HostelNotesPayload;
+import com.smartstay.console.payloads.hostel.RecurringConfigurationPayload;
 import com.smartstay.console.services.HostelsService;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -154,5 +156,10 @@ public class HostelsController {
     @GetMapping("/search")
     public ResponseEntity<?> getHostelByName(@RequestParam String name){
         return hostelsService.getHostelByName(name);
+    }
+
+    @PostMapping("/recurring-config")
+    public ResponseEntity<?> updateRecurringConfig(@RequestBody @Valid RecurringConfigurationPayload payload){
+        return hostelsService.updateRecurringConfig(payload);
     }
 }

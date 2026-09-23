@@ -104,6 +104,7 @@ public class AgentActivityUtil {
             case KYC_HISTORY -> "Created a new kyc history";
             case DATA_ARCHIVE -> "Created a new data archive";
             case CREDENTIALS -> "Created a new credential";
+            case HOSTEL_FOLLOW_UP -> "Created a new hostel follow-up";
             default -> "Created successfully";
         };
     }

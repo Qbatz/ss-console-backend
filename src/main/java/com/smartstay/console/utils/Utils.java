@@ -126,6 +126,7 @@ public class Utils {
     public static final String PRODUCT_UPDATE_STATUS_NOT_FOUND = "Product update status not found";
     public static final String DATA_ARCHIVE_NOT_FOUND = "Data archive not found";
     public static final String CREDENTIALS_NOT_FOUND = "Credentials not found";
+    public static final String HOSTEL_FOLLOW_UP_STATUS_NOT_FOUND = "Hostel follow-up status not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -187,6 +188,7 @@ public class Utils {
     public static final String TRIAL_DAYS_REASON_REQUIRED = "Trial days reason is required";
     public static final String COMMENTS_REQUIRED_FOR_REASSIGN_STAFF = "Comments is required for reassigning staff";
     public static final String PAID_AT_DATE_TIME_IS_REQUIRED = "Paid at date time is required";
+    public static final String DROP_REASON_IS_REQUIRED = "Drop reason is required";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";

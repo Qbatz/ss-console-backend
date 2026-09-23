@@ -7,6 +7,7 @@ import com.smartstay.console.dto.bed.BedSnapshot;
 import com.smartstay.console.dto.credentials.CredentialsSnapshot;
 import com.smartstay.console.dto.dataArchive.DataArchiveSnapshot;
 import com.smartstay.console.dto.demoRequest.DemoRequestActivitySnapshot;
+import com.smartstay.console.dto.hostelFollowUp.HostelFollowUpSnapshot;
 import com.smartstay.console.dto.hostelRelationalAgent.HostelRelationalAgentSnapshot;
 import com.smartstay.console.dto.agent.AgentSnapshot;
 import com.smartstay.console.dto.customers.*;
@@ -1055,6 +1056,33 @@ public class SnapshotUtility {
                 c.getSecretValue(),
                 c.getRefreshToken(),
                 c.getOtherSecrets()
+        );
+    }
+
+    public static HostelFollowUpSnapshot toSnapshot(HostelFollowUp h) {
+        if (h == null) return null;
+
+        return new HostelFollowUpSnapshot(
+                h.getFollowUpId(),
+                h.getHostelId(),
+                h.getHostelFollowUpStatus(),
+                h.getComments(),
+                h.getDropReason(),
+                h.getCreatedBy(),
+                copyDate(h.getCreatedAt())
+        );
+    }
+
+    public static RecurringConfigSnapshot toSnapshot(RecurringConfiguration r) {
+        if (r == null) return null;
+
+        return new RecurringConfigSnapshot(
+                r.getConfigId(),
+                r.getHostelId(),
+                r.getShouldVerify(),
+                r.getRequestedBy(),
+                r.getCreatedBy(),
+                copyDate(r.getCreatedAt())
         );
     }
 

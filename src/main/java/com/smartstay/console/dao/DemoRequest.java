@@ -48,6 +48,7 @@ public class DemoRequest {
     //from demo type enum
     private String demoType;
     private String demoMeetLink;
+    //from drop reason enum
     private String dropReason;
 
     private Date createdAt;

@@ -23,6 +23,7 @@ import com.smartstay.console.payloads.billingRules.UpdateBillingRulesPayload;
 import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
 import com.smartstay.console.payloads.hostel.HostelNotesPayload;
+import com.smartstay.console.payloads.hostel.RecurringConfigurationPayload;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerRecTrackerRes;
@@ -201,6 +202,8 @@ public class HostelsService {
     private TenantBankTransactionsService tenantBankTransactionsService;
     @Autowired
     private BankingV2Service bankingV2Service;
+    @Autowired
+    private RecurringConfigurationService recurringConfigurationService;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -471,6 +474,14 @@ public class HostelsService {
         customerIds.addAll(invoiceCustomerIds);
         customerIds.addAll(redemptionInvoiceCustomerIds);
 
+        RecurringConfiguration recurringConfiguration = recurringConfigurationService
+                .getByHostelId(hostelId);
+        if (recurringConfiguration != null){
+            if (recurringConfiguration.getCreatedBy() != null){
+                createdByIds.add(recurringConfiguration.getCreatedBy());
+            }
+        }
+
         List<Agent> agents = createdByIds.isEmpty()
                 ? Collections.emptyList()
                 : agentService.getAgentsByIds(createdByIds);
@@ -608,7 +619,8 @@ public class HostelsService {
                 sharingTypeList, amenities, customerResponses, subscriptions, mastersRes, staffsRes,
                 activitiesRes, userLookup, trialPlans, expandableTrialPlans, billingDatesMap, recurringHistory,
                 customerRecurringHistory, recurringStatus, currentBillLastRecDate, currentBillingRules,
-                relationalAgentResponses, invoiceRedemptionResList, invoiceResponses
+                relationalAgentResponses, invoiceRedemptionResList, invoiceResponses, recurringConfiguration,
+                agentMap
         ).apply(hostel);
 
         return new ResponseEntity<>(hostelDetails, HttpStatus.OK);
@@ -3580,5 +3592,67 @@ public class HostelsService {
                 .toList();
 
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> updateRecurringConfig(RecurringConfigurationPayload payload) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(loggedInAgent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_UPDATE)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        String hostelId = payload.hostelId();
+        HostelV1 hostel = hostelService.getHostelInfo(hostelId);
+        if (hostel == null) {
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        boolean shouldVerify = payload.shouldVerify();
+
+        Date today = new Date();
+
+        RecurringConfiguration recurringConfiguration = recurringConfigurationService
+                .getByHostelId(hostelId);
+
+        RecurringConfigSnapshot oldSnapshot = SnapshotUtility.toSnapshot(recurringConfiguration);
+
+        boolean isCreate = false;
+
+        if (recurringConfiguration == null){
+            recurringConfiguration = new RecurringConfiguration();
+
+            Users owner = usersService.getOwner(hostel.getParentId());
+            if (owner == null){
+                return new ResponseEntity<>(Utils.NO_OWNER_FOUND, HttpStatus.BAD_REQUEST);
+            }
+
+            recurringConfiguration.setHostelId(hostelId);
+            recurringConfiguration.setRequestedBy(owner.getUserId());
+            recurringConfiguration.setCreatedBy(loggedInAgentId);
+            recurringConfiguration.setCreatedAt(today);
+
+            isCreate = true;
+        }
+
+        recurringConfiguration.setShouldVerify(shouldVerify);
+
+        recurringConfiguration = recurringConfigurationService.save(recurringConfiguration);
+
+        RecurringConfigSnapshot newSnapshot = SnapshotUtility.toSnapshot(recurringConfiguration);
+
+        if (isCreate){
+            agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.CREATE, Source.RECURRING_CONFIG,
+                    String.valueOf(recurringConfiguration), null, newSnapshot);
+        } else {
+            agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.UPDATE, Source.RECURRING_CONFIG,
+                    String.valueOf(recurringConfiguration), oldSnapshot, newSnapshot);
+        }
+
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 }
