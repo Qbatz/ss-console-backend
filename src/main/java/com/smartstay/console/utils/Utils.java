@@ -127,6 +127,7 @@ public class Utils {
     public static final String DATA_ARCHIVE_NOT_FOUND = "Data archive not found";
     public static final String CREDENTIALS_NOT_FOUND = "Credentials not found";
     public static final String HOSTEL_FOLLOW_UP_STATUS_NOT_FOUND = "Hostel follow-up status not found";
+    public static final String REASON_NOT_FOUND = "Reason not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";

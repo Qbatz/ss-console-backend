@@ -1065,9 +1065,9 @@ public class SnapshotUtility {
         return new HostelFollowUpSnapshot(
                 h.getFollowUpId(),
                 h.getHostelId(),
-                h.getHostelFollowUpStatus(),
+                h.getStatus(),
                 h.getComments(),
-                h.getDropReason(),
+                h.getReason(),
                 h.getCreatedBy(),
                 copyDate(h.getCreatedAt())
         );
