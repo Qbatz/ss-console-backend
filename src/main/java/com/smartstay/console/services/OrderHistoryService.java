@@ -313,11 +313,11 @@ public class OrderHistoryService {
         VerifyResponse verifyResponse;
 
         try {
-            Credentials credential = credentialsService.getByService(ServiceEnum.payments.name());
 
-            if (credential == null || credential.getAuthToken() == null) {
-                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
-            }
+//            Credentials credential = credentialsService.getByService(ServiceEnum.payments.name());
+//            if (credential == null || credential.getAuthToken() == null) {
+//                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+//            }
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -407,11 +407,11 @@ public class OrderHistoryService {
         payableAmount = Utils.roundOfDoubleTo2Digits(payableAmount);
 
         try {
-            Credentials credential = credentialsService.getByService(ServiceEnum.payments.name());
 
-            if (credential == null || credential.getAuthToken() == null) {
-                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
-            }
+//            Credentials credential = credentialsService.getByService(ServiceEnum.payments.name());
+//            if (credential == null || credential.getAuthToken() == null) {
+//                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+//            }
 
             String generatePaymentLink = paymentUrl + "/v2/payments/generate/" + hostelId ;
 

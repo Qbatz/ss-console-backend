@@ -16,9 +16,7 @@ import com.smartstay.console.dto.customers.CustomersCredentialsSnapshot;
 import com.smartstay.console.dto.hostel.*;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import com.smartstay.console.ennum.*;
-import com.smartstay.console.events.JoiningBasedPrepaidEvents;
-import com.smartstay.console.events.PostpaidRecurringEvents;
-import com.smartstay.console.events.RecurringEvents;
+import com.smartstay.console.events.*;
 import com.smartstay.console.payloads.billingRules.UpdateBillingRulesPayload;
 import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
@@ -2351,13 +2349,30 @@ public class HostelsService {
                 return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
             }
 
+            RecurringConfiguration recurringConfiguration = recurringConfigurationService
+                    .getByHostelId(hostelId);
+            boolean shouldDraftInvoice = false;
+            if (recurringConfiguration != null && recurringConfiguration.getShouldVerify() != null){
+                shouldDraftInvoice = recurringConfiguration.getShouldVerify();
+            }
+
             try {
-                if (isPrePaid){
-                    applicationEventPublisher.publishEvent(new RecurringEvents(this,
-                            hostelId, billingDay, currentBillStartDate, billingDates));
-                } else if (isPostPaid) {
-                    applicationEventPublisher.publishEvent(new PostpaidRecurringEvents(this,
-                            hostelId, billingDay, billingDates));
+                if (shouldDraftInvoice){
+                    if (isPrePaid){
+                        applicationEventPublisher.publishEvent(new DraftPrepaidRecurringEvents(this,
+                                hostel, billingDates));
+                    } else if (isPostPaid) {
+                        applicationEventPublisher.publishEvent(new DraftPostpaidRecurringEvents(this,
+                                hostel, billingDates));
+                    }
+                } else {
+                    if (isPrePaid){
+                        applicationEventPublisher.publishEvent(new RecurringEvents(this,
+                                hostelId, billingDay, currentBillStartDate, billingDates));
+                    } else if (isPostPaid) {
+                        applicationEventPublisher.publishEvent(new PostpaidRecurringEvents(this,
+                                hostelId, billingDay, billingDates));
+                    }
                 }
             } catch (Exception e){
                 return new ResponseEntity<>("Server error", HttpStatus.BAD_REQUEST);
@@ -3125,13 +3140,30 @@ public class HostelsService {
                 return new ResponseEntity<>(Utils.RECURRING_ALREADY_CREATED, HttpStatus.BAD_REQUEST);
             }
 
+            RecurringConfiguration recurringConfiguration = recurringConfigurationService
+                    .getByHostelId(hostelId);
+            boolean shouldDraftInvoice = false;
+            if (recurringConfiguration != null && recurringConfiguration.getShouldVerify() != null){
+                shouldDraftInvoice = recurringConfiguration.getShouldVerify();
+            }
+
             try {
-                if (isPrePaid){
-                    applicationEventPublisher.publishEvent(new JoiningBasedPrepaidEvents(this,
-                            customerId, hostelId, billingDay, joinBasedBillingDates));
-                } else if (isPostPaid) {
-                   return new ResponseEntity<>("Postpaid joining date based recurring has not been implemented",
-                           HttpStatus.BAD_REQUEST);
+                if (shouldDraftInvoice){
+                    if (isPrePaid){
+                        applicationEventPublisher.publishEvent(new DraftJoinBasedPrepaidRecurringEvents(this,
+                                customer, hostel, joinBasedBillingDates));
+                    } else if (isPostPaid) {
+                        return new ResponseEntity<>("Postpaid joining date based recurring has not been implemented",
+                                HttpStatus.BAD_REQUEST);
+                    }
+                } else {
+                    if (isPrePaid){
+                        applicationEventPublisher.publishEvent(new JoiningBasedPrepaidEvents(this,
+                                customerId, hostelId, billingDay, joinBasedBillingDates));
+                    } else if (isPostPaid) {
+                        return new ResponseEntity<>("Postpaid joining date based recurring has not been implemented",
+                                HttpStatus.BAD_REQUEST);
+                    }
                 }
             } catch (Exception e){
                 return new ResponseEntity<>("Server error", HttpStatus.BAD_REQUEST);

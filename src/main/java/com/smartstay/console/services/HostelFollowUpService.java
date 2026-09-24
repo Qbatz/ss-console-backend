@@ -75,7 +75,11 @@ public class HostelFollowUpService {
 
         HostelFollowUpResMapper mapper = new HostelFollowUpResMapper(hostelFollowUps, agentMap);
 
-        HostelFollowUpResponse response = mapper.apply(latestFollowUp);
+        HostelFollowUpResponse response = null;
+
+        if (latestFollowUp != null) {
+            response = mapper.apply(latestFollowUp);
+        }
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
