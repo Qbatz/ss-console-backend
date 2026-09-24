@@ -4,7 +4,6 @@ import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.ennum.*;
 import com.smartstay.console.events.DraftJoinBasedPrepaidRecurringEvents;
-import com.smartstay.console.repositories.InvoiceV1Repository;
 import com.smartstay.console.services.*;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,13 +23,9 @@ public class DraftJoinBasedPrepaidRecurringEventListener {
     @Autowired
     private CustomerWalletHistoryService customerWalletHistoryService;
     @Autowired
-    private InvoiceV1Repository invoiceV1Repository;
-    @Autowired
     private CustomersAmenityService customersAmenityService;
     @Autowired
     private AmenitiesService amenitiesService;
-    @Autowired
-    private TemplatesService templatesService;
     @Autowired
     private InvoiceDraftService invoiceDraftService;
 
@@ -42,6 +37,8 @@ public class DraftJoinBasedPrepaidRecurringEventListener {
         String hostelId = hostel.getHostelId();
         Customers customer = recurringEvents.getCustomer();
         String customerId = customer.getCustomerId();
+
+        String invoiceNumber = recurringEvents.getInvoiceNumber();
 
         BookingsV1 bookingsV1 = bookingsService.getBookingInfoByCustomerId(customerId);
         BillingDates billingDates = recurringEvents.getBillingDates();
@@ -92,46 +89,6 @@ public class DraftJoinBasedPrepaidRecurringEventListener {
                 }
             }
 
-            StringBuilder prefixSuffix = new StringBuilder();
-
-            String prefix = "INV";
-            com.smartstay.console.dao.BillTemplates templates = templatesService
-                    .getTemplateByHostelId(hostelId);
-            if (templates != null && templates.getTemplateTypes() != null) {
-                if (!templates.getTemplateTypes().isEmpty()) {
-                    BillTemplateType rentTemplateType = templates.getTemplateTypes()
-                            .stream()
-                            .filter(i -> i.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
-                            .findFirst()
-                            .get();
-                    prefix = rentTemplateType.getInvoicePrefix();
-                }
-                prefixSuffix.append(prefix);
-            }
-
-            InvoicesV1 inv = invoiceV1Repository.findLatestInvoiceByPrefix(prefix, hostelId);
-
-            if (inv != null) {
-                String[] prefArr = inv.getInvoiceNumber().split("-");
-                if (prefArr.length > 1) {
-                    int suffix = Integer.parseInt(prefArr[prefArr.length - 1]) + 1;
-                    prefixSuffix.append("-");
-                    if (suffix < 10) {
-                        prefixSuffix.append("00");
-                        prefixSuffix.append(suffix);
-                    } else if (suffix < 100) {
-                        prefixSuffix.append("0");
-                        prefixSuffix.append(suffix);
-                    } else {
-                        prefixSuffix.append(suffix);
-                    }
-                }
-            } else {
-                //this is going to be the first invoice
-                prefixSuffix.append("-");
-                prefixSuffix.append("001");
-            }
-
             Date today = new Date();
 
             Date dueDate = Utils.addDaysToDate(today, billingDates.dueDays());
@@ -142,7 +99,7 @@ public class DraftJoinBasedPrepaidRecurringEventListener {
 
             invoiceDrafts.setCustomerId(customerId);
             invoiceDrafts.setHostelId(hostelId);
-            invoiceDrafts.setInvoiceNumber(prefixSuffix.toString());
+            invoiceDrafts.setInvoiceNumber(invoiceNumber);
             invoiceDrafts.setCustomerMobile(customer.getMobile());
             invoiceDrafts.setCustomerMailId(customer.getEmailId());
             invoiceDrafts.setInvoiceType(InvoiceType.RENT.name());

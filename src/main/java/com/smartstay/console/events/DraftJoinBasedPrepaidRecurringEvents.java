@@ -12,14 +12,17 @@ public class DraftJoinBasedPrepaidRecurringEvents extends ApplicationEvent {
     private final Customers customer;
     private final HostelV1 hostel;
     private final BillingDates billingDates;
+    private final String invoiceNumber;
 
     public DraftJoinBasedPrepaidRecurringEvents(Object source,
                                                 Customers customer,
                                                 HostelV1 hostel,
-                                                BillingDates billingDates) {
+                                                BillingDates billingDates,
+                                                String invoiceNumber) {
         super(source);
         this.customer = customer;
         this.hostel = hostel;
         this.billingDates = billingDates;
+        this.invoiceNumber = invoiceNumber;
     }
 }

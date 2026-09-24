@@ -3061,6 +3061,8 @@ public class HostelsService {
 
         Date today = new Date();
 
+        Map<String, Integer> nextInvoiceNumberByHostel = new HashMap<>();
+
         for (CustomerIdPayload payload : payloads) {
 
             String customerId = payload.customerId();
@@ -3147,11 +3149,13 @@ public class HostelsService {
                 shouldDraftInvoice = recurringConfiguration.getShouldVerify();
             }
 
+            String invoiceNumber = getNextInvoiceNumber(hostelId, "INV", nextInvoiceNumberByHostel);
+
             try {
                 if (shouldDraftInvoice){
                     if (isPrePaid){
                         applicationEventPublisher.publishEvent(new DraftJoinBasedPrepaidRecurringEvents(this,
-                                customer, hostel, joinBasedBillingDates));
+                                customer, hostel, joinBasedBillingDates, invoiceNumber));
                     } else if (isPostPaid) {
                         return new ResponseEntity<>("Postpaid joining date based recurring has not been implemented",
                                 HttpStatus.BAD_REQUEST);
@@ -3171,6 +3175,52 @@ public class HostelsService {
         }
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    private String getNextInvoiceNumber(String hostelId, String prefix,
+                                        Map<String, Integer> nextInvoiceNumberByHostel) {
+
+        BillTemplates templates = templatesService.getTemplateByHostelId(hostelId);
+
+        if (templates != null && templates.getTemplateTypes() != null) {
+
+            if (!templates.getTemplateTypes().isEmpty()) {
+
+                BillTemplateType rentTemplateType = templates.getTemplateTypes()
+                        .stream()
+                        .filter(i -> i.getInvoiceType().equalsIgnoreCase(BillConfigTypes.RENTAL.name()))
+                        .findFirst()
+                        .get();
+
+                prefix = rentTemplateType.getInvoicePrefix();
+            }
+        }
+
+        Integer nextNumber = nextInvoiceNumberByHostel.get(hostelId);
+
+        if (nextNumber == null) {
+
+            InvoicesV1 latestInvoice = invoiceV1Service
+                    .getLatestInvoiceByPrefix(hostelId, prefix);
+
+            if (latestInvoice != null) {
+
+                String[] parts = latestInvoice.getInvoiceNumber().split("-");
+
+                if (parts.length > 1) {
+                    nextNumber = Integer.parseInt(parts[parts.length - 1]) + 1;
+                } else {
+                    nextNumber = 1;
+                }
+
+            } else {
+                nextNumber = 1;
+            }
+        }
+
+        nextInvoiceNumberByHostel.put(hostelId, nextNumber + 1);
+
+        return String.format("%s-%03d", prefix, nextNumber);
     }
 
     public ResponseEntity<?> getTenantRecurringHistory(String customerId, int page, int size) {
