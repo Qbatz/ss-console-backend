@@ -121,10 +121,6 @@ public class ServiceTokenService {
             return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        if (ServiceEnum.zoho.name().equals(service)) {
-            return new ResponseEntity<>("Zoho service token can not be updated", HttpStatus.BAD_REQUEST);
-        }
-
         CredentialsSnapshot oldSnapshot = SnapshotUtility.toSnapshot(credentials);
 
         String secret = generateSecret();
@@ -165,10 +161,6 @@ public class ServiceTokenService {
         Credentials credentials = credentialsService.getByService(service);
         if (credentials == null) {
             return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
-        }
-
-        if (ServiceEnum.zoho.name().equals(service)) {
-            return new ResponseEntity<>("Zoho service token can not be updated", HttpStatus.BAD_REQUEST);
         }
 
         CredentialsSnapshot oldSnapshot = SnapshotUtility.toSnapshot(credentials);
