@@ -3729,10 +3729,10 @@ public class HostelsService {
 
         if (isCreate){
             agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.CREATE, Source.RECURRING_CONFIG,
-                    String.valueOf(recurringConfiguration), null, newSnapshot);
+                    String.valueOf(recurringConfiguration.getConfigId()), null, newSnapshot);
         } else {
             agentActivitiesService.createAgentActivity(loggedInAgent, ActivityType.UPDATE, Source.RECURRING_CONFIG,
-                    String.valueOf(recurringConfiguration), oldSnapshot, newSnapshot);
+                    String.valueOf(recurringConfiguration.getConfigId()), oldSnapshot, newSnapshot);
         }
 
         return new ResponseEntity<>(HttpStatus.OK);

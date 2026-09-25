@@ -105,6 +105,7 @@ public class AgentActivityUtil {
             case DATA_ARCHIVE -> "Created a new data archive";
             case CREDENTIALS -> "Created a new credential";
             case HOSTEL_FOLLOW_UP -> "Created a new hostel follow-up";
+            case RECURRING_CONFIG -> "Created a new recurring configuration";
             default -> "Created successfully";
         };
     }
@@ -145,6 +146,7 @@ public class AgentActivityUtil {
             case KYC_HISTORY -> "Updated a kyc history";
             case DATA_ARCHIVE -> "Updated a data archive";
             case CREDENTIALS -> "Updated a credential";
+            case RECURRING_CONFIG -> "Updated recurring configuration";
             default -> "Updated successfully";
         };
     }
