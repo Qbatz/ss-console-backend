@@ -53,6 +53,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
     List<HostelRelationalAgentResponse> relationalAgentResponses;
     List<InvoiceRedemptionRes> invoiceRedemptionResponses;
     List<InvoiceResponse> invoiceResponses;
+    RecurringConfiguration recurringConfiguration;
+    Map<String, Agent> agentMap;
 
     public HostelDetailsMapper(UsersResponse owner,
                                int noOfFloors,
@@ -82,7 +84,9 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                                BillingRules currentBillingRules,
                                List<HostelRelationalAgentResponse> relationalAgentResponses,
                                List<InvoiceRedemptionRes> invoiceRedemptionResponses,
-                               List<InvoiceResponse> invoiceResponses) {
+                               List<InvoiceResponse> invoiceResponses,
+                               RecurringConfiguration recurringConfiguration,
+                               Map<String, Agent> agentMap) {
         this.owner = owner;
         this.noOfFloors = noOfFloors;
         this.noOfRooms = noOfRooms;
@@ -112,6 +116,8 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
         this.relationalAgentResponses = relationalAgentResponses;
         this.invoiceRedemptionResponses = invoiceRedemptionResponses;
         this.invoiceResponses = invoiceResponses;
+        this.recurringConfiguration = recurringConfiguration;
+        this.agentMap = agentMap;
     }
 
     @Override
@@ -388,6 +394,43 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                 .map(billingModel -> new BillingModelResponse(billingModel.name()))
                 .toList();
 
+        RecurringConfigurationResponse recurringConfigRes = null;
+        if (recurringConfiguration != null){
+
+            boolean shouldVerify = false;
+            String requestedBy = null;
+            String createdBy = null;
+            String createdAtDate = null;
+            String createdAtTime = null;
+
+            if (recurringConfiguration.getShouldVerify() != null){
+                shouldVerify = recurringConfiguration.getShouldVerify();
+            }
+
+            if (recurringConfiguration.getRequestedBy() != null){
+                Users owner = userLookup.getOrDefault(recurringConfiguration.getRequestedBy(), null);
+                if (owner != null){
+                    requestedBy = Utils.getFullName(owner.getFirstName(), owner.getLastName());
+                }
+            }
+
+            if (recurringConfiguration.getCreatedBy() != null){
+                Agent createdByAgent = agentMap.getOrDefault(recurringConfiguration.getCreatedBy(), null);
+                if (createdByAgent != null){
+                    createdBy = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
+                }
+            }
+
+            if (recurringConfiguration.getCreatedAt() != null){
+                createdAtDate = Utils.dateToString(recurringConfiguration.getCreatedAt());
+                createdAtTime = Utils.dateToTime(recurringConfiguration.getCreatedAt());
+            }
+
+            recurringConfigRes = new RecurringConfigurationResponse(recurringConfiguration.getConfigId(), recurringConfiguration.getHostelId(),
+                    shouldVerify, recurringConfiguration.getRequestedBy(), requestedBy, recurringConfiguration.getCreatedBy(), createdBy,
+                    createdAtDate, createdAtTime);
+        }
+
         return new HostelResponse(hostelV1.getHostelId(), hostelV1.getHostelName(), Utils.getInitials(hostelV1.getHostelName()),
                 hostelV1.getMobile(), hostelV1.getEmailId(), hostelV1.getHouseNo(), hostelV1.getStreet(), hostelV1.getLandmark(),
                 hostelV1.getCity(), hostelV1.getState(), hostelV1.getCountry(), hostelV1.getPincode(), fullAddress,
@@ -397,6 +440,7 @@ public class HostelDetailsMapper implements Function<HostelV1, HostelResponse> {
                 Utils.dateToTime(hostelV1.getCreatedAt()), owner, masters, staffs, billingTypeRes, billingModelRes,
                 currentBillingRulesRes, billingRules, ebConfig, currentSubRes, otherSubsRes, subscriptionStatus,
                 subscriptionRenewalTimeLeftDays, isSubscriptionActive, recurringStatus, recurringHistory,
-                customerRecurringHistory, activitiesRes, relationalAgentResponses, invoiceRedemptionResponses, invoiceResponses);
+                customerRecurringHistory, activitiesRes, relationalAgentResponses, invoiceRedemptionResponses, invoiceResponses,
+                recurringConfigRes);
     }
 }

@@ -1344,6 +1344,10 @@ public class InvoiceV1Service {
         return invoiceNumber.toString();
     }
 
+    public InvoicesV1 getLatestInvoiceByPrefix(String hostelId, String prefix) {
+        return invoiceV1Repository.findLatestInvoiceByPrefix(prefix, hostelId);
+    }
+
     public List<InvoicesV1> getInvoicesByCustomerIdAndInvoiceTypes(String customerId,
                                                                    Set<String> invoiceTypes) {
         return invoiceV1Repository.findByCustomerIdAndInvoiceTypeIn(customerId, invoiceTypes);

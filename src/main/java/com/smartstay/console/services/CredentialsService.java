@@ -5,7 +5,9 @@ import com.smartstay.console.repositories.CredentialsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class CredentialsService {
@@ -26,6 +28,8 @@ public class CredentialsService {
     }
 
     public List<Credentials> getAllCredentials() {
-        return credentialsRepository.findAllByOrderByServiceAsc();
+        Set<String> services = new HashSet<>();
+        services.add("zoho");
+        return credentialsRepository.findAllByServiceNotInOrderByServiceAsc(services);
     }
 }
