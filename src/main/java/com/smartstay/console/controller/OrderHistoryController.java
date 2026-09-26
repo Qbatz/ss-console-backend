@@ -35,6 +35,11 @@ public class OrderHistoryController {
         return orderHistoryService.getOrderHistory(page, size, name, startDate, endDate);
     }
 
+    @GetMapping("/graph")
+    public ResponseEntity<?> getOrderHistoryGraph(@RequestParam(defaultValue = "MONTH") String comparisonFilter) {
+        return orderHistoryService.getOrderHistoryGraph(comparisonFilter);
+    }
+
     @GetMapping("/verify/{orderHistoryId}")
     public ResponseEntity<?> verifyOrderHistory(@PathVariable(value = "orderHistoryId") Long orderHistoryId) {
         return orderHistoryService.verifyOrderHistory(orderHistoryId);

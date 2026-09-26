@@ -4,6 +4,7 @@ import com.smartstay.console.Mapper.orderHistory.OrderHistoryMapper;
 import com.smartstay.console.config.*;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.files.FileData;
+import com.smartstay.console.dto.orderHistory.OrderHistoryGraphPeriodDto;
 import com.smartstay.console.dto.orderHistory.PaymentLinkGenerateDto;
 import com.smartstay.console.dto.orderHistory.PaymentLinkGenerateResDto;
 import com.smartstay.console.dto.subscription.SubscriptionSnapshot;
@@ -282,6 +283,356 @@ public class OrderHistoryService {
 
     public OrderHistory save(OrderHistory newOrder) {
         return orderHistoryRepository.save(newOrder);
+    }
+
+    public ResponseEntity<?> getOrderHistoryGraph(String comparisonFilter) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(loggedInAgent.getRoleId(), ModuleId.Payments.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        OrderHistoryGraphFilterEnum comparisonFilterEnum;
+        try {
+            comparisonFilterEnum = OrderHistoryGraphFilterEnum.valueOf(comparisonFilter);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Comparison filter not found", HttpStatus.BAD_REQUEST);
+        }
+
+        LocalDate todayLocalDate = LocalDate.now();
+
+        Date startDate = Utils.getStartDateOfMonth(todayLocalDate);
+        Date endDate = Utils.getEndDateOfMonth(todayLocalDate);
+
+        OrderHistoryGraphPeriodDto currentPeriod;
+        OrderHistoryGraphPeriodDto comparisonPeriod;
+
+        if (OrderHistoryGraphFilterEnum.QUARTER.name().equals(comparisonFilter)) {
+
+            currentPeriod = getQuarterPeriod(startDate);
+
+            Date previousQuarterEnd = Utils.addDaysToDate(currentPeriod.startDate(), -1);
+            Date previousQuarterStart;
+
+            // Move to the first day of the previous quarter.
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(currentPeriod.startDate());
+            calendar.add(Calendar.MONTH, -3);
+
+            previousQuarterStart = Utils.getStartOfQuarter(calendar.getTime());
+
+            comparisonPeriod = new OrderHistoryGraphPeriodDto(
+                    previousQuarterStart,
+                    previousQuarterEnd
+            );
+
+        } else {
+
+            currentPeriod = new OrderHistoryGraphPeriodDto(startDate, endDate);
+
+            Date previousMonthEnd = Utils.addDaysToDate(startDate, -1);
+
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(startDate);
+            calendar.add(Calendar.MONTH, -1);
+
+            Date previousMonthStart = Utils.getStartOfDay(Utils.getFirstDayOfMonth(calendar.getTime()));
+
+            comparisonPeriod = new OrderHistoryGraphPeriodDto(
+                    previousMonthStart,
+                    previousMonthEnd
+            );
+        }
+
+        Date currentStartDate = Utils.getStartOfDay(currentPeriod.startDate());
+        Date currentEndDate = Utils.getStartOfDay(currentPeriod.endDate());
+
+        currentEndDate = Utils.addDaysToDate(currentEndDate, 1);
+
+        Date comparisonStartDate = Utils.getStartOfDay(comparisonPeriod.startDate());
+        Date comparisonEndDate = Utils.getStartOfDay(comparisonPeriod.endDate());
+
+        comparisonEndDate = Utils.addDaysToDate(comparisonEndDate, 1);
+
+        String paidStatus = OrderStatus.PAID.name();
+
+        List<OrderHistory> currentOrders = orderHistoryRepository
+                .findOrdersBetweenDatesAndOrderStatus(currentStartDate, currentEndDate, paidStatus);
+
+        List<OrderHistory> comparisonOrders = orderHistoryRepository
+                .findOrdersBetweenDatesAndOrderStatus(comparisonStartDate, comparisonEndDate, paidStatus);
+
+        double totalRevenue = currentOrders.stream()
+                .mapToDouble(OrderHistory::getTotalAmount)
+                .sum();
+
+        totalRevenue = Utils.roundOfDoubleTo2Digits(totalRevenue);
+
+        long totalSubscriptions = currentOrders.size();
+
+        double comparisonRevenue = comparisonOrders.stream()
+                .mapToDouble(OrderHistory::getTotalAmount)
+                .sum();
+
+        comparisonRevenue = Utils.roundOfDoubleTo2Digits(comparisonRevenue);
+
+        long comparisonSubscriptions = comparisonOrders.size();
+
+        double revenuePercentageDifference = Utils
+                .calculatePercentageDifference(totalRevenue, comparisonRevenue);
+
+        double subscriptionPercentageDifference = Utils.
+                calculatePercentageDifference(totalSubscriptions, comparisonSubscriptions);
+
+        String periodLabel = buildPeriodLabel(currentPeriod.startDate(), comparisonFilter);
+
+        OrderHistoryGraphCardDataRes cardData = new OrderHistoryGraphCardDataRes(
+                periodLabel,
+                Utils.getYear(currentPeriod.startDate()),
+                totalRevenue,
+                revenuePercentageDifference,
+                totalSubscriptions,
+                subscriptionPercentageDifference
+        );
+
+        List<OrderHistoryGraphRecordRes> currentRecords;
+
+        List<OrderHistoryGraphRecordRes> comparisonRecords;
+
+        if (OrderHistoryGraphFilterEnum.QUARTER.name().equals(comparisonFilter)) {
+
+            currentRecords = buildMonthlyRecords(
+                    currentOrders,
+                    currentPeriod.startDate(),
+                    currentPeriod.endDate()
+            );
+
+            comparisonRecords = buildMonthlyRecords(
+                    comparisonOrders,
+                    comparisonPeriod.startDate(),
+                    comparisonPeriod.endDate()
+            );
+
+        } else {
+
+            currentRecords = buildWeeklyRecords(
+                    currentOrders,
+                    currentPeriod.startDate(),
+                    currentPeriod.endDate()
+            );
+
+            comparisonRecords = buildWeeklyRecords(
+                    comparisonOrders,
+                    comparisonPeriod.startDate(),
+                    comparisonPeriod.endDate()
+            );
+        }
+
+        OrderHistoryGraphDataRes current = new OrderHistoryGraphDataRes(
+                Utils.dateToString(currentPeriod.startDate()),
+                Utils.dateToString(currentPeriod.endDate()),
+                buildPeriodLabel(
+                        currentPeriod.startDate(),
+                        comparisonFilter
+                ),
+                currentRecords
+        );
+
+        OrderHistoryGraphDataRes comparison = new OrderHistoryGraphDataRes(
+                Utils.dateToString(comparisonPeriod.startDate()),
+                Utils.dateToString(comparisonPeriod.endDate()),
+                buildPeriodLabel(
+                        comparisonPeriod.startDate(),
+                        comparisonFilter
+                ),
+                comparisonRecords
+        );
+
+        List<OrderHistoryGraphFilterRes> comparisonFilters = Arrays.stream(OrderHistoryGraphFilterEnum.values())
+                .map(i -> new OrderHistoryGraphFilterRes(i.name()))
+                .toList();
+
+        OrderHistoryGraphResponse response = new OrderHistoryGraphResponse(cardData, current,
+                comparison, comparisonFilters);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private OrderHistoryGraphPeriodDto getQuarterPeriod(Date date) {
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        int month = calendar.get(Calendar.MONTH);
+
+        int quarterStartMonth = (month / 3) * 3;
+
+        calendar.set(Calendar.MONTH, quarterStartMonth);
+
+        calendar.set(Calendar.DAY_OF_MONTH, 1);
+
+        Date startDate = Utils.getStartOfDay(calendar.getTime());
+
+        calendar.add(Calendar.MONTH, 3);
+        calendar.add(Calendar.DAY_OF_MONTH, -1);
+
+        Date endDate = Utils.getEndOfDay(calendar.getTime());
+
+        return new OrderHistoryGraphPeriodDto(startDate, endDate);
+    }
+
+    private List<OrderHistoryGraphRecordRes> buildMonthlyRecords(List<OrderHistory> orders,
+                                                                 Date startDate, Date endDate) {
+
+        List<OrderHistoryGraphRecordRes> records = new ArrayList<>();
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(Utils.getStartOfDay(startDate));
+
+        while (!calendar.getTime().after(endDate)) {
+
+            Date monthStart = Utils.getStartOfDay(calendar.getTime());
+
+            Calendar monthEndCalendar = Calendar.getInstance();
+            monthEndCalendar.setTime(monthStart);
+
+            monthEndCalendar.set(
+                    Calendar.DAY_OF_MONTH,
+                    monthEndCalendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+            );
+
+            Date monthEnd = Utils.getEndOfDay(monthEndCalendar.getTime());
+
+            if (monthEnd.after(endDate)) {
+                monthEnd = endDate;
+            }
+
+            Date finalMonthStart = monthStart;
+            Date finalMonthEnd = monthEnd;
+
+            List<OrderHistory> monthOrders = orders.stream()
+                    .filter(order -> {
+
+                        Date orderDate;
+                        if (order.getPaidAt() != null) {
+                            orderDate = order.getPaidAt();
+                        } else {
+                            orderDate = order.getCreatedAt();
+                        }
+
+                        if (orderDate != null){
+                            return !orderDate.before(finalMonthStart)
+                                    && !orderDate.after(finalMonthEnd);
+                        } else {
+                            return false;
+                        }
+                    })
+                    .toList();
+
+            double revenue = monthOrders.stream()
+                    .mapToDouble(OrderHistory::getTotalAmount)
+                    .sum();
+
+            records.add(
+                    new OrderHistoryGraphRecordRes(
+                            Utils.getMonthShortName(monthStart),
+                            Utils.roundOfDoubleTo2Digits(revenue),
+                            monthOrders.size()
+                    )
+            );
+
+            calendar.add(Calendar.MONTH, 1);
+            calendar.set(Calendar.DAY_OF_MONTH, 1);
+        }
+
+        return records;
+    }
+
+    private List<OrderHistoryGraphRecordRes> buildWeeklyRecords(List<OrderHistory> orders,
+                                                                Date startDate, Date endDate) {
+
+        List<OrderHistoryGraphRecordRes> records = new ArrayList<>();
+
+        Date weekStart = Utils.getStartOfDay(startDate);
+
+        int weekNumber = 1;
+
+        while (!weekStart.after(endDate)) {
+
+            Date weekEnd = Utils.getEndOfDay(Utils.addDaysToDate(weekStart, 6));
+
+            if (weekEnd.after(endDate)) {
+                weekEnd = endDate;
+            }
+
+            Date finalWeekStart = weekStart;
+            Date finalWeekEnd = weekEnd;
+
+            List<OrderHistory> weekOrders = orders.stream()
+                    .filter(order -> {
+
+                        Date orderDate = null;
+                        if (order.getPaidAt() != null) {
+                            orderDate = order.getPaidAt();
+                        } else {
+                            orderDate = order.getCreatedAt();
+                        }
+
+                        if (orderDate != null){
+                            return !orderDate.before(finalWeekStart)
+                                    && !orderDate.after(finalWeekEnd);
+                        } else {
+                            return false;
+                        }
+                    })
+                    .toList();
+
+            double revenue = weekOrders.stream()
+                    .mapToDouble(OrderHistory::getTotalAmount)
+                    .sum();
+
+            records.add(
+                    new OrderHistoryGraphRecordRes(
+                            "Week " + weekNumber,
+                            Utils.roundOfDoubleTo2Digits(revenue),
+                            weekOrders.size()
+                    )
+            );
+
+            weekStart = Utils.getStartOfDay(Utils.addDaysToDate(weekEnd, 1));
+
+            weekNumber++;
+        }
+
+        return records;
+    }
+
+    private String buildPeriodLabel(Date startDate, String comparisonFilter) {
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(startDate);
+
+        if (OrderHistoryGraphFilterEnum.QUARTER.name().equals(comparisonFilter)) {
+
+            int month = calendar.get(Calendar.MONTH);
+
+            int quarter = (month / 3) + 1;
+
+            return "Q" + quarter
+                    + " "
+                    + calendar.get(Calendar.YEAR);
+        }
+
+        return calendar.getDisplayName(
+                Calendar.MONTH,
+                Calendar.LONG,
+                Locale.ENGLISH
+        ) + " " + calendar.get(Calendar.YEAR);
     }
 
     public ResponseEntity<?> verifyOrderHistory(Long orderHistoryId) {

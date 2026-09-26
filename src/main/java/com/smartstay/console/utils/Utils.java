@@ -1270,4 +1270,77 @@ public class Utils {
                 ? ""
                 : value.replace(" ", "").toLowerCase();
     }
+
+    public static Integer getYear(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        return calendar.get(Calendar.YEAR);
+    }
+
+    public static String getMonthShortName(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        return calendar.getDisplayName(
+                Calendar.MONTH,
+                Calendar.SHORT,
+                Locale.ENGLISH
+        );
+    }
+
+    public static Date getStartOfQuarter(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        int month = calendar.get(Calendar.MONTH);
+
+        int quarterStartMonth = (month / 3) * 3;
+
+        calendar.set(Calendar.MONTH, quarterStartMonth);
+
+        calendar.set(Calendar.DAY_OF_MONTH, 1);
+
+        return Utils.getStartOfDay(calendar.getTime());
+    }
+
+    public static Date getFirstDayOfMonth(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        calendar.set(Calendar.DAY_OF_MONTH, 1);
+
+        return calendar.getTime();
+    }
+
+    public static double calculatePercentageDifference(double currentValue, double comparisonValue) {
+
+        if (comparisonValue == 0) {
+            return currentValue == 0 ? 0 : 100;
+        }
+
+        double percentage = ((currentValue - comparisonValue) / comparisonValue) * 100;
+
+        return Utils.roundOfDoubleTo2Digits(percentage);
+    }
 }
