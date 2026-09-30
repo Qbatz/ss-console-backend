@@ -1408,6 +1408,7 @@ public class CustomersService {
             double advanceAvailableBalance = 0;
             List<InvoicesV1> unpaidInvoices = new ArrayList<>();
             List<UnpaidInvoicesRes> unpaidInvoicesRes = new ArrayList<>();
+            List<OtherInvoicesRes> otherInvoicesRes = new ArrayList<>();
             List<WalletHistoryRes> walletHistoriesRes = new ArrayList<>();
             List<RentBreakUpInfoRes> rentBreakUpsRes = new ArrayList<>();
             List<OtherItemsRes> otherItemsRes = new ArrayList<>();
@@ -1418,6 +1419,8 @@ public class CustomersService {
 
             CustomerFinalSettlementInfoRes finalSettlementInfoRes = response.customerFinalSettlementInfo();
             UnpaidInvoicesInfoRes unpaidInvoicesInfoRes = response.unpaidInvoicesInfo();
+            OtherInvoicesInfoRes otherInvoicesInfoRes = response.customerRentInfo() != null ?
+                    response.customerRentInfo().otherInvoicesInfo() : null;
             CustomerRentInfoRes rentInfoRes = response.customerRentInfo();
             CustomerBookingInfoRes bookingInfoRes = response.customerBookingInfo();
             CustomerAdvanceInfoRes advanceInfoRes = response.customerAdvanceInfo();
@@ -1434,6 +1437,11 @@ public class CustomersService {
                         .collect(Collectors.toSet());
 
                 unpaidInvoices = invoiceV1Service.getInvoicesByIds(unpaidInvoicesIds);
+            }
+
+            if (otherInvoicesInfoRes != null){
+                otherInvoicesRes = otherInvoicesInfoRes.otherInvoices() != null ?
+                        otherInvoicesInfoRes.otherInvoices() : new ArrayList<>();
             }
 
             Set<String> invoicesTypes = new HashSet<>();
@@ -1670,10 +1678,15 @@ public class CustomersService {
 
             settlementInvoice = invoiceV1Service.save(settlementInvoice);
 
-            List<SettlementUnpaidInvoices> settlementItemsUnpaidInvoices = unpaidInvoicesRes.stream()
+            List<SettlementUnpaidInvoices> settlementItemsUnpaidInvoices = new ArrayList<>(unpaidInvoicesRes.stream()
                     .map(i -> new SettlementUnpaidInvoices(i.invoiceNumber(), i.invoiceTotalAmount(),
                             i.type(), i.invoiceId(), i.pendingAmount()))
-                    .toList();
+                    .toList());
+
+            settlementItemsUnpaidInvoices.addAll(otherInvoicesRes.stream()
+                    .map(i -> new SettlementUnpaidInvoices(i.invoiceNumber(),
+                            i.invoiceAmount(), i.invoiceType(), i.invoiceId(), i.pendingAmount())
+                    ).toList());
 
             List<WalltetItems> settlementItemsWalletItems = walletHistoriesRes.stream()
                     .map(i -> new WalltetItems(i.source(), i.amount(), i.walletHistoryId()))
@@ -2538,7 +2551,8 @@ public class CustomersService {
                     pendingAmount = Utils.roundOfDoubleTo2Digits(pendingAmount);
 
                     otherInvoicesRes.add(new OtherInvoicesRes(otherInvoice.getInvoiceId(), otherInvoice.getInvoiceNumber(),
-                            invoiceDate, invoiceAmount, paidAmount, pendingAmount, otherInvoiceItemsRes));
+                            invoiceDate, otherInvoice.getInvoiceType(), invoiceAmount, paidAmount, pendingAmount,
+                            otherInvoiceItemsRes));
                 }
 
                 otherInvoicesInfoRes = new OtherInvoicesInfoRes(Utils.roundOfDoubleTo2Digits(totalInvoiceAmount),
@@ -3740,6 +3754,7 @@ public class CustomersService {
                 Set<String> invoicesTypes = new HashSet<>();
                 invoicesTypes.add(InvoiceType.RENT.name());
                 invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
+                invoicesTypes.add(InvoiceType.OTHER.name());
 
                 unpaidInvoices = invoiceV1Service
                         .getOlderUnpaidInvoicesByInvoiceTypes(customerId, invoicesTypes,
@@ -3802,9 +3817,12 @@ public class CustomersService {
                     if (unpaidInvoice.getInvoiceType().equalsIgnoreCase(InvoiceType.RENT.name()) ||
                             unpaidInvoice.getInvoiceType().equalsIgnoreCase(InvoiceType.REASSIGN_RENT.name())) {
                         invoiceType = "Rent";
-                    }
-                    else if (unpaidInvoice.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
+                    } else if (InvoiceType.OTHER.name().equalsIgnoreCase(unpaidInvoice.getInvoiceType())) {
+                        invoiceType = "Other";
+                    } else if (unpaidInvoice.getInvoiceType().equalsIgnoreCase(InvoiceType.ADVANCE.name())) {
                         invoiceType = "Advance";
+                    } else {
+                        invoiceType = unpaidInvoice.getInvoiceType();
                     }
 
                     return new UnpaidInvoicesRes(unpaidInvoice.getInvoiceId(),

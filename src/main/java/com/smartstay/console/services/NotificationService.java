@@ -34,6 +34,24 @@ public class NotificationService {
         adminNotificationRepository.save(adminNotifications);
     }
 
+    public void addAdminNotificationsForDraftRecurringInvoice(String hostelId) {
+
+        AdminNotifications adminNotifications = new AdminNotifications();
+
+        adminNotifications.setNotificationType(NotificationType.RECURRING_INVOICE.name());
+        adminNotifications.setUserId(null);
+        adminNotifications.setHostelId(hostelId);
+        adminNotifications.setSourceId(null);
+        adminNotifications.setDescription("Your rental invoice has been generated for preview by admin.");
+        adminNotifications.setTitle("Recurring invoice for preview has been generated.");
+        adminNotifications.setUserType(UserType.ALL_EXCEPT_TENANT.name());
+        adminNotifications.setCreatedAt(new Date());
+        adminNotifications.setActive(true);
+        adminNotifications.setRead(false);
+
+        adminNotificationRepository.save(adminNotifications);
+    }
+
     public void deleteAll(List<AdminNotifications> adminNotifications) {
         adminNotificationRepository.deleteAll(adminNotifications);
     }

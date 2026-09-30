@@ -46,5 +46,7 @@ public enum Source {
     KYC_CONFIG,
     KYC_HISTORY,
     DATA_ARCHIVE,
-    CREDENTIALS
+    CREDENTIALS,
+    HOSTEL_FOLLOW_UP,
+    RECURRING_CONFIG
 }

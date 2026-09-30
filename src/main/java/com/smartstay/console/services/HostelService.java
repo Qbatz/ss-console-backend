@@ -61,9 +61,18 @@ public class HostelService {
 
         int billStartDate = 1;
         int billingRuleDueDate = 5;
+        boolean hasGracePeriod = false;
+        int gracePeriodDays = 0;
+        String typeOfBilling = null;
+        String billingModel = null;
         if (billingRules != null) {
             billStartDate = billingRules.getBillingStartDate();
             billingRuleDueDate = billingRules.getBillDueDays();
+            hasGracePeriod = billingRules.isHasGracePeriod();
+            gracePeriodDays = billingRules.getGracePeriodDays() != null
+                    ? billingRules.getGracePeriodDays() : 0;
+            typeOfBilling = billingRules.getTypeOfBilling();
+            billingModel = billingRules.getBillingModel();
         }
 
         Calendar calendar = Calendar.getInstance();
@@ -82,8 +91,7 @@ public class HostelService {
         Date findEndDate = Utils.findLastDate(billStartDate, calendar.getTime());
 
         return new BillingDates(calendar.getTime(), findEndDate, dueDate, billingRuleDueDate,
-                billingRules.isHasGracePeriod(), billingRules.getGracePeriodDays(),
-                billingRules.getTypeOfBilling(), billingRules.getBillingModel());
+                hasGracePeriod, gracePeriodDays, typeOfBilling, billingModel);
     }
 
     public ElectricityConfig getElectricityConfig(String hostelId) {

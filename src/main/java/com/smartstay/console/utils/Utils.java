@@ -126,6 +126,8 @@ public class Utils {
     public static final String PRODUCT_UPDATE_STATUS_NOT_FOUND = "Product update status not found";
     public static final String DATA_ARCHIVE_NOT_FOUND = "Data archive not found";
     public static final String CREDENTIALS_NOT_FOUND = "Credentials not found";
+    public static final String HOSTEL_FOLLOW_UP_STATUS_NOT_FOUND = "Hostel follow-up status not found";
+    public static final String REASON_NOT_FOUND = "Reason not found";
 
     public static final String INVALID_ROLE_ID = "Invalid Role ID";
     public static final String INVALID_HOSTEL_ID = "Invalid hostel id";
@@ -187,6 +189,7 @@ public class Utils {
     public static final String TRIAL_DAYS_REASON_REQUIRED = "Trial days reason is required";
     public static final String COMMENTS_REQUIRED_FOR_REASSIGN_STAFF = "Comments is required for reassigning staff";
     public static final String PAID_AT_DATE_TIME_IS_REQUIRED = "Paid at date time is required";
+    public static final String DROP_REASON_IS_REQUIRED = "Drop reason is required";
 
     public static final String PRICE_SHOULD_BE_HIGHER_THAN_ZERO = "Price should be higher than 0";
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
@@ -1266,5 +1269,78 @@ public class Utils {
         return value == null
                 ? ""
                 : value.replace(" ", "").toLowerCase();
+    }
+
+    public static Integer getYear(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        return calendar.get(Calendar.YEAR);
+    }
+
+    public static String getMonthShortName(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        return calendar.getDisplayName(
+                Calendar.MONTH,
+                Calendar.SHORT,
+                Locale.ENGLISH
+        );
+    }
+
+    public static Date getStartOfQuarter(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        int month = calendar.get(Calendar.MONTH);
+
+        int quarterStartMonth = (month / 3) * 3;
+
+        calendar.set(Calendar.MONTH, quarterStartMonth);
+
+        calendar.set(Calendar.DAY_OF_MONTH, 1);
+
+        return Utils.getStartOfDay(calendar.getTime());
+    }
+
+    public static Date getFirstDayOfMonth(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+
+        calendar.set(Calendar.DAY_OF_MONTH, 1);
+
+        return calendar.getTime();
+    }
+
+    public static double calculatePercentageDifference(double currentValue, double comparisonValue) {
+
+        if (comparisonValue == 0) {
+            return currentValue == 0 ? 0 : 100;
+        }
+
+        double percentage = ((currentValue - comparisonValue) / comparisonValue) * 100;
+
+        return Utils.roundOfDoubleTo2Digits(percentage);
     }
 }

@@ -64,6 +64,7 @@ public record HostelResponse(String hostelId,
                              List<UserActivitiesResponse> activities,
                              List<HostelRelationalAgentResponse> relationalAgents,
                              List<InvoiceRedemptionRes> invoiceRedemptions,
-                             List<InvoiceResponse> invoices
+                             List<InvoiceResponse> invoices,
+                             RecurringConfigurationResponse recurringConfiguration
 ) {
 }

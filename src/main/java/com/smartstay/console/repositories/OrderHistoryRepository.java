@@ -62,4 +62,17 @@ public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long
     OrderHistory findByHistoryIdAndIsActiveTrue(Long orderHistoryId);
 
     OrderHistory findByPaymentUrlAndOrderStatusAndIsActiveTrue(String paymentLink, String name);
+
+    @Query("""
+            SELECT o
+            FROM OrderHistory o
+            WHERE o.isActive = true
+              AND o.orderStatus = :orderStatus
+              AND COALESCE(o.paidAt, o.createdAt) >= :startDate
+              AND COALESCE(o.paidAt, o.createdAt) < :endDate
+            ORDER BY COALESCE(o.paidAt, o.createdAt) DESC
+            """)
+    List<OrderHistory> findOrdersBetweenDatesAndOrderStatus(@Param("startDate") Date startDate,
+                                                            @Param("endDate") Date endDate,
+                                                            @Param("orderStatus") String orderStatus);
 }
