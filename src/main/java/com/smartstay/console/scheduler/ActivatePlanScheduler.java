@@ -2,17 +2,16 @@ package com.smartstay.console.scheduler;
 
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dao.KycConfig;
+import com.smartstay.console.dao.KycHistory;
 import com.smartstay.console.dao.Plans;
 import com.smartstay.console.dto.hostelPlans.HostelPlan;
-import com.smartstay.console.services.HostelPlanService;
-import com.smartstay.console.services.KycConfigService;
-import com.smartstay.console.services.PlansService;
-import com.smartstay.console.services.SubscriptionService;
+import com.smartstay.console.services.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component
@@ -26,6 +25,8 @@ public class ActivatePlanScheduler {
     private KycConfigService kycConfigService;
     @Autowired
     private PlansService plansService;
+    @Autowired
+    private KycHistoryService kycHistoryService;
 
     @Scheduled(cron = "0 30 0 * * *")
     public void activatePlan() {
@@ -35,6 +36,13 @@ public class ActivatePlanScheduler {
         Date today = new Date();
 
         if (!hostelPlanDtoList.isEmpty()) {
+
+            Map<String, HostelPlan> hostelPlanDtoMap = hostelPlanDtoList.stream()
+                    .collect(Collectors.toMap(
+                            HostelPlan::hostelId,
+                            Function.identity(),
+                            (a, b) -> a
+                    ));
 
             List<String> hostelIds = hostelPlanDtoList.stream()
                     .map(HostelPlan::hostelId)
@@ -61,10 +69,16 @@ public class ActivatePlanScheduler {
                     .collect(Collectors.toMap(Plans::getPlanCode, plan -> plan,
                             (a, b) -> a));
 
+            List<KycHistory> latestKycHistories = kycHistoryService
+                    .getAllLatestByHostelIds(new HashSet<>(hostelIds));
+            Map<String, KycHistory> latestKycHistoryMap = latestKycHistories.stream()
+                    .collect(Collectors.toMap(KycHistory::getHostelId, Function.identity()));
+
             if (!listHostelPlans.isEmpty()) {
 
                 List<com.smartstay.console.dao.HostelPlan> listNewPlans = new ArrayList<>();
                 List<KycConfig> savableKycConfigs = new ArrayList<>();
+                List<KycHistory> savableKycHistories = new ArrayList<>();
 
                 for (com.smartstay.console.dao.HostelPlan hostelPlan : listHostelPlans){
 
@@ -76,11 +90,7 @@ public class ActivatePlanScheduler {
                     HostelV1 hostel = hostelPlan.getHostel();
                     String hostelId = hostel.getHostelId();
 
-                    HostelPlan hostelPlanDto = hostelPlanDtoList
-                            .stream()
-                            .filter(i2 -> i2.hostelId().equalsIgnoreCase(hostelId))
-                            .findFirst()
-                            .orElse(null);
+                    HostelPlan hostelPlanDto = hostelPlanDtoMap.getOrDefault(hostelId, null);
 
                     if (hostelPlanDto != null) {
                         hostelPlan.setCurrentPlanCode(hostelPlanDto.planCode());
@@ -94,6 +104,7 @@ public class ActivatePlanScheduler {
 
                         KycConfig kycConfig = kycConfigMap.getOrDefault(hostelId, null);
                         Plans plan = plansMap.getOrDefault(hostelPlanDto.planCode(), null);
+                        KycHistory latestKycHistory = latestKycHistoryMap.getOrDefault(hostelId, null);
 
                         int kycPerMonthLimit = -1;
                         if (plan != null){
@@ -113,6 +124,23 @@ public class ActivatePlanScheduler {
                         kycConfig.setLimitPerMonth(kycPerMonthLimit);
 
                         savableKycConfigs.add(kycConfig);
+
+                        if (latestKycHistory == null || latestKycHistory.getEndDate() != null) {
+
+                            KycHistory newKycHistory = new KycHistory();
+
+                            newKycHistory.setHostelId(hostelId);
+                            newKycHistory.setStartDate(hostelPlanDto.startDate());
+                            newKycHistory.setEndDate(null);
+                            newKycHistory.setIsCancelledDueToPlan(false);
+                            newKycHistory.setCancellationReason(null);
+                            newKycHistory.setActivationReason("Activation due to plan");
+                            newKycHistory.setCancelledBy(null);
+                            newKycHistory.setCreatedBy(null);
+                            newKycHistory.setCreatedAt(today);
+
+                            savableKycHistories.add(newKycHistory);
+                        }
                     }
 
                     listNewPlans.add(hostelPlan);
@@ -120,6 +148,7 @@ public class ActivatePlanScheduler {
 
                 hostelPlanService.saveAll(listNewPlans);
                 kycConfigService.saveAll(savableKycConfigs);
+                kycHistoryService.saveAll(savableKycHistories);
             }
         }
     }

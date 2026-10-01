@@ -665,14 +665,14 @@ public class OrderHistoryService {
 
         try {
 
-//            Credentials credential = credentialsService.getByService(ServiceEnum.payments.name());
-//            if (credential == null || credential.getAuthToken() == null) {
-//                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
-//            }
+            Credentials credential = credentialsService.getByService(ServiceEnum.payments.name());
+            if (credential == null || credential.getAuthToken() == null) {
+                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-            //headers.setBearerAuth(credential.getAuthToken());
+            headers.setBearerAuth(credential.getAuthToken());
 
             HttpEntity<Void> request = new HttpEntity<>(headers);
 
@@ -759,16 +759,16 @@ public class OrderHistoryService {
 
         try {
 
-//            Credentials credential = credentialsService.getByService(ServiceEnum.payments.name());
-//            if (credential == null || credential.getAuthToken() == null) {
-//                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
-//            }
+            Credentials credential = credentialsService.getByService(ServiceEnum.payments.name());
+            if (credential == null || credential.getAuthToken() == null) {
+                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+            }
 
             String generatePaymentLink = paymentUrl + "/v2/payments/generate/" + hostelId ;
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            //headers.setBearerAuth(credential.getAuthToken());
+            headers.setBearerAuth(credential.getAuthToken());
 
             PaymentLinkGenerateDto requestPayload = new PaymentLinkGenerateDto(payableAmount, "INR",
                     null, planCode, discountAmount, finalPrice, agent.getAgentId());
