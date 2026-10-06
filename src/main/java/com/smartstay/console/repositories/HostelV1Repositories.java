@@ -1,6 +1,7 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.HostelV1;
+import com.smartstay.console.dto.dashboard.DashboardOwnerProjection;
 import com.smartstay.console.dto.hostel.DashboardCityGraphProjection;
 import com.smartstay.console.dto.hostel.DashboardRegionHostelProjection;
 import com.smartstay.console.dto.hostel.HostelLiteProjection;
@@ -386,4 +387,19 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             ORDER BY h.created_at DESC
             """, nativeQuery = true)
     List<DashboardRegionHostelProjection> findHostelsFromRecentlyAddedCities();
+
+    @Query(value = """
+            SELECT
+                h.parent_id AS parentId,
+                COUNT(DISTINCT h.hostel_id) AS hostelCount,
+                COUNT(DISTINCT LOWER(TRIM(h.city))) AS cityCount
+            FROM hostelv1 h
+            WHERE h.is_active = true
+              AND h.is_deleted = false
+              AND h.parent_id IS NOT NULL
+            GROUP BY h.parent_id
+            ORDER BY COUNT(DISTINCT h.hostel_id) DESC
+            LIMIT 5
+            """, nativeQuery = true)
+    List<DashboardOwnerProjection> findOwnersByHostelCount();
 }

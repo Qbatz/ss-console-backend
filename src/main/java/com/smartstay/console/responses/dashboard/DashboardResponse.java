@@ -15,5 +15,7 @@ public record DashboardResponse(long hostelCount,
                                 long usedLast45DaysCount,
                                 List<DashboardRegionGraphDateFilterRes> regionGraphDateFilters,
                                 List<DashboardRegionGraphRes> regionGraphData,
-                                List<DashboardRegionDataRes> regionData) {
+                                List<DashboardRegionDataRes> regionData,
+                                List<DashboardOwnerDataRes> ownerData,
+                                List<DashboardUserActivitiesRes> userActivitiesData) {
 }

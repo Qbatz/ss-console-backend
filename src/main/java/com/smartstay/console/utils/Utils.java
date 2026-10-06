@@ -1357,6 +1357,7 @@ public class Utils {
     }
 
     public static String getRelativeDateDisplay(Date date) {
+
         if (date == null) {
             return null;
         }
@@ -1395,5 +1396,44 @@ public class Utils {
         }
 
         return months + " months ago";
+    }
+
+    public static String getRelativeTimeDisplay(Date date) {
+
+        if (date == null) {
+            return "";
+        }
+
+        long diffMillis = new Date().getTime() - date.getTime();
+
+        if (diffMillis < 0) {
+            return "just now";
+        }
+
+        long seconds = diffMillis / 1000;
+
+        if (seconds < 10) {
+            return "just now";
+        }
+
+        if (seconds < 60) {
+            return seconds + (seconds == 1 ? " second ago" : " seconds ago");
+        }
+
+        long minutes = seconds / 60;
+
+        if (minutes < 60) {
+            return minutes + (minutes == 1 ? " minute ago" : " minutes ago");
+        }
+
+        long hours = minutes / 60;
+
+        if (hours < 24) {
+            return hours + (hours == 1 ? " hour ago" : " hours ago");
+        }
+
+        long days = hours / 24;
+
+        return days + (days == 1 ? " day ago" : " days ago");
     }
 }

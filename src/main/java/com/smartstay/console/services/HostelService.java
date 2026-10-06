@@ -4,6 +4,7 @@ import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.BillingRules;
 import com.smartstay.console.dao.ElectricityConfig;
 import com.smartstay.console.dao.HostelV1;
+import com.smartstay.console.dto.dashboard.DashboardOwnerProjection;
 import com.smartstay.console.dto.hostel.BillingDates;
 import com.smartstay.console.dto.hostel.DashboardCityGraphProjection;
 import com.smartstay.console.dto.hostel.DashboardRegionHostelProjection;
@@ -151,5 +152,9 @@ public class HostelService {
 
     public List<DashboardRegionHostelProjection> getHostelsFromRecentlyAddedCities(){
         return hostelRepository.findHostelsFromRecentlyAddedCities();
+    }
+
+    public List<DashboardOwnerProjection> getOwnersByHostelCount() {
+        return hostelRepository.findOwnersByHostelCount();
     }
 }

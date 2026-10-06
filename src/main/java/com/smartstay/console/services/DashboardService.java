@@ -1,18 +1,15 @@
 package com.smartstay.console.services;
 
 import com.smartstay.console.config.Authentication;
-import com.smartstay.console.dao.Agent;
-import com.smartstay.console.dao.AgentRoles;
-import com.smartstay.console.dao.LoginHistory;
+import com.smartstay.console.dao.*;
+import com.smartstay.console.dto.dashboard.DashboardOwnerProjection;
 import com.smartstay.console.dto.hostel.DashboardCityGraphProjection;
 import com.smartstay.console.dto.hostel.DashboardRegionHostelProjection;
 import com.smartstay.console.dto.hostel.HostelLiteProjection;
 import com.smartstay.console.ennum.DashboardRegionGraphDateFilterEnum;
 import com.smartstay.console.ennum.ModuleId;
-import com.smartstay.console.responses.dashboard.DashboardRegionDataRes;
-import com.smartstay.console.responses.dashboard.DashboardRegionGraphDateFilterRes;
-import com.smartstay.console.responses.dashboard.DashboardRegionGraphRes;
-import com.smartstay.console.responses.dashboard.DashboardResponse;
+import com.smartstay.console.responses.dashboard.*;
+import com.smartstay.console.utils.UserActivityUtil;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.function.BinaryOperator;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,6 +42,12 @@ public class DashboardService {
     private BedsService bedsService;
     @Autowired
     private LoginHistoryService loginHistoryService;
+    @Autowired
+    private UsersService usersService;
+    @Autowired
+    private UserActivitiesService userActivitiesService;
+    @Autowired
+    private UserActivityUtil userActivityUtil;
 
     public ResponseEntity<?> getDashboard(String regionGraphDateFilter) {
 
@@ -112,6 +116,7 @@ public class DashboardService {
 
         List<DashboardRegionGraphRes> dashboardRegionGraphResList = new ArrayList<>();
         List<DashboardRegionDataRes> regionData = new ArrayList<>();
+        List<DashboardOwnerDataRes> ownerData = new ArrayList<>();
 
         if (agentRolesService.checkPermission(agentRole, ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
 
@@ -164,9 +169,39 @@ public class DashboardService {
                         );
                     })
                     .toList();
+
+            List<DashboardOwnerProjection> ownerProjections = hostelService
+                    .getOwnersByHostelCount();
+
+            Set<String> parentIds = ownerProjections.stream()
+                    .map(DashboardOwnerProjection::getParentId)
+                    .collect(Collectors.toSet());
+
+            List<Users> owners = usersService
+                    .getOwners(new ArrayList<>(parentIds));
+
+            Map<String, Users> ownersMap = owners.stream()
+                    .collect(Collectors.toMap(Users::getParentId,
+                            Function.identity(), (a,b) -> a));
+
+            ownerData = ownerProjections.stream()
+                    .map(i -> {
+                        Users owner = ownersMap.getOrDefault(i.getParentId(), null);
+
+                        String ownerId = null;
+                        String ownerName = null;
+                        if (owner != null){
+                            ownerId = owner.getUserId();
+                            ownerName = Utils.getFullName(owner.getFirstName(), owner.getLastName());
+                        }
+
+                        return new DashboardOwnerDataRes(ownerId, ownerName,
+                                i.getHostelCount(), i.getCityCount());
+                    }).toList();
         }
 
         if (agentRolesService.checkPermission(agentRole, ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
+
             ownersCount = ownersService.getOwnerCount();
 
             Set<String> targetParentIds = hostelService.getActiveParentIds();
@@ -206,6 +241,7 @@ public class DashboardService {
         }
 
         if (agentRolesService.checkPermission(agentRole, ModuleId.Agents.getId(), Utils.PERMISSION_READ)) {
+
             agentCount = agentService.getAgentCount();
         }
 
@@ -234,6 +270,44 @@ public class DashboardService {
 
         bedCount = bedsService.getBedCount();
 
+        List<UserActivities> userActivities = userActivitiesService
+                .getLimitedRecentUserActivities(5);
+
+        Set<String> hostelIds = userActivities.stream()
+                .map(UserActivities::getHostelId)
+                .collect(Collectors.toSet());
+
+        List<HostelV1> hostels = hostelService
+                .getHostelsByHostelIds(hostelIds);
+
+        Map<String, HostelV1> hostelMap = hostels.stream()
+                .collect(Collectors.toMap(HostelV1::getHostelId,
+                        Function.identity(), (a,b) -> a));
+
+        List<DashboardUserActivitiesRes> dashboardUserActivitiesRes = userActivities.stream()
+                .map(i -> {
+
+                    HostelV1 hostel = hostelMap.getOrDefault(i.getHostelId(), null);
+
+                    String hostelName = null;
+                    String hostelInitials = null;
+                    String hostelMainImage = null;
+                    String hostelAddress = null;
+                    String hostelCity = null;
+
+                    if (hostel != null) {
+                        hostelName = hostel.getHostelName();
+                        hostelInitials = Utils.getInitials(hostelName);
+                        hostelMainImage = hostel.getMainImage();
+                        hostelAddress = Utils.buildFullAddress(hostel);
+                        hostelCity = hostel.getCity();
+                    }
+
+                    return new DashboardUserActivitiesRes(userActivityUtil.getDescription(i), i.getActivityType(),
+                            i.getSource(), i.getHostelId(), hostelName, hostelInitials, hostelMainImage,
+                            hostelAddress, hostelCity, Utils.getRelativeTimeDisplay(i.getCreatedAt()));
+                }).toList();
+
         List<DashboardRegionGraphDateFilterRes> regionGraphDateFilterRes = Arrays
                 .stream(DashboardRegionGraphDateFilterEnum.values())
                 .map(i -> new DashboardRegionGraphDateFilterRes(
@@ -243,7 +317,7 @@ public class DashboardService {
         DashboardResponse response = new DashboardResponse(hostelCount, activeHostelCount, ownersCount,
                 agentCount, demoRequestCount, expiredSubscriptionsCount, bedCount, paidHostelCount,
                 activePaidHostelCount, multiBranchOwnerCount, usedLast45DaysCount, regionGraphDateFilterRes,
-                dashboardRegionGraphResList, regionData);
+                dashboardRegionGraphResList, regionData, ownerData, dashboardUserActivitiesRes);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
