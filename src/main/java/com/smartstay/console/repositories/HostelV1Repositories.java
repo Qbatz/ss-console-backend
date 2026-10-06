@@ -2,6 +2,7 @@ package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dto.hostel.DashboardCityGraphProjection;
+import com.smartstay.console.dto.hostel.DashboardRegionHostelProjection;
 import com.smartstay.console.dto.hostel.HostelLiteProjection;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import org.springframework.data.domain.Page;
@@ -361,4 +362,28 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             """, nativeQuery = true)
     List<DashboardCityGraphProjection> getTopCitiesForDashboard(@Param("startDate") Date startDate,
                                                                 @Param("endDate") Date endDate);
+
+    @Query(value = """
+            SELECT h.city AS city,
+                   h.state AS state,
+                   h.parent_id AS parentId,
+                   h.created_at AS createdAt
+            FROM hostelv1 h
+            INNER JOIN (
+                SELECT LOWER(TRIM(city)) AS city
+                FROM hostelv1
+                WHERE is_active = true
+                  AND is_deleted = false
+                  AND city IS NOT NULL
+                  AND TRIM(city) <> ''
+                GROUP BY LOWER(TRIM(city))
+                ORDER BY MAX(created_at) DESC
+                LIMIT 5
+            ) recent_cities
+                ON LOWER(TRIM(h.city)) = recent_cities.city
+            WHERE h.is_active = true
+              AND h.is_deleted = false
+            ORDER BY h.created_at DESC
+            """, nativeQuery = true)
+    List<DashboardRegionHostelProjection> findHostelsFromRecentlyAddedCities();
 }

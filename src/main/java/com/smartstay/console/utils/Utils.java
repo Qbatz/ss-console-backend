@@ -1355,4 +1355,45 @@ public class Utils {
                         + word.substring(1).toLowerCase())
                 .collect(Collectors.joining(" "));
     }
+
+    public static String getRelativeDateDisplay(Date date) {
+        if (date == null) {
+            return null;
+        }
+
+        Date today = getStartOfDay(new Date());
+        Date targetDate = getStartOfDay(date);
+
+        long days = daysBetween(targetDate, today);
+
+        if (days == 0) {
+            return "Today";
+        }
+
+        if (days == 1) {
+            return "1 day ago";
+        }
+
+        if (days < 7) {
+            return days + " days ago";
+        }
+
+        long weeks = days / 7;
+
+        if (weeks == 1) {
+            return "1 week ago";
+        }
+
+        if (weeks < 4) {
+            return weeks + " weeks ago";
+        }
+
+        long months = days / 30;
+
+        if (months == 1) {
+            return "1 month ago";
+        }
+
+        return months + " months ago";
+    }
 }

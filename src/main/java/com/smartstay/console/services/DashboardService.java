@@ -5,9 +5,11 @@ import com.smartstay.console.dao.Agent;
 import com.smartstay.console.dao.AgentRoles;
 import com.smartstay.console.dao.LoginHistory;
 import com.smartstay.console.dto.hostel.DashboardCityGraphProjection;
+import com.smartstay.console.dto.hostel.DashboardRegionHostelProjection;
 import com.smartstay.console.dto.hostel.HostelLiteProjection;
 import com.smartstay.console.ennum.DashboardRegionGraphDateFilterEnum;
 import com.smartstay.console.ennum.ModuleId;
+import com.smartstay.console.responses.dashboard.DashboardRegionDataRes;
 import com.smartstay.console.responses.dashboard.DashboardRegionGraphDateFilterRes;
 import com.smartstay.console.responses.dashboard.DashboardRegionGraphRes;
 import com.smartstay.console.responses.dashboard.DashboardResponse;
@@ -109,8 +111,10 @@ public class DashboardService {
         }
 
         List<DashboardRegionGraphRes> dashboardRegionGraphResList = new ArrayList<>();
+        List<DashboardRegionDataRes> regionData = new ArrayList<>();
 
         if (agentRolesService.checkPermission(agentRole, ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+
             hostelCount = hostelService.getHostelCount();
 
             multiBranchOwnerCount = hostelService.getParentIdCountWithMultipleHostels();
@@ -123,6 +127,43 @@ public class DashboardService {
                             Utils.capitalizeWords(city.getCity()),
                             city.getCount()
                     )).toList();
+
+            List<DashboardRegionHostelProjection> hostelsByCities =
+                    hostelService.getHostelsFromRecentlyAddedCities();
+
+            Map<String, List<DashboardRegionHostelProjection>> hostelsByCity =
+                    hostelsByCities.stream()
+                            .filter(h -> h.getCity() != null && !h.getCity().isBlank())
+                            .collect(Collectors.groupingBy(
+                                    h -> h.getCity().trim().toLowerCase(),
+                                    LinkedHashMap::new,
+                                    Collectors.toList()
+                            ));
+
+            regionData = hostelsByCity.values().stream()
+                    .map(hostels -> {
+
+                        DashboardRegionHostelProjection latestHostel = hostels.stream()
+                                .max(Comparator.comparing(
+                                        DashboardRegionHostelProjection::getCreatedAt
+                                ))
+                                .orElseThrow();
+
+                        long ownerCount = hostels.stream()
+                                .map(DashboardRegionHostelProjection::getParentId)
+                                .filter(Objects::nonNull)
+                                .distinct()
+                                .count();
+
+                        return new DashboardRegionDataRes(
+                                Utils.capitalizeWords(latestHostel.getCity()),
+                                Utils.capitalizeWords(latestHostel.getState()),
+                                ownerCount,
+                                hostels.size(),
+                                Utils.getRelativeDateDisplay(latestHostel.getCreatedAt())
+                        );
+                    })
+                    .toList();
         }
 
         if (agentRolesService.checkPermission(agentRole, ModuleId.Owners.getId(), Utils.PERMISSION_READ)) {
@@ -202,7 +243,7 @@ public class DashboardService {
         DashboardResponse response = new DashboardResponse(hostelCount, activeHostelCount, ownersCount,
                 agentCount, demoRequestCount, expiredSubscriptionsCount, bedCount, paidHostelCount,
                 activePaidHostelCount, multiBranchOwnerCount, usedLast45DaysCount, regionGraphDateFilterRes,
-                dashboardRegionGraphResList);
+                dashboardRegionGraphResList, regionData);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
