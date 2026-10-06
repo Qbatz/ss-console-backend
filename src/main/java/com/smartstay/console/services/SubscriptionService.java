@@ -896,4 +896,15 @@ public class SubscriptionService {
     public com.smartstay.console.dao.Subscription save(com.smartstay.console.dao.Subscription subscription) {
         return subscriptionRepository.save(subscription);
     }
+
+    public Set<String> getHostelIdsWithPaidSubscriptions(Set<String> hostelIds) {
+
+        List<Plans> freePlans = plansService.getFreePlans();
+        Set<String> freePlanCodes = freePlans.stream()
+                .map(Plans::getPlanCode)
+                .collect(Collectors.toSet());
+
+        return subscriptionRepository
+                .findHostelIdsWithPaidSubscriptions(hostelIds, freePlanCodes);
+    }
 }

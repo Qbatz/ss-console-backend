@@ -1,6 +1,7 @@
 package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.HostelV1;
+import com.smartstay.console.dto.hostel.DashboardCityGraphProjection;
 import com.smartstay.console.dto.hostel.HostelLiteProjection;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import org.springframework.data.domain.Page;
@@ -328,4 +329,36 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             """)
     Page<HostelV1> findKycPagedHostels(String name, Set<String> hostelIds,
                                        Pageable pageable);
+
+    @Query(value = """
+            SELECT COUNT(*)
+            FROM (
+                SELECT h.parent_id
+                FROM hostelv1 h
+                INNER JOIN hostel_plan hp
+                    ON hp.hostel_id = h.hostel_id
+                WHERE h.is_active = true
+                  AND h.is_deleted = false
+                GROUP BY h.parent_id
+                HAVING COUNT(*) > 1
+            ) duplicate_parents
+            """, nativeQuery = true)
+    long getParentIdCountWithMultipleHostels();
+
+    @Query(value = """
+            SELECT LOWER(TRIM(h.city)) AS city,
+                   COUNT(*) AS count
+            FROM hostelv1 h
+            WHERE h.is_active = true
+              AND h.is_deleted = false
+              AND h.city IS NOT NULL
+              AND TRIM(h.city) <> ''
+              AND h.created_at >= :startDate
+              AND h.created_at < :endDate
+            GROUP BY LOWER(TRIM(h.city))
+            ORDER BY COUNT(*) DESC, h.created_at DESC
+            LIMIT 6
+            """, nativeQuery = true)
+    List<DashboardCityGraphProjection> getTopCitiesForDashboard(@Param("startDate") Date startDate,
+                                                                @Param("endDate") Date endDate);
 }

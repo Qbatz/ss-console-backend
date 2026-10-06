@@ -15,6 +15,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Utils {
 
@@ -1342,5 +1343,16 @@ public class Utils {
         double percentage = ((currentValue - comparisonValue) / comparisonValue) * 100;
 
         return Utils.roundOfDoubleTo2Digits(percentage);
+    }
+
+    public static String capitalizeWords(String value) {
+        if (value == null || value.isBlank()) {
+            return value;
+        }
+
+        return Arrays.stream(value.trim().split("\\s+"))
+                .map(word -> word.substring(0, 1).toUpperCase()
+                        + word.substring(1).toLowerCase())
+                .collect(Collectors.joining(" "));
     }
 }

@@ -5,6 +5,7 @@ import com.smartstay.console.dao.BillingRules;
 import com.smartstay.console.dao.ElectricityConfig;
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dto.hostel.BillingDates;
+import com.smartstay.console.dto.hostel.DashboardCityGraphProjection;
 import com.smartstay.console.dto.hostel.HostelLiteProjection;
 import com.smartstay.console.repositories.HostelV1Repositories;
 import com.smartstay.console.utils.Utils;
@@ -137,5 +138,13 @@ public class HostelService {
     public Page<HostelV1> getKycPagedHostels(String name, Set<String> hostelIds,
                                              Pageable pageable) {
         return hostelRepository.findKycPagedHostels(name, hostelIds, pageable);
+    }
+
+    public long getParentIdCountWithMultipleHostels() {
+        return hostelRepository.getParentIdCountWithMultipleHostels();
+    }
+
+    public List<DashboardCityGraphProjection> getTopCitiesForDashboard(Date startDate, Date endDate) {
+        return hostelRepository.getTopCitiesForDashboard(startDate, endDate);
     }
 }
