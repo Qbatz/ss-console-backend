@@ -126,6 +126,8 @@ public class SubscriptionService {
             return new ResponseEntity<>(Utils.INVALID_PLAN_DURATION, HttpStatus.BAD_REQUEST);
         }
 
+        kycPerMonthLimit = plans.getKycPerMonthLimit();
+
         com.smartstay.console.dao.Subscription newSubscription = new com.smartstay.console.dao.Subscription();
 
         if (plans.getPlanType().equalsIgnoreCase(PlanType.TRIAL.name())) {
@@ -277,8 +279,6 @@ public class SubscriptionService {
             }
 
             duration = plans.getDuration().intValue();
-
-            kycPerMonthLimit = plans.getKycPerMonthLimit();
         }
 
         Date startsAt = today;
