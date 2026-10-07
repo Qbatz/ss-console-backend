@@ -406,7 +406,7 @@ public class SubscriptionService {
                     newKycHistory.setCancellationReason(null);
                     newKycHistory.setActivationReason("Activation due to plan");
                     newKycHistory.setCancelledBy(null);
-                    newKycHistory.setCreatedBy(null);
+                    newKycHistory.setCreatedBy(agent.getAgentId());
                     newKycHistory.setCreatedAt(today);
 
                     kycHistoryService.save(newKycHistory);
