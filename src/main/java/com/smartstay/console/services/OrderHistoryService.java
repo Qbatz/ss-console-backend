@@ -285,7 +285,7 @@ public class OrderHistoryService {
         return orderHistoryRepository.save(newOrder);
     }
 
-    public ResponseEntity<?> getOrderHistoryGraph(String comparisonFilter) {
+    public ResponseEntity<?> getOrderHistoryGraph(String comparisonFilter, Integer customMonth, Integer customYear) {
 
         String loggedInAgentId = authentication.getName();
         Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
@@ -326,12 +326,52 @@ public class OrderHistoryService {
 
             previousQuarterStart = Utils.getStartOfQuarter(calendar.getTime());
 
+            previousQuarterStart = Utils.getStartOfDay(previousQuarterStart);
+            previousQuarterEnd = Utils.getEndOfDay(previousQuarterEnd);
+
             comparisonPeriod = new OrderHistoryGraphPeriodDto(
                     previousQuarterStart,
                     previousQuarterEnd
             );
 
+        } else if (OrderHistoryGraphFilterEnum.CUSTOM_MONTH.name().equals(comparisonFilter)) {
+
+            startDate = Utils.getStartOfDay(startDate);
+            endDate = Utils.getEndOfDay(endDate);
+
+            currentPeriod = new OrderHistoryGraphPeriodDto(startDate, endDate);
+
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(startDate);
+            calendar.add(Calendar.MONTH, -1);
+
+            Date previousMonthStart = Utils.getStartOfDay(Utils.getFirstDayOfMonth(calendar.getTime()));
+
+            if (customMonth == null){
+                customMonth = Utils.getCurrentMonth(previousMonthStart);
+            } else {
+                if (customMonth > 12 || customMonth < 1) {
+                    return new ResponseEntity<>("Custom month must be between 1 and 12", HttpStatus.BAD_REQUEST);
+                }
+            }
+            if (customYear == null){
+                customYear = Utils.getCurrentYear(previousMonthStart);
+            }
+
+            LocalDate comparisonDate = LocalDate.of(customYear, customMonth, 1);
+
+            Date customMonthStart = Utils.getStartDateOfMonth(comparisonDate);
+            Date customMonthEnd = Utils.getEndDateOfMonth(comparisonDate);
+
+            customMonthStart = Utils.getStartOfDay(customMonthStart);
+            customMonthEnd = Utils.getEndOfDay(customMonthEnd);
+
+            comparisonPeriod = new OrderHistoryGraphPeriodDto(customMonthStart, customMonthEnd);
+
         } else {
+
+            startDate = Utils.getStartOfDay(startDate);
+            endDate = Utils.getEndOfDay(endDate);
 
             currentPeriod = new OrderHistoryGraphPeriodDto(startDate, endDate);
 
@@ -342,6 +382,7 @@ public class OrderHistoryService {
             calendar.add(Calendar.MONTH, -1);
 
             Date previousMonthStart = Utils.getStartOfDay(Utils.getFirstDayOfMonth(calendar.getTime()));
+            previousMonthEnd = Utils.getEndOfDay(previousMonthEnd);
 
             comparisonPeriod = new OrderHistoryGraphPeriodDto(
                     previousMonthStart,
@@ -405,6 +446,20 @@ public class OrderHistoryService {
         List<OrderHistoryGraphRecordRes> comparisonRecords;
 
         if (OrderHistoryGraphFilterEnum.QUARTER.name().equals(comparisonFilter)) {
+
+            currentRecords = buildMonthlyRecords(
+                    currentOrders,
+                    currentPeriod.startDate(),
+                    currentPeriod.endDate()
+            );
+
+            comparisonRecords = buildMonthlyRecords(
+                    comparisonOrders,
+                    comparisonPeriod.startDate(),
+                    comparisonPeriod.endDate()
+            );
+
+        } else if (OrderHistoryGraphFilterEnum.CUSTOM_MONTH.name().equals(comparisonFilter)) {
 
             currentRecords = buildMonthlyRecords(
                     currentOrders,

@@ -394,6 +394,7 @@ public class InvoiceRedemptionService {
         double targetTotal = targetInvoice.getTotalAmount() != null ? targetInvoice.getTotalAmount() : 0;
         double targetPaid = targetInvoice.getPaidAmount() != null ? targetInvoice.getPaidAmount() : 0;
         double sourceBalance = sourceInvoice.getBalanceAmount() != null ? sourceInvoice.getBalanceAmount() : 0;
+        double targetBalance = targetInvoice.getBalanceAmount() != null ? targetInvoice.getBalanceAmount() : 0;
         double creditAmount = paymentSummary.getCreditAmount() != null ? paymentSummary.getCreditAmount() : 0;
         double balance = paymentSummary.getBalance() != null ? paymentSummary.getBalance() : 0;
 
@@ -419,12 +420,19 @@ public class InvoiceRedemptionService {
         sourceInvoice.setBalanceAmount(sourceInvoiceNewBalanceAmount);
         sourceInvoice.setUpdatedAt(today);
 
+        double targetInvoiceNewBalanceAmount = targetBalance - differenceAmount;
         double targetInvoiceNewPaidAmount = targetPaid - differenceAmount;
 
+        if (targetInvoiceNewBalanceAmount < 0) {
+            return new ResponseEntity<>(Utils.BALANCE_AMOUNT_GOES_NEGATIVE, HttpStatus.BAD_REQUEST);
+        }
         if (targetInvoiceNewPaidAmount < 0) {
             return new ResponseEntity<>(Utils.PAID_AMOUNT_GOES_NEGATIVE, HttpStatus.BAD_REQUEST);
         }
 
+        if (targetInvoiceNewBalanceAmount > targetTotal) {
+            return new ResponseEntity<>(Utils.BALANCE_AMOUNT_EXCEEDS_TOTAL_AMOUNT, HttpStatus.BAD_REQUEST);
+        }
         if (targetInvoiceNewPaidAmount > targetTotal) {
             return new ResponseEntity<>(Utils.PAID_AMOUNT_EXCEEDS_TOTAL_AMOUNT, HttpStatus.BAD_REQUEST);
         }
@@ -543,6 +551,7 @@ public class InvoiceRedemptionService {
             }
         }
 
+        targetInvoice.setBalanceAmount(targetInvoiceNewBalanceAmount);
         targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
         targetInvoice.setUpdatedAt(today);
 
@@ -635,6 +644,7 @@ public class InvoiceRedemptionService {
         double targetTotal = targetInvoice.getTotalAmount() != null ? targetInvoice.getTotalAmount() : 0;
         double targetPaid = targetInvoice.getPaidAmount() != null ? targetInvoice.getPaidAmount() : 0;
         double sourceBalance = sourceInvoice.getBalanceAmount() != null ? sourceInvoice.getBalanceAmount() : 0;
+        double targetBalance = targetInvoice.getBalanceAmount() != null ? targetInvoice.getBalanceAmount() : 0;
         double creditAmount = paymentSummary.getCreditAmount() != null ? paymentSummary.getCreditAmount() : 0;
         double balance = paymentSummary.getBalance() != null ? paymentSummary.getBalance() : 0;
 
@@ -650,8 +660,12 @@ public class InvoiceRedemptionService {
         sourceInvoice.setBalanceAmount(sourceInvoiceNewBalanceAmount);
         sourceInvoice.setUpdatedAt(today);
 
+        double targetInvoiceNewBalanceAmount = targetBalance - redemptionAmount;
         double targetInvoiceNewPaidAmount = targetPaid - redemptionAmount;
 
+        if (targetInvoiceNewBalanceAmount < 0) {
+            return new ResponseEntity<>(Utils.BALANCE_AMOUNT_GOES_NEGATIVE, HttpStatus.BAD_REQUEST);
+        }
         if (targetInvoiceNewPaidAmount < 0) {
             return new ResponseEntity<>(Utils.PAID_AMOUNT_GOES_NEGATIVE, HttpStatus.BAD_REQUEST);
         }
@@ -713,6 +727,7 @@ public class InvoiceRedemptionService {
             }
         }
 
+        targetInvoice.setBalanceAmount(targetInvoiceNewBalanceAmount);
         targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
         targetInvoice.setUpdatedAt(today);
 
@@ -827,6 +842,7 @@ public class InvoiceRedemptionService {
             double targetTotal = targetInvoice.getTotalAmount() != null ? targetInvoice.getTotalAmount() : 0;
             double targetPaid = targetInvoice.getPaidAmount() != null ? targetInvoice.getPaidAmount() : 0;
             double sourceBalance = sourceInvoice.getBalanceAmount() != null ? sourceInvoice.getBalanceAmount() : 0;
+            double targetBalance = targetInvoice.getBalanceAmount() != null ? targetInvoice.getBalanceAmount() : 0;
             double creditAmount = paymentSummary.getCreditAmount() != null ? paymentSummary.getCreditAmount() : 0;
             double balance = paymentSummary.getBalance() != null ? paymentSummary.getBalance() : 0;
 
@@ -842,8 +858,12 @@ public class InvoiceRedemptionService {
             sourceInvoice.setBalanceAmount(sourceInvoiceNewBalanceAmount);
             sourceInvoice.setUpdatedAt(today);
 
+            double targetInvoiceNewBalanceAmount = targetBalance - redemptionAmount;
             double targetInvoiceNewPaidAmount = targetPaid - redemptionAmount;
 
+            if (targetInvoiceNewBalanceAmount < 0) {
+                throw new BadRequestException(Utils.BALANCE_AMOUNT_GOES_NEGATIVE);
+            }
             if (targetInvoiceNewPaidAmount < 0) {
                 throw new BadRequestException(Utils.PAID_AMOUNT_GOES_NEGATIVE);
             }
@@ -902,6 +922,7 @@ public class InvoiceRedemptionService {
                 }
             }
 
+            targetInvoice.setBalanceAmount(targetInvoiceNewBalanceAmount);
             targetInvoice.setPaidAmount(targetInvoiceNewPaidAmount);
             targetInvoice.setUpdatedAt(today);
 
