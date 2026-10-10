@@ -14,7 +14,9 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Utils {
 
@@ -195,7 +197,9 @@ public class Utils {
     public static final String DURATION_NEED_TO_BE_HIGHER_THAN_ZERO = "Duration should be higher than 0";
     public static final String BALANCE_AMOUNT_NOT_ENOUGH = "Balance not enough in source invoice";
     public static final String PAID_AMOUNT_EXCEEDS_TOTAL_AMOUNT = "Target invoice paid amount exceeds total amount";
+    public static final String BALANCE_AMOUNT_EXCEEDS_TOTAL_AMOUNT = "Target invoice balance amount exceeds total amount";
     public static final String PAID_AMOUNT_GOES_NEGATIVE = "Target paid amount goes negative";
+    public static final String BALANCE_AMOUNT_GOES_NEGATIVE = "Target invoice balance amount goes negative";
     public static final String DATE_IS_NOT_FROM_FUTURE_OR_PRESENT = "Date is not from future or present";
     public static final String MINIMUM_1_PERMISSION_ENABLED = "At least one module must have read permission enabled";
     public static final String RELEASE_DATE_MUST_BE_IN_FUTURE = "Release date must be in future";
@@ -1319,6 +1323,24 @@ public class Utils {
         return Utils.getStartOfDay(calendar.getTime());
     }
 
+    public static Date getEndOfQuarter(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        int endMonth = ((localDate.getMonthValue() - 1) / 3) * 3 + 3;
+
+        return Date.from(localDate.withMonth(endMonth)
+                .with(TemporalAdjusters.lastDayOfMonth())
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant());
+    }
+
     public static Date getFirstDayOfMonth(Date date) {
 
         if (date == null) {
@@ -1342,5 +1364,193 @@ public class Utils {
         double percentage = ((currentValue - comparisonValue) / comparisonValue) * 100;
 
         return Utils.roundOfDoubleTo2Digits(percentage);
+    }
+
+    public static String capitalizeWords(String value) {
+        if (value == null || value.isBlank()) {
+            return value;
+        }
+
+        return Arrays.stream(value.trim().split("\\s+"))
+                .map(word -> word.substring(0, 1).toUpperCase()
+                        + word.substring(1).toLowerCase())
+                .collect(Collectors.joining(" "));
+    }
+
+    public static String getRelativeDateDisplay(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        Date today = getStartOfDay(new Date());
+        Date targetDate = getStartOfDay(date);
+
+        long days = daysBetween(targetDate, today);
+
+        if (days == 0) {
+            return "Today";
+        }
+
+        if (days == 1) {
+            return "1 day ago";
+        }
+
+        if (days < 7) {
+            return days + " days ago";
+        }
+
+        long weeks = days / 7;
+
+        if (weeks == 1) {
+            return "1 week ago";
+        }
+
+        if (weeks < 4) {
+            return weeks + " weeks ago";
+        }
+
+        long months = days / 30;
+
+        if (months == 1) {
+            return "1 month ago";
+        }
+
+        return months + " months ago";
+    }
+
+    public static String getRelativeTimeDisplay(Date date) {
+
+        if (date == null) {
+            return "";
+        }
+
+        long diffMillis = new Date().getTime() - date.getTime();
+
+        if (diffMillis < 0) {
+            return "just now";
+        }
+
+        long seconds = diffMillis / 1000;
+
+        if (seconds < 10) {
+            return "just now";
+        }
+
+        if (seconds < 60) {
+            return seconds + (seconds == 1 ? " second ago" : " seconds ago");
+        }
+
+        long minutes = seconds / 60;
+
+        if (minutes < 60) {
+            return minutes + (minutes == 1 ? " minute ago" : " minutes ago");
+        }
+
+        long hours = minutes / 60;
+
+        if (hours < 24) {
+            return hours + (hours == 1 ? " hour ago" : " hours ago");
+        }
+
+        long days = hours / 24;
+
+        return days + (days == 1 ? " day ago" : " days ago");
+    }
+
+    public static Date getStartOfWeek(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return Date.from(localDate.with(DayOfWeek.MONDAY)
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant());
+    }
+
+    public static Date getEndOfWeek(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return Date.from(localDate.with(DayOfWeek.SUNDAY)
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant());
+    }
+
+    public static Date getStartOfMonth(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return Date.from(localDate.withDayOfMonth(1)
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant());
+    }
+
+    public static Date getEndOfMonth(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return Date.from(localDate.withDayOfMonth(localDate.lengthOfMonth())
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant());
+    }
+
+    public static Date getStartOfLastSixMonths(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        LocalDate localDate = date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+
+        return Date.from(localDate.minusMonths(5)
+                .withDayOfMonth(1)
+                .atStartOfDay(ZoneId.systemDefault())
+                .toInstant());
+    }
+
+    public static Date getEndOfLastSixMonths(Date date) {
+
+        if (date == null) {
+            return null;
+        }
+
+        return getEndOfMonth(date);
+    }
+
+    public static int getPercentage(Long value, Long totalValue){
+
+        value = value != null ? value : 0;
+        totalValue = totalValue != null ? totalValue : 0;
+
+        return totalValue == 0 ? 0 :
+                (int) Math.round(
+                        value * 100.0 / totalValue
+                );
     }
 }

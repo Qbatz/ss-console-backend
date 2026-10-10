@@ -221,4 +221,8 @@ public class BedsService {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    public long getBedCount() {
+        return bedsRepository.findBedCount();
+    }
 }

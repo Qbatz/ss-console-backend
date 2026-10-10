@@ -120,4 +120,12 @@ public class UserActivitiesService {
                     }
                 });
     }
+
+    public List<UserActivities> getLimitedRecentUserActivities(int size){
+        Pageable pageable = PageRequest.of(0, size);
+
+        return userActivitiesRepository
+                .findByHostelIdIsNotNullOrderByCreatedAtDesc(pageable)
+                .getContent();
+    }
 }

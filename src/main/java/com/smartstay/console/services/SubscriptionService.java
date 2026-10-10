@@ -56,6 +56,8 @@ public class SubscriptionService {
     private Environment environment;
     @Autowired
     private KycConfigService kycConfigService;
+    @Autowired
+    private KycHistoryService kycHistoryService;
 
     @Transactional
     public ResponseEntity<?> subscribeHostel(String hostelId, Subscription payload, MultipartFile paymentProof) {
@@ -81,6 +83,8 @@ public class SubscriptionService {
         HostelPlan hostelPlan = hostelV1.getHostelPlan();
 
         KycConfig kycConfig = kycConfigService.getByHostelId(hostelId);
+
+        KycHistory latestKycHistory = kycHistoryService.getLatestByHostelId(hostelId);
 
         com.smartstay.console.dao.Subscription latestSubscription = subscriptionRepository
                 .findTopByHostelIdOrderByPlanStartsAtDesc(hostelId);
@@ -121,6 +125,8 @@ public class SubscriptionService {
         if (plans.getDuration().intValue() <= 0) {
             return new ResponseEntity<>(Utils.INVALID_PLAN_DURATION, HttpStatus.BAD_REQUEST);
         }
+
+        kycPerMonthLimit = plans.getKycPerMonthLimit();
 
         com.smartstay.console.dao.Subscription newSubscription = new com.smartstay.console.dao.Subscription();
 
@@ -273,8 +279,6 @@ public class SubscriptionService {
             }
 
             duration = plans.getDuration().intValue();
-
-            kycPerMonthLimit = plans.getKycPerMonthLimit();
         }
 
         Date startsAt = today;
@@ -318,22 +322,6 @@ public class SubscriptionService {
             newOrder.setCreatedBy(agent.getAgentId());
 
             newOrder = orderHistoryService.save(newOrder);
-
-            if (kycConfig == null){
-                kycConfig = new KycConfig();
-
-                kycConfig.setHostelId(hostelId);
-                kycConfig.setCanRequest(true);
-                kycConfig.setCreatedBy(agent.getAgentId());
-                kycConfig.setCreatedAt(today);
-            } else {
-                kycConfig.setUpdatedBy(agent.getAgentId());
-                kycConfig.setUpdatedAt(today);
-            }
-
-            kycConfig.setLimitPerMonth(kycPerMonthLimit);
-
-            kycConfigService.save(kycConfig);
         }
 
         newSubscription.setPlanStartsAt(startsAt);
@@ -390,6 +378,39 @@ public class SubscriptionService {
                 hostelPlan.setTrialEndingAt(isTrial ? newSubscription.getPlanEndsAt() : null);
 
                 hostelService.updateHostel(hostelV1);
+
+                if (kycConfig == null){
+                    kycConfig = new KycConfig();
+
+                    kycConfig.setHostelId(hostelId);
+                    kycConfig.setCreatedBy(agent.getAgentId());
+                    kycConfig.setCreatedAt(today);
+                } else {
+                    kycConfig.setUpdatedBy(agent.getAgentId());
+                    kycConfig.setUpdatedAt(today);
+                }
+
+                kycConfig.setCanRequest(true);
+                kycConfig.setLimitPerMonth(kycPerMonthLimit);
+
+                kycConfigService.save(kycConfig);
+
+                if (latestKycHistory == null || latestKycHistory.getEndDate() != null) {
+
+                    KycHistory newKycHistory = new KycHistory();
+
+                    newKycHistory.setHostelId(hostelId);
+                    newKycHistory.setStartDate(newSubscription.getPlanStartsAt());
+                    newKycHistory.setEndDate(null);
+                    newKycHistory.setIsCancelledDueToPlan(false);
+                    newKycHistory.setCancellationReason(null);
+                    newKycHistory.setActivationReason("Activation due to plan");
+                    newKycHistory.setCancelledBy(null);
+                    newKycHistory.setCreatedBy(agent.getAgentId());
+                    newKycHistory.setCreatedAt(today);
+
+                    kycHistoryService.save(newKycHistory);
+                }
             }
         }
 
@@ -895,5 +916,16 @@ public class SubscriptionService {
 
     public com.smartstay.console.dao.Subscription save(com.smartstay.console.dao.Subscription subscription) {
         return subscriptionRepository.save(subscription);
+    }
+
+    public Set<String> getHostelIdsWithPaidSubscriptions(Set<String> hostelIds) {
+
+        List<Plans> freePlans = plansService.getFreePlans();
+        Set<String> freePlanCodes = freePlans.stream()
+                .map(Plans::getPlanCode)
+                .collect(Collectors.toSet());
+
+        return subscriptionRepository
+                .findHostelIdsWithPaidSubscriptions(hostelIds, freePlanCodes);
     }
 }

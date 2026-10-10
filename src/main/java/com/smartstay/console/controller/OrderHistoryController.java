@@ -36,8 +36,10 @@ public class OrderHistoryController {
     }
 
     @GetMapping("/graph")
-    public ResponseEntity<?> getOrderHistoryGraph(@RequestParam(defaultValue = "MONTH") String comparisonFilter) {
-        return orderHistoryService.getOrderHistoryGraph(comparisonFilter);
+    public ResponseEntity<?> getOrderHistoryGraph(@RequestParam(defaultValue = "CUSTOM_MONTH") String comparisonFilter,
+                                                  @RequestParam(required = false) Integer customMonth,
+                                                  @RequestParam(required = false) Integer customYear) {
+        return orderHistoryService.getOrderHistoryGraph(comparisonFilter, customMonth, customYear);
     }
 
     @GetMapping("/verify/{orderHistoryId}")
