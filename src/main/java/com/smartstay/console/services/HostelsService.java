@@ -51,7 +51,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
@@ -3736,5 +3740,206 @@ public class HostelsService {
         }
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getHostelsGraph(String onboardedDateFilter) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(loggedInAgent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelOnboardedDateFilterEnum hostelOnboardedDateFilter;
+        try {
+            hostelOnboardedDateFilter = HostelOnboardedDateFilterEnum.valueOf(onboardedDateFilter);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        Date monthStartDate = Utils.getStartOfMonth(today);
+        Date monthEndDate = Utils.getEndOfMonth(today);
+
+        Date onboardedStartDate = monthStartDate;
+        Date onboardedEndDate = monthEndDate;
+
+        if (HostelOnboardedDateFilterEnum.WEEK.equals(hostelOnboardedDateFilter)){
+            onboardedStartDate = Utils.getStartOfWeek(today);
+            onboardedEndDate = Utils.getEndOfWeek(today);
+        } else if (HostelOnboardedDateFilterEnum.MONTH.equals(hostelOnboardedDateFilter)) {
+            // initialized at start
+        } else if (HostelOnboardedDateFilterEnum.QUARTER.equals(hostelOnboardedDateFilter)) {
+            onboardedStartDate = Utils.getStartOfQuarter(today);
+            onboardedEndDate = Utils.getEndOfQuarter(today);
+        } else if (HostelOnboardedDateFilterEnum.SIX_MONTHS.equals(hostelOnboardedDateFilter)){
+            onboardedStartDate = Utils.getStartOfLastSixMonths(today);
+            onboardedEndDate = Utils.getEndOfLastSixMonths(today);
+        }
+
+        Date dbOnboardedStartDate = Utils.getStartOfDay(onboardedStartDate);
+        Date dbOnboardedEndDate = Utils.getStartOfDay(Utils.addDaysToDate(onboardedEndDate, 1));
+
+        List<HostelCreatedAtProjection> onboardedHostels = hostelRepository
+                .findAllHostelsBetweenDates(dbOnboardedStartDate, dbOnboardedEndDate);
+
+        onboardedStartDate = Utils.getStartOfDay(onboardedStartDate);
+        onboardedEndDate = Utils.getEndOfDay(onboardedEndDate);
+
+        List<HostelOnboardedDataRes> hostelOnboardedDataRes = new ArrayList<>();
+        if (onboardedHostels != null && !onboardedHostels.isEmpty()){
+            hostelOnboardedDataRes = buildHostelOnboardedData(onboardedHostels, hostelOnboardedDateFilter,
+                    onboardedStartDate, onboardedEndDate);
+        }
+
+        List<HostelRegionGraphProjection> regionGraphProjections = hostelRepository
+                .getTopCities();
+
+        long hostelCount = hostelRepository.findHostelCount();
+
+        List<HostelGraphRegionDataRes> hostelGraphRegionDataRes = new ArrayList<>();
+        if (regionGraphProjections != null && !regionGraphProjections.isEmpty()){
+            hostelGraphRegionDataRes = regionGraphProjections.stream()
+                    .map(i -> new HostelGraphRegionDataRes(
+                            Utils.capitalizeWords(i.getCity()),
+                            i.getCount() != null ? i.getCount() : 0,
+                            Utils.getPercentage(i.getCount(), hostelCount)
+                    )).toList();
+        }
+
+        String topRegion = null;
+        long topRegionHostelCount = 0;
+        int topRegionPercentage = 0;
+
+        if (!hostelGraphRegionDataRes.isEmpty()) {
+            HostelGraphRegionDataRes topRegionData = hostelGraphRegionDataRes.getFirst();
+
+            topRegion = topRegionData.region();
+            topRegionHostelCount = topRegionData.regionHostelCount();
+            topRegionPercentage = topRegionData.regionPercentage();
+        }
+
+        Date currentMonthStartDate = Utils.getStartOfDay(monthStartDate);
+        Date currentMonthEndDate = Utils.getEndOfDay(monthEndDate);
+
+        Date previousMonthEnd = Utils.addDaysToDate(currentMonthStartDate, -1);
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(currentMonthStartDate);
+        calendar.add(Calendar.MONTH, -1);
+
+        Date previousMonthStart = Utils.getStartOfDay(Utils.getFirstDayOfMonth(calendar.getTime()));
+        previousMonthEnd = Utils.getEndOfDay(previousMonthEnd);
+
+        Date dbCurrentMonthEndDate = Utils.getStartOfDay(Utils.addDaysToDate(currentMonthEndDate, 1));
+        Date dbPreviousMonthEndDate = Utils.getStartOfDay(Utils.addDaysToDate(previousMonthEnd, 1));
+
+        long onboardedThisMonth = hostelRepository
+                .findHostelCountBetweenDates(currentMonthStartDate, dbCurrentMonthEndDate);
+        long onboardedPreviousMonth = hostelRepository
+                .findHostelCountBetweenDates(previousMonthStart, dbPreviousMonthEndDate);
+
+        double onboardedPercentageDifference = Utils
+                .calculatePercentageDifference(onboardedThisMonth, onboardedPreviousMonth);
+
+        HostelGraphCardDataRes hostelGraphCardData = new HostelGraphCardDataRes(hostelCount, onboardedThisMonth,
+                onboardedPercentageDifference, topRegion, topRegionHostelCount, topRegionPercentage);
+
+        List<HostelOnboardedDateFilterRes> onboardedDateFilterRes = Arrays.stream(HostelOnboardedDateFilterEnum.values())
+                .map(i -> new HostelOnboardedDateFilterRes(
+                        i.name(), i.getValue()
+                )).toList();
+
+        HostelsGraphWrapperRes response = new HostelsGraphWrapperRes(hostelGraphCardData, hostelOnboardedDataRes,
+                hostelGraphRegionDataRes, onboardedDateFilterRes);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private List<HostelOnboardedDataRes> buildHostelOnboardedData(List<HostelCreatedAtProjection> onboardedHostels,
+                                                                  HostelOnboardedDateFilterEnum filter,
+                                                                  Date startDate, Date endDate) {
+
+        ZoneId zoneId = ZoneId.systemDefault();
+
+        LocalDate start = startDate.toInstant()
+                .atZone(zoneId)
+                .toLocalDate();
+
+        LocalDate end = endDate.toInstant()
+                .atZone(zoneId)
+                .toLocalDate();
+
+        Map<String, Long> hostelCountMap = new LinkedHashMap<>();
+
+        if (filter == HostelOnboardedDateFilterEnum.WEEK) {
+            LocalDate monday = start.with(DayOfWeek.MONDAY);
+
+            for (int i = 0; i < 7; i++) {
+                String label = monday.plusDays(i)
+                        .format(DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH));
+                hostelCountMap.put(label, 0L);
+            }
+
+        } else if (filter == HostelOnboardedDateFilterEnum.MONTH) {
+            int weeks = (start.lengthOfMonth() + 6) / 7;
+
+            for (int i = 1; i <= weeks; i++) {
+                hostelCountMap.put("Week " + i, 0L);
+            }
+
+        } else {
+            LocalDate month = start.withDayOfMonth(1);
+
+            while (!month.isAfter(end)) {
+                String label = month.format(
+                        DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH));
+
+                hostelCountMap.put(label, 0L);
+                month = month.plusMonths(1);
+            }
+        }
+
+        for (HostelCreatedAtProjection hostel : onboardedHostels) {
+            if (hostel.getCreatedAt() == null) {
+                continue;
+            }
+
+            LocalDate createdDate = hostel.getCreatedAt()
+                    .toInstant()
+                    .atZone(zoneId)
+                    .toLocalDate();
+
+            String label;
+
+            if (filter == HostelOnboardedDateFilterEnum.WEEK) {
+                label = createdDate.format(
+                        DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH));
+
+            } else if (filter == HostelOnboardedDateFilterEnum.MONTH) {
+                label = "Week " + ((createdDate.getDayOfMonth() - 1) / 7 + 1);
+
+            } else {
+                label = createdDate.format(
+                        DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH));
+            }
+
+            hostelCountMap.computeIfPresent(
+                    label, (key, count) -> count + 1
+            );
+        }
+
+        return hostelCountMap.entrySet()
+                .stream()
+                .map(entry -> new HostelOnboardedDataRes(
+                        entry.getKey(),
+                        entry.getValue()
+                ))
+                .toList();
     }
 }

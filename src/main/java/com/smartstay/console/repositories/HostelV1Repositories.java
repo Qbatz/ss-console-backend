@@ -2,9 +2,7 @@ package com.smartstay.console.repositories;
 
 import com.smartstay.console.dao.HostelV1;
 import com.smartstay.console.dto.dashboard.DashboardOwnerProjection;
-import com.smartstay.console.dto.hostel.DashboardCityGraphProjection;
-import com.smartstay.console.dto.hostel.DashboardRegionHostelProjection;
-import com.smartstay.console.dto.hostel.HostelLiteProjection;
+import com.smartstay.console.dto.hostel.*;
 import com.smartstay.console.dto.hostelPlans.HostelPlanProjection;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -358,7 +356,7 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
               AND h.created_at >= :startDate
               AND h.created_at < :endDate
             GROUP BY LOWER(TRIM(h.city))
-            ORDER BY COUNT(*) DESC, h.created_at DESC
+            ORDER BY COUNT(*) DESC, MAX(h.created_at) DESC
             LIMIT 6
             """, nativeQuery = true)
     List<DashboardCityGraphProjection> getTopCitiesForDashboard(@Param("startDate") Date startDate,
@@ -402,4 +400,44 @@ public interface HostelV1Repositories extends JpaRepository<HostelV1, String> {
             LIMIT 5
             """, nativeQuery = true)
     List<DashboardOwnerProjection> findOwnersByHostelCount();
+
+    @Query(value = """
+            SELECT h.created_at AS createdAt
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE (:startDate IS NULL OR h.created_at >= :startDate)
+                AND (:endDate IS NULL OR h.created_at < :endDate)
+                AND h.is_active = true
+                AND h.is_deleted = false
+            ORDER BY h.created_at DESC
+            """, nativeQuery = true)
+    List<HostelCreatedAtProjection> findAllHostelsBetweenDates(@Param("startDate") Date startDate,
+                                                               @Param("endDate") Date endDate);
+
+    @Query(value = """
+            SELECT LOWER(TRIM(h.city)) AS city,
+                   COUNT(*) AS count
+            FROM hostelv1 h
+            WHERE h.is_active = true
+              AND h.is_deleted = false
+              AND h.city IS NOT NULL
+              AND TRIM(h.city) <> ''
+            GROUP BY LOWER(TRIM(h.city))
+            ORDER BY COUNT(*) DESC, MAX(h.created_at) DESC
+            LIMIT 5
+            """, nativeQuery = true)
+    List<HostelRegionGraphProjection> getTopCities();
+
+    @Query(value = """
+            SELECT count(h.hostel_id)
+            FROM hostelv1 h
+            INNER JOIN hostel_plan hp ON h.hostel_id = hp.hostel_id
+            WHERE (:startDate IS NULL OR h.created_at >= :startDate)
+                AND (:endDate IS NULL OR h.created_at < :endDate)
+                AND h.is_active = true
+                AND h.is_deleted = false
+            ORDER BY h.created_at DESC
+            """, nativeQuery = true)
+    long findHostelCountBetweenDates(@Param("startDate") Date startDate,
+                                     @Param("endDate") Date endDate);
 }
