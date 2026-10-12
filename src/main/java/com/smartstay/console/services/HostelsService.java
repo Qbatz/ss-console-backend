@@ -3792,7 +3792,7 @@ public class HostelsService {
         onboardedEndDate = Utils.getEndOfDay(onboardedEndDate);
 
         List<HostelOnboardedDataRes> hostelOnboardedDataRes = new ArrayList<>();
-        if (onboardedHostels != null && !onboardedHostels.isEmpty()){
+        if (onboardedHostels != null){
             hostelOnboardedDataRes = buildHostelOnboardedData(onboardedHostels, hostelOnboardedDateFilter,
                     onboardedStartDate, onboardedEndDate);
         }
