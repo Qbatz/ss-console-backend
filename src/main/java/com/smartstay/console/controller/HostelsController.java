@@ -1,6 +1,5 @@
 package com.smartstay.console.controller;
 
-import com.smartstay.console.dao.RecurringConfiguration;
 import com.smartstay.console.payloads.billingRules.UpdateBillingRulesPayload;
 import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
@@ -50,6 +49,11 @@ public class HostelsController {
                                  @RequestParam(defaultValue = "TOTAL_PROPERTIES") String filterOption,
                                  HttpServletResponse response) throws IOException {
         hostelsService.exportHostelsNew(name, startDate, endDate, agentId, filterOption, response);
+    }
+
+    @GetMapping("/graph")
+    public ResponseEntity<?> getHostelsGraph(@RequestParam(defaultValue = "MONTH") String onboardedDateFilter){
+        return hostelsService.getHostelsGraph(onboardedDateFilter);
     }
 
     @GetMapping("/{hostelId}")

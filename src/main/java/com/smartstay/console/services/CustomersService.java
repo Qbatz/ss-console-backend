@@ -2337,6 +2337,22 @@ public class CustomersService {
         if (billingDates != null && billingDates.currentBillStartDate() != null
                 && billingDates.currentBillEndDate() != null) {
 
+            double payableRent = 0;
+            double paidRent = 0;
+            long totalStayDays = 0;
+            double monthlyRent = 0;
+            double currentMonthTotalAmount = 0;
+            double currentMonthPendingAmount = 0;
+            Date currentMonthStartDate = null;
+            InvoicesV1 latestCurrentMonthInvoice;
+            double otherItemAmount = 0;
+            boolean discountApplied = false;
+            double discountAmount = 0;
+            double fullRent = 0;
+            double rentDifference = 0;
+            List<OtherItemsRes> otherItems = new ArrayList<>();
+            List<RentBreakUpInfoRes> rentBreakUpInfoRes = new ArrayList<>();
+
             OtherInvoicesInfoRes otherInvoicesInfoRes = buildOtherInvoicesInfoRes(customerId, billingDates);
 
             List<InvoicesV1> currentMonthInvoices = invoiceV1Service
@@ -2345,20 +2361,15 @@ public class CustomersService {
             if (!currentMonthInvoices.isEmpty()) {
 
                 // latest invoice
-                InvoicesV1 latestCurrentMonthInvoice = currentMonthInvoices.stream()
+                latestCurrentMonthInvoice = currentMonthInvoices.stream()
                         .max(Comparator.comparing(InvoicesV1::getInvoiceStartDate))
                         .orElse(null);
 
-                Date currentMonthStartDate = customer.getJoiningDate() != null
+                currentMonthStartDate = customer.getJoiningDate() != null
                         && Utils.compareWithTwoDates(customer.getJoiningDate(), billingDates.currentBillStartDate()) >= 0
                         ? customer.getJoiningDate()
                         : billingDates.currentBillStartDate();
 
-                boolean discountApplied = false;
-                double discountAmount = 0.0;
-
-                double otherItemAmount = 0.0;
-                List<OtherItemsRes> otherItems = new ArrayList<>();
                 Set<String> discountedInvoiceIds = new HashSet<>();
 
                 for (InvoicesV1 invoice : currentMonthInvoices) {
@@ -2409,11 +2420,11 @@ public class CustomersService {
                         .filter(i -> !i.getInvoiceId().equals(latestCurrentMonthInvoice.getInvoiceId()))
                         .toList();
 
-                double payableRent = oldInvoices.stream()
+                payableRent = oldInvoices.stream()
                         .mapToDouble(i -> i.getTotalAmount() == null ? 0 : i.getTotalAmount())
                         .sum();
 
-                double paidRent = oldInvoices.stream()
+                paidRent = oldInvoices.stream()
                         .mapToDouble(i -> i.getPaidAmount() == null ? 0 : i.getPaidAmount())
                         .sum();
 
@@ -2423,7 +2434,6 @@ public class CustomersService {
 
                 long daysInMonth = Utils.getLastDayOfMonth(billingDates.currentBillStartDate());
 
-                double monthlyRent = 0;
                 if (booking != null){
                     monthlyRent = booking.getRentAmount() != null ? booking.getRentAmount() : 0;
                 }
@@ -2437,19 +2447,16 @@ public class CustomersService {
                 payableRent += runningInvoiceRent;
                 paidRent += runningInvoicePaid;
 
-                double currentMonthTotalAmount = payableRent + otherItemAmount;
-                double currentMonthPendingAmount = currentMonthTotalAmount - paidRent;
+                currentMonthTotalAmount = payableRent + otherItemAmount;
+                currentMonthPendingAmount = currentMonthTotalAmount - paidRent;
 
                 // Rent breakup
                 List<CustomersBedHistory> customersBedHistories = customerBedHistoryService
                         .findBedHistoriesByCustomerIdAndDates(customerId, billingDates.currentBillStartDate(),
                                 billingDates.currentBillEndDate());
 
-                List<RentBreakUpInfoRes> rentBreakUpInfoRes = buildRentBreakUpInfoRes(customersBedHistories,
+                rentBreakUpInfoRes = buildRentBreakUpInfoRes(customersBedHistories,
                         bedsMap, roomsMap, floorsMap, billingDates, leavingDate);
-
-                double fullRent = 0;
-                long totalStayDays = 0;
 
                 if (!rentBreakUpInfoRes.isEmpty()) {
 
@@ -2464,7 +2471,7 @@ public class CustomersService {
                 }
 
                 double currentMonthRentOnly = currentMonthTotalAmount - otherItemAmount;
-                double rentDifference = fullRent - currentMonthRentOnly;
+                rentDifference = fullRent - currentMonthRentOnly;
 
                 if (paidRent > 0) {
                     if (paidRent >= fullRent + otherItemAmount) {
@@ -2476,27 +2483,29 @@ public class CustomersService {
                         }
                     }
                 }
-
-                customerRentInfoRes = new CustomerRentInfoRes(
-                        Utils.roundOfDoubleTo2Digits(payableRent),
-                        Utils.roundOfDoubleTo2Digits(paidRent),
-                        (int) totalStayDays,
-                        Utils.roundOfDoubleTo2Digits(monthlyRent),
-                        Utils.roundOfDoubleTo2Digits(currentMonthTotalAmount),
-                        Utils.roundOfDoubleTo2Digits(currentMonthPendingAmount),
-                        Utils.dateToString(currentMonthStartDate),
-                        Utils.dateToString(billingDates.currentBillEndDate()),
-                        latestCurrentMonthInvoice.getInvoiceId(),
-                        Utils.roundOfDoubleTo2Digits(otherItemAmount),
-                        discountApplied,
-                        Utils.roundOfDoubleTo2Digits(discountAmount),
-                        Utils.roundOfDoubleTo2Digits(fullRent),
-                        Utils.roundOfDoubleTo2Digits(rentDifference),
-                        otherItems,
-                        rentBreakUpInfoRes,
-                        otherInvoicesInfoRes
-                );
+            } else {
+                latestCurrentMonthInvoice = null;
             }
+
+            customerRentInfoRes = new CustomerRentInfoRes(
+                    Utils.roundOfDoubleTo2Digits(payableRent),
+                    Utils.roundOfDoubleTo2Digits(paidRent),
+                    (int) totalStayDays,
+                    Utils.roundOfDoubleTo2Digits(monthlyRent),
+                    Utils.roundOfDoubleTo2Digits(currentMonthTotalAmount),
+                    Utils.roundOfDoubleTo2Digits(currentMonthPendingAmount),
+                    Utils.dateToString(currentMonthStartDate),
+                    Utils.dateToString(billingDates.currentBillEndDate()),
+                    latestCurrentMonthInvoice != null ? latestCurrentMonthInvoice.getInvoiceId() : null,
+                    Utils.roundOfDoubleTo2Digits(otherItemAmount),
+                    discountApplied,
+                    Utils.roundOfDoubleTo2Digits(discountAmount),
+                    Utils.roundOfDoubleTo2Digits(fullRent),
+                    Utils.roundOfDoubleTo2Digits(rentDifference),
+                    otherItems,
+                    rentBreakUpInfoRes,
+                    otherInvoicesInfoRes
+            );
         }
 
         return customerRentInfoRes;

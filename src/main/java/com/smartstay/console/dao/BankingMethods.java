@@ -1,9 +1,6 @@
 package com.smartstay.console.dao;
 
-import com.smartstay.console.ennum.PaymentMethod;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -31,8 +28,8 @@ public class BankingMethods {
     @JoinColumn(name = "bank_id")
     private BankingV2 bank;
 
-    @Enumerated(EnumType.STRING)
-    private PaymentMethod paymentMethod;
+    //PaymentMethod ENUM
+    private String paymentMethod;
 
     private String upiId;
     private Integer upiApp;
