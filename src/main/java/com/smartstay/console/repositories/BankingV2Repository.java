@@ -13,4 +13,8 @@ public interface BankingV2Repository extends JpaRepository<BankingV2, String> {
     List<BankingV2> findAllByBankIdIn(Set<String> bankIds);
 
     List<BankingV2> findAllByHostelId(String hostelId);
+
+    List<BankingV2> findAllByUserIdIn(Set<String> userIds);
+
+    BankingV2 findByBankIdAndIsActiveTrueAndIsDeletedFalse(String bankId);
 }

@@ -412,10 +412,7 @@ public class UserActivityUtil {
     private void loadCustomers(Map<ActivitySource, Set<String>> idsBySource,
                                Map<String, String> displayValues) {
 
-        Set<String> customerIds =
-                idsBySource.getOrDefault(
-                        ActivitySource.CUSTOMERS,
-                        Collections.emptySet());
+        Set<String> customerIds = idsBySource.getOrDefault(ActivitySource.CUSTOMERS, Collections.emptySet());
 
         if (customerIds.isEmpty()) {
             return;
@@ -529,5 +526,16 @@ public class UserActivityUtil {
                                 ""
                         )
                 ));
+    }
+
+    public String getDescription(UserActivities activity) {
+
+        if (activity == null) {
+            return "";
+        }
+
+        Map<String, String> displayValues = buildDisplayValues(List.of(activity));
+
+        return buildDescription(activity, displayValues);
     }
 }

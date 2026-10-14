@@ -35,7 +35,7 @@ public class TransactionV1Service {
     @Autowired
     private BankTransactionService bankTransactionService;
     @Autowired
-    private BankingService bankingService;
+    private BankingV2Service bankingV2Service;
     @Autowired
     private AgentActivitiesService agentActivitiesService;
     @Autowired
@@ -98,7 +98,7 @@ public class TransactionV1Service {
             return new ResponseEntity<>(Utils.BANK_TRANSACTION_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
-        BankingV1 bank = bankingService
+        BankingV2 bank = bankingV2Service
                 .getByBankId(transaction.getBankId());
         if (bank == null){
             return new ResponseEntity<>(Utils.BANK_NOT_FOUND, HttpStatus.BAD_REQUEST);
@@ -286,7 +286,7 @@ public class TransactionV1Service {
         paymentSummary.setBalance(balance + transactionNewPaidAmount);
 
         invoiceService.save(invoice);
-        bankingService.save(bank);
+        bankingV2Service.save(bank);
         paymentSummaryService.save(paymentSummary);
 
         bankTransactionService.delete(bankTransaction);
