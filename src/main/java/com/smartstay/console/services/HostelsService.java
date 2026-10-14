@@ -125,8 +125,6 @@ public class HostelsService {
     @Autowired
     private BankTransactionService bankTransactionService;
     @Autowired
-    private BankingService bankingService;
-    @Autowired
     private AgentActivitiesService agentActivitiesService;
     @Autowired
     private ExpenseService expenseService;
@@ -786,7 +784,6 @@ public class HostelsService {
         List<HostelReadings> listHostelReadings = hostelReadingService.findByHostelId(hostelId);
         List<Beds> listBeds = bedsService.findOccupiedBeds(hostelId);
         List<BankTransactionsV1> listBankTransactions = bankTransactionService.getAllTransactions(hostelId);
-        List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
         List<BankingV2> bankingV2List = bankingV2Service.getByHostelId(hostelId);
 
         List<AssetsV1> listAssets = assetsService.findByHostelId(hostelId);
@@ -995,18 +992,6 @@ public class HostelsService {
                 bankV2Balances.put(item.getBankId(), currentBankV2Balance);
             });
         }
-        if (bankingList != null && !bankingList.isEmpty()) {
-            if (bankingList.stream().anyMatch(i -> bankBalances.containsKey(i.getBankId()))) {
-                recordsFound = true;
-            }
-            bankingList.forEach(i -> {
-                Double amount = bankBalances.get(i.getBankId());
-                if (amount != null) {
-                    i.setBalance(i.getBalance() - amount);
-                }
-            });
-            bankingService.updateBankAccount(bankingList);
-        }
         if (bankingV2List != null && !bankingV2List.isEmpty()) {
             if (bankingV2List.stream().anyMatch(i -> bankV2Balances.containsKey(i.getBankId()))) {
                 recordsFound = true;
@@ -1154,7 +1139,6 @@ public class HostelsService {
         List<Subscription> listSubscriptions = subscriptionService.getSubscriptionsByHostelId(hostelId);
         List<TableColumns> listTableColumns = tableColumnsService.findByHostelId(hostelId);
         List<Beds> listBeds = bedsService.getBedsByHostelId(hostelId);
-        List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
         List<BankingV2> bankingV2List = bankingV2Service.getByHostelId(hostelId);
 
         if (listAmenities != null && !listAmenities.isEmpty()) {
@@ -1189,9 +1173,6 @@ public class HostelsService {
         }
         if (listBeds != null && !listBeds.isEmpty()) {
             bedsService.deleteAll(listBeds);
-        }
-        if (bankingList != null && !bankingList.isEmpty()) {
-            bankingService.deleteAll(bankingList);
         }
         if (bankingV2List != null && !bankingV2List.isEmpty()) {
             bankingV2Service.deleteAll(bankingV2List);

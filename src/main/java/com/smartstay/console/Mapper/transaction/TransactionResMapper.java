@@ -11,14 +11,14 @@ public class TransactionResMapper implements Function<TransactionV1, Transaction
     InvoicesV1 invoice;
     HostelV1 hostel;
     Customers customer;
-    BankingV1 bank;
+    BankingV2 bank;
     Users createdByUser;
     Users updatedByUser;
 
     public TransactionResMapper(InvoicesV1 invoice,
                                 HostelV1 hostel,
                                 Customers customer,
-                                BankingV1 bank,
+                                BankingV2 bank,
                                 Users createdByUser,
                                 Users updatedByUser) {
         this.invoice = invoice;

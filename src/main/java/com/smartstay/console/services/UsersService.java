@@ -42,7 +42,7 @@ public class UsersService {
     @Autowired
     private NotificationService notificationService;
     @Autowired
-    private BankingService bankingService;
+    private BankingV2Service bankingV2Service;
     @Autowired
     private CustomerNotificationsService customerNotificationsService;
     @Autowired
@@ -124,7 +124,7 @@ public class UsersService {
                 .getUserActivitiesByUserIds(userIds);
         List<AdminNotifications> adminNotifications = notificationService
                 .getByUserIds(userIds);
-        List<BankingV1> banks = bankingService
+        List<BankingV2> v2Banks = bankingV2Service
                 .getByUserIds(userIds);
         List<Comments> comments = commentsService
                 .getByUserIds(userIds);
@@ -137,7 +137,7 @@ public class UsersService {
 
         userActivitiesService.deleteAll(userActivities);
         notificationService.deleteAll(adminNotifications);
-        bankingService.deleteAll(banks);
+        bankingV2Service.deleteAll(v2Banks);
         commentsService.deleteAll(comments);
         customerNotificationsService.deleteAll(customerNotifications);
         loginHistoryService.deleteAll(loginHistories);

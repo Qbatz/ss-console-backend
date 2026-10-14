@@ -25,10 +25,12 @@ public class BankingV1 {
     String branchName;
     String branchCode;
     String accountHolderName;
+    //From bank purpose ENUM
     String transactionType;
     String upiId;
     String creditCardNumber;
     String debitCardNumber;
+    //BankAccountType enum
     String accountType;
     String description;
     String userId;
@@ -41,4 +43,5 @@ public class BankingV1 {
     String updatedBy;
     Date createdAt;
     Date updatedAt;
+    Date lastTransaction;
 }

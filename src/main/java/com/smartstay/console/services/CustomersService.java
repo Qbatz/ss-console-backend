@@ -85,8 +85,6 @@ public class CustomersService {
     @Autowired
     private BankTransactionService bankTransactionService;
     @Autowired
-    private BankingService bankingService;
-    @Autowired
     private CustomerAdditionalContactsService customerAdditionalContactsService;
     @Autowired
     private CustomersCredentialService customersCredentialService;
@@ -299,7 +297,6 @@ public class CustomersService {
                 .map(TransactionV1::getBankId)
                 .collect(Collectors.toSet());
         List<BankTransactionsV1> listBankTransactions = bankTransactionService.getTransactionsByTransactionIds(transactionIds);
-        List<BankingV1> bankingList = bankingService.findByBankIds(bankIds);
         List<BankingV2> bankingV2List = bankingV2Service.getByBankIds(bankIds);
 
         Set<String> activeStatuses = Set.of(
@@ -474,19 +471,6 @@ public class CustomersService {
         }
         if (!listItemsOtherThanExpense.isEmpty()) {
             bankTransactionService.deleteItemsOtherThanExpense(listItemsOtherThanExpense);
-        }
-        if (bankingList != null && !bankingList.isEmpty()) {
-            List<BankingV1> newBalanceAmounts = bankingList
-                    .stream()
-                    .map(i -> {
-                        if (bankBalances.get(i.getBankId()) != null) {
-                            double amount = bankBalances.get(i.getBankId());
-                            i.setBalance(i.getBalance() - amount);
-                        }
-
-                        return i;
-                    }).toList();
-            bankingService.updateBankAccount(newBalanceAmounts);
         }
         if (bankingV2List != null && !bankingV2List.isEmpty()) {
             List<BankingV2> updatedBankingV2s = bankingV2List.stream()
@@ -887,9 +871,9 @@ public class CustomersService {
         Map<String, Users> usersMap = users.stream()
                 .collect(Collectors.toMap(Users::getUserId, user -> user));
 
-        List<BankingV1> banks = bankingService.findByBankIds(bankIds);
-        Map<String, BankingV1> bankMap = banks.stream()
-                .collect(Collectors.toMap(BankingV1::getBankId, Function.identity()));
+        List<BankingV2> v2Banks = bankingV2Service.getByBankIds(bankIds);
+        Map<String, BankingV2> bankMap = v2Banks.stream()
+                .collect(Collectors.toMap(BankingV2::getBankId, Function.identity()));
 
         List<Agent> agents = agentService.getAgentsByIds(agentIds);
         Map<String, Agent> agentMap = agents.stream()
@@ -939,7 +923,7 @@ public class CustomersService {
         List<TransactionResponse> transactionResponses = transactions.stream()
                 .map(transaction -> {
                     InvoicesV1 invoice = invoiceMap.getOrDefault(transaction.getInvoiceId(), null);
-                    BankingV1 bank = bankMap.getOrDefault(transaction.getBankId(), null);
+                    BankingV2 bank = bankMap.getOrDefault(transaction.getBankId(), null);
                     Users createdByUser = usersMap.getOrDefault(transaction.getCreatedBy(), null);
                     Users updatedByUser = usersMap.getOrDefault(transaction.getUpdatedBy(), null);
                     return new TransactionResMapper(invoice, hostel, customer, bank,
