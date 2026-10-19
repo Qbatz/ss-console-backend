@@ -133,13 +133,13 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
     @Query("""
             select i from invoicesv1 i
             where i.customerId = :customerId
-                and i.invoiceType = :invoiceType
+                and i.invoiceType in :invoiceTypes
                 and DATE(i.invoiceStartDate) <= DATE(:endDate)
                 and DATE(i.invoiceEndDate) >= DATE(:startDate)
                 and i.isCancelled = false
             """)
-    List<InvoicesV1> findAllByCustomerIdAndInvoiceTypeAndBetweenDates(String customerId,
-                                                                      String invoiceType,
-                                                                      Date startDate,
-                                                                      Date endDate);
+    List<InvoicesV1> findAllByCustomerIdAndInvoiceTypeInAndBetweenDates(String customerId,
+                                                                        Set<String> invoiceTypes,
+                                                                        Date startDate,
+                                                                        Date endDate);
 }

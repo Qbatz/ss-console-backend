@@ -2216,8 +2216,12 @@ public class InvoiceV1Service {
 
     public List<InvoicesV1> getOtherInvoicesByCustomerIdAndBetweenDates(String customerId, Date startDate,
                                                                         Date endDate) {
-        String invoiceType = InvoiceType.OTHER.name();
-        return invoiceV1Repository.findAllByCustomerIdAndInvoiceTypeAndBetweenDates(customerId, invoiceType,
-                startDate, endDate);
+
+        Set<String> invoiceTypes = new HashSet<>();
+        invoiceTypes.add(InvoiceType.OTHER.name());
+        invoiceTypes.add(InvoiceType.EB.name());
+
+        return invoiceV1Repository.findAllByCustomerIdAndInvoiceTypeInAndBetweenDates(customerId,
+                invoiceTypes, startDate, endDate);
     }
 }

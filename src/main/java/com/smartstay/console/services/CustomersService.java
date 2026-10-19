@@ -1433,6 +1433,7 @@ public class CustomersService {
             invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
             invoicesTypes.add(InvoiceType.ADDITIONAL_ADVANCE.name());
             invoicesTypes.add(InvoiceType.OTHER.name());
+            invoicesTypes.add(InvoiceType.EB.name());
 
             List<InvoicesV1> currentUnpaidInvoices = invoiceV1Service
                     .getCurrentUnpaidInvoicesByInvoiceTypes(customerId, invoicesTypes,
@@ -2543,9 +2544,17 @@ public class CustomersService {
                     paidAmount = Utils.roundOfDoubleTo2Digits(paidAmount);
                     pendingAmount = Utils.roundOfDoubleTo2Digits(pendingAmount);
 
+                    String invoiceType = null;
+                    if (InvoiceType.EB.name().equalsIgnoreCase(otherInvoice.getInvoiceType())) {
+                        invoiceType = "EB";
+                    } else if (InvoiceType.OTHER.name().equalsIgnoreCase(otherInvoice.getInvoiceType())) {
+                        invoiceType = "Other";
+                    } else {
+                        invoiceType = otherInvoice.getInvoiceType();
+                    }
+
                     otherInvoicesRes.add(new OtherInvoicesRes(otherInvoice.getInvoiceId(), otherInvoice.getInvoiceNumber(),
-                            invoiceDate, otherInvoice.getInvoiceType(), invoiceAmount, paidAmount, pendingAmount,
-                            otherInvoiceItemsRes));
+                            invoiceDate, invoiceType, invoiceAmount, paidAmount, pendingAmount, otherInvoiceItemsRes));
                 }
 
                 otherInvoicesInfoRes = new OtherInvoicesInfoRes(Utils.roundOfDoubleTo2Digits(totalInvoiceAmount),
@@ -3748,6 +3757,7 @@ public class CustomersService {
                 invoicesTypes.add(InvoiceType.RENT.name());
                 invoicesTypes.add(InvoiceType.REASSIGN_RENT.name());
                 invoicesTypes.add(InvoiceType.OTHER.name());
+                invoicesTypes.add(InvoiceType.EB.name());
 
                 unpaidInvoices = invoiceV1Service
                         .getOlderUnpaidInvoicesByInvoiceTypes(customerId, invoicesTypes,
