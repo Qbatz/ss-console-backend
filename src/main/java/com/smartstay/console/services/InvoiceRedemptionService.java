@@ -537,7 +537,9 @@ public class InvoiceRedemptionService {
                         targetInvoice.setDeductions(updated);
                     }
 
-                    double updatedDeductionAmount = targetInvoice.getDeductions()
+                    List<Deductions> targetInvoiceDeductions = targetInvoice.getDeductions() != null
+                            ? targetInvoice.getDeductions() : new ArrayList<>();
+                    double updatedDeductionAmount = targetInvoiceDeductions
                             .stream()
                             .mapToDouble(d ->
                                     d.getAmount() != null
@@ -712,7 +714,9 @@ public class InvoiceRedemptionService {
                         }
                     }
 
-                    double updatedDeductionAmount = targetInvoice.getDeductions()
+                    List<Deductions> targetInvoiceDeductions = targetInvoice.getDeductions() != null
+                            ? targetInvoice.getDeductions() : new ArrayList<>();
+                    double updatedDeductionAmount = targetInvoiceDeductions
                             .stream()
                             .mapToDouble(d ->
                                     d.getAmount() != null

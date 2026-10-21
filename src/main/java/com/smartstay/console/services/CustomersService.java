@@ -1376,6 +1376,10 @@ public class CustomersService {
 
         List<Deductions> advInvDeductions = advanceInvoice != null ?
                 advanceInvoice.getDeductions() : new ArrayList<>();
+        if (advInvDeductions == null) {
+            advInvDeductions = new ArrayList<>();
+        }
+
         List<InvoicesV1> cancelledInvoices = new ArrayList<>();
 
         boolean isCustomRent = payload.isCustomRent();
