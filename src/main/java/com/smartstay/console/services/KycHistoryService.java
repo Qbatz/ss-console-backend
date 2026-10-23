@@ -25,4 +25,8 @@ public class KycHistoryService {
     public List<KycHistory> getAllLatestByHostelIds(Set<String> hostelIds) {
         return kycHistoryRepository.findLatestByHostelIds(hostelIds);
     }
+
+    public void saveAll(List<KycHistory> kycHistories) {
+        kycHistoryRepository.saveAll(kycHistories);
+    }
 }
