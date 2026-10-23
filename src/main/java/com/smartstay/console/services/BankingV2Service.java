@@ -1,6 +1,5 @@
 package com.smartstay.console.services;
 
-import com.smartstay.console.dao.BankingV1;
 import com.smartstay.console.dao.BankingV2;
 import com.smartstay.console.repositories.BankingV2Repository;
 import org.springframework.beans.factory.annotation.Autowired;
