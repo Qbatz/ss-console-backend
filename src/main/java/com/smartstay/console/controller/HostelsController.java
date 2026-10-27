@@ -57,8 +57,9 @@ public class HostelsController {
     }
 
     @GetMapping("/{hostelId}")
-    public ResponseEntity<?> getHostelByHostelId(@PathVariable("hostelId") String hostelId){
-        return hostelsService.getHostelByHostelId(hostelId);
+    public ResponseEntity<?> getHostelByHostelId(@PathVariable("hostelId") String hostelId,
+                                                 @RequestParam(value = "tenantName", required = false) String tenantName){
+        return hostelsService.getHostelByHostelId(hostelId, tenantName);
     }
 
     @PostMapping("/hard-reset/{hostelId}")

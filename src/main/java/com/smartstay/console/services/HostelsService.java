@@ -213,7 +213,7 @@ public class HostelsService {
         return hostelRepository.findHostelPlanProjectionData(parentIds);
     }
 
-    public ResponseEntity<?> getHostelByHostelId(String hostelId) {
+    public ResponseEntity<?> getHostelByHostelId(String hostelId, String tenantName) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -233,6 +233,8 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        tenantName = (tenantName == null || tenantName.isBlank()) ? null : tenantName.trim();
+
         Users owner = usersService.getOwner(hostel.getParentId());
         List<Users> masters = usersService.getMasters(hostel);
         List<Users> staffs = usersService.getStaffs(hostel);
@@ -242,8 +244,8 @@ public class HostelsService {
                 .collect(Collectors.groupingBy(TableColumns::getUserId));
 
         UsersResponse ownerRes = new UsersResponseMapper(
-                tableColumnMap.getOrDefault(owner.getUserId(), null), hostel
-        ).apply(owner);
+                tableColumnMap.getOrDefault(owner.getUserId(), null), hostel)
+                .apply(owner);
         List<UsersResponse> mastersRes = masters.stream()
                 .map(users -> new UsersResponseMapper(
                         tableColumnMap.getOrDefault(users.getUserId(), null), hostel
@@ -352,7 +354,12 @@ public class HostelsService {
                     .map(BookingsV1::getCustomerId)
                     .collect(Collectors.toSet());
 
-            List<Customers> customers = customersService.getCustomersByIds(customerIds);
+            List<Customers> customers = new ArrayList<>();
+            if (tenantName == null){
+                customers = customersService.getCustomersByIds(customerIds);
+            } else {
+                customers = customersService.getCustomersByIdsAndName(customerIds, tenantName);
+            }
 
             customerResponses = customers.stream()
                     .map(customer -> new CustomerResMapper().apply(customer))

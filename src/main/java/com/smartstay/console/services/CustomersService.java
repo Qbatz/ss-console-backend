@@ -135,6 +135,15 @@ public class CustomersService {
         return customersRepository.findAllByCustomerIdIn(customerIds);
     }
 
+    public List<Customers> getCustomersByIdsAndName(Set<String> customerIds, String tenantName) {
+
+        if (tenantName == null || tenantName.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        return customersRepository.findAllByCustomerIdsAndName(customerIds, tenantName);
+    }
+
     public ResponseEntity<?> getTenantsWithPaymentSummary(int page, int size, String tenantName) {
 
         if (!authentication.isAuthenticated()) {
