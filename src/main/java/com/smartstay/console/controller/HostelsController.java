@@ -37,8 +37,10 @@ public class HostelsController {
                                            @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
                                            @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
                                            @RequestParam(value = "agentId", required = false) String agentId,
+                                           @RequestParam(value = "followUpStatus", required = false) String followUpStatus,
                                            @RequestParam(defaultValue = "TOTAL_PROPERTIES") String filterOption) {
-        return hostelsService.getAllHostels(page, size, name, startDate, endDate, agentId, filterOption);
+        return hostelsService.getAllHostels(page, size, name, startDate, endDate,
+                agentId, followUpStatus, filterOption);
     }
 
     @GetMapping("/export/new")

@@ -27,6 +27,7 @@ import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerRecTrackerRes;
 import com.smartstay.console.responses.customers.CustomerRecurringResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
+import com.smartstay.console.responses.hostelFollowUp.HostelFollowUpStatusRes;
 import com.smartstay.console.responses.hostelRelationalAgent.HostelRelationalAgentResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
@@ -204,6 +205,8 @@ public class HostelsService {
     private BankingV2Service bankingV2Service;
     @Autowired
     private RecurringConfigurationService recurringConfigurationService;
+    @Autowired
+    private HostelFollowUpService hostelFollowUpService;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -1188,7 +1191,8 @@ public class HostelsService {
 
     public ResponseEntity<?> getAllHostels(int page, int size, String name,
                                            Date startDate, Date endDate,
-                                           String agentId, String filterOption) {
+                                           String agentId, String followUpStatus,
+                                           String filterOption) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -1209,6 +1213,7 @@ public class HostelsService {
 
         name = (name == null || name.isBlank()) ? null : name.trim();
         agentId = (agentId == null || agentId.isBlank()) ? null : agentId.trim();
+        followUpStatus = (followUpStatus == null || followUpStatus.isBlank()) ? null : followUpStatus.trim();
 
         page = Math.max(page - 1, 0);
         size = Math.max(size, 1);
@@ -1346,6 +1351,22 @@ public class HostelsService {
                         .map(HostelLiteProjection::getHostelId)
                         .collect(Collectors.toSet());
 
+        if (followUpStatus != null){
+            HostelFollowUpStatusEnum followUpStatusEnum;
+            try {
+                followUpStatusEnum = HostelFollowUpStatusEnum.valueOf(followUpStatus);
+            } catch (Exception e) {
+                followUpStatusEnum = HostelFollowUpStatusEnum.ACTIVE;
+            }
+
+            List<HostelFollowUp> latestFollowUps = hostelFollowUpService
+                    .getFollowUpsByHostelIdsAndStatus(targetHostelIds, followUpStatusEnum.name());
+
+            targetHostelIds = latestFollowUps.stream()
+                    .map(HostelFollowUp::getHostelId)
+                    .collect(Collectors.toSet());
+        }
+
         Pageable pageable = PageRequest.of(page, size);
 
         Page<HostelV1> pagedHostels = hostelRepository
@@ -1443,6 +1464,10 @@ public class HostelsService {
                     return new HostelFilterOptionsRes(f.name(), f.getLabel(), count);
                 }).toList();
 
+        List<FollowUpStatusHostelRes> followUpStatusFilters = Arrays.stream(HostelFollowUpStatusEnum.values())
+                .map(i -> new FollowUpStatusHostelRes(i.name(), i.getValue()))
+                .toList();
+
         Hostels hostelsResponse = new Hostels(totalPropertiesCount,
                 activePropertiesCount,
                 inactivePropertiesCount,
@@ -1458,6 +1483,7 @@ public class HostelsService {
                 pagedHostels.getTotalPages(),
                 pagedHostels.getTotalElements(),
                 hostelFilterOptionsRes,
+                followUpStatusFilters,
                 hostelsList);
 
         return new ResponseEntity<>(hostelsResponse, HttpStatus.OK);
