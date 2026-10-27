@@ -1416,6 +1416,12 @@ public class HostelsService {
         Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
                 .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
 
+        List<HostelFollowUp> hostelFollowUps = hostelFollowUpService
+                .getFollowUpsByHostelIds(new HashSet<>(hostelIds));
+        Map<String, HostelFollowUp> hostelFollowUpMap = hostelFollowUps.stream()
+                .collect(Collectors.toMap(HostelFollowUp::getHostelId, Function.identity(),
+                        (a, b) -> a));
+
         Set<String> agentIds = new HashSet<>();
         for (HostelRelationalAgent relationalAgent : relationalAgents) {
             if (relationalAgent.getAgentId() != null){
@@ -1423,6 +1429,12 @@ public class HostelsService {
             }
             if (relationalAgent.getCreatedBy() != null){
                 agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        for (HostelFollowUp hostelFollowUp : hostelFollowUps) {
+            if (hostelFollowUp.getCreatedBy() != null){
+                agentIds.add(hostelFollowUp.getCreatedBy());
             }
         }
 
@@ -1440,7 +1452,8 @@ public class HostelsService {
                         expandableTrialPlans,
                         subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
                         relationalAgentMap.getOrDefault(i.getParentId(), null),
-                        agentMap
+                        agentMap,
+                        hostelFollowUpMap.getOrDefault(i.getHostelId(), null)
                 ).apply(i))
                 .toList();
 
@@ -1493,9 +1506,7 @@ public class HostelsService {
                                                     Date endDate, String agentId,
                                                     String filterOption){
 
-        if (name == null || name.isBlank()){
-            name = null;
-        }
+        name = (name == null || name.isBlank()) ? null : name.trim();
 
         if (endDate != null) {
             endDate = Utils.addDaysToDate(endDate, 1);
@@ -1621,7 +1632,7 @@ public class HostelsService {
                 .collect(Collectors.toSet());
 
         List<HostelV1> listHostels = hostelRepository
-                .findAllHostels(name.trim(), startDate, endDate, subActive,
+                .findAllHostels(name, startDate, endDate, subActive,
                         targetHostelIds, trialStartDate, trialEndDate);
 
         Set<String> hostelIds = new HashSet<>();
@@ -1670,6 +1681,12 @@ public class HostelsService {
         Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
                 .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
 
+        List<HostelFollowUp> hostelFollowUps = hostelFollowUpService
+                .getFollowUpsByHostelIds(new HashSet<>(hostelIds));
+        Map<String, HostelFollowUp> hostelFollowUpMap = hostelFollowUps.stream()
+                .collect(Collectors.toMap(HostelFollowUp::getHostelId, Function.identity(),
+                        (a, b) -> a));
+
         Set<String> agentIds = new HashSet<>();
         for (HostelRelationalAgent relationalAgent : relationalAgents) {
             if (relationalAgent.getAgentId() != null){
@@ -1677,6 +1694,12 @@ public class HostelsService {
             }
             if (relationalAgent.getCreatedBy() != null){
                 agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        for (HostelFollowUp hostelFollowUp : hostelFollowUps) {
+            if (hostelFollowUp.getCreatedBy() != null){
+                agentIds.add(hostelFollowUp.getCreatedBy());
             }
         }
 
@@ -1695,7 +1718,8 @@ public class HostelsService {
                         expandableTrialPlans,
                         subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
                         relationalAgentMap.getOrDefault(i.getParentId(), null),
-                        agentMap
+                        agentMap,
+                        hostelFollowUpMap.getOrDefault(i.getHostelId(), null)
                 ).apply(i))
                 .toList();
     }

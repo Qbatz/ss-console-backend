@@ -32,4 +32,19 @@ public interface HostelFollowUpRepository extends JpaRepository<HostelFollowUp, 
             nativeQuery = true)
     List<HostelFollowUp> findLatestByHostelIdsAndStatus(@Param("hostelIds") Set<String> hostelIds,
                                                         @Param("status") String status);
+
+    @Query(value = """
+                    SELECT hf.*
+                    FROM hostel_follow_up hf
+                    JOIN (
+                        SELECT hostel_id, MAX(follow_up_id) AS max_follow_up_id
+                        FROM hostel_follow_up
+                        WHERE hostel_id IN (:hostelIds)
+                        GROUP BY hostel_id
+                    ) latest
+                    ON hf.hostel_id = latest.hostel_id
+                    AND hf.follow_up_id = latest.max_follow_up_id
+                    """,
+            nativeQuery = true)
+    List<HostelFollowUp> findLatestByHostelIds(Set<String> hostelIds);
 }
