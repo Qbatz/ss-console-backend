@@ -57,4 +57,6 @@ public interface UserActivitiesRepository extends JpaRepository<UserActivities, 
             order by ua.activityId
             """)
     Page<UserActivities> findAllByHostelIdAndCreatedAtBefore(String hostelId, Date cutOffDate, Pageable pageable);
+
+    Page<UserActivities> findByHostelIdIsNotNullOrderByCreatedAtDesc(Pageable pageable);
 }

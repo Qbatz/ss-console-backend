@@ -27,6 +27,7 @@ import com.smartstay.console.responses.customers.CustomerRecHistoryRes;
 import com.smartstay.console.responses.customers.CustomerRecTrackerRes;
 import com.smartstay.console.responses.customers.CustomerRecurringResponse;
 import com.smartstay.console.responses.customers.CustomerResponse;
+import com.smartstay.console.responses.hostelFollowUp.HostelFollowUpStatusRes;
 import com.smartstay.console.responses.hostelRelationalAgent.HostelRelationalAgentResponse;
 import com.smartstay.console.responses.hostels.*;
 import com.smartstay.console.responses.invoice.InvoiceResponse;
@@ -51,7 +52,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
@@ -120,8 +125,6 @@ public class HostelsService {
     private TransactionV1Service transactionV1Service;
     @Autowired
     private BankTransactionService bankTransactionService;
-    @Autowired
-    private BankingService bankingService;
     @Autowired
     private AgentActivitiesService agentActivitiesService;
     @Autowired
@@ -202,6 +205,8 @@ public class HostelsService {
     private BankingV2Service bankingV2Service;
     @Autowired
     private RecurringConfigurationService recurringConfigurationService;
+    @Autowired
+    private HostelFollowUpService hostelFollowUpService;
 
     public List<HostelV1> getHostelsByParentId(String parentId) {
         return hostelRepository.findAllByParentIdAndIsActiveTrueAndIsDeletedFalse(parentId);
@@ -211,7 +216,7 @@ public class HostelsService {
         return hostelRepository.findHostelPlanProjectionData(parentIds);
     }
 
-    public ResponseEntity<?> getHostelByHostelId(String hostelId) {
+    public ResponseEntity<?> getHostelByHostelId(String hostelId, String tenantName, String invoiceNumber) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -231,6 +236,9 @@ public class HostelsService {
             return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        tenantName = (tenantName == null || tenantName.isBlank()) ? null : tenantName.trim();
+        invoiceNumber = (invoiceNumber == null || invoiceNumber.isBlank()) ? null : invoiceNumber.trim();
+
         Users owner = usersService.getOwner(hostel.getParentId());
         List<Users> masters = usersService.getMasters(hostel);
         List<Users> staffs = usersService.getStaffs(hostel);
@@ -240,8 +248,8 @@ public class HostelsService {
                 .collect(Collectors.groupingBy(TableColumns::getUserId));
 
         UsersResponse ownerRes = new UsersResponseMapper(
-                tableColumnMap.getOrDefault(owner.getUserId(), null), hostel
-        ).apply(owner);
+                tableColumnMap.getOrDefault(owner.getUserId(), null), hostel)
+                .apply(owner);
         List<UsersResponse> mastersRes = masters.stream()
                 .map(users -> new UsersResponseMapper(
                         tableColumnMap.getOrDefault(users.getUserId(), null), hostel
@@ -350,7 +358,12 @@ public class HostelsService {
                     .map(BookingsV1::getCustomerId)
                     .collect(Collectors.toSet());
 
-            List<Customers> customers = customersService.getCustomersByIds(customerIds);
+            List<Customers> customers = new ArrayList<>();
+            if (tenantName == null){
+                customers = customersService.getCustomersByIds(customerIds);
+            } else {
+                customers = customersService.getCustomersByIdsAndName(customerIds, tenantName);
+            }
 
             customerResponses = customers.stream()
                     .map(customer -> new CustomerResMapper().apply(customer))
@@ -459,7 +472,13 @@ public class HostelsService {
 
         List<InvoicesV1> redemptionInvoices = invoiceV1Service.getInvoicesByIds(invoiceIds);
 
-        List<InvoicesV1> invoices = invoiceV1Service.getLimitedInvoicesByHostelId(hostelId, 50);
+        List<InvoicesV1> invoices = new ArrayList<>();
+        if (invoiceNumber != null){
+            invoices = invoiceV1Service
+                    .getLimitedInvoicesByHostelIdAndInvoiceNumber(hostelId, invoiceNumber, 50);
+        } else {
+            invoices = invoiceV1Service.getLimitedInvoicesByHostelId(hostelId, 50);
+        }
 
         Set<String> invoiceCustomerIds = invoices.stream()
                 .map(InvoicesV1::getCustomerId)
@@ -782,7 +801,6 @@ public class HostelsService {
         List<HostelReadings> listHostelReadings = hostelReadingService.findByHostelId(hostelId);
         List<Beds> listBeds = bedsService.findOccupiedBeds(hostelId);
         List<BankTransactionsV1> listBankTransactions = bankTransactionService.getAllTransactions(hostelId);
-        List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
         List<BankingV2> bankingV2List = bankingV2Service.getByHostelId(hostelId);
 
         List<AssetsV1> listAssets = assetsService.findByHostelId(hostelId);
@@ -991,18 +1009,6 @@ public class HostelsService {
                 bankV2Balances.put(item.getBankId(), currentBankV2Balance);
             });
         }
-        if (bankingList != null && !bankingList.isEmpty()) {
-            if (bankingList.stream().anyMatch(i -> bankBalances.containsKey(i.getBankId()))) {
-                recordsFound = true;
-            }
-            bankingList.forEach(i -> {
-                Double amount = bankBalances.get(i.getBankId());
-                if (amount != null) {
-                    i.setBalance(i.getBalance() - amount);
-                }
-            });
-            bankingService.updateBankAccount(bankingList);
-        }
         if (bankingV2List != null && !bankingV2List.isEmpty()) {
             if (bankingV2List.stream().anyMatch(i -> bankV2Balances.containsKey(i.getBankId()))) {
                 recordsFound = true;
@@ -1150,7 +1156,6 @@ public class HostelsService {
         List<Subscription> listSubscriptions = subscriptionService.getSubscriptionsByHostelId(hostelId);
         List<TableColumns> listTableColumns = tableColumnsService.findByHostelId(hostelId);
         List<Beds> listBeds = bedsService.getBedsByHostelId(hostelId);
-        List<BankingV1> bankingList = bankingService.findByHostelId(hostelId);
         List<BankingV2> bankingV2List = bankingV2Service.getByHostelId(hostelId);
 
         if (listAmenities != null && !listAmenities.isEmpty()) {
@@ -1186,9 +1191,6 @@ public class HostelsService {
         if (listBeds != null && !listBeds.isEmpty()) {
             bedsService.deleteAll(listBeds);
         }
-        if (bankingList != null && !bankingList.isEmpty()) {
-            bankingService.deleteAll(bankingList);
-        }
         if (bankingV2List != null && !bankingV2List.isEmpty()) {
             bankingV2Service.deleteAll(bankingV2List);
         }
@@ -1196,7 +1198,8 @@ public class HostelsService {
 
     public ResponseEntity<?> getAllHostels(int page, int size, String name,
                                            Date startDate, Date endDate,
-                                           String agentId, String filterOption) {
+                                           String agentId, String followUpStatus,
+                                           String filterOption) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -1217,6 +1220,7 @@ public class HostelsService {
 
         name = (name == null || name.isBlank()) ? null : name.trim();
         agentId = (agentId == null || agentId.isBlank()) ? null : agentId.trim();
+        followUpStatus = (followUpStatus == null || followUpStatus.isBlank()) ? null : followUpStatus.trim();
 
         page = Math.max(page - 1, 0);
         size = Math.max(size, 1);
@@ -1354,6 +1358,22 @@ public class HostelsService {
                         .map(HostelLiteProjection::getHostelId)
                         .collect(Collectors.toSet());
 
+        if (followUpStatus != null){
+            HostelFollowUpStatusEnum followUpStatusEnum;
+            try {
+                followUpStatusEnum = HostelFollowUpStatusEnum.valueOf(followUpStatus);
+            } catch (Exception e) {
+                followUpStatusEnum = HostelFollowUpStatusEnum.ACTIVE;
+            }
+
+            List<HostelFollowUp> latestFollowUps = hostelFollowUpService
+                    .getFollowUpsByHostelIdsAndStatus(targetHostelIds, followUpStatusEnum.name());
+
+            targetHostelIds = latestFollowUps.stream()
+                    .map(HostelFollowUp::getHostelId)
+                    .collect(Collectors.toSet());
+        }
+
         Pageable pageable = PageRequest.of(page, size);
 
         Page<HostelV1> pagedHostels = hostelRepository
@@ -1403,6 +1423,12 @@ public class HostelsService {
         Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
                 .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
 
+        List<HostelFollowUp> hostelFollowUps = hostelFollowUpService
+                .getFollowUpsByHostelIds(new HashSet<>(hostelIds));
+        Map<String, HostelFollowUp> hostelFollowUpMap = hostelFollowUps.stream()
+                .collect(Collectors.toMap(HostelFollowUp::getHostelId, Function.identity(),
+                        (a, b) -> a));
+
         Set<String> agentIds = new HashSet<>();
         for (HostelRelationalAgent relationalAgent : relationalAgents) {
             if (relationalAgent.getAgentId() != null){
@@ -1410,6 +1436,12 @@ public class HostelsService {
             }
             if (relationalAgent.getCreatedBy() != null){
                 agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        for (HostelFollowUp hostelFollowUp : hostelFollowUps) {
+            if (hostelFollowUp.getCreatedBy() != null){
+                agentIds.add(hostelFollowUp.getCreatedBy());
             }
         }
 
@@ -1427,7 +1459,8 @@ public class HostelsService {
                         expandableTrialPlans,
                         subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
                         relationalAgentMap.getOrDefault(i.getParentId(), null),
-                        agentMap
+                        agentMap,
+                        hostelFollowUpMap.getOrDefault(i.getHostelId(), null)
                 ).apply(i))
                 .toList();
 
@@ -1451,6 +1484,10 @@ public class HostelsService {
                     return new HostelFilterOptionsRes(f.name(), f.getLabel(), count);
                 }).toList();
 
+        List<FollowUpStatusHostelRes> followUpStatusFilters = Arrays.stream(HostelFollowUpStatusEnum.values())
+                .map(i -> new FollowUpStatusHostelRes(i.name(), i.getValue()))
+                .toList();
+
         Hostels hostelsResponse = new Hostels(totalPropertiesCount,
                 activePropertiesCount,
                 inactivePropertiesCount,
@@ -1466,6 +1503,7 @@ public class HostelsService {
                 pagedHostels.getTotalPages(),
                 pagedHostels.getTotalElements(),
                 hostelFilterOptionsRes,
+                followUpStatusFilters,
                 hostelsList);
 
         return new ResponseEntity<>(hostelsResponse, HttpStatus.OK);
@@ -1475,9 +1513,7 @@ public class HostelsService {
                                                     Date endDate, String agentId,
                                                     String filterOption){
 
-        if (name == null || name.isBlank()){
-            name = null;
-        }
+        name = (name == null || name.isBlank()) ? null : name.trim();
 
         if (endDate != null) {
             endDate = Utils.addDaysToDate(endDate, 1);
@@ -1603,7 +1639,7 @@ public class HostelsService {
                 .collect(Collectors.toSet());
 
         List<HostelV1> listHostels = hostelRepository
-                .findAllHostels(name.trim(), startDate, endDate, subActive,
+                .findAllHostels(name, startDate, endDate, subActive,
                         targetHostelIds, trialStartDate, trialEndDate);
 
         Set<String> hostelIds = new HashSet<>();
@@ -1652,6 +1688,12 @@ public class HostelsService {
         Map<String, List<HostelRelationalAgent>> relationalAgentMap = relationalAgents.stream()
                 .collect(Collectors.groupingBy(HostelRelationalAgent::getParentId));
 
+        List<HostelFollowUp> hostelFollowUps = hostelFollowUpService
+                .getFollowUpsByHostelIds(new HashSet<>(hostelIds));
+        Map<String, HostelFollowUp> hostelFollowUpMap = hostelFollowUps.stream()
+                .collect(Collectors.toMap(HostelFollowUp::getHostelId, Function.identity(),
+                        (a, b) -> a));
+
         Set<String> agentIds = new HashSet<>();
         for (HostelRelationalAgent relationalAgent : relationalAgents) {
             if (relationalAgent.getAgentId() != null){
@@ -1659,6 +1701,12 @@ public class HostelsService {
             }
             if (relationalAgent.getCreatedBy() != null){
                 agentIds.add(relationalAgent.getCreatedBy());
+            }
+        }
+
+        for (HostelFollowUp hostelFollowUp : hostelFollowUps) {
+            if (hostelFollowUp.getCreatedBy() != null){
+                agentIds.add(hostelFollowUp.getCreatedBy());
             }
         }
 
@@ -1677,7 +1725,8 @@ public class HostelsService {
                         expandableTrialPlans,
                         subscriptionHostelMap.getOrDefault(i.getHostelId(), null),
                         relationalAgentMap.getOrDefault(i.getParentId(), null),
-                        agentMap
+                        agentMap,
+                        hostelFollowUpMap.getOrDefault(i.getHostelId(), null)
                 ).apply(i))
                 .toList();
     }
@@ -3736,5 +3785,206 @@ public class HostelsService {
         }
 
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    public ResponseEntity<?> getHostelsGraph(String onboardedDateFilter) {
+
+        String loggedInAgentId = authentication.getName();
+        Agent loggedInAgent = agentService.findUserByUserId(loggedInAgentId);
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(loggedInAgent.getRoleId(), ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        HostelOnboardedDateFilterEnum hostelOnboardedDateFilter;
+        try {
+            hostelOnboardedDateFilter = HostelOnboardedDateFilterEnum.valueOf(onboardedDateFilter);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        Date monthStartDate = Utils.getStartOfMonth(today);
+        Date monthEndDate = Utils.getEndOfMonth(today);
+
+        Date onboardedStartDate = monthStartDate;
+        Date onboardedEndDate = monthEndDate;
+
+        if (HostelOnboardedDateFilterEnum.WEEK.equals(hostelOnboardedDateFilter)){
+            onboardedStartDate = Utils.getStartOfWeek(today);
+            onboardedEndDate = Utils.getEndOfWeek(today);
+        } else if (HostelOnboardedDateFilterEnum.MONTH.equals(hostelOnboardedDateFilter)) {
+            // initialized at start
+        } else if (HostelOnboardedDateFilterEnum.QUARTER.equals(hostelOnboardedDateFilter)) {
+            onboardedStartDate = Utils.getStartOfQuarter(today);
+            onboardedEndDate = Utils.getEndOfQuarter(today);
+        } else if (HostelOnboardedDateFilterEnum.SIX_MONTHS.equals(hostelOnboardedDateFilter)){
+            onboardedStartDate = Utils.getStartOfLastSixMonths(today);
+            onboardedEndDate = Utils.getEndOfLastSixMonths(today);
+        }
+
+        Date dbOnboardedStartDate = Utils.getStartOfDay(onboardedStartDate);
+        Date dbOnboardedEndDate = Utils.getStartOfDay(Utils.addDaysToDate(onboardedEndDate, 1));
+
+        List<HostelCreatedAtProjection> onboardedHostels = hostelRepository
+                .findAllHostelsBetweenDates(dbOnboardedStartDate, dbOnboardedEndDate);
+
+        onboardedStartDate = Utils.getStartOfDay(onboardedStartDate);
+        onboardedEndDate = Utils.getEndOfDay(onboardedEndDate);
+
+        List<HostelOnboardedDataRes> hostelOnboardedDataRes = new ArrayList<>();
+        if (onboardedHostels != null){
+            hostelOnboardedDataRes = buildHostelOnboardedData(onboardedHostels, hostelOnboardedDateFilter,
+                    onboardedStartDate, onboardedEndDate);
+        }
+
+        List<HostelRegionGraphProjection> regionGraphProjections = hostelRepository
+                .getTopCities();
+
+        long hostelCount = hostelRepository.findHostelCount();
+
+        List<HostelGraphRegionDataRes> hostelGraphRegionDataRes = new ArrayList<>();
+        if (regionGraphProjections != null && !regionGraphProjections.isEmpty()){
+            hostelGraphRegionDataRes = regionGraphProjections.stream()
+                    .map(i -> new HostelGraphRegionDataRes(
+                            Utils.capitalizeWords(i.getCity()),
+                            i.getCount() != null ? i.getCount() : 0,
+                            Utils.getPercentage(i.getCount(), hostelCount)
+                    )).toList();
+        }
+
+        String topRegion = null;
+        long topRegionHostelCount = 0;
+        int topRegionPercentage = 0;
+
+        if (!hostelGraphRegionDataRes.isEmpty()) {
+            HostelGraphRegionDataRes topRegionData = hostelGraphRegionDataRes.getFirst();
+
+            topRegion = topRegionData.region();
+            topRegionHostelCount = topRegionData.regionHostelCount();
+            topRegionPercentage = topRegionData.regionPercentage();
+        }
+
+        Date currentMonthStartDate = Utils.getStartOfDay(monthStartDate);
+        Date currentMonthEndDate = Utils.getEndOfDay(monthEndDate);
+
+        Date previousMonthEnd = Utils.addDaysToDate(currentMonthStartDate, -1);
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(currentMonthStartDate);
+        calendar.add(Calendar.MONTH, -1);
+
+        Date previousMonthStart = Utils.getStartOfDay(Utils.getFirstDayOfMonth(calendar.getTime()));
+        previousMonthEnd = Utils.getEndOfDay(previousMonthEnd);
+
+        Date dbCurrentMonthEndDate = Utils.getStartOfDay(Utils.addDaysToDate(currentMonthEndDate, 1));
+        Date dbPreviousMonthEndDate = Utils.getStartOfDay(Utils.addDaysToDate(previousMonthEnd, 1));
+
+        long onboardedThisMonth = hostelRepository
+                .findHostelCountBetweenDates(currentMonthStartDate, dbCurrentMonthEndDate);
+        long onboardedPreviousMonth = hostelRepository
+                .findHostelCountBetweenDates(previousMonthStart, dbPreviousMonthEndDate);
+
+        double onboardedPercentageDifference = Utils
+                .calculatePercentageDifference(onboardedThisMonth, onboardedPreviousMonth);
+
+        HostelGraphCardDataRes hostelGraphCardData = new HostelGraphCardDataRes(hostelCount, onboardedThisMonth,
+                onboardedPercentageDifference, topRegion, topRegionHostelCount, topRegionPercentage);
+
+        List<HostelOnboardedDateFilterRes> onboardedDateFilterRes = Arrays.stream(HostelOnboardedDateFilterEnum.values())
+                .map(i -> new HostelOnboardedDateFilterRes(
+                        i.name(), i.getValue()
+                )).toList();
+
+        HostelsGraphWrapperRes response = new HostelsGraphWrapperRes(hostelGraphCardData, hostelOnboardedDataRes,
+                hostelGraphRegionDataRes, onboardedDateFilterRes);
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    private List<HostelOnboardedDataRes> buildHostelOnboardedData(List<HostelCreatedAtProjection> onboardedHostels,
+                                                                  HostelOnboardedDateFilterEnum filter,
+                                                                  Date startDate, Date endDate) {
+
+        ZoneId zoneId = ZoneId.systemDefault();
+
+        LocalDate start = startDate.toInstant()
+                .atZone(zoneId)
+                .toLocalDate();
+
+        LocalDate end = endDate.toInstant()
+                .atZone(zoneId)
+                .toLocalDate();
+
+        Map<String, Long> hostelCountMap = new LinkedHashMap<>();
+
+        if (filter == HostelOnboardedDateFilterEnum.WEEK) {
+            LocalDate monday = start.with(DayOfWeek.MONDAY);
+
+            for (int i = 0; i < 7; i++) {
+                String label = monday.plusDays(i)
+                        .format(DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH));
+                hostelCountMap.put(label, 0L);
+            }
+
+        } else if (filter == HostelOnboardedDateFilterEnum.MONTH) {
+            int weeks = (start.lengthOfMonth() + 6) / 7;
+
+            for (int i = 1; i <= weeks; i++) {
+                hostelCountMap.put("Week " + i, 0L);
+            }
+
+        } else {
+            LocalDate month = start.withDayOfMonth(1);
+
+            while (!month.isAfter(end)) {
+                String label = month.format(
+                        DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH));
+
+                hostelCountMap.put(label, 0L);
+                month = month.plusMonths(1);
+            }
+        }
+
+        for (HostelCreatedAtProjection hostel : onboardedHostels) {
+            if (hostel.getCreatedAt() == null) {
+                continue;
+            }
+
+            LocalDate createdDate = hostel.getCreatedAt()
+                    .toInstant()
+                    .atZone(zoneId)
+                    .toLocalDate();
+
+            String label;
+
+            if (filter == HostelOnboardedDateFilterEnum.WEEK) {
+                label = createdDate.format(
+                        DateTimeFormatter.ofPattern("EEE", Locale.ENGLISH));
+
+            } else if (filter == HostelOnboardedDateFilterEnum.MONTH) {
+                label = "Week " + ((createdDate.getDayOfMonth() - 1) / 7 + 1);
+
+            } else {
+                label = createdDate.format(
+                        DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH));
+            }
+
+            hostelCountMap.computeIfPresent(
+                    label, (key, count) -> count + 1
+            );
+        }
+
+        return hostelCountMap.entrySet()
+                .stream()
+                .map(entry -> new HostelOnboardedDataRes(
+                        entry.getKey(),
+                        entry.getValue()
+                ))
+                .toList();
     }
 }

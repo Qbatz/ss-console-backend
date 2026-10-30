@@ -25,7 +25,7 @@ public class ExpenseService {
     @Autowired
     private ExpenseRepository expenseRepository;
     @Autowired
-    private BankingService bankingService;
+    private BankingV2Service bankingV2Service;
     @Autowired
     private AgentActivitiesService agentActivitiesService;
 
@@ -70,7 +70,7 @@ public class ExpenseService {
         });
 
         bankTransactionService.updateBankTransactions(expensesId);
-        bankingService.removeExpenses(bankIds, expensePerBankIds);
+        bankingV2Service.removeExpenses(bankIds, expensePerBankIds);
         expenseRepository.deleteAll(listExpenses);
 
         agentActivitiesService.createAgentActivity(agent, ActivityType.SNAPSHOT_DELETE, Source.HOSTEL_EXPENSE,

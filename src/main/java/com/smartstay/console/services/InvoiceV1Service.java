@@ -64,7 +64,7 @@ public class InvoiceV1Service {
     @Autowired
     private BankTransactionService bankTransactionService;
     @Autowired
-    private BankingService bankingService;
+    private BankingV2Service bankingV2Service;
     @Autowired
     @Lazy
     private CustomersService customersService;
@@ -482,7 +482,7 @@ public class InvoiceV1Service {
 
         List<BankTransactionsV1> bankTransactions = bankTransactionService
                 .getTransactionsByTransactionIds(transactionIds);
-        List<BankingV1> bankingList = bankingService.findByBankIds(bankIds);
+        List<BankingV2> bankingV2List = bankingV2Service.getByBankIds(bankIds);
 
         HashMap<String, Double> bankBalances = new HashMap<>();
 
@@ -511,8 +511,8 @@ public class InvoiceV1Service {
             });
         }
 
-        if (bankingList != null && !bankingList.isEmpty()) {
-            List<BankingV1> newBalanceAmounts = bankingList
+        if (bankingV2List != null && !bankingV2List.isEmpty()) {
+            List<BankingV2> newBalanceAmounts = bankingV2List
                     .stream()
                     .map(i -> {
                         if (bankBalances.get(i.getBankId()) != null) {
@@ -522,7 +522,7 @@ public class InvoiceV1Service {
 
                         return i;
                     }).toList();
-            bankingService.updateBankAccount(newBalanceAmounts);
+            bankingV2Service.saveAll(newBalanceAmounts);
         }
 
         invoiceRedemptionService.deleteAll(invoiceRedemptions);
@@ -548,6 +548,13 @@ public class InvoiceV1Service {
     public List<InvoicesV1> getLimitedInvoicesByHostelId(String hostelId, int size) {
         Pageable pageable = PageRequest.of(0, size);
         return invoiceV1Repository.findAllByHostelIdOrderByCreatedAtDesc(hostelId, pageable)
+                .getContent();
+    }
+
+    public List<InvoicesV1> getLimitedInvoicesByHostelIdAndInvoiceNumber(String hostelId, String invoiceNumber,
+                                                                         int size) {
+        Pageable pageable = PageRequest.of(0, size);
+        return invoiceV1Repository.findAllByHostelIdAndInvoiceNumber(hostelId, invoiceNumber, pageable)
                 .getContent();
     }
 
@@ -1058,10 +1065,9 @@ public class InvoiceV1Service {
                 .map(TransactionV1::getBankId)
                 .collect(Collectors.toSet());
 
-        List<BankingV1> banks = bankingService.findByBankIds(bankIds);
-
-        Map<String, BankingV1> bankMap = banks.stream()
-                .collect(Collectors.toMap(BankingV1::getBankId, bank -> bank));
+        List<BankingV2> v2Banks = bankingV2Service.getByBankIds(bankIds);
+        Map<String, BankingV2> bankMap = v2Banks.stream()
+                .collect(Collectors.toMap(BankingV2::getBankId, Function.identity()));
 
         Set<String> userIds = new HashSet<>();
         for (TransactionV1 transaction : transactions) {
@@ -1081,7 +1087,7 @@ public class InvoiceV1Service {
         List<TransactionResponse> response = transactions.stream()
                 .map(transaction -> {
 
-                    BankingV1 bank = bankMap.getOrDefault(transaction.getBankId(), null);
+                    BankingV2 bank = bankMap.getOrDefault(transaction.getBankId(), null);
                     Users createdByUser = usersMap.getOrDefault(transaction.getCreatedBy(), null);
                     Users updatedByUser = usersMap.getOrDefault(transaction.getUpdatedBy(), null);
 
@@ -2217,8 +2223,12 @@ public class InvoiceV1Service {
 
     public List<InvoicesV1> getOtherInvoicesByCustomerIdAndBetweenDates(String customerId, Date startDate,
                                                                         Date endDate) {
-        String invoiceType = InvoiceType.OTHER.name();
-        return invoiceV1Repository.findAllByCustomerIdAndInvoiceTypeAndBetweenDates(customerId, invoiceType,
-                startDate, endDate);
+
+        Set<String> invoiceTypes = new HashSet<>();
+        invoiceTypes.add(InvoiceType.OTHER.name());
+        invoiceTypes.add(InvoiceType.EB.name());
+
+        return invoiceV1Repository.findAllByCustomerIdAndInvoiceTypeInAndBetweenDates(customerId,
+                invoiceTypes, startDate, endDate);
     }
 }

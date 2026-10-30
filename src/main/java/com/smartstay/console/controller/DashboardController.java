@@ -6,10 +6,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/v2/dashboard")
@@ -22,7 +19,7 @@ public class DashboardController {
     DashboardService dashboardService;
 
     @GetMapping
-    public ResponseEntity<?> getDashboard() {
-        return dashboardService.getDashboard();
+    public ResponseEntity<?> getDashboard(@RequestParam(defaultValue = "THIS_MONTH") String regionGraphDateFilter) {
+        return dashboardService.getDashboard(regionGraphDateFilter);
     }
 }

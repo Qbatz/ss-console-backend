@@ -1,6 +1,8 @@
 package com.smartstay.console.Mapper.hostels;
 
 import com.smartstay.console.dao.*;
+import com.smartstay.console.responses.hostelFollowUp.HostelFollowUpHistoryRes;
+import com.smartstay.console.responses.hostelFollowUp.HostelFollowUpResponse;
 import com.smartstay.console.responses.hostelRelationalAgent.HostelRelationalAgentResponse;
 import com.smartstay.console.responses.hostels.HostelList;
 import com.smartstay.console.responses.hostels.OwnerInfo;
@@ -20,6 +22,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
     List<Subscription> subscriptions;
     List<HostelRelationalAgent> relationalAgents;
     Map<String, Agent> agentMap;
+    HostelFollowUp latestFollowUp;
 
     public HostelsListMapper(OwnerInfo owner,
                              UserActivities latestActivity,
@@ -28,7 +31,8 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                              List<Plans> expandableTrialPlans,
                              List<Subscription> subscriptions,
                              List<HostelRelationalAgent> relationalAgents,
-                             Map<String, Agent> agentMap) {
+                             Map<String, Agent> agentMap,
+                             HostelFollowUp latestFollowUp) {
         this.owner = owner;
         this.latestActivity = latestActivity;
         this.lastLogin = lastLogin;
@@ -37,6 +41,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
         this.subscriptions = subscriptions;
         this.relationalAgents = relationalAgents;
         this.agentMap = agentMap;
+        this.latestFollowUp = latestFollowUp;
     }
 
     @Override
@@ -188,13 +193,39 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                     }).toList();
         }
 
+        HostelFollowUpHistoryRes latestFollowUpRes = null;
+        if (latestFollowUp != null) {
+
+            String followUpCreatedBy = null;
+            String followUpCreatedAtDate = null;
+            String followUpCreatedAtTime = null;
+
+            if (agentMap != null) {
+                if (latestFollowUp.getCreatedBy() != null) {
+                    Agent createdByAgent = agentMap.getOrDefault(latestFollowUp.getCreatedBy(), null);
+                    if (createdByAgent != null) {
+                        followUpCreatedBy = Utils.getFullName(createdByAgent.getFirstName(), createdByAgent.getLastName());
+                    }
+                }
+            }
+
+            if (latestFollowUp.getCreatedAt() != null) {
+                followUpCreatedAtDate = Utils.dateToString(latestFollowUp.getCreatedAt());
+                followUpCreatedAtTime = Utils.dateToTime(latestFollowUp.getCreatedAt());
+            }
+
+            latestFollowUpRes = new HostelFollowUpHistoryRes(latestFollowUp.getFollowUpId(), latestFollowUp.getStatus(),
+                    latestFollowUp.getComments(), latestFollowUp.getReason(), latestFollowUp.getCreatedBy(), followUpCreatedBy,
+                    followUpCreatedAtDate, followUpCreatedAtTime);
+        }
+
         return new HostelList(hostelV1.getHostelName(),
                 hostelV1.getHostelId(),
                 hostelV1.getMainImage(),
-                initials.toString(),
+                initials,
                 CountryUtils.COUNTRY_CODE_IN,
                 hostelV1.getMobile(),
-                fullAddress.toString(),
+                fullAddress,
                 hostelV1.getCity(),
                 hostelV1.getState(),
                 Utils.dateToString(hostelV1.getCreatedAt()),
@@ -211,6 +242,7 @@ public class HostelsListMapper implements Function<HostelV1, HostelList> {
                 platform,
                 ownerInfo,
                 hp,
-                relationalAgentResponses);
+                relationalAgentResponses,
+                latestFollowUpRes);
     }
 }

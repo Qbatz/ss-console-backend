@@ -1,6 +1,5 @@
 package com.smartstay.console.controller;
 
-import com.smartstay.console.dao.RecurringConfiguration;
 import com.smartstay.console.payloads.billingRules.UpdateBillingRulesPayload;
 import com.smartstay.console.payloads.customers.CustomerIdPayload;
 import com.smartstay.console.payloads.hostel.HostelIdPayload;
@@ -38,8 +37,10 @@ public class HostelsController {
                                            @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date startDate,
                                            @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") Date endDate,
                                            @RequestParam(value = "agentId", required = false) String agentId,
+                                           @RequestParam(value = "followUpStatus", required = false) String followUpStatus,
                                            @RequestParam(defaultValue = "TOTAL_PROPERTIES") String filterOption) {
-        return hostelsService.getAllHostels(page, size, name, startDate, endDate, agentId, filterOption);
+        return hostelsService.getAllHostels(page, size, name, startDate, endDate,
+                agentId, followUpStatus, filterOption);
     }
 
     @GetMapping("/export/new")
@@ -52,9 +53,16 @@ public class HostelsController {
         hostelsService.exportHostelsNew(name, startDate, endDate, agentId, filterOption, response);
     }
 
+    @GetMapping("/graph")
+    public ResponseEntity<?> getHostelsGraph(@RequestParam(defaultValue = "MONTH") String onboardedDateFilter){
+        return hostelsService.getHostelsGraph(onboardedDateFilter);
+    }
+
     @GetMapping("/{hostelId}")
-    public ResponseEntity<?> getHostelByHostelId(@PathVariable("hostelId") String hostelId){
-        return hostelsService.getHostelByHostelId(hostelId);
+    public ResponseEntity<?> getHostelByHostelId(@PathVariable("hostelId") String hostelId,
+                                                 @RequestParam(value = "tenantName", required = false) String tenantName,
+                                                 @RequestParam(value = "invoiceNumber", required = false) String invoiceNumber){
+        return hostelsService.getHostelByHostelId(hostelId, tenantName, invoiceNumber);
     }
 
     @PostMapping("/hard-reset/{hostelId}")

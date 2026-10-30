@@ -147,4 +147,12 @@ public class HostelFollowUpService {
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
+    public List<HostelFollowUp> getFollowUpsByHostelIdsAndStatus(Set<String> hostelIds, String status) {
+        return hostelFollowUpRepository.findLatestByHostelIdsAndStatus(hostelIds, status);
+    }
+
+    public List<HostelFollowUp> getFollowUpsByHostelIds(Set<String> hostelIds) {
+        return hostelFollowUpRepository.findLatestByHostelIds(hostelIds);
+    }
 }

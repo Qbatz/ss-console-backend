@@ -109,4 +109,25 @@ public interface CustomersRepository extends JpaRepository<Customers, String> {
             """)
     Page<Customers> findByHostelIdNameKycStatus(String hostelId, String name, String kycStatus,
                                                 Date startDate, Date endDate, Pageable pageable);
+
+    @Query("""
+            select c
+            from Customers c
+            where
+                c.customerId in :customerIds
+                and (
+                lower(replace(coalesce(c.firstName, ''), ' ', ''))
+                    like lower(concat('%', replace(:name, ' ', ''), '%'))
+                or
+                lower(replace(coalesce(c.lastName, ''), ' ', ''))
+                    like lower(concat('%', replace(:name, ' ', ''), '%'))
+                or
+                lower(concat(
+                    replace(coalesce(c.firstName, ''), ' ', ''),
+                    replace(coalesce(c.lastName, ''), ' ', '')
+                ))
+                    like lower(concat('%', replace(:name, ' ', ''), '%'))
+                )
+            """)
+    List<Customers> findAllByCustomerIdsAndName(Set<String> customerIds, String name);
 }
