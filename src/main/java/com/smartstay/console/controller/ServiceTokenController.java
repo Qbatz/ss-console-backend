@@ -45,7 +45,7 @@ public class ServiceTokenController {
         return serviceTokenService.revokeServiceToken(service);
     }
 
-    @GetMapping
+    @GetMapping("")
     public ResponseEntity<?> getServiceTokens(@RequestParam(value = "page", defaultValue = "1") int page,
                                               @RequestParam(value = "size", defaultValue = "10") int size,
                                               @RequestParam(value = "name", required = false) String name,
