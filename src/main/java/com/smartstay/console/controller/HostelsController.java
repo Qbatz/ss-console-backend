@@ -60,8 +60,9 @@ public class HostelsController {
 
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getHostelByHostelId(@PathVariable("hostelId") String hostelId,
-                                                 @RequestParam(value = "tenantName", required = false) String tenantName){
-        return hostelsService.getHostelByHostelId(hostelId, tenantName);
+                                                 @RequestParam(value = "tenantName", required = false) String tenantName,
+                                                 @RequestParam(value = "invoiceNumber", required = false) String invoiceNumber){
+        return hostelsService.getHostelByHostelId(hostelId, tenantName, invoiceNumber);
     }
 
     @PostMapping("/hard-reset/{hostelId}")

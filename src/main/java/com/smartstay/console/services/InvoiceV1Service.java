@@ -551,6 +551,13 @@ public class InvoiceV1Service {
                 .getContent();
     }
 
+    public List<InvoicesV1> getLimitedInvoicesByHostelIdAndInvoiceNumber(String hostelId, String invoiceNumber,
+                                                                         int size) {
+        Pageable pageable = PageRequest.of(0, size);
+        return invoiceV1Repository.findAllByHostelIdAndInvoiceNumber(hostelId, invoiceNumber, pageable)
+                .getContent();
+    }
+
     public ResponseEntity<?> getInvoicesByHostelId(String hostelId, int page, int size) {
 
         if (!authentication.isAuthenticated()) {

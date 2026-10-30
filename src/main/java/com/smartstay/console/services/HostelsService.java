@@ -216,7 +216,7 @@ public class HostelsService {
         return hostelRepository.findHostelPlanProjectionData(parentIds);
     }
 
-    public ResponseEntity<?> getHostelByHostelId(String hostelId, String tenantName) {
+    public ResponseEntity<?> getHostelByHostelId(String hostelId, String tenantName, String invoiceNumber) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -237,6 +237,7 @@ public class HostelsService {
         }
 
         tenantName = (tenantName == null || tenantName.isBlank()) ? null : tenantName.trim();
+        invoiceNumber = (invoiceNumber == null || invoiceNumber.isBlank()) ? null : invoiceNumber.trim();
 
         Users owner = usersService.getOwner(hostel.getParentId());
         List<Users> masters = usersService.getMasters(hostel);
@@ -471,7 +472,13 @@ public class HostelsService {
 
         List<InvoicesV1> redemptionInvoices = invoiceV1Service.getInvoicesByIds(invoiceIds);
 
-        List<InvoicesV1> invoices = invoiceV1Service.getLimitedInvoicesByHostelId(hostelId, 50);
+        List<InvoicesV1> invoices = new ArrayList<>();
+        if (invoiceNumber != null){
+            invoices = invoiceV1Service
+                    .getLimitedInvoicesByHostelIdAndInvoiceNumber(hostelId, invoiceNumber, 50);
+        } else {
+            invoices = invoiceV1Service.getLimitedInvoicesByHostelId(hostelId, 50);
+        }
 
         Set<String> invoiceCustomerIds = invoices.stream()
                 .map(InvoicesV1::getCustomerId)

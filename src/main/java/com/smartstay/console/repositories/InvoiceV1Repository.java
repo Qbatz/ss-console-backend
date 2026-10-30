@@ -48,6 +48,18 @@ public interface InvoiceV1Repository extends JpaRepository<InvoicesV1, String> {
 
     Page<InvoicesV1> findAllByHostelIdOrderByCreatedAtDesc(String hostelId, Pageable pageable);
 
+    @Query("""
+            SELECT i FROM invoicesv1 i
+            WHERE i.hostelId = :hostelId
+                AND (
+                    :invoiceNumber IS NULL
+                    OR LOWER(REPLACE(COALESCE(i.invoiceNumber, ''), ' ', ''))
+                        LIKE CONCAT('%', LOWER(REPLACE(:invoiceNumber, ' ', '')), '%')
+                )
+            ORDER BY i.createdAt desc
+            """)
+    Page<InvoicesV1> findAllByHostelIdAndInvoiceNumber(String hostelId, String invoiceNumber, Pageable pageable);
+
     List<InvoicesV1> findAllByInvoiceType(String invoiceType);
 
     List<InvoicesV1> findByCustomerIdAndInvoiceType(String customerId, String invoiceType);
