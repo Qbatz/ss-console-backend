@@ -720,7 +720,7 @@ public class OrderHistoryService {
 
         try {
 
-            Credentials credential = credentialsService.getByService(ServiceEnum.payments.name());
+            Credentials credential = credentialsService.getByService(ServiceEnum.SS_PAYMENTS.name());
             if (credential == null || credential.getAuthToken() == null) {
                 return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
@@ -814,7 +814,7 @@ public class OrderHistoryService {
 
         try {
 
-            Credentials credential = credentialsService.getByService(ServiceEnum.payments.name());
+            Credentials credential = credentialsService.getByService(ServiceEnum.SS_PAYMENTS.name());
             if (credential == null || credential.getAuthToken() == null) {
                 return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
             }
