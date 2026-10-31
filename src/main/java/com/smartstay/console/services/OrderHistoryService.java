@@ -722,7 +722,8 @@ public class OrderHistoryService {
 
             Credentials credential = credentialsService.getByService(ServiceEnum.SS_PAYMENTS.name());
             if (credential == null || credential.getAuthToken() == null) {
-                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+//                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.BAD_REQUEST);
             }
 
             HttpHeaders headers = new HttpHeaders();
@@ -816,7 +817,8 @@ public class OrderHistoryService {
 
             Credentials credential = credentialsService.getByService(ServiceEnum.SS_PAYMENTS.name());
             if (credential == null || credential.getAuthToken() == null) {
-                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+//                return new ResponseEntity<>(Utils.CREDENTIALS_NOT_FOUND, HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.BAD_REQUEST);
             }
 
             String generatePaymentLink = paymentUrl + "/v2/payments/generate/" + hostelId ;

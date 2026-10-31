@@ -42,7 +42,8 @@ public class ServiceTokenService {
     public ResponseEntity<?> getServices() {
 
         List<ServicesResponse> responses = Arrays.stream(ServiceEnum.values())
-                .map(i -> new ServicesResponse(i.name()))
+                .filter(i -> !i.name().equalsIgnoreCase("zoho"))
+                .map(i -> new ServicesResponse(i.name(), i.getLabel()))
                 .toList();
 
         return new ResponseEntity<>(responses, HttpStatus.OK);
@@ -248,14 +249,14 @@ public class ServiceTokenService {
                         expiryAtDate = Utils.dateToString(expiryDate);
                         expiryAtTime = Utils.dateToTime(expiryDate);
                     }
+
                     String serviceName = null;
                     if (credential.getService().equalsIgnoreCase(ServiceEnum.SS_PAYMENTS.name())) {
-                        serviceName = "Payments";
+                        serviceName = ServiceEnum.SS_PAYMENTS.getLabel();
                     }
                     if (credential.getService().equalsIgnoreCase(ServiceEnum.SS_REPORTS.name())) {
-                        serviceName = "Reports";
+                        serviceName = ServiceEnum.SS_REPORTS.getLabel();
                     }
-
 
                     return new ServiceTokenResponse(
                             credential.getService(),
@@ -392,12 +393,13 @@ public class ServiceTokenService {
             expiryAtDate = Utils.dateToString(expiryDate);
             expiryAtTime = Utils.dateToTime(expiryDate);
         }
+
         String serviceName = null;
         if (credential.getService().equalsIgnoreCase(ServiceEnum.SS_PAYMENTS.name())) {
-            serviceName = "Payments";
+            serviceName = ServiceEnum.SS_PAYMENTS.getLabel();
         }
         if (credential.getService().equalsIgnoreCase(ServiceEnum.SS_REPORTS.name())) {
-            serviceName = "Reports";
+            serviceName = ServiceEnum.SS_REPORTS.getLabel();
         }
 
         ServiceTokenResponse response = new ServiceTokenResponse(credential.getService(),
