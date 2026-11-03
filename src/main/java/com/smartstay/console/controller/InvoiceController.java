@@ -26,8 +26,9 @@ public class InvoiceController {
     @GetMapping("/{hostelId}")
     public ResponseEntity<?> getInvoicesByHostelId(@PathVariable("hostelId") String hostelId,
                                                    @RequestParam(value = "page", defaultValue = "0") int page,
-                                                   @RequestParam(value = "size", defaultValue = "10") int size) {
-        return invoiceService.getInvoicesByHostelId(hostelId, page, size);
+                                                   @RequestParam(value = "size", defaultValue = "10") int size,
+                                                   @RequestParam(value = "invoiceNumber", required = false) String invoiceNumber) {
+        return invoiceService.getInvoicesByHostelId(hostelId, page, size, invoiceNumber);
     }
 
     @DeleteMapping

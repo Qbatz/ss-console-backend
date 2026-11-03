@@ -558,7 +558,8 @@ public class InvoiceV1Service {
                 .getContent();
     }
 
-    public ResponseEntity<?> getInvoicesByHostelId(String hostelId, int page, int size) {
+    public ResponseEntity<?> getInvoicesByHostelId(String hostelId, int page, int size,
+                                                   String invoiceNumber) {
 
         if (!authentication.isAuthenticated()) {
             return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
@@ -583,8 +584,17 @@ public class InvoiceV1Service {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<InvoicesV1> pagedInvoices = invoiceV1Repository
-                .findAllByHostelIdOrderByCreatedAtDesc(hostelId, pageable);
+        invoiceNumber = (invoiceNumber == null || invoiceNumber.isBlank()) ? null : invoiceNumber.trim();
+
+        Page<InvoicesV1> pagedInvoices;
+
+        if (invoiceNumber == null){
+            pagedInvoices = invoiceV1Repository
+                    .findAllByHostelIdOrderByCreatedAtDesc(hostelId, pageable);
+        } else {
+            pagedInvoices = invoiceV1Repository
+                    .findAllByHostelIdAndInvoiceNumber(hostelId, invoiceNumber, pageable);
+        }
 
         List<InvoicesV1> invoices = pagedInvoices.getContent();
 
