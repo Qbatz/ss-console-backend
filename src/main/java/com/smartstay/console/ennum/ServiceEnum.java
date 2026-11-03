@@ -1,6 +1,6 @@
 package com.smartstay.console.ennum;
 
 public enum ServiceEnum {
-    reports,
-    payments
+    SS_REPORTS,
+    SS_PAYMENTS
 }
