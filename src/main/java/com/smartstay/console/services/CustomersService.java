@@ -130,6 +130,8 @@ public class CustomersService {
     private TenantBankTransactionsService tenantBankTransactionsService;
     @Autowired
     private BankingV2Service bankingV2Service;
+    @Autowired
+    private CustomerActivitiesService customerActivitiesService;
 
     public List<Customers> getCustomersByIds(Set<String> customerIds) {
         return customersRepository.findAllByCustomerIdIn(customerIds);
@@ -833,6 +835,9 @@ public class CustomersService {
         Rooms room = roomsService.getRoomById(booking.getRoomId());
         Beds bed = bedService.getBedById(booking.getBedId());
 
+        List<CustomerActivities> customerActivities = customerActivitiesService
+                .getLimitedActivitiesByCustomerId(customerId, 50);
+
         List<InvoicesV1> invoices = invoiceV1Service
                 .findAllByHostelIdAndCustomerId(customer.getHostelId(), customerId);
 
@@ -978,6 +983,25 @@ public class CustomersService {
             canGenerateSettlement = true;
         }
 
+        List<CustomerActivitiesRes> customerActivitiesRes = customerActivities.stream()
+                .map(i -> {
+
+                    String customerName = Utils.getFullName(customer.getFirstName(), customer.getLastName());
+                    String activityCreatedAtDate = null;
+                    String activityCreatedAtTime = null;
+
+                    if (i.getCreatedAt() != null) {
+                        activityCreatedAtDate = Utils.dateToString(i.getCreatedAt());
+                        activityCreatedAtTime = Utils.dateToTime(i.getCreatedAt());
+                    }
+
+                    return new CustomerActivitiesRes(i.getActivityId(), i.getCustomerId(), customerName,
+                            i.getHostelId(), hostel.getHostelName(), Utils.capitalizeWordsWithUnderscore(i.getActivityType()),
+                            i.getDescription(), Utils.capitalizeWordsWithUnderscore(i.getSource()), i.getSourceId(),
+                            Utils.capitalizeWordsWithUnderscore(i.getUserType()), activityCreatedAtDate,
+                            activityCreatedAtTime, Utils.capitalizeWordsWithUnderscore(i.getPlatform()), i.getSourceIds());
+                }).toList();
+
         CustomerDetailsRes response = new CustomerDetailsRes(customer.getCustomerId(), customer.getFirstName(),
                 customer.getLastName(), Utils.getFullName(customer.getFirstName(), customer.getLastName()),
                 Utils.getInitials(customer.getFirstName(), customer.getLastName()), customer.getMobSerialNo(),
@@ -988,7 +1012,7 @@ public class CustomersService {
                 Utils.dateToString(customer.getJoiningDate()), Utils.dateToString(customer.getExpJoiningDate()),
                 Utils.dateToString(customer.getDateOfBirth()), customer.getGender(), createdBy, updatedBy,
                 createdAtDate, createdAtTime, updatedAtDate, updatedAtTime, canApproveKyc, canGenerateSettlement,
-                hostelDetails, invoiceResponses, transactionResponses, invoiceRedemptionRes);
+                hostelDetails, invoiceResponses, transactionResponses, invoiceRedemptionRes, customerActivitiesRes);
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -5580,5 +5604,63 @@ public class CustomersService {
         if (!newHistories.isEmpty()) {
             customerEbHistoryService.saveAll(newHistories);
         }
+    }
+
+    public ResponseEntity<?> getCustomerActivities(String customerId, int page, int size) {
+
+        Agent loggedInAgent = agentService.findUserByUserId(authentication.getName());
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(loggedInAgent.getRoleId(), ModuleId.Tenants.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Customers customer = customersRepository.findByCustomerId(customerId);
+        if (customer == null){
+            return new ResponseEntity<>(Utils.NO_CUSTOMER_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        HostelV1 hostel = hostelService.getHostelByHostelId(customer.getHostelId());
+        if (hostel == null){
+            return new ResponseEntity<>(Utils.NO_HOSTEL_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        page = Math.max(page - 1, 0);
+        size = Math.max(size, 1);
+
+        Page<CustomerActivities> pagedActivities = customerActivitiesService
+                .getPagedCustomerActivities(customerId, page, size);
+
+        List<CustomerActivities> customerActivities = pagedActivities.getContent();
+
+        List<CustomerActivitiesRes> customerActivitiesRes = customerActivities.stream()
+                .map(i -> {
+
+                    String customerName = Utils.getFullName(customer.getFirstName(), customer.getLastName());
+                    String activityCreatedAtDate = null;
+                    String activityCreatedAtTime = null;
+
+                    if (i.getCreatedAt() != null) {
+                        activityCreatedAtDate = Utils.dateToString(i.getCreatedAt());
+                        activityCreatedAtTime = Utils.dateToTime(i.getCreatedAt());
+                    }
+
+                    return new CustomerActivitiesRes(i.getActivityId(), i.getCustomerId(), customerName,
+                            i.getHostelId(), hostel.getHostelName(), Utils.capitalizeWordsWithUnderscore(i.getActivityType()),
+                            i.getDescription(), Utils.capitalizeWordsWithUnderscore(i.getSource()), i.getSourceId(),
+                            Utils.capitalizeWordsWithUnderscore(i.getUserType()), activityCreatedAtDate,
+                            activityCreatedAtTime, Utils.capitalizeWordsWithUnderscore(i.getPlatform()), i.getSourceIds());
+                }).toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("activities", customerActivitiesRes);
+        response.put("currentPage", page + 1);
+        response.put("pageSize", size);
+        response.put("totalItems", pagedActivities.getTotalElements());
+        response.put("totalPages", pagedActivities.getTotalPages());
+
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
