@@ -128,4 +128,14 @@ public class UserActivitiesService {
                 .findByHostelIdIsNotNullOrderByCreatedAtDesc(pageable)
                 .getContent();
     }
+
+    public List<UserActivities> getActivitiesByHostelIdAndSourceAndSourceIdAndBetweenDate(String hostelId,
+                                                                                          String source,
+                                                                                          String sourceId,
+                                                                                          Date startDate,
+                                                                                          Date endDate){
+        return userActivitiesRepository
+                .findAllByDatesBetweenAndHostelIdAndSourceAndSourceId(hostelId, source, sourceId,
+                        startDate, endDate);
+    }
 }

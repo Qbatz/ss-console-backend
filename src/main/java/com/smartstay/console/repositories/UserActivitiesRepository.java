@@ -59,4 +59,18 @@ public interface UserActivitiesRepository extends JpaRepository<UserActivities, 
     Page<UserActivities> findAllByHostelIdAndCreatedAtBefore(String hostelId, Date cutOffDate, Pageable pageable);
 
     Page<UserActivities> findByHostelIdIsNotNullOrderByCreatedAtDesc(Pageable pageable);
+
+    @Query("""
+            select ua
+            from UserActivities ua
+            where ua.hostelId = :hostelId
+                and ua.source = :source
+                and ua.sourceId = :sourceId
+                and (:startDate is null or ua.createdAt >= :startDate)
+                and (:endDate is null or ua.createdAt < :endDate)
+            order by ua.createdAt, ua.activityId desc
+            """)
+    List<UserActivities> findAllByDatesBetweenAndHostelIdAndSourceAndSourceId(String hostelId, String source,
+                                                                              String sourceId, Date startDate,
+                                                                              Date endDate);
 }

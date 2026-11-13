@@ -1553,4 +1553,19 @@ public class Utils {
                         value * 100.0 / totalValue
                 );
     }
+
+    public static String capitalizeWordsWithUnderscore(String input) {
+
+        if (input == null || input.isBlank()) {
+            return input;
+        }
+
+        String[] words = input.toLowerCase()
+                .replace("_", " ")
+                .split("\\s+");
+
+        return Arrays.stream(words)
+                .map(word -> Character.toUpperCase(word.charAt(0)) + word.substring(1))
+                .collect(Collectors.joining(" "));
+    }
 }
