@@ -37,7 +37,7 @@ public class BankingV2Service {
     }
 
     public BankingV2 getByBankId(String bankId) {
-        return bankingV2Repository.findByBankIdAndIsActiveTrueAndIsDeletedFalse(bankId);
+        return bankingV2Repository.findByBankIdAndIsDeletedFalse(bankId);
     }
 
     public void save(BankingV2 bank) {

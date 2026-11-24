@@ -303,9 +303,9 @@ public class UserActivityUtil {
                 Utils.dateToString(activity.getLoggedAt()),
                 Utils.dateToTime(activity.getLoggedAt()),
                 activity.getSourceId(),
-                activity.getSource(),
-                activity.getActivityType(),
-                activity.getPlatform()
+                Utils.capitalizeWordsWithUnderscore(activity.getSource()),
+                Utils.capitalizeWordsWithUnderscore(activity.getActivityType()),
+                Utils.capitalizeWords(activity.getPlatform())
         );
     }
 

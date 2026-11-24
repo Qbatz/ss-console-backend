@@ -42,5 +42,6 @@ public record CustomerDetailsRes(String customerId,
                                  TenantHostelDetailsRes hostelDetails,
                                  List<InvoiceResponse> invoices,
                                  List<TransactionResponse> transactions,
-                                 List<InvoiceRedemptionRes> invoiceRedemptions) {
+                                 List<InvoiceRedemptionRes> invoiceRedemptions,
+                                 List<CustomerActivitiesRes> customerActivities) {
 }

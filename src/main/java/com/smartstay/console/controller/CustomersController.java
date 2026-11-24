@@ -89,4 +89,11 @@ public class CustomersController {
     public ResponseEntity<?> ebRecalculate(@PathVariable("customerId") String customerId){
         return customersService.ebRecalculate(customerId);
     }
+
+    @GetMapping("/activities/{customerId}")
+    public ResponseEntity<?> getActivities(@PathVariable("customerId") String customerId,
+                                           @RequestParam(value = "page", defaultValue = "0") int page,
+                                           @RequestParam(value = "size", defaultValue = "10") int size){
+        return customersService.getCustomerActivities(customerId, page, size);
+    }
 }

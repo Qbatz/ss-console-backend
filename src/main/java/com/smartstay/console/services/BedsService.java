@@ -3,16 +3,15 @@ package com.smartstay.console.services;
 import com.smartstay.console.config.Authentication;
 import com.smartstay.console.dao.*;
 import com.smartstay.console.dto.bed.BedSnapshot;
-import com.smartstay.console.ennum.ActivityType;
-import com.smartstay.console.ennum.BedStatus;
-import com.smartstay.console.ennum.ModuleId;
-import com.smartstay.console.ennum.Source;
+import com.smartstay.console.ennum.*;
 import com.smartstay.console.repositories.BedsRepository;
-import com.smartstay.console.responses.beds.BedsResponse;
-import com.smartstay.console.responses.beds.FloorsResponse;
-import com.smartstay.console.responses.beds.HostelsBedInfoRes;
-import com.smartstay.console.responses.beds.RoomsResponse;
+import com.smartstay.console.responses.beds.*;
+import com.smartstay.console.responses.customers.CustomerRes;
+import com.smartstay.console.responses.date.DateFilterRes;
+import com.smartstay.console.responses.hostels.HostelInfoRes;
+import com.smartstay.console.responses.users.UserActivitiesResponse;
 import com.smartstay.console.utils.SnapshotUtility;
+import com.smartstay.console.utils.UserActivityUtil;
 import com.smartstay.console.utils.Utils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -46,6 +45,16 @@ public class BedsService {
     private FloorsService floorsService;
     @Autowired
     private RoomsService roomsService;
+    @Autowired
+    private UserActivitiesService userActivitiesService;
+    @Autowired
+    private HostelService hostelService;
+    @Autowired
+    @Lazy
+    private UserActivityUtil userActivityUtil;
+    @Autowired
+    @Lazy
+    private CustomersService customersService;
 
     public List<Beds> getBedsByHostelId(String hostelId) {
         return bedsRepository.findAllByHostelIdAndIsActiveTrueAndIsDeletedFalse(hostelId);
@@ -224,5 +233,128 @@ public class BedsService {
 
     public long getBedCount() {
         return bedsRepository.findBedCount();
+    }
+
+    public ResponseEntity<?> getBedDetailsByBedId(int bedId, String dateFilter, Date startDate, Date endDate) {
+
+        Agent loggedInAgent = agentService.findUserByUserId(authentication.getName());
+        if (loggedInAgent == null) {
+            return new ResponseEntity<>(Utils.UN_AUTHORIZED, HttpStatus.UNAUTHORIZED);
+        }
+
+        if (!agentRolesService.checkPermission(loggedInAgent.getRoleId(),
+                ModuleId.Hostels.getId(), Utils.PERMISSION_READ)) {
+            return new ResponseEntity<>(Utils.ACCESS_RESTRICTED, HttpStatus.FORBIDDEN);
+        }
+
+        Beds bed = bedsRepository.findByBedIdAndIsActiveTrueAndIsDeletedFalse(bedId);
+        if (bed == null) {
+            return new ResponseEntity<>(Utils.BED_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        BookingsV1 latestBooking = bookingsService.getLatestActiveBookingByBedId(bedId);
+        String customerId = null;
+        if (latestBooking != null) {
+            customerId = latestBooking.getCustomerId();
+        }
+
+        Customers customer = null;
+        if (customerId != null) {
+            customer = customersService.getCustomerInformation(customerId);
+        }
+
+        String hostelId = bed.getHostelId();
+        HostelV1 hostel = hostelService.getHostelByHostelId(hostelId);
+
+        String freeFromDate = null;
+        String roomName = null;
+        Integer floorId = null;
+        String floorName = null;
+
+        Rooms room = roomsService.getRoomById(bed.getRoomId());
+        if (room != null) {
+            roomName = room.getRoomName();
+            floorId = room.getFloorId();
+
+            Floors floor = floorsService.getByFloorId(floorId);
+            if (floor != null) {
+                floorName = floor.getFloorName();
+            }
+        }
+
+        if (bed.getFreeFrom() != null) {
+            freeFromDate = Utils.dateToString(bed.getFreeFrom());
+        }
+
+        DateFilterEnum2 dateFilterEnum;
+        try {
+            dateFilterEnum = DateFilterEnum2.valueOf(dateFilter);
+        } catch (Exception e) {
+            return new ResponseEntity<>(Utils.DATE_FILTER_NOT_FOUND, HttpStatus.BAD_REQUEST);
+        }
+
+        Date today = new Date();
+
+        if (DateFilterEnum2.CUSTOM.equals(dateFilterEnum)) {
+            if (startDate == null || endDate == null){
+                return new ResponseEntity<>(Utils.DATE_IS_NULL, HttpStatus.BAD_REQUEST);
+            }
+        } else if (DateFilterEnum2.THIS_MONTH.equals(dateFilterEnum)) {
+            startDate = Utils.getStartOfMonth(today);
+            endDate = Utils.getEndOfMonth(today);
+        }  else if (DateFilterEnum2.LAST_MONTH.equals(dateFilterEnum)) {
+            Date previousMonthDate = Utils.getPreviousMonthDate(today);
+            startDate = Utils.getStartOfMonth(previousMonthDate);
+            endDate = Utils.getEndOfMonth(previousMonthDate);
+        }  else if (DateFilterEnum2.LAST_6_MONTHS.equals(dateFilterEnum)) {
+            startDate = Utils.getStartOfLastSixMonths(today);
+            endDate = Utils.getEndOfLastSixMonths(today);
+        }
+
+        startDate = Utils.getStartOfDay(startDate);
+        endDate = Utils.getEndOfDay(Utils.addDaysToDate(endDate, 1));
+
+        List<UserActivities> bedActivities = userActivitiesService
+                .getActivitiesByHostelIdAndSourceAndSourceIdAndBetweenDate(hostelId, ActivitySource.BEDS.name(),
+                        String.valueOf(bedId), startDate, endDate);
+
+        List<UserActivitiesResponse> bedActivitiesRes = userActivityUtil
+                .buildResponses(bedActivities);
+
+        HostelInfoRes hostelRes = null;
+        if (hostel != null) {
+            hostelRes = new HostelInfoRes(hostel.getHostelId(), hostel.getHostelName(),
+                    Utils.getInitials(hostel.getHostelName()), hostel.getMobile(), hostel.getEmailId(),
+                    hostel.getHouseNo(), hostel.getStreet(), hostel.getLandmark(), hostel.getCity(),
+                    hostel.getState(), hostel.getCountry(), hostel.getPincode(), Utils.buildFullAddress(hostel),
+                    hostel.getMainImage());
+        }
+
+        CustomerRes customerRes = null;
+        if (customer != null) {
+
+            String joiningDate = null;
+            if (customer.getJoiningDate() != null) {
+                joiningDate = Utils.dateToString(customer.getJoiningDate());
+            }
+
+            customerRes = new CustomerRes(customer.getCustomerId(), customer.getFirstName(),
+                    customer.getLastName(), Utils.getFullName(customer.getFirstName(), customer.getLastName()),
+                    Utils.getInitials(customer.getFirstName(), customer.getLastName()), Utils.maskMobileNo(customer.getMobile()),
+                    customer.getEmailId(), customer.getCurrentStatus(), joiningDate);
+        }
+
+
+        BedsInfoResponse bedInfoRes = new BedsInfoResponse(bedId, bed.getBedName(), bed.getRoomId(), roomName,
+                floorId, floorName, bed.isBooked(), bed.getRentAmount(), bed.getCurrentStatus(), freeFromDate,
+                customerRes, hostelRes, bedActivitiesRes);
+
+        List<DateFilterRes> dateFilterRes = Arrays.stream(DateFilterEnum2.values())
+                .map(i -> new DateFilterRes(i.name(), i.getLabel()))
+                .toList();
+
+        BedsInfoResWrapper resWrapper = new BedsInfoResWrapper(dateFilterRes, bedInfoRes);
+
+        return new ResponseEntity<>(resWrapper, HttpStatus.OK);
     }
 }

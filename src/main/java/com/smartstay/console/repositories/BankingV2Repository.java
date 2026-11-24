@@ -16,5 +16,5 @@ public interface BankingV2Repository extends JpaRepository<BankingV2, String> {
 
     List<BankingV2> findAllByUserIdIn(Set<String> userIds);
 
-    BankingV2 findByBankIdAndIsActiveTrueAndIsDeletedFalse(String bankId);
+    BankingV2 findByBankIdAndIsDeletedFalse(String bankId);
 }

@@ -8,6 +8,7 @@ import com.smartstay.console.ennum.ActivityType;
 import com.smartstay.console.ennum.FilterOptionsModule;
 import com.smartstay.console.ennum.ModuleId;
 import com.smartstay.console.ennum.Source;
+import com.smartstay.console.exceptions.BadRequestException;
 import com.smartstay.console.payloads.tableColumns.EditFilterOptionsPayload;
 import com.smartstay.console.payloads.tableColumns.EditTableColumnsPayload;
 import com.smartstay.console.payloads.tableColumns.ResetTableColumnsPayload;
@@ -18,6 +19,7 @@ import com.smartstay.console.responses.tableColumns.TableColumnsResponse;
 import com.smartstay.console.responses.tableColumns.TableColumnsUserResponse;
 import com.smartstay.console.utils.SnapshotUtility;
 import com.smartstay.console.utils.Utils;
+import com.smartstay.console.utils.columnOptions.InvRegisterConsolidatedColumnUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
@@ -28,6 +30,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -273,6 +276,10 @@ public class TableColumnsService {
             return new ResponseEntity<>(Utils.TABLE_COLUMN_NOT_FOUND, HttpStatus.BAD_REQUEST);
         }
 
+        if (FilterOptionsModule.MODULE_INVOICE_REGISTER_CONSOLIDATED.name().equals(moduleName)) {
+            validateInvRegConsolidatedColumns(columns, tableColumn.getColumns());
+        }
+
         TableColumnsSnapshot oldSnapshot = SnapshotUtility.toSnapshot(tableColumn);
 
         tableColumn.setColumns(columns);
@@ -455,6 +462,10 @@ public class TableColumnsService {
             return new ResponseEntity<>("Module name does not match", HttpStatus.BAD_REQUEST);
         }
 
+        if (FilterOptionsModule.MODULE_INVOICE_REGISTER_CONSOLIDATED.name().equals(moduleName)) {
+            validateInvRegConsolidatedColumns(columns, filterOptions.getFilterOptions());
+        }
+
         FilterOptionsSnapshot oldSnapshot = SnapshotUtility.toSnapshot(filterOptions);
 
         filterOptions.setFilterOptions(columns);
@@ -467,5 +478,36 @@ public class TableColumnsService {
                 String.valueOf(filterOptions.getFilterOptionId()), oldSnapshot, newSnapshot);
 
         return new ResponseEntity<>(Utils.UPDATED, HttpStatus.OK);
+    }
+
+    private void validateInvRegConsolidatedColumns(List<ColumnFilters> inputColumns, List<ColumnFilters> defaultColumns) {
+
+        Set<String> lockedColumns = Set.of(
+                InvRegisterConsolidatedColumnUtils.FLOOR,
+                InvRegisterConsolidatedColumnUtils.ROOM,
+                InvRegisterConsolidatedColumnUtils.BED,
+                InvRegisterConsolidatedColumnUtils.TOTAL_PENDING_AMOUNT
+        );
+
+        Map<String, ColumnFilters> existingLockedColumns = defaultColumns.stream()
+                .filter(i -> lockedColumns.contains(i.getFieldName()))
+                .collect(Collectors.toMap(
+                        ColumnFilters::getFieldName,
+                        Function.identity()
+                ));
+
+        boolean invalidLockedColumn = inputColumns.stream()
+                .filter(i -> lockedColumns.contains(i.getFieldName()))
+                .anyMatch(i -> {
+                    ColumnFilters existing = existingLockedColumns.get(i.getFieldName());
+
+                    return existing == null
+                            || existing.getOrder() != i.getOrder()
+                            || !i.isSelected();
+                });
+
+        if (invalidLockedColumn) {
+            throw new BadRequestException("Locked columns cannot be modified");
+        }
     }
 }
